@@ -17,6 +17,15 @@ import {
   PanelsTopLeft,
   AlertCircle,
   LogIn,
+  ArrowRight,
+  Layers3,
+  Folder,
+  Calendar,
+  Mail,
+  MessageSquare,
+  StickyNote,
+  Code2,
+  Image,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -28,6 +37,12 @@ import {
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
+import { ConnectorWriteControls } from "@/components/ConnectorWriteControls";
+import {
+  ConnectorDirectoryBuilder,
+  ConnectorDirectorySubmissions,
+  PublishedConnectorListings,
+} from "@/components/ConnectorDirectorySubmissions";
 import { BankConnectionsPanel } from "@/components/BankConnectionsPanel";
 import { HealthConnectionsPanel } from "@/components/HealthConnectionsPanel";
 import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
@@ -106,6 +121,16 @@ const PLUGIN_CATEGORIES = [
 ].sort();
 const parsePluginFilters = (raw: string | null) =>
   parsePluginListPreferences(raw, PLUGIN_CATEGORIES);
+const categoryIcons: Partial<Record<ConnectorItem["category"], typeof Layers3>> = {
+  Productivity: Layers3,
+  "Storage & Files": Folder,
+  Calendar,
+  Email: Mail,
+  Communication: MessageSquare,
+  "Notes & Docs": StickyNote,
+  Development: Code2,
+  "Social & Media": Image,
+};
 
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
@@ -708,7 +733,7 @@ function GitHubManager({
           </div>
           <ul className="mt-3 max-h-80 divide-y overflow-y-auto rounded-xl border">
             {repos.map((repo) => (
-              <li key={repo.id} className="flex min-h-12 items-center gap-3 p-3">
+              <li key={repo.id} className="flex min-h-12 flex-wrap items-center gap-3 p-3">
                 <label className="flex min-h-11 min-w-11 items-center justify-center">
                   <input
                     data-ui-reference="chatgpt.checkbox"
@@ -738,6 +763,17 @@ function GitHubManager({
                 >
                   {repo.explicitly_granted ? "Granted" : "Available"}
                 </span>
+                {repo.explicitly_granted && (
+                  <ConnectorWriteControls
+                    connector="github"
+                    target={String(repo.id)}
+                    label={repo.full_name}
+                    providerCanWrite={
+                      !repo.archived &&
+                      (repo.permissions.push === true || repo.permissions.admin === true)
+                    }
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -859,11 +895,12 @@ function AppsPage() {
   principalRef.current = principal;
   const generationRef = useRef(0);
   const [lifecycleVersion, setLifecycleVersion] = useState(0);
-  const [{ query, connectionFilter }, setListPreferences] = usePrincipalSessionPreferences(
-    PLUGIN_LIST_STORAGE_BASE,
-    isLoaded ? userKey : undefined,
-    parsePluginFilters,
-  );
+  const [{ query, category, connectionFilter }, setListPreferences] =
+    usePrincipalSessionPreferences(
+      PLUGIN_LIST_STORAGE_BASE,
+      isLoaded ? userKey : undefined,
+      parsePluginFilters,
+    );
   const navigate = useNavigate({ from: "/apps" });
   const searchString = useLocation({ select: (location) => location.searchStr });
   const [connectionGroup, setConnectionGroup] = useState<"health" | "finances" | null>(null);
@@ -1154,7 +1191,11 @@ function AppsPage() {
     void refreshGoogle();
   };
 
-  const connectGoogle = async (connectionId?: string, itemId = "gmail") => {
+  const connectGoogle = async (
+    connectionId?: string,
+    itemId = "gmail",
+    access: "read" | "read-write" = "read",
+  ) => {
     if (!activityReady || !principal || !userKey || googleBusyRef.current || googleLoading) return;
     const generation = generationRef.current;
     const requestPrincipal = principal;
@@ -1169,7 +1210,12 @@ function AppsPage() {
       return next;
     });
     try {
-      await startGoogleConnect(connectionId, userKey, itemId === "google" ? "gmail" : itemId);
+      await startGoogleConnect(
+        connectionId,
+        userKey,
+        itemId === "google" ? "gmail" : itemId,
+        access,
+      );
     } catch (error) {
       if (isCurrent()) {
         setFailed((current) => ({ ...current, [itemId]: true }));
@@ -1373,7 +1419,7 @@ function AppsPage() {
         return "temporarily_unavailable";
       if (visibleGoogleStatus?.state === "reauthorization_required") return "reauthorize";
       const { read, write } = googleServiceAccess(id, visibleGoogleStatus);
-      if (read && write !== false) return "connected";
+      if (read) return "connected";
       if (read || write) return "permission_incomplete";
       return "idle";
     }
@@ -1521,6 +1567,7 @@ function AppsPage() {
     connectionFilter === "connected" && connectionCountState !== "ready";
   const filtered = catalog.filter((c) => {
     if (connectionFilter === "connected" && !hasConnection(c.id)) return false;
+    if (category !== "all" && c.category !== category) return false;
     const q = query.trim().toLowerCase();
     return (
       !q ||
@@ -1529,6 +1576,11 @@ function AppsPage() {
       )
     );
   });
+  const browsing = connectionFilter === "all" && !query.trim() && category === "all";
+  const featured = browsing
+    ? filtered.filter((item) => groupOf(item.id) === 2 && priority(item.id) < 6).slice(0, 4)
+    : [];
+  const featuredIds = new Set(featured.map(({ id }) => id));
 
   const handleUseInChat = (item: ConnectorItem) => {
     const handoff = writePrincipalHandoff(
@@ -1544,8 +1596,12 @@ function AppsPage() {
     window.location.href = "/";
   };
 
-  const renderGrid = (items: ConnectorItem[]) => (
-    <ul className="spec400-plugin-grid" aria-label="Connection directory">
+  const renderGrid = (items: ConnectorItem[], singleColumn = false) => (
+    <ul
+      className="spec400-plugin-grid kova-directory-rows"
+      data-single-column={singleColumn || undefined}
+      aria-label="Connection directory"
+    >
       {items.map((item) => (
         <AppCard
           key={item.id}
@@ -1565,6 +1621,24 @@ function AppsPage() {
     </ul>
   );
 
+  const developerView = new URLSearchParams(searchString).get("directory");
+  if (developerView === "submissions" || developerView === "guide")
+    return (
+      <AppShell hideUtilities>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="kova-page kova-secondary-page spec400-plugins"
+        >
+          <ConnectorDirectorySubmissions
+            key={principal ?? "guest"}
+            owner={isLoaded && isSignedIn ? userKey : null}
+            guide={developerView === "guide"}
+          />
+        </main>
+      </AppShell>
+    );
+
   return (
     <AppShell hideUtilities>
       <main
@@ -1572,12 +1646,12 @@ function AppsPage() {
         tabIndex={-1}
         aria-labelledby="apps-title"
         className="kova-page kova-secondary-page spec400-plugins"
-        data-ui-reference="chatgpt.apps.directory"
+        data-ui-reference="kova.connections.directory"
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent
             className="spec400-plugin-detail"
-            data-ui-reference="chatgpt.apps.details-dialog"
+            data-ui-reference="kova.connections.details"
             closeLabel="Close connection details"
             onCloseAutoFocus={(event) => {
               event.preventDefault();
@@ -1624,15 +1698,8 @@ function AppsPage() {
                   {isGoogleId(visibleSelectedApp.id) && (
                     <>
                       <p>
-                        This connection requests your Google profile and email, plus only{" "}
-                        {visibleSelectedApp.label} permissions:
-                        {visibleSelectedApp.id === "gmail"
-                          ? " read email, create drafts, and send email after confirmation."
-                          : visibleSelectedApp.id === "google-calendar"
-                            ? " read events and create events after confirmation."
-                            : " read Drive files."}
-                        Other Google services require their own Connect action. Previously approved
-                        services remain connected.
+                        Connect to read from {visibleSelectedApp.label}. Use Permissions to review
+                        or enable supported writes for a connected account.
                       </p>
                       <p>Review the permissions on Google’s consent screen before approving.</p>
                     </>
@@ -1722,7 +1789,7 @@ function AppsPage() {
                                 <p>
                                   Read {read ? "granted" : "not granted"}
                                   {write !== undefined &&
-                                    ` · Write ${write ? "granted" : "not granted"}`}
+                                    ` · Provider write scope ${write ? "granted" : "not granted"}`}
                                 </p>
                               )}
                               <details className="spec400-plugin-scope-list">
@@ -1741,6 +1808,24 @@ function AppsPage() {
                                 )}
                               </details>
                               <div className="spec400-plugin-actions">
+                                {account.connected &&
+                                  read &&
+                                  (visibleSelectedApp.id === "gmail" ||
+                                    visibleSelectedApp.id === "google-calendar") && (
+                                    <ConnectorWriteControls
+                                      connector={visibleSelectedApp.id}
+                                      target={account.id}
+                                      label={account.email || visibleSelectedApp.label}
+                                      providerCanWrite={write === true}
+                                      authorizeWrite={() =>
+                                        void connectGoogle(
+                                          account.id,
+                                          visibleSelectedApp.id,
+                                          "read-write",
+                                        )
+                                      }
+                                    />
+                                  )}
                                 <Button
                                   variant="outline"
                                   className="spec400-plugin-use-account"
@@ -1947,7 +2032,15 @@ function AppsPage() {
         <WorkspacePageHeader
           title="Connections"
           titleId="apps-title"
-          description="Connect tools and sources to Kova"
+          description="Browse and manage the tools you use with KovaGPT."
+          reference="kova.connections.header"
+          actions={
+            <Button asChild variant="outline">
+              <a href="/apps?directory=submissions">
+                Submissions <ArrowRight aria-hidden="true" />
+              </a>
+            </Button>
+          }
         />
         {activityPersistenceError && (
           <p role="status" className="spec400-plugin-notice">
@@ -2012,27 +2105,52 @@ function AppsPage() {
                     placeholder="Search connections"
                   />
                 </label>
+                {category !== "all" && (
+                  <Button variant="outline" onClick={() => setListPreferences({ category: "all" })}>
+                    {category} · Clear category
+                  </Button>
+                )}
               </div>
               <TabsContent value={connectionFilter} className="spec400-plugin-results">
                 {connectedStatusUnverified && <p role="status">{connectedStatusMessage}</p>}
                 {filtered.length ? (
                   [0, 1, 2, 3].map((group) => {
-                    const items = filtered.filter((item) => groupOf(item.id) === group);
-                    if (!items.length) return null;
+                    const items = filtered.filter(
+                      (item) => groupOf(item.id) === group && !featuredIds.has(item.id),
+                    );
+                    const recommended = group === 2 && featured.length > 0;
+                    if (!items.length && !recommended) return null;
                     const label = ["Connected", "Reconnect required", "Available", "Coming soon"][
                       group
                     ];
                     return (
-                      <section
-                        key={group}
-                        aria-label={label}
-                        className="spec400-plugin-status-group"
-                      >
-                        {connectionFilter === "all" && (
-                          <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
+                      <div key={group}>
+                        {recommended && (
+                          <section
+                            className="spec400-plugin-status-group"
+                            aria-labelledby="plugins-featured-title"
+                          >
+                            <h2 id="plugins-featured-title">Get started</h2>
+                            {renderGrid(featured)}
+                          </section>
                         )}
-                        {renderGrid(items)}
-                      </section>
+                        <section aria-label={label} className="spec400-plugin-status-group">
+                          {connectionFilter === "all" && (
+                            <div className="kova-directory-section-head">
+                              <h2>{group === 0 ? "Your connections" : label}</h2>
+                              {group === 0 && browsing && (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => setConnectionFilter("connected")}
+                                >
+                                  Manage connections <ArrowRight aria-hidden="true" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                          {renderGrid(items, group === 0 || connectionFilter === "connected")}
+                        </section>
+                      </div>
                     );
                   })
                 ) : (
@@ -2061,8 +2179,7 @@ function AppsPage() {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        setQuery("");
-                        setConnectionFilter("all");
+                        setListPreferences({ query: "", connectionFilter: "all", category: "all" });
                       }}
                     >
                       {connectionFilter === "connected"
@@ -2070,6 +2187,50 @@ function AppsPage() {
                         : "Clear filters"}
                     </Button>
                   </section>
+                )}
+                {connectionFilter === "all" && (
+                  <>
+                    {browsing && <PublishedConnectorListings />}
+                    <section
+                      className="kova-directory-categories"
+                      aria-labelledby="plugin-categories-title"
+                    >
+                      <div className="kova-directory-section-head">
+                        <h2 id="plugin-categories-title">Browse categories</h2>
+                        {category !== "all" && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => setListPreferences({ category: "all" })}
+                          >
+                            Show all
+                          </Button>
+                        )}
+                      </div>
+                      <div className="kova-directory-category-grid">
+                        {PLUGIN_CATEGORIES.map((item) => {
+                          const Icon = categoryIcons[item] ?? Layers3;
+                          return (
+                            <Button
+                              key={item}
+                              variant={category === item ? "secondary" : "outline"}
+                              aria-pressed={category === item}
+                              onClick={() => {
+                                setListPreferences({
+                                  category: item,
+                                  query: "",
+                                  connectionFilter: "all",
+                                });
+                                searchRef.current?.focus({ preventScroll: false });
+                              }}
+                            >
+                              <Icon aria-hidden="true" /> {item}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                    <ConnectorDirectoryBuilder />
+                  </>
                 )}
               </TabsContent>
               <TabsContent forceMount value="finances" className="spec400-connection-group">

@@ -82,6 +82,7 @@ export function buildGoogleAuthUrl(opts: {
   state: string;
   codeChallenge: string;
   connector?: string;
+  access?: string;
   loginHint?: string;
 }): string {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -90,7 +91,7 @@ export function buildGoogleAuthUrl(opts: {
     client_id: clientId,
     redirect_uri: googleRedirectUri(opts.request),
     response_type: "code",
-    scope: googleConnectorScopes(opts.connector),
+    scope: googleConnectorScopes(opts.connector, opts.access),
     access_type: "offline",
     include_granted_scopes: "true",
     prompt: "consent select_account",

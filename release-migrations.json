@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 224,
-  "latest": "20261119131500_kova_chat_browser_daily_time.sql",
+  "count": 225,
+  "latest": "20261123084000_kova_connector_controls_and_submissions.sql",
   "migrations": [
     {
       "order": 1,
@@ -4713,6 +4713,23 @@
       "rls": ["browserbase_daily_usage"],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 225,
+      "filename": "20261123084000_kova_connector_controls_and_submissions.sql",
+      "timestamp": "20261123084000",
+      "sha256": "560a575ec59594038bb40b5b0a32fefbb28438d35e0702a656cf11f07dcb16d3",
+      "tables": ["connector_write_preferences", "connector_directory_submissions"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": ["connector_write_preferences", "connector_directory_submissions"],
+      "policies": [],
+      "indexes": [
+        "connector_directory_submissions_owner_idx",
+        "connector_directory_submissions_status_idx"
+      ]
     }
   ]
 }

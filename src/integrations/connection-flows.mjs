@@ -269,7 +269,12 @@ export function hasConnectionScopes(scopes, required) {
       granted.has(scope) ||
       (scope === "root_readonly" && granted.has("root_readwrite")) ||
       (scope === "Chat.Read" && granted.has("Chat.ReadWrite")) ||
-      (scope === "Files.Read" && granted.has("Files.Read.All")) ||
+      (scope === "Files.Read" &&
+        (granted.has("Files.Read.All") ||
+          granted.has("Files.ReadWrite") ||
+          granted.has("Files.ReadWrite.All"))) ||
+      (scope === "Files.ReadWrite" && granted.has("Files.ReadWrite.All")) ||
+      (scope === "Mail.Read" && granted.has("Mail.ReadWrite")) ||
       (scope === "Calendars.ReadBasic" &&
         (granted.has("Calendars.Read") || granted.has("Calendars.ReadWrite"))),
   );

@@ -242,9 +242,11 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     requiredScopes: ["openid", "profile", "email", "offline_access", "User.Read"],
     optionalScopes: [
       "Files.Read",
+      "Files.ReadWrite",
       "Files.Read.All",
       "Sites.Read.All",
       "Mail.Read",
+      "Mail.ReadWrite",
       "Mail.Send",
       "Calendars.ReadBasic",
       "Calendars.ReadWrite",

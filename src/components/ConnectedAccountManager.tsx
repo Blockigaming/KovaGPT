@@ -11,10 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { ConnectorWriteControls } from "@/components/ConnectorWriteControls";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { searchConnectedAccount, refreshConnectedAccess } from "@/lib/connected-accounts.functions";
 import {
   CONNECTION_FLOWS,
   canReadConnection,
+  hasConnectionScopes,
   connectionAccounts,
   connectionAuthorizationUrl,
   safeConnectionLink,
@@ -71,6 +74,7 @@ export function ConnectedAccountManager({
   error: boolean;
   reload: () => Promise<boolean>;
 }) {
+  const owner = useUser().user?.id;
   const [teamsMessages, setTeamsMessages] = useState(initiallySearchTeamsMessages);
   const [hubspotContacts, setHubspotContacts] = useState(false);
   const operationId =
@@ -99,19 +103,21 @@ export function ConnectedAccountManager({
   }, []);
   if (!flow) return null;
   const accounts = connectionAccounts(data?.accounts ?? [], operationId);
+  const writeScope =
+    id === "onedrive" ? "Files.ReadWrite" : id === "outlook" ? "Mail.ReadWrite" : null;
   const usesApiKey = flow.authentication === "api-key";
   const configured =
     data?.configuredProviders.some((provider) => provider.id === flow.provider) === true;
-  const start = async (existingAccountId?: string) => {
-    if (busy || loading || error || !configured) return;
+  const start = async (existingAccountId?: string, write = false) => {
+    if (busy || loading || error || !configured || !owner) return;
     setBusy(true);
     try {
       const response = await fetchWithTimeoutAuthenticated("/api/integrations/oauth/start", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Kova-Owner": owner },
         body: JSON.stringify({
           provider: flow.provider,
-          optionalScopes: flow.scopes,
+          optionalScopes: write && writeScope ? [...flow.scopes, writeScope] : flow.scopes,
           returnPath: `/apps?connection_view=${id === "hubspot" ? id : operationId}`,
           existingAccountId,
         }),
@@ -468,6 +474,18 @@ export function ConnectedAccountManager({
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
+                  {(id === "onedrive" || id === "outlook") &&
+                    writeScope &&
+                    configured &&
+                    canReadConnection(account, operationId) && (
+                      <ConnectorWriteControls
+                        connector={id}
+                        target={account.id}
+                        label={account.account_label ?? flow.label}
+                        providerCanWrite={hasConnectionScopes(account.granted_scopes, [writeScope])}
+                        authorizeWrite={() => void start(account.id, true)}
+                      />
+                    )}
                   {!usesApiKey && (
                     <Button
                       variant="outline"

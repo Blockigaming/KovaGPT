@@ -706,3 +706,285 @@
     background: var(--muted);
   }
 }
+
+/* The directory uses the same type, surfaces, and controls as the Kova workspace. */
+.spec400-plugins .kova-directory-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px 18px;
+  padding: 0;
+  list-style: none;
+}
+@container (min-width: 740px) {
+  .spec400-plugins .kova-directory-rows:not([data-single-column]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.spec400-plugins .kova-directory-rows .spec400-plugin-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "identity actions" "description description";
+  gap: 4px 10px;
+  align-items: center;
+  min-height: 84px;
+  padding: 10px 12px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+}
+.spec400-plugins .kova-directory-rows .spec400-plugin-card:hover {
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.kova-directory-rows .spec400-plugin-card-heading {
+  grid-area: identity;
+}
+.kova-directory-rows .spec400-plugin-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+}
+.kova-directory-rows .spec400-plugin-logo img,
+.kova-directory-rows .spec400-plugin-logo svg {
+  width: 22px;
+  height: 22px;
+}
+.kova-directory-rows .spec400-plugin-purpose {
+  grid-area: description;
+  margin: 0 0 0 46px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+}
+.kova-directory-rows .spec400-plugin-card-footer {
+  grid-area: actions;
+  justify-content: flex-end;
+  margin: 0;
+}
+.kova-directory-rows .spec400-plugin-card-footer .spec400-plugin-status {
+  display: none;
+}
+.spec400-plugin-results .spec400-plugin-status-group,
+.kova-directory-categories {
+  margin: 0 0 24px;
+}
+.spec400-plugin-status-group h2,
+.kova-directory-categories h2,
+.kova-directory-workspace h2,
+.kova-directory-build h2 {
+  font-size: 16px;
+  font-weight: 620;
+}
+.kova-directory-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.kova-directory-categories {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.kova-directory-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 164px), 1fr));
+  gap: 8px;
+}
+.kova-directory-category-grid button {
+  justify-content: flex-start;
+  padding: 8px 12px;
+  height: auto;
+  min-height: 40px;
+  white-space: normal;
+  text-align: left;
+}
+.kova-directory-build {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface-app));
+}
+.kova-directory-build-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  color: var(--foreground);
+  background: var(--muted);
+}
+.kova-directory-build p,
+.kova-directory-workspace p,
+.kova-directory-workspace small {
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.kova-directory-build .spec400-plugin-actions {
+  margin-left: auto;
+}
+.kova-directory-build a,
+.kova-directory-workspace a[data-slot="button"],
+.kova-directory-workspace button,
+.kova-directory-access button {
+  border-radius: var(--kova-radius-button);
+}
+.kova-directory-workspace {
+  display: grid;
+  width: 100%;
+  gap: 16px;
+  justify-items: start;
+}
+.kova-directory-workspace h1 {
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+.kova-directory-workspace
+  > :is(section, header, ul, .kova-directory-wizard, .kova-directory-choice-grid) {
+  width: 100%;
+  min-width: 0;
+}
+.kova-directory-panel,
+.kova-directory-empty,
+.kova-directory-choice {
+  min-width: 0;
+  padding: clamp(14px, 3vw, 22px);
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  background: color-mix(in srgb, var(--foreground) 2%, var(--surface-app));
+}
+.kova-directory-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.kova-directory-panel.kova-directory-section-head {
+  flex-direction: row;
+  align-items: center;
+}
+.kova-directory-panel pre {
+  width: 100%;
+}
+.kova-directory-empty {
+  display: grid;
+  min-height: 190px;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.kova-directory-submission-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.kova-directory-choice-grid,
+.kova-directory-wizard {
+  display: grid;
+  gap: 14px;
+}
+.kova-directory-choice {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  color: var(--foreground);
+}
+.kova-directory-choice:hover {
+  background: var(--muted);
+}
+.kova-directory-choice:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-directory-choice span {
+  color: var(--muted-foreground);
+}
+.kova-directory-wizard nav ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kova-directory-field,
+.kova-directory-summary {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+}
+.kova-directory-field select,
+.kova-directory-textarea {
+  border: 1px solid var(--border);
+  background: var(--surface-app);
+  border-radius: 12px;
+  padding: 10px;
+}
+.kova-directory-textarea {
+  min-height: 96px;
+}
+.kova-directory-summary > div {
+  display: grid;
+  grid-template-columns: minmax(90px, 25%) minmax(0, 1fr);
+  gap: 10px;
+  padding-block: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.kova-directory-summary dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.kova-directory-summary dt {
+  color: var(--muted-foreground);
+}
+.kova-directory-access {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kova-directory-review {
+  width: 100%;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.kova-directory-review p,
+.kova-directory-review label {
+  margin: 8px 0;
+}
+@container (min-width: 660px) {
+  .kova-directory-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kova-directory-wizard {
+    grid-template-columns: 168px minmax(0, 1fr);
+  }
+  .kova-directory-wizard nav ol {
+    flex-direction: column;
+  }
+  .kova-directory-wizard nav button {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+@media (max-width: 640px) {
+  .kova-directory-build .spec400-plugin-actions {
+    margin-left: 0;
+  }
+  .kova-directory-rows .spec400-plugin-card-action {
+    max-width: 105px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

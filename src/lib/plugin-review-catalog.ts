@@ -142,11 +142,19 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
   ]),
   entry("outlook", [
     proposed("read", "Proposed: search and read selected Outlook mail; scope unconfirmed"),
-    proposed("write", "Proposed: draft or send Outlook mail after review; scope unconfirmed"),
+    supported(
+      "write",
+      "Save a draft to Outlook after review",
+      "src/lib/connector-write.functions.ts",
+    ),
   ]),
   entry("onedrive", [
     proposed("read", "Proposed: search and read selected OneDrive files; scope unconfirmed"),
-    proposed("write", "Proposed: create or update selected OneDrive files; scope unconfirmed"),
+    supported(
+      "write",
+      "Create a folder in your OneDrive after review",
+      "src/lib/connector-write.functions.ts",
+    ),
   ]),
   entry("sharepoint", [
     proposed("read", "Proposed: search selected SharePoint sites and documents; scope unconfirmed"),

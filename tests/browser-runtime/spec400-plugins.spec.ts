@@ -21,7 +21,7 @@ const mocks: Record<string, string> = {
   `,
   "@tanstack/react-start": `export const useServerFn=fn=>fn;export const createClientOnlyFn=fn=>fn;`,
   "@/components/AppShell": `export const AppShell=({children})=>children;`,
-  "@/components/WorkspacePageHeader": `export const WorkspacePageHeader=({title,titleId,description})=><header className="kova-page-header"><h1 id={titleId}>{title}</h1><p>{description}</p></header>;`,
+  "@/components/WorkspacePageHeader": `export const WorkspacePageHeader=({title,titleId,description,actions})=><header className="kova-page-header"><h1 id={titleId}>{title}</h1><p>{description}</p>{actions}</header>;`,
   "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,isSignedIn:!!window.testOwner,user:window.testOwner?{id:window.testOwner,primaryEmailAddress:{emailAddress:"owner@example.test",verification:{status:"verified"}}}:null});export const SignInButton=({children})=>children;`,
   "@/components/WorkflowSkillsPanel": `export const WorkflowSkillsPanel=()=>null;`,
   "@/integrations/supabase/client": `export const getSupabaseClientConfigStatus=()=>({configured:false});export const supabase={auth:{resend:async()=>({error:null})}};`,
@@ -29,6 +29,26 @@ const mocks: Record<string, string> = {
 
   "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};if(url==="/api/finances/manage"&&init?.method!=="POST")return {ok:true,json:async()=>({configured:false,planEligible:false,connections:[]})};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
   "@/lib/connected-accounts.functions": `export const searchConnectedAccount=async({data})=>{window.operations.push(["provider-read",data]);return {service:"Outlook",results:[{id:"result-1",title:"Actual fixture result",url:"https://outlook.live.com/mail/result-1",snippet:"Read result from the isolated fixture"}],limited:true}};export const refreshConnectedAccess=async()=>({ok:true});`,
+  "@/lib/connector-write.functions": `
+    export const getConnectorWriteAccess=async()=>({enabled:!!window.writeAccess});
+    export const setConnectorWriteAccess=async({data})=>{window.operations.push(["write-access",data]);window.writeAccess=data.enabled;return {enabled:data.enabled}};
+    export const createOneDriveFolder=async({data})=>{window.operations.push(["create-folder",data]);return {created:true}};
+    export const createOutlookDraft=async({data})=>{window.operations.push(["create-draft",data]);return {created:true}};
+  `,
+  "@/lib/connector-submissions.functions": `
+    export const listPublishedConnectorSubmissions=async()=>[];
+    export const listConnectorSubmissions=async()=>({own:window.submissions??[],queue:[],reviewer:false});
+    export const checkConnectorSource=async({data})=>{window.operations.push(["validate-source",data]);return {label:"HTTPS URL saved for manual server review",reference:null}};
+    export const saveConnectorSubmission=async({data})=>{
+      const row={...data,revision:data.revision+1,status:"draft",review_note:null,updated_at:"2026-11-23"};
+      window.submissions=[row]; return row;
+    };
+    export const submitConnectorForReview=async({data})=>{
+      const row={...window.submissions[0],status:"submitted"}; window.submissions=[row];
+      window.operations.push(["submit-for-review",data]); return row;
+    };
+    export const reviewConnectorSubmission=async()=>({saved:true});
+  `,
   "@/lib/google-client": `export const getGoogleStatus=async()=>window.googleStatus;export const startGoogleConnect=async(...args)=>{window.operations.push(["google-connect",...args])};export const disconnectGoogleAccount=async(...args)=>{window.operations.push(["google-disconnect",...args]);window.googleStatus={connected:false,state:"disconnected",accounts:[],selectedConnectionId:null,selectionRevision:2}};export const selectGoogleAccount=async(...args)=>window.operations.push(["google-select",...args]);`,
   "@/lib/github.functions": `export const getGitHubManagement=async()=>window.githubData;export const refreshGitHubInstallations=async()=>window.operations.push(["github-refresh"]);export const updateGitHubRepositoryGrants=async(...args)=>window.operations.push(["github-grants",...args]);export const disconnectGitHub=async(...args)=>window.operations.push(["github-disconnect",...args]);`,
   "@/lib/scheduled-tasks.functions": `export const listScheduledTasks=async()=>[];export const listScheduledTaskConnections=async()=>({connections:[],grants:[]});`,
@@ -97,6 +117,7 @@ const healthyGoogle: GoogleStatus = {
       connected: true,
       state: "connected",
       email: "connected@example.test",
+      has: { gmail: true, gmailWrite: true, calendar: true, calendarWrite: true, drive: true },
       scopes: ["gmail.readonly", "calendar.events", "drive.readonly"],
     },
   ],
@@ -142,8 +163,12 @@ async function boot(
     content: `:root { --background:#fff; --foreground:#222; --card:#fafafa; --muted:#eee; --muted-foreground:#666; --border:#ddd; --input:#aaa; --ring:#369; --text-success:#286137; --text-warning:#815300; }*{box-sizing:border-box}body{margin:0;padding:32px;font:15px/1.5 Arial;background:var(--background);color:var(--foreground)}button,input,select{font:inherit}h1,h2,h3,p{margin:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.spec400-plugins{margin:auto}button{cursor:pointer}.spec400-plugin-detail{position:fixed;background:white;z-index:50;overflow-y:auto;translate:-50% -50%}.spec400-plugin-detail [data-kova-dialog-close]{position:absolute;right:12px;top:12px;width:44px;height:44px}.spec400-plugin-detail svg{width:20px;height:20px}[role="alertdialog"]{position:fixed;inset:20%;background:white;border:1px solid #888;padding:24px;z-index:100}.spec400-plugin-management button{margin:4px}${css}`,
   });
   await page.addScriptTag({ content: script });
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
-  await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText("Checking connection…");
+  if (!url.includes("directory=")) {
+    await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
+    await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText(
+      "Checking connection…",
+    );
+  }
 }
 
 test("approved directory keeps all providers and offers Health examples and search", async ({
@@ -166,7 +191,9 @@ test("approved directory keeps all providers and offers Health examples and sear
   await expect(chooser.getByText("Requires Android app", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await picker.getByRole("tab", { name: "All" }).click();
-  await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Browse and manage the tools you use with KovaGPT.", { exact: true }),
+  ).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(12);
   for (const item of MASTER_CONNECTORS) {
     await expect(page.locator(`[data-plugin-id="${item.id}"]`)).toHaveCount(1);
@@ -177,6 +204,10 @@ test("approved directory keeps all providers and offers Health examples and sear
     await expect(card.getByRole("button")).toHaveText("Coming soon");
   }
   await expect(page.getByRole("combobox", { name: "Category", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Email", exact: true }).click();
+  await expect(page.locator('[data-plugin-id="github"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Email · Clear category", exact: true }).click();
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
   await page.getByRole("textbox", { name: "Search connections" }).fill("Gmail");
   await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
   await page.getByRole("textbox", { name: "Search connections" }).fill("missing");
@@ -186,6 +217,102 @@ test("approved directory keeps all providers and offers Health examples and sear
   await page.getByRole("tab", { name: /Connected/ }).click();
   await expect(page.getByRole("heading", { name: "No connections yet" })).toBeVisible();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+});
+
+test("Gmail supports locally enforced read and write settings", async ({ page }) => {
+  await boot(page, healthyGoogle, undefined, undefined, "plus");
+  await page.getByRole("button", { name: "Connected Gmail", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for connected@example.test" }).click();
+  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await expect(permissions.getByRole("button", { name: "Read only" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await permissions.getByRole("button", { name: "Read and write" }).click();
+  await expect(permissions.getByRole("button", { name: "Read and write" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await permissions.getByRole("button", { name: "Read only" }).click();
+  await expect(permissions.getByRole("button", { name: "Read only" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([
+    ["write-access", { enabled: true, subject: { connector: "gmail", target: "account-1" } }],
+    ["write-access", { enabled: false, subject: { connector: "gmail", target: "account-1" } }],
+  ]);
+});
+
+test("MCP submission validates, saves each step, and enters review", async ({ page }) => {
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps?directory=submissions");
+  await page.getByRole("button", { name: "New submission" }).click();
+  await page.getByRole("button", { name: /Remote MCP connector/ }).click();
+  await page.getByRole("button", { name: "Add MCP server" }).click();
+  const server = page.getByRole("dialog", { name: "Add MCP server" });
+  await server.getByLabel("MCP server URL").fill("https://connector.example.com/mcp");
+  await server.getByRole("button", { name: "Save server" }).click();
+  await page.getByRole("button", { name: "Validate source" }).click();
+  await expect(page.getByText("HTTPS URL saved for manual server review")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Plugin name").fill("Example connector");
+  await page.getByLabel("Description", { exact: true }).fill("Search a test workspace.");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Check server registration" }).click();
+  await expect(page.getByText("HTTPS URL saved for manual server review")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel(/Describe the data collected/).fill("Only searches authorized data.");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Contact email").fill("author@example.com");
+  await page.getByRole("checkbox", { name: /authorized to submit/ }).check();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Submit for review" }).click();
+  await expect(page.getByRole("heading", { name: "Example connector" })).toBeVisible();
+  await expect(page.getByText("In review · Remote MCP connector")).toBeVisible();
+});
+
+test("OneDrive confirms the folder name before writing", async ({ page }) => {
+  await boot(page, emptyGoogle, undefined, {
+    configuredProviders: [
+      {
+        id: "microsoft",
+        name: "Microsoft",
+        requiredScopes: [],
+        optionalScopes: ["Files.ReadWrite"],
+      },
+    ],
+    accounts: [
+      {
+        id: "fixture-onedrive",
+        provider_id: "microsoft",
+        account_label: "OneDrive test account",
+        status: "connected",
+        granted_scopes: ["Files.ReadWrite"],
+        token_expires_at: null,
+        deleted_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Connected OneDrive", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for OneDrive test account" }).click();
+  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await permissions.getByRole("button", { name: "Read and write" }).click();
+  await permissions.getByLabel("Folder name in My files").fill("Example folder");
+  await permissions.getByRole("button", { name: "Review folder" }).click();
+  await expect(permissions.getByText("Example folder")).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      (window as FixtureWindow).operations.filter(([kind]) => kind === "create-folder"),
+    ),
+  ).toEqual([]);
+  await permissions.getByRole("button", { name: "Create folder" }).click();
+  await expect(permissions.getByText("Folder created in OneDrive.")).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      (window as FixtureWindow).operations.filter(([kind]) => kind === "create-folder"),
+    ),
+  ).toEqual([["create-folder", { target: "fixture-onedrive", name: "Example folder" }]]);
 });
 
 test("new master entries show the correct native and OAuth setup requirements", async ({

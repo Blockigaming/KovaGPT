@@ -162,3 +162,9 @@ Official Salesforce references:
 - [UserInfo endpoint](https://help.salesforce.com/s/articleView?id=sf.remoteaccess_using_userinfo_endpoint.htm&type=5)
 - [Refresh flow](https://developer.salesforce.com/docs/platform/mobile-sdk/guide/oauth-refresh-token-flow.html)
 - [Token revocation](https://developer.salesforce.com/docs/platform/mobile-sdk/guide/oauth-revoking-tokens.html)
+
+## Directory submissions and write access
+
+Apply the connector controls and submissions migration before deploying the directory. Use the existing administrator allowlist to review submissions. Authors can save drafts and resubmit when a reviewer requests changes. A public repository must have a readable `kova-plugin.json` at its root. The directory verifies its name and description and publishes a link after approval. A remote MCP submission requires a configured, reviewed read tool before publication. Submission validation never sends a request to an unapproved MCP URL or executes bundle code.
+
+The account or repository Permissions panel starts at Read only. Write access needs both the provider grant and the KovaGPT setting. Gmail draft and send actions and Google Calendar event creation retain their chat approval. GitHub issues, new OneDrive folders, and Outlook drafts have a review step in the directory. Outlook drafts stay in Drafts. Switching back to Read only blocks subsequent KovaGPT writes. Review the provider's account settings to remove its underlying grant.
