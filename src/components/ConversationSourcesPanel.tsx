@@ -23,11 +23,13 @@ export function ConversationSourcesPanel({
   browserOnly = false,
   compactBrowser = false,
   hideBrowser = false,
+  hideAttachments = false,
 }: {
   showActivity?: boolean;
   browserOnly?: boolean;
   compactBrowser?: boolean;
   hideBrowser?: boolean;
+  hideAttachments?: boolean;
   activeBrowserOnly?: boolean;
   separateInputs?: boolean;
   hideSourcesHeading?: boolean;
@@ -61,9 +63,11 @@ export function ConversationSourcesPanel({
         inventory={
           browserOnly
             ? { providers: [], web: [], memory: [], attachments: [], browser: browserRows }
-            : hideBrowser
-              ? { ...inventory, browser: [] }
-              : inventory
+            : {
+                ...inventory,
+                browser: hideBrowser ? [] : inventory.browser,
+                attachments: hideAttachments ? [] : inventory.attachments,
+              }
         }
         activeBrowserOnly={activeBrowserOnly}
         compactBrowser={compactBrowser}

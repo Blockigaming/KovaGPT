@@ -128,6 +128,7 @@ function fixture(overrides = {}, desktop = true) {
     react: {
       lazy: () => "LazyComponent",
       Suspense: "Suspense",
+      useId: () => "activity-id",
       useMemo: (fn) => fn(),
       useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
       useState(initial) {
@@ -151,6 +152,8 @@ function fixture(overrides = {}, desktop = true) {
     "@/lib/chat-output-templates": starterTemplates,
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "lucide-react": primitives([
+      "Check",
+      "CircleAlert",
       "ArrowLeft",
       "Archive",
       "File",
@@ -192,6 +195,7 @@ function fixture(overrides = {}, desktop = true) {
     "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: desktop }) },
     "./MobileBottomSheet": { MobileBottomSheet: "MobileBottomSheet" },
     "./MessageActivityList": { MessageActivityList: "MessageActivityList" },
+    "./ConversationSourcesView": { ConversationInputRows: "ConversationInputRows" },
     "./ConversationSourcesPanel": {
       ConversationSourcesPanel: "ConversationSourcesPanel",
       ConversationActivitySummary: "ConversationActivitySummary",
@@ -415,7 +419,7 @@ test("attachment preview returns focus to the visible Activity button", () => {
     (node) => node.type === "button" && node.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("u:attachment:0");
   root = f.render();
   nodes(root)
@@ -440,7 +444,7 @@ test("per-output downloads still use only the selected attachment", async () => 
     },
   });
   nodes(f.render())
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("file-message:attachment:0");
   const originalDocument = globalThis.document;
   const originalCreate = URL.createObjectURL;
@@ -500,7 +504,7 @@ test("outputs open real attachment content and report missing originals truthful
   });
   let root = f.render();
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("u:attachment:0");
   root = f.render();
   assert.equal(text(nodes(root).find((node) => node.type === "pre")), "Exact attached content");
@@ -524,7 +528,7 @@ test("outputs open real attachment content and report missing originals truthful
   });
   root = library.render();
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("u:attachment:0");
   root = library.render();
   assert.match(text(root), /This chat keeps a Library reference/);

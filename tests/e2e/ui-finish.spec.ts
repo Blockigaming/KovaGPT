@@ -329,12 +329,12 @@ test("the conversation checklist collects sources, outputs and real browser meta
         sources: [{ kind: "chat_memory", id: "11111111-1111-4111-8111-111111111111" }],
       };
       chat.messages[1].activities = [
-        "github_read",
-        "supabase_query",
-        "firecrawl_scrape",
-        "library_search",
-        "read_file",
-      ].map((tool) => ({ tool, label: "Reviewed " + tool.split("_")[0], status: "done" }));
+        ["github_read", "Checked the project repository"],
+        ["supabase_query", "Looked up the project record"],
+        ["firecrawl_scrape", "Read the reference page"],
+        ["library_search", "Found the editing template"],
+        ["read_file", "Reviewed the video brief"],
+      ].map(([tool, label]) => ({ tool, label, status: "done" }));
       localStorage.setItem(key, JSON.stringify(chats));
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input, init) => {
@@ -427,10 +427,47 @@ test("the conversation checklist collects sources, outputs and real browser meta
   await page.getByRole("button", { name: "Activity", exact: true }).click();
   expect((await previewRequest).headers()["x-kova-owner"]).toBe(owner);
   const panel = page.locator(".kova-conversation-outputs");
-  await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toHaveAttribute(
-    "aria-expanded",
-    "true",
+  const [outputs, inputs, sources] = ["Outputs", "Inputs", "Sources"].map((name) =>
+    panel.getByRole("region", { name, exact: true }),
   );
+  const sections = [
+    {
+      name: "Outputs",
+      region: outputs,
+      row: outputs.getByRole("button", { name: /Editing checklist/ }),
+    },
+    {
+      name: "Inputs",
+      region: inputs,
+      row: inputs.getByRole("button", { name: /Video brief.txt/ }),
+    },
+    {
+      name: "Sources",
+      region: sources,
+      row: sources.getByRole("button", { name: /Open browser activity/ }),
+    },
+  ];
+  for (const { name, region, row } of sections) {
+    const toggle = region.getByRole("button", { name, exact: true });
+    const arrow = toggle.locator(".kova-activity-chevron");
+    if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+      await toggle.hover();
+    }
+    await expect(arrow).toHaveCSS("opacity", "1");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const controlledId = await toggle.getAttribute("aria-controls");
+    await expect(region.locator(`[id="${controlledId}"]`)).toBeVisible();
+    await arrow.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(row).toBeHidden();
+    for (const other of sections.filter((entry) => entry.name !== name)) {
+      await expect(other.row).toBeVisible();
+    }
+    await expect(arrow).toHaveCSS("opacity", "1");
+    await toggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(row).toBeVisible();
+  }
   for (const name of [
     "GitHub",
     "Supabase",
@@ -449,18 +486,45 @@ test("the conversation checklist collects sources, outputs and real browser meta
   await expect(browser).toContainText("1 tab");
   await expect(panel.getByRole("button", { name: /Editing checklist/ })).toBeVisible();
   await expect(panel.getByRole("button", { name: /Shot schedule/ })).toBeVisible();
-  await expect(panel.getByText("Video brief.txt", { exact: true })).toBeVisible();
-  await expect(panel.getByText("Shot list.txt", { exact: true })).toBeVisible();
+  await expect(inputs.getByText("Video brief.txt", { exact: true })).toBeVisible();
+  await expect(inputs.getByText("Shot list.txt", { exact: true })).toBeVisible();
+  await expect(sources.getByText("Shot list.txt", { exact: true })).toHaveCount(0);
   const preview = browser.getByRole("img", { name: "Current cloud browser preview" });
   await expect(preview).toBeVisible();
   await expect(preview).toHaveAttribute("src", /^blob:/);
   await expect
     .poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBe(400);
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await panel.getByText("Browsing YouTube", { exact: true }).click();
+    await sources.getByRole("button", { name: "Sources", exact: true }).hover();
+  }
   await page.screenshot({
     path: `artifacts/ui-finish-${test.info().project.name}-checklist.png`,
     fullPage: true,
   });
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ width: viewport.width, height: 470 });
+  const scrollBody = await panel.evaluateHandle((element) => {
+    for (let parent: HTMLElement | null = element; parent; parent = parent.parentElement) {
+      if (getComputedStyle(parent).overflowY === "auto") return parent;
+    }
+    throw new Error("Activity has no scroll container");
+  });
+  await expect
+    .poll(() => scrollBody.evaluate((body) => body.scrollHeight - body.clientHeight))
+    .toBeGreaterThan(0);
+  await scrollBody.evaluate((body) => (body.scrollTop = 0));
+  const scrollBounds = await scrollBody.asElement().boundingBox();
+  expect(scrollBounds).not.toBeNull();
+  await page.mouse.move(
+    scrollBounds!.x + scrollBounds!.width / 2,
+    scrollBounds!.y + scrollBounds!.height / 2,
+  );
+  await page.mouse.wheel(0, 1000);
+  await expect.poll(() => scrollBody.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
+  await expect(panel.getByText("Memory", { exact: true })).toBeInViewport();
+  await page.setViewportSize(viewport);
   await browser.getByRole("button", { name: /Open browser activity/ }).click();
   const workspace = page.getByRole("dialog", { name: "Cloud browser", exact: true });
   await expect(workspace.getByRole("img", { name: "Current cloud browser preview" })).toBeVisible();

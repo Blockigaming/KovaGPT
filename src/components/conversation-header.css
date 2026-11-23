@@ -515,6 +515,7 @@
 
 .kova-conversation-outputs {
   --kova-activity-row-height: 32px;
+  scrollbar-width: thin;
   width: min(360px, calc(100vw - 24px));
   padding: 10px 14px;
   border: 0;
@@ -619,11 +620,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 4px;
 }
 .kova-activity-inventory .kova-activity-section-toggle {
   min-height: var(--kova-activity-row-height);
   justify-content: flex-start;
-  width: auto;
+  flex: 1;
   padding-inline: 8px;
   border-radius: 12px;
   color: var(--foreground);
@@ -633,6 +635,7 @@
 .kova-activity-inventory .kova-activity-chevron {
   opacity: 0;
 }
+.kova-activity-inventory-heading:hover .kova-activity-chevron,
 .kova-activity-inventory .kova-activity-section-toggle:hover .kova-activity-chevron,
 .kova-activity-inventory .kova-activity-section-toggle:focus-visible .kova-activity-chevron,
 .kova-activity-inventory .kova-activity-chevron.is-collapsed {
@@ -715,27 +718,25 @@
   padding-block: 4px;
 }
 .kova-activity-progress {
-  position: relative;
-  margin: 2px 0 4px 8px;
-  padding-inline-start: 18px;
+  margin: 0 0 4px;
+  padding: 0;
   list-style: none;
-}
-.kova-activity-progress::before {
-  position: absolute;
-  inset-block: 5px;
-  inset-inline-start: 3px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--border-subtle);
-  content: "";
 }
 .kova-activity-progress li {
   position: relative;
   padding-block: 3px;
+  padding-inline: 29px 8px;
   color: var(--muted-foreground);
   font-size: 13px;
   line-height: 18px;
   overflow-wrap: anywhere;
+}
+.kova-activity-step-icon {
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-start: 8px;
+  width: 14px;
+  height: 14px;
 }
 .kova-activity-progress li[data-status="running"] {
   color: var(--foreground);
@@ -743,7 +744,7 @@
 .kova-activity-progress li[data-status="running"]::before {
   position: absolute;
   inset-block-start: 8px;
-  inset-inline-start: -18px;
+  inset-inline-start: 11px;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -751,7 +752,7 @@
   content: "";
 }
 .kova-activity-step-status {
-  margin-inline-start: 4px;
+  margin-inline-start: 6px;
   font-size: 12px;
 }
 .kova-activity-progress-empty {

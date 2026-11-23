@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
 for (const [connector, label, permission] of [
-  ["gmail", "Gmail", "read email, manage drafts, and send email"],
-  ["google-calendar", "Google Calendar", "read and edit calendar events"],
+  ["gmail", "Gmail", "read email, create drafts, and send email after confirmation"],
+  ["google-calendar", "Google Calendar", "read events and create events after confirmation"],
   ["google-drive", "Google Drive", "read Drive files"],
 ]) {
   test(`${label} Connect sends only its own service selection`, async ({ page }) => {

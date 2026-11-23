@@ -804,7 +804,7 @@
 .spec400-composer-dock > .spec400-chat-input {
   max-width: none;
   overflow-y: auto;
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable;
   padding-inline: 4px;
   padding-top: 4px;
 }

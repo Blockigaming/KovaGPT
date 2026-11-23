@@ -3,6 +3,7 @@
 @import "tw-animate-css";
 @import "./styles/core-system.css";
 @import "./styles/sidebar-core.css";
+@import "./styles/held-chat-menu.css";
 @import "./styles/composer-core.css";
 @import "./styles/core-pages.css";
 @import "./components/account-surfaces.css";

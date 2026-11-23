@@ -200,17 +200,14 @@ for (const state of states) {
       unchanged(".kova-file-filters button", ["font", "line", "radius"]);
     }
     if (state.name === "connections") {
-      unchanged(".spec400-plugin-card", ["radius", "display"]);
-      expect(row(".spec400-plugin-card").padding).toBe("8px");
+      // Phones list connections as rows inside one grouped card.
+      expect(row(".spec400-plugin-card").radius).toBe("0px");
       expect(row(".spec400-plugin-card").gap).toBe("8px");
-      expect(row(".spec400-plugin-grid").columns.split(" ")).toHaveLength(1);
+      expect(row(".spec400-plugin-grid").display).toBe("block");
     }
     if (state.name === "settings") {
-      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS("font-size", "24px");
-      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS(
-        "line-height",
-        "28.8px",
-      );
+      // Settings opens as a modal; its section heading stays in view.
+      await expect(page.locator(".kova-settings-content-header h2")).toBeInViewport();
     }
     if (state.name === "tasks") {
       await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "24px");

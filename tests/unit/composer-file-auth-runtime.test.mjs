@@ -100,6 +100,7 @@ function fixture(
       ];
     },
     useEffect() {},
+    useCallback: (callback) => callback,
     useSyncExternalStore: () => true,
     lazy: (loader) => String(loader).match(/Composer[A-Za-z]+/)?.[0] ?? "Lazy",
     Suspense: "Suspense",
@@ -263,7 +264,12 @@ function fixture(
     offer: () => nodes(tree).find((node) => node.type === "ComposerPasteOffer")?.props,
     input: () => nodes(tree).find((node) => node.type === "textarea").props,
     async click(label) {
-      await button(label).onClick();
+      await button(label).onClick({
+        detail: 0,
+        currentTarget: { isConnected: true, focus() {} },
+        preventDefault() {},
+        stopPropagation() {},
+      });
       await flush();
     },
     async update(next) {
@@ -716,7 +722,7 @@ test("removing a file also blocks a stale Send callback and queued file analysis
   );
   const staleSend = f.button("Send message").onClick;
   await f.click("Remove Data.csv");
-  staleSend();
+  staleSend({ detail: 0 });
   await f.flush();
   assert.deepEqual(f.submittedTools, []);
   assert.match(text(f.nodes()), /Attach a text file/);
@@ -735,7 +741,7 @@ test("stale analysis Send callbacks cannot run for a replacement account", async
   const f = fixture({ selectedTool: "data_analysis" }, { isLoaded: true, user: { id: "owner-a" } });
   const staleSend = f.button("Send message").onClick;
   await f.account({ isLoaded: true, user: { id: "owner-b" } });
-  staleSend();
+  staleSend({ detail: 0 });
   await f.flush();
   assert.deepEqual(f.submittedTools, []);
   await f.click("Send message");

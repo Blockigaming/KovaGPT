@@ -50,6 +50,41 @@ export function ConversationActivitySummary({
     </div>
   );
 }
+export function ConversationInputRows({
+  attachments,
+  onOpenAttachment,
+}: {
+  attachments: ConversationSourceInventory["attachments"];
+  onOpenAttachment: (outputId: string) => void;
+}) {
+  return (
+    <>
+      {attachments.map((entry) => (
+        <button
+          key={entry.id}
+          type="button"
+          className="kova-output-row"
+          title={entry.name}
+          onClick={() => onOpenAttachment(entry.outputId)}
+        >
+          {entry.attachmentKind === "image" ? (
+            <Image aria-hidden="true" />
+          ) : (
+            <File aria-hidden="true" />
+          )}
+          <span className="kova-output-name">{entry.name}</span>
+          <span className="kova-output-label">Available</span>
+        </button>
+      ))}
+      {attachments.length > 0 && (
+        <p className="kova-header-note">
+          Attached to this chat. Use in a response is not confirmed.
+        </p>
+      )}
+    </>
+  );
+}
+
 export function ConversationSourcesView({
   inventory,
   onOpenAttachment,
@@ -232,28 +267,10 @@ export function ConversationSourcesView({
         </details>
       )}
       {separateInputs && inventory.attachments.length > 0 ? <h2>Inputs</h2> : null}
-      {inventory.attachments.map((entry) => (
-        <button
-          key={entry.id}
-          type="button"
-          className="kova-output-row"
-          title={entry.name}
-          onClick={() => onOpenAttachment(entry.outputId)}
-        >
-          {entry.attachmentKind === "image" ? (
-            <Image aria-hidden="true" />
-          ) : (
-            <File aria-hidden="true" />
-          )}
-          <span className="kova-output-name">{entry.name}</span>
-          <span className="kova-output-label">Available</span>
-        </button>
-      ))}
-      {inventory.attachments.length > 0 && (
-        <p className="kova-header-note">
-          Attached to this chat. Use in a response is not confirmed.
-        </p>
-      )}
+      <ConversationInputRows
+        attachments={inventory.attachments}
+        onOpenAttachment={onOpenAttachment}
+      />
       {!compactBrowser && browsers.length > 0 && (
         <section className="kova-browser-section" aria-label="Cloud browser">
           {showActivity ? (

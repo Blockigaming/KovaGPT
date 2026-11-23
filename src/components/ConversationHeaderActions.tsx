@@ -2,8 +2,18 @@ import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { CloudBrowserTakeover } from "./CloudBrowserTakeover";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import {
+  Check,
+  CircleAlert,
   FileText,
   Image,
   Share,
@@ -37,6 +47,7 @@ import type { MemorySources } from "@/lib/memory-sources.mjs";
 import { conversationSources, type ConversationBrowserSource } from "@/lib/conversation-sources";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
+import { ConversationInputRows } from "./ConversationSourcesView";
 import {
   conversationWithLiveBrowserActivity,
   getLiveBrowserActivity,
@@ -145,6 +156,8 @@ export function ConversationHeaderActions({
   );
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
+  const activityId = useId();
+  const [inputsCollapsed, setInputsCollapsed] = useState(false);
   const [outputsOpen, setOutputsOpen] = useState(false);
   const [outputsCollapsed, setOutputsCollapsed] = useState(false);
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
@@ -210,10 +223,16 @@ export function ConversationHeaderActions({
   const hasSources = Boolean(
     sourceInventory.web.length ||
     sourceInventory.memory.length ||
-    sourceInventory.attachments.length ||
     sourceInventory.providers?.length ||
     (signedIn && sourceInventory.browser.length),
   );
+  const openAttachment = (outputId: string) => {
+    const output = outputs.find((item) => item.id === outputId);
+    if (!output) return;
+    rememberFocus(outputsRef.current);
+    setSelectedOutput(output);
+    setOutputsOpen(false);
+  };
   const formatIcons = { docx: FileText, pptx: PanelsTopLeft, xlsx: Table2 };
   const handOff = (action: () => void, opensDialog = false) => {
     dialogOpeningRef.current = opensDialog;
@@ -287,6 +306,7 @@ export function ConversationHeaderActions({
           type="button"
           className="kova-activity-section-toggle"
           aria-expanded={!progressCollapsed}
+          aria-controls={`${activityId}-progress`}
           onClick={() => setProgressCollapsed(!progressCollapsed)}
         >
           <span>Progress</span>
@@ -295,30 +315,34 @@ export function ConversationHeaderActions({
             aria-hidden="true"
           />
         </button>
-        {!progressCollapsed && (
-          <div aria-live="polite">
-            {steps.length ? (
-              <ol className="kova-activity-progress">
-                {steps.map((step) => (
-                  <li key={step.key} data-status={step.status}>
-                    <span>{step.label}</span>{" "}
-                    <span
-                      className={
-                        step.status === "done" || step.status === "running"
-                          ? "sr-only"
-                          : "kova-activity-step-status"
-                      }
-                    >
-                      {stepStatusLabels[step.status]}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="kova-activity-progress-empty">No steps recorded</p>
-            )}
-          </div>
-        )}
+        <div id={`${activityId}-progress`} hidden={progressCollapsed} aria-live="polite">
+          {steps.length ? (
+            <ol className="kova-activity-progress">
+              {steps.map((step) => (
+                <li key={step.key} data-status={step.status}>
+                  {step.status === "done" && (
+                    <Check className="kova-activity-step-icon" aria-hidden="true" />
+                  )}
+                  {step.status !== "done" && step.status !== "running" && (
+                    <CircleAlert className="kova-activity-step-icon" aria-hidden="true" />
+                  )}
+                  <span>{step.label}</span>
+                  <span
+                    className={
+                      step.status === "done" || step.status === "running"
+                        ? "sr-only"
+                        : "kova-activity-step-status"
+                    }
+                  >
+                    {stepStatusLabels[step.status]}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="kova-activity-progress-empty">No steps recorded</p>
+          )}
+        </div>
       </section>
       <section className="kova-activity-inventory" aria-label="Outputs">
         {renderMenu({
@@ -330,6 +354,7 @@ export function ConversationHeaderActions({
                 type="button"
                 className="kova-activity-section-toggle"
                 aria-expanded={!outputsCollapsed}
+                aria-controls={`${activityId}-outputs`}
                 onClick={() => {
                   setOutputsCollapsed(!outputsCollapsed);
                   setMenu(null);
@@ -374,8 +399,8 @@ export function ConversationHeaderActions({
             </>
           ),
         })}
-        {!outputsCollapsed &&
-          (generatedOutputs.length ? (
+        <div id={`${activityId}-outputs`} hidden={outputsCollapsed}>
+          {generatedOutputs.length ? (
             <div className="kova-output-list">
               {generatedOutputs.map((output) => (
                 <button
@@ -408,7 +433,33 @@ export function ConversationHeaderActions({
             >
               Create an output
             </button>
-          ))}
+          )}
+        </div>
+      </section>
+      <section className="kova-activity-inventory" aria-label="Inputs">
+        <button
+          type="button"
+          className="kova-activity-section-toggle"
+          aria-expanded={!inputsCollapsed}
+          aria-controls={`${activityId}-inputs`}
+          onClick={() => setInputsCollapsed(!inputsCollapsed)}
+        >
+          <span>Inputs</span>
+          <ChevronDown
+            className={`kova-activity-chevron${inputsCollapsed ? " is-collapsed" : ""}`}
+            aria-hidden="true"
+          />
+        </button>
+        <div id={`${activityId}-inputs`} hidden={inputsCollapsed}>
+          {sourceInventory.attachments.length ? (
+            <ConversationInputRows
+              attachments={sourceInventory.attachments}
+              onOpenAttachment={openAttachment}
+            />
+          ) : (
+            <p className="kova-activity-progress-empty">No files attached</p>
+          )}
+        </div>
       </section>
       <section className="kova-activity-inventory" aria-label="Sources">
         {renderMenu({
@@ -420,6 +471,7 @@ export function ConversationHeaderActions({
                 type="button"
                 className="kova-activity-section-toggle"
                 aria-expanded={!sourcesCollapsed}
+                aria-controls={`${activityId}-sources`}
                 onClick={() => {
                   setSourcesCollapsed(!sourcesCollapsed);
                   setMenu(null);
@@ -490,12 +542,13 @@ export function ConversationHeaderActions({
             </>
           ),
         })}
-        {!sourcesCollapsed &&
-          (hasSources ? (
+        <div id={`${activityId}-sources`} hidden={sourcesCollapsed}>
+          {hasSources ? (
             <ConversationSourcesPanel
               hideBrowser={!signedIn}
               compactBrowser
               hideSourcesHeading
+              hideAttachments
               showActivity={false}
               conversation={conversation}
               browserTabCount={
@@ -514,13 +567,7 @@ export function ConversationHeaderActions({
                 setOutputsOpen(false);
                 setSelectedMemory(sources);
               }}
-              onOpenAttachment={(outputId) => {
-                const output = outputs.find((item) => item.id === outputId);
-                if (!output) return;
-                rememberFocus(outputsRef.current);
-                setSelectedOutput(output);
-                setOutputsOpen(false);
-              }}
+              onOpenAttachment={openAttachment}
             />
           ) : (
             <button
@@ -531,7 +578,8 @@ export function ConversationHeaderActions({
             >
               Attach files or connect apps
             </button>
-          ))}
+          )}
+        </div>
       </section>
     </>
   );

@@ -83,7 +83,9 @@ test("dedicated settings excludes workspace navigation and supports desktop drag
     await page.mouse.down();
     await page.mouse.move(box!.x + 64, box!.y + 100);
     await page.mouse.up();
-    const expectedWidth = page.viewportSize()!.width < 1024 ? 240 : 350;
+    // The modal's own width bounds the navigation drag.
+    const frame = (await navigation.locator("..").boundingBox())!.width;
+    const expectedWidth = Math.min(350, frame - 400, frame < 1024 ? 240 : 440);
     await expect(edge).toHaveAttribute("aria-valuenow", String(expectedWidth));
     const actual = await navigation.boundingBox();
     expect(actual!.width).toBeCloseTo(expectedWidth, 0);

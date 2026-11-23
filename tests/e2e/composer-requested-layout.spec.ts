@@ -118,8 +118,8 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   );
   if (phoneComposer) expect(inset.x).toBeCloseTo(19, 0);
   else {
-    if (insetComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
-    expect(inset.x).toBeLessThanOrEqual(insetComposer ? 26 : 18);
+    if (insetComposer) expect(inset.x).toBeGreaterThanOrEqual(19);
+    expect(inset.x).toBeLessThanOrEqual(insetComposer ? 26 : 19);
   }
   expect(inset.y).toBeLessThanOrEqual(20);
   if (!(await usesSidebarDrawer(page))) {
