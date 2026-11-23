@@ -1195,7 +1195,7 @@ function ThreeD({ spec, type, colors }: Props) {
   };
   const shade = (z: number) =>
     `color-mix(in srgb, ${colors[0]} ${Math.round(25 + ((z - zmin) / (zmax - zmin || 1)) * 75)}%, var(--card))`;
-  let marks: ReactNode = null;
+  let marks: ReactNode;
   if (grid) {
     const quads = [];
     for (let j = 0; j < grid.ys.length - 1; j++)
