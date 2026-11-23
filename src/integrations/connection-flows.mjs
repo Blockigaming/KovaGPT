@@ -244,6 +244,14 @@ export const CONNECTION_FLOWS = {
     description:
       "Find shared Notion pages by title, or pass the page ID returned by a previous search to read its Markdown content.",
   },
+  "notion-private": {
+    provider: "notion-private",
+    authentication: "api-key",
+    scopes: ["page:read"],
+    tool: "notion_read_linked_page",
+    label: "Notion linked page",
+    description: "Read the single Notion page linked to this credential. Use the query 'open'.",
+  },
   linear: {
     provider: "linear",
     scopes: ["read"],

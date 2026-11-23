@@ -695,6 +695,36 @@ test("Outlook Calendar reuses only a calendar-authorized account and requests ba
   });
 });
 
+test("Notion can read a linked page without a public OAuth app", async ({ page }) => {
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
+    configuredProviders: [{ id: "notion-private" }],
+    accounts: [
+      {
+        id: "linked-page-account",
+        provider_id: "notion-private",
+        status: "connected",
+        granted_scopes: ["page:read"],
+        account_label: "Notion linked page",
+        token_expires_at: null,
+        deleted_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Connected Notion", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Notion", exact: true });
+  await expect(dialog.getByLabel("Notion page ID", { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel("Notion internal integration token")).toHaveAttribute(
+    "type",
+    "password",
+  );
+  await dialog.getByRole("button", { name: "Read linked page", exact: true }).click();
+  await expect(dialog.getByText("Actual fixture result")).toBeVisible();
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toContainEqual([
+    "provider-read",
+    { connectionId: "notion-private", accountId: "linked-page-account", query: "open" },
+  ]);
+});
+
 test("Salesforce management sends the selected record type with the owner-bound account", async ({
   page,
 }) => {

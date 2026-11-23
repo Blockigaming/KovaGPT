@@ -45,6 +45,7 @@ const KEY_CONNECTION_FIELDS: Record<
     { field: "accessToken", label: "Webull access token", secret: true, optional: true },
   ],
   wix: [{ field: "clientId", label: "Wix Headless client ID" }],
+  "notion-private": [{ field: "pageId", label: "Notion page ID" }],
   "custom-mcp": [{ field: "serverId", label: "Approved server ID" }],
 };
 
@@ -56,6 +57,7 @@ const KEY_CREDENTIAL_LABELS: Record<string, string> = {
   "sp-global": "Capital IQ API password",
   webull: "Webull app secret",
   wix: "Wix Headless client secret",
+  "notion-private": "Notion internal integration token",
   "custom-mcp": "MCP bearer token",
 };
 
@@ -115,6 +117,8 @@ export function ConnectedAccountManager({
             ? "issues:create"
             : null;
   const usesApiKey = flow.authentication === "api-key";
+  const linkedPage = id === "notion-private";
+  const readQuery = linkedPage ? "open" : query.trim();
   const configured =
     data?.configuredProviders.some((provider) => provider.id === flow.provider) === true;
   const start = async (existingAccountId?: string, write = false) => {
@@ -144,7 +148,7 @@ export function ConnectedAccountManager({
   const linkApiKey = async (form: HTMLFormElement) => {
     const field = keyInput.current;
     const apiKey = field?.value.trim();
-    if (busy || loading || error || !configured || !field || !apiKey) return;
+    if (busy || loading || error || !configured || !field || !apiKey || !owner) return;
     const credentials = Object.fromEntries(
       Array.from(
         form.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-credential-field]"),
@@ -162,7 +166,7 @@ export function ConnectedAccountManager({
         "/api/integrations/accounts",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Kova-Owner": owner },
           body: JSON.stringify({ ...credentials, provider: flow.provider, apiKey }),
         },
         25_000,
@@ -189,7 +193,7 @@ export function ConnectedAccountManager({
     }
   };
   const search = async (accountId: string) => {
-    if (busy || !owner || !query.trim()) return;
+    if (busy || !owner || !readQuery) return;
     setBusy(true);
     setResult(null);
     setReadError(null);
@@ -198,7 +202,7 @@ export function ConnectedAccountManager({
         data: {
           connectionId: operationId,
           accountId,
-          query,
+          query: readQuery,
           ...(id === "salesforce" ? { recordType } : {}),
         },
         headers: { "X-Kova-Owner": owner },
@@ -246,7 +250,7 @@ export function ConnectedAccountManager({
   };
   return (
     <section className="spec400-plugin-detail-section" aria-label={`${flow.label} accounts`}>
-      <h3>Accounts</h3>
+      <h3>{linkedPage ? "Link a Notion page" : "Accounts"}</h3>
       {id === "ms-teams" && (
         <div className="my-3 space-y-2">
           <label htmlFor="teams-search-type">Teams access</label>
@@ -291,7 +295,11 @@ export function ConnectedAccountManager({
           </Select>
         </div>
       )}
-      <p>{flow.description}</p>
+      <p>
+        {linkedPage
+          ? "Create a read-only internal integration in Notion, share the page with it, then enter the page ID and token."
+          : flow.description}
+      </p>
       {id === "hyperframes-heygen" && (
         <p className="text-sm text-muted-foreground">
           Use a restricted HeyGen key with HyperFrames read access.
@@ -447,34 +455,36 @@ export function ConnectedAccountManager({
               </Select>
             </div>
           )}
-          <label className="block mt-4">
-            {id === "figma"
-              ? "Figma file"
-              : id === "google-bigquery"
-                ? "Google Cloud project ID"
-                : `Search ${flow.label}`}
-            <Input
-              value={query}
-              maxLength={id === "canva" ? 255 : 300}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setResult(null);
-              }}
-              placeholder={
-                id === "notion"
-                  ? "Enter a title or page ID"
-                  : id === "figma"
-                    ? "Enter a design link or file key"
-                    : id === "google-bigquery"
-                      ? "Enter a Google Cloud project ID"
-                      : id === "calendly"
-                        ? "Enter a meeting title or upcoming"
-                        : id === "granola"
-                          ? "Enter a note title or recent"
-                          : "Enter a search"
-              }
-            />
-          </label>
+          {!linkedPage && (
+            <label className="block mt-4">
+              {id === "figma"
+                ? "Figma file"
+                : id === "google-bigquery"
+                  ? "Google Cloud project ID"
+                  : `Search ${flow.label}`}
+              <Input
+                value={query}
+                maxLength={id === "canva" ? 255 : 300}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setResult(null);
+                }}
+                placeholder={
+                  id === "notion"
+                    ? "Enter a title or page ID"
+                    : id === "figma"
+                      ? "Enter a design link or file key"
+                      : id === "google-bigquery"
+                        ? "Enter a Google Cloud project ID"
+                        : id === "calendly"
+                          ? "Enter a meeting title or upcoming"
+                          : id === "granola"
+                            ? "Enter a note title or recent"
+                            : "Enter a search"
+                }
+              />
+            </label>
+          )}
           <ul className="space-y-3 mt-3">
             {accounts.map((account) => (
               <li key={account.id} className="rounded-xl border p-3">
@@ -518,17 +528,19 @@ export function ConnectedAccountManager({
                       loading ||
                       error ||
                       !canReadConnection(account, operationId) ||
-                      !query.trim()
+                      !readQuery
                     }
                     onClick={() => {
                       void search(account.id);
                     }}
                   >
-                    {id === "figma"
-                      ? "Read this file"
-                      : id === "google-bigquery"
-                        ? "List datasets"
-                        : "Search this account"}
+                    {linkedPage
+                      ? "Read linked page"
+                      : id === "figma"
+                        ? "Read this file"
+                        : id === "google-bigquery"
+                          ? "List datasets"
+                          : "Search this account"}
                   </Button>
                   <Button
                     variant="ghost"

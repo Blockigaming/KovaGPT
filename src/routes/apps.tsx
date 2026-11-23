@@ -1390,8 +1390,13 @@ function AppsPage() {
     void refreshOtherConnections();
   }, [activityReady, isSignedIn, refreshOtherConnections]);
 
+  const notionKeyConfigured =
+    otherConnections.data?.configuredProviders.some(({ id }) => id === "notion-private") === true;
+  const notionOAuthConfigured =
+    otherConnections.data?.configuredProviders.some(({ id }) => id === "notion") === true;
   const configuredOf = (id: string) => {
     if (id === "github") return visibleGithubData?.configured !== false;
+    if (id === "notion") return notionKeyConfigured || notionOAuthConfigured;
     if (NATIVE_HEALTH_IDS.has(id)) return true;
     if (id === "oura")
       return (
@@ -1450,6 +1455,14 @@ function AppsPage() {
     if (CONNECTION_FLOWS[id]) {
       if (otherConnections.loading) return "syncing";
       if (otherConnections.error || !configuredOf(id)) return "temporarily_unavailable";
+      if (
+        id === "notion" &&
+        notionKeyConfigured &&
+        otherConnections.data?.accounts.some((account) =>
+          canReadConnection(account, "notion-private"),
+        )
+      )
+        return "connected";
       const accounts = connectionAccounts(otherConnections.data?.accounts ?? [], id);
       if (
         accounts.some(
@@ -1482,6 +1495,13 @@ function AppsPage() {
       );
     if (id === "github")
       return !!visibleGithubData?.accounts.some((account) => account.status !== "disconnected");
+    if (
+      id === "notion" &&
+      otherConnections.data?.accounts.some(
+        (account) => account.provider_id === "notion-private" && account.status !== "revoked",
+      )
+    )
+      return true;
     if (id === "oura")
       return (
         otherConnections.data?.accounts.some(
@@ -1955,6 +1975,27 @@ function AppsPage() {
                     </p>
                     <Button onClick={() => void navigate({ to: "/" })}>Open chat</Button>
                   </section>
+                ) : visibleSelectedApp.id === "notion" && notionKeyConfigured ? (
+                  <>
+                    {notionOAuthConfigured && (
+                      <ConnectedAccountManager
+                        key={`${principal}:notion`}
+                        id="notion"
+                        data={otherConnections.data}
+                        loading={otherConnections.loading}
+                        error={otherConnections.error}
+                        reload={otherConnections.reload}
+                      />
+                    )}
+                    <ConnectedAccountManager
+                      key={`${principal}:notion-private`}
+                      id="notion-private"
+                      data={otherConnections.data}
+                      loading={otherConnections.loading}
+                      error={otherConnections.error}
+                      reload={otherConnections.reload}
+                    />
+                  </>
                 ) : CONNECTION_FLOWS[visibleSelectedApp.id] ? (
                   <ConnectedAccountManager
                     key={`${principal}:${visibleSelectedApp.id}`}

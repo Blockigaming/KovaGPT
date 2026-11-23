@@ -29,6 +29,7 @@ const providerReadErrors = new Map([
     "The provider returned an unexpected response. Try again shortly.",
   ],
   ["connection_account_not_allowed", "The selected account no longer grants this read."],
+  ["invalid_connection_query", "This connector does not support that query."],
   [
     "connection_status_unavailable",
     "Account status is temporarily unavailable. Try again shortly.",

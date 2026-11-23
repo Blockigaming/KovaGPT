@@ -8,6 +8,11 @@ import { readMcpConnection } from "./mcp-provider-read.server.mjs";
 
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
 const notionPageId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+function linkedNotionPage(query, token) {
+  if (typeof query !== "string" || query.length > 300 || query.trim().toLowerCase() !== "open")
+    throw new Error("invalid_connection_query");
+  return unpackKeyCredential("notion-private", token);
+}
 
 const figmaFileKey = /^[a-zA-Z0-9]{1,64}$/u;
 
@@ -40,6 +45,10 @@ const title = (page) => {
 
 export function connectionReadRequest(id, query, token, options = {}) {
   if (!Object.hasOwn(CONNECTION_FLOWS, id)) throw new Error("unsupported_connection");
+  if (id === "notion-private") {
+    const { apiKey, pageId } = linkedNotionPage(query, token);
+    return connectionReadRequest("notion", pageId, apiKey, options);
+  }
   if (id === "salesforce") return salesforceReadRequest(query, token, options.recordType);
   if (typeof query !== "string" || !query.trim() || query.length > 300)
     throw new Error("invalid_connection_query");
@@ -208,6 +217,11 @@ export function connectionReadRequest(id, query, token, options = {}) {
 }
 
 export async function readConnection(id, query, token, fetchImpl = fetch, options = {}) {
+  if (id === "notion-private") {
+    const { apiKey, pageId } = linkedNotionPage(query, token);
+    await options.beforeRequest?.();
+    return readConnection("notion", pageId, apiKey, fetchImpl, options);
+  }
   if (id === "tana" || id === "custom-mcp")
     return readMcpConnection(id, query, token, fetchImpl, options.beforeRequest);
   if (isAccountProviderRead(id)) {

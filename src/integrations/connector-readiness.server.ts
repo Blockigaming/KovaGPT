@@ -110,6 +110,7 @@ export function connectorDeploymentReadiness(request: Request): Check[] {
     if (googleIds.has(id)) requiredSettings = google;
     else if (id === "github") requiredSettings = github;
     else if (id === "plaid") requiredSettings = plaid;
+    else if (id === "notion" && keyProviders.has("notion-private")) requiredSettings = [];
     else {
       const flow = CONNECTION_FLOWS[id];
       const providerId = flow?.provider ?? id;

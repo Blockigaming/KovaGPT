@@ -116,7 +116,12 @@ export const Route = createFileRoute("/api/integrations/accounts")({
               throw new Error("connection_session_changed");
             await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "connector_write");
           };
-          const probeQuery = provider.id === "sp-global" ? "Facebook" : "recent";
+          const probeQuery =
+            provider.id === "sp-global"
+              ? "Facebook"
+              : provider.id === "notion-private"
+                ? "open"
+                : "recent";
           await readConnection(provider.id, probeQuery, token, undefined, {
             beforeRequest: checkConsent,
           });

@@ -84,6 +84,13 @@ export function prepareKeyCredential(provider, input) {
     binding = { clientId };
     accountId = clientId;
     labelSuffix = `project ending ${clientId.slice(-6)}`;
+  } else if (provider === "notion-private") {
+    const compact = field("pageId").toLowerCase().replaceAll("-", "");
+    if (!/^[a-f0-9]{32}$/u.test(compact)) throw new Error("invalid_connection_credential");
+    const pageId = compact.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/u, "$1-$2-$3-$4-$5");
+    binding = { pageId };
+    accountId = pageId;
+    labelSuffix = `page ending ${compact.slice(-6)}`;
   } else if (provider === "custom-mcp") {
     const serverId = field("serverId");
     const server = approvedMcpServers().get(serverId);

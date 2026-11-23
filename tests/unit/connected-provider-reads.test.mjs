@@ -20,6 +20,54 @@ import {
   selectRefreshTokens,
 } from "../../src/integrations/oauth-token-request.server.mjs";
 
+test("a Notion internal integration can read only its bound page", async () => {
+  const apiKey = "ntn_fixture_read_only";
+  const pageId = "12345678-abcd-4123-8123-12345678abcd";
+  const { token, accountId } = prepareKeyCredential("notion-private", {
+    apiKey,
+    pageId: pageId.replaceAll("-", ""),
+  });
+  assert.equal(accountId, pageId);
+  let allowed = false;
+  let calls = 0;
+  const request = async (url, init) => {
+    assert.equal(allowed, true);
+    calls++;
+    assert.equal(new URL(url).pathname, `/v1/pages/${pageId}/markdown`);
+    assert.equal(new URL(url).origin, "https://api.notion.com");
+    assert.equal(init.method, "GET");
+    assert.equal(init.headers.Authorization, `Bearer ${apiKey}`);
+    return Response.json({
+      object: "page_markdown",
+      id: pageId,
+      markdown: "Fixture page only",
+      truncated: false,
+      unknown_block_ids: [],
+    });
+  };
+  await assert.rejects(
+    readConnection("notion-private", "12345678-abcd-4123-8123-12345678abce", token, request),
+    /invalid_connection_query/u,
+  );
+  await assert.rejects(
+    readConnection("notion-private", "open", token, request, {
+      beforeRequest: async () => {
+        throw new Error("connection_changed_or_expired");
+      },
+    }),
+    /connection_changed_or_expired/u,
+  );
+  assert.equal(calls, 0);
+  const result = await readConnection("notion-private", "open", token, request, {
+    beforeRequest: async () => {
+      allowed = true;
+    },
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.results[0].snippet, "Fixture page only");
+  assert.doesNotMatch(JSON.stringify(result), /ntn_fixture/u);
+});
+
 test("a Microsoft account is usable only for the service scopes it actually has", () => {
   const account = {
     provider_id: "microsoft",
@@ -252,6 +300,10 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     }).token,
     etoro: prepareKeyCredential("etoro", { apiKey: "fake-token", userKey: "fixture-user-key" })
       .token,
+    "notion-private": prepareKeyCredential("notion-private", {
+      apiKey: "fake-token",
+      pageId: "12345678-abcd-4123-8123-12345678abcd",
+    }).token,
   };
   for (const id of Object.keys(CONNECTION_FLOWS)) {
     // Account adapters with multi-step requests have transport-level fixtures of their own.
@@ -265,7 +317,9 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
           ? "recent"
           : id === "google-bigquery"
             ? "example-project"
-            : "a&?$top=999' https://evil.example",
+            : id === "notion-private"
+              ? "open"
+              : "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : token,
       { calendlyUser: "https://api.calendly.com/users/test-user" },
     );
@@ -289,7 +343,7 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     } else {
       assert.equal(
         req.init.headers.Authorization,
-        `Bearer ${id === "vercel" ? "fake-token" : token}`,
+        `Bearer ${["notion-private", "vercel"].includes(id) ? "fake-token" : token}`,
       );
     }
     assert.equal(req.init.redirect, "error");

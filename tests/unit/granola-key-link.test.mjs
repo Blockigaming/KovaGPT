@@ -83,6 +83,7 @@ function fixture(provider = "granola", binding = {}) {
           { id: "granola", name: "Granola", requiredScopes: [GRANOLA_NOTE_READ] },
           { id: "hyperframes-heygen", name: "HyperFrames", requiredScopes: ["hyperframes:read"] },
           { id: "mixpanel", name: "Mixpanel", requiredScopes: ["mixpanel:cohorts:list"] },
+          { id: "notion-private", name: "Notion linked page", requiredScopes: ["page:read"] },
         ],
       },
       "@/integrations/connected-tools.server": {},
@@ -102,7 +103,7 @@ function fixture(provider = "granola", binding = {}) {
       "@/integrations/connection-read.server.mjs": {
         readConnection: async (requestedProvider, query, token) => {
           assert.equal(requestedProvider, provider);
-          assert.equal(query, "recent");
+          assert.equal(query, provider === "notion-private" ? "open" : "recent");
           assert.equal(token, expectedToken);
           state.reads++;
           await state.onRead?.();
@@ -125,6 +126,27 @@ test("Granola stores only an encrypted, owner-bound key after a provider read", 
   assert.equal(state.writes[0][1].owner_id, owner);
   assert.equal(state.writes[0][1].access_token_ciphertext, "encrypted-fixture");
   assert.equal(JSON.stringify(state.writes).includes(key), false);
+});
+
+test("Notion stores a page-bound token only after the exact page can be read", async () => {
+  const pageId = "12345678-abcd-4123-8123-12345678abcd";
+  const { state, post } = fixture("notion-private", { pageId });
+  assert.equal((await post()).status, 200);
+  assert.equal(state.reads, 1);
+  assert.equal(state.encryption, 1);
+  assert.equal(state.writes[0][1].owner_id, owner);
+  assert.equal(state.writes[0][1].provider_account_id, pageId);
+  assert.deepEqual(state.writes[0][1].granted_scopes, ["page:read"]);
+  assert.equal(state.writes[0][1].access_token_ciphertext, "encrypted-fixture");
+  assert.doesNotMatch(JSON.stringify(state.writes), /grn_fixture_only/u);
+
+  const denied = fixture("notion-private", { pageId });
+  denied.state.onRead = () => {
+    throw new Error("connection_permission_required");
+  };
+  assert.equal((await denied.post()).status, 403);
+  assert.equal(denied.state.encryption, 0);
+  assert.deepEqual(denied.state.writes, []);
 });
 
 test("Granola refuses rejected credentials, a stale replacement, and a session that ended during validation", async () => {

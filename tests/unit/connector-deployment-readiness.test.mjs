@@ -113,6 +113,7 @@ test("provider setup distinguishes a shared Microsoft grant, hosted Tana, API ke
     "tana",
     "webull",
     "granola",
+    "notion",
   ])
     assert.equal(get(id).state, "ready_for_account_verification");
   assert.deepEqual(get("sp-global").requiredSettings, ["KOVA_SP_GLOBAL_ENABLED"]);
