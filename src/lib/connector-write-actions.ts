@@ -12,6 +12,7 @@ export const EXTRA_WRITE_CONNECTORS = [
   "figma",
   "gamma",
   "google-bigquery",
+  "granola",
   "hubspot",
   "hyperframes-heygen",
   "meltwater",
@@ -113,6 +114,17 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
       { name: "destination", label: "Google Cloud project ID", maxLength: 30 },
       { name: "title", label: "Dataset ID", maxLength: 128 },
       { name: "location", label: "Dataset location", maxLength: 40 },
+    ],
+  },
+  granola: {
+    scope: null,
+    readConnection: "granola",
+    action: "Pause or resume a Granola webhook",
+    summary:
+      "Update delivery for an existing webhook. Granola requires a Business or Enterprise plan and a key authorized to manage that webhook.",
+    fields: [
+      { name: "destination", label: "Webhook endpoint ID", maxLength: 128 },
+      { name: "delivery", label: "Delivery (pause or resume)", maxLength: 6 },
     ],
   },
   hubspot: {

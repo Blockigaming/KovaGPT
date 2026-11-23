@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 229,
-  "latest": "20261123201500_kova_extend_reviewed_connector_writes.sql",
+  "count": 230,
+  "latest": "20261123214500_kova_plaid_granola_connector_writes.sql",
   "migrations": [
     {
       "order": 1,
@@ -4778,6 +4778,20 @@
       "filename": "20261123201500_kova_extend_reviewed_connector_writes.sql",
       "timestamp": "20261123201500",
       "sha256": "9ef8ab29953a2d5b6d6fbb2a9073179cadc696ee9c1b537c6580c30da180ebaf",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 230,
+      "filename": "20261123214500_kova_plaid_granola_connector_writes.sql",
+      "timestamp": "20261123214500",
+      "sha256": "0f25b01aa229243856dd6ba95579d3717bb7198bd6b82f915aae738eeb8cfda6",
       "tables": [],
       "functions": [],
       "destructive": false,

@@ -36,6 +36,7 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
 import { ConnectorWriteControls } from "@/components/ConnectorWriteControls";
 import {
@@ -1973,7 +1974,10 @@ function AppsPage() {
                       Attach a .excalidraw file to share the diagram’s text and layout summary. To
                       export a Kova sketch, open Drawing and choose Download Excalidraw file.
                     </p>
-                    <Button onClick={() => void navigate({ to: "/" })}>Open chat</Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button onClick={() => void navigate({ to: "/" })}>Open chat</Button>
+                      <ExcalidrawExportButton />
+                    </div>
                   </section>
                 ) : visibleSelectedApp.id === "notion" && notionKeyConfigured ? (
                   <>
@@ -2299,5 +2303,22 @@ function AppsPage() {
         )}
       </main>
     </AppShell>
+  );
+}
+
+function ExcalidrawExportButton() {
+  const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <Button ref={button} variant="outline" onClick={() => setOpen(true)}>
+        Draw and export
+      </Button>
+      <ComposerDrawingDialog
+        open={open}
+        onOpenChange={setOpen}
+        onReturnFocus={() => button.current?.focus()}
+      />
+    </>
   );
 }

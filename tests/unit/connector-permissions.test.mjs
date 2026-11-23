@@ -215,9 +215,15 @@ test("database keeps connector preference and private submission records server-
         "utf8",
       ),
     );
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261123214500_kova_plaid_granola_connector_writes.sql",
+        "utf8",
+      ),
+    );
     await db.exec("set role service_role");
     await db.query(
-      "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'google-drive',$2), ($1,'outlook-calendar',$2), ($1,'linear',$2)",
+      "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'google-drive',$2), ($1,'outlook-calendar',$2), ($1,'linear',$2), ($1,'plaid',$2)",
       [owner, target],
     );
     for (const connector of actions.EXTRA_WRITE_CONNECTORS)
@@ -239,7 +245,7 @@ test("database keeps connector preference and private submission records server-
     const preferences = await db.query(
       "select allows_write from public.connector_write_preferences",
     );
-    assert.equal(preferences.rows.length, actions.EXTRA_WRITE_CONNECTORS.length + 3);
+    assert.equal(preferences.rows.length, actions.EXTRA_WRITE_CONNECTORS.length + 4);
     assert.ok(preferences.rows.every(({ allows_write }) => allows_write === false));
     await db.exec("set role authenticated");
     await assert.rejects(
@@ -461,6 +467,13 @@ test("every new directory action builds a bounded request and validates a provid
       201,
       { id: "111" },
     ],
+    granola: [
+      { destination: "whe_Fixture", delivery: "pause" },
+      "public-api.granola.ai",
+      "/v1/webhook-endpoints/whe_Fixture",
+      200,
+      { id: "whe_Fixture", object: "webhook_endpoint", enabled: false },
+    ],
     notion: [
       { destination: target, text: "Paragraph" },
       "api.notion.com",
@@ -553,6 +566,21 @@ test("every new directory action builds a bounded request and validates a provid
   assert.equal(
     writeRequests.connectorWriteRequest("calendly", {
       destination: "https://example.test/event_types/AAAAAAAAAAAAAAAA",
+    }),
+    null,
+  );
+  const resume = writeRequests.connectorWriteRequest("granola", {
+    destination: "whe_Fixture",
+    delivery: "resume",
+  });
+  assert.equal(resume.method, "PATCH");
+  assert.deepEqual({ ...resume.body }, { enabled: true });
+  assert.equal(resume.confirmed(receipts.granola[4]), false);
+  assert.equal(resume.confirmed({ ...receipts.granola[4], id: "whe_Other", enabled: true }), false);
+  assert.equal(
+    writeRequests.connectorWriteRequest("granola", {
+      destination: "https://external.test/webhook",
+      delivery: "resume",
     }),
     null,
   );

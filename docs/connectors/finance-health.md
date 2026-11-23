@@ -24,6 +24,8 @@ Read balances and transactions fetches current account balances and at most 100 
 
 Webhooks verify ES256 signatures using Plaid's fixed public-key endpoint, enforce a five-minute issuance limit, and compare the SHA-256 of the original body. Valid known-Item notifications are acknowledged only after a durable, deduplicated receipt is stored. Provider payloads and raw Item IDs are omitted from receipts. Unknown or disconnected Items do not trigger private-data reads. This notification receipt does not claim a transaction sync or advance a Sync cursor.
 
+Finances starts with connection maintenance off for each linked bank. Enable it and confirm Restore webhook to reset that Item to the KovaGPT callback configured on the server. In Plaid Sandbox, verify that the request is denied with maintenance off, succeeds for the same owner's selected Item after explicit confirmation, and is denied again after disabling maintenance.
+
 Disconnect asks Plaid to remove the Item before deleting Kova's credential. A downgrade does not prevent disconnection. On an uncertain exchange or disconnect outcome, refresh status before starting a new link; the browser does not replay the public token automatically.
 
 ## Oura and WHOOP
@@ -45,6 +47,8 @@ WHOOP's v2 revocation endpoint is supported. Oura disconnection removes local cr
 
 Open Connections → Health → Apple Health in the KovaGPT iPhone app. Connect Apple Health once and choose which data to share in the system sheet. On later visits, the app resumes the approved connection for the same KovaGPT account and refreshes its daily summaries as HealthKit reports changes while the tab is open. The app preserves Apple data on the device. Connection options disconnects automatic updates or opens an optional local export from Files. Exports stay in the current browser page and keep device sources separate.
 
+Record steps requests separate HealthKit write permission after you review the exact step count and time range on the device. The entry is saved as user-entered data in HealthKit. Verify denial, cancellation, and a confirmed sample using a signed staging build.
+
 The dashboard groups readings such as sleep stages, activity, workouts, mobility, vitals, hearing, nutrition, mindfulness, and supported symptom and cycle logs. Available data depends on the device, iOS version, and granted permissions. Clinical records and raw ECG waveforms need separate handling and are outside this dashboard. The native app requires signing and physical-device testing before distribution.
 
 Verify a permitted category with known data, then disable it in Apple Health and reopen the app. Check that the previous readings clear and that categories without readable data do not report verified access. Disconnect from Kova and reopen under a different Kova account. The iOS build workflow checks an unsigned simulator build. Physical-device acceptance requires an appropriately signed install and known HealthKit data.
@@ -54,6 +58,8 @@ Verify a permitted category with known data, then disable it in Apple Health and
 The Android companion is in `android/`. Build it using JDK 17, Android SDK 36 and Gradle 8.11.1, or run the Android Health Connect build on GitHub. For a local debug build run `gradle -p android :app:assembleDebug`. Sign a release through the Android distribution process and complete the Health Connect permissions declaration for the app.
 
 Open the Android companion, sign into Kova, and choose Connections → Health → Android Health Connect. Approve the categories you want. The app requests read permissions for steps, sleep, and heart rate. It rechecks grants before each foreground refresh and shows daily aggregates for up to 29 days. The summaries are delivered to the on-device health dashboard for the authorized Kova user. Disconnection clears that user's local opt-in. Use Android Health Connect settings to revoke the app's platform grant.
+
+Record steps requests separate Health Connect write permission after you review the exact step count and time range on the device. The entry uses manual-entry attribution. Include step writing in the Play Console Health Connect permission declaration and verify denial, cancellation, and a confirmed sample with the staging app.
 
 Verify on Android 14 or newer and on a supported device using the Health Connect app. Seed known samples, grant only one category, and verify that only that category appears. Revoke access, switch Kova accounts, background and foreground the companion, and disconnect. An APK build or simulated browser bridge check does not verify real device permission handling.
 

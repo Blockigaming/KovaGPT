@@ -34,7 +34,7 @@ import {
 } from "@/lib/connector-write-actions";
 
 type Props = {
-  connector: WritableConnector;
+  connector: Exclude<WritableConnector, "plaid">;
   target: string;
   label: string;
   providerCanWrite: boolean;

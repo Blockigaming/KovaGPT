@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useCallback,
@@ -495,6 +496,48 @@ export function NativeHealthReport({
         <p role="status" className="text-sm text-muted-foreground">
           {status}
         </p>
+      )}
+      {ownerId && live.connected && live.canWriteSteps && (
+        <details className="rounded-xl border border-border p-3">
+          <summary className="cursor-pointer font-medium">Record steps</summary>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Enter steps you tracked yourself. The device asks you to confirm before saving and may
+            request separate write permission.
+          </p>
+          <form
+            className="mt-3 grid gap-3 sm:grid-cols-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const fields = new FormData(event.currentTarget);
+              live.recordSteps(
+                Number(fields.get("steps")),
+                new Date(String(fields.get("start"))).getTime(),
+                new Date(String(fields.get("end"))).getTime(),
+              );
+            }}
+          >
+            <label className="grid min-w-0 gap-1 text-sm">
+              Steps
+              <Input name="steps" type="number" min={1} max={1_000_000} required />
+            </label>
+            <label className="grid min-w-0 gap-1 text-sm">
+              Started at
+              <Input name="start" type="datetime-local" required />
+            </label>
+            <label className="grid min-w-0 gap-1 text-sm">
+              Ended at
+              <Input name="end" type="datetime-local" required />
+            </label>
+            <Button type="submit" variant="outline" disabled={live.writingSteps}>
+              {live.writingSteps ? "Waiting for device…" : "Review on device"}
+            </Button>
+          </form>
+          {live.stepWriteStatus && (
+            <p className="mt-2 text-sm text-muted-foreground" role="status">
+              {live.stepWriteStatus}
+            </p>
+          )}
+        </details>
       )}
       {ownerId && live.platform && !live.connected && (
         <Button onClick={live.start} disabled={live.pending}>

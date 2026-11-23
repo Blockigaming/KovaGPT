@@ -225,6 +225,27 @@ test("approved directory keeps all providers and offers Health examples and sear
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
+test("Excalidraw opens a drawing from Connections and downloads it locally", async ({ page }) => {
+  await boot(page);
+  await page.locator('[data-plugin-id="excalidraw"]').getByRole("button").click();
+  await page.getByRole("button", { name: "Draw and export" }).click();
+  const dialog = page.getByRole("dialog", { name: "Drawing", exact: true });
+  const save = dialog.getByRole("button", { name: "Download Excalidraw file" });
+  await expect(save).toBeDisabled();
+  const canvas = dialog.getByLabel("Drawing canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + 20, box.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 70, box.y + 60, { steps: 3 });
+  await page.mouse.up();
+  await expect(save).toBeEnabled();
+  const download = page.waitForEvent("download");
+  await save.click();
+  await expect.poll(async () => (await download).suggestedFilename()).toMatch(/\.excalidraw$/u);
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+});
+
 test("Gmail supports locally enforced read and write settings", async ({ page }) => {
   await boot(page, healthyGoogle, undefined, undefined, "plus");
   await page.getByRole("button", { name: "Connected Gmail", exact: true }).click();

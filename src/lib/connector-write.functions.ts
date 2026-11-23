@@ -298,8 +298,9 @@ export const runConnectorWriteAction = createServerFn({ method: "POST" })
       });
       if (!request) return { error: "Review the action fields and try again." };
       const apiKey = notion?.apiKey ?? salesforce?.access_token ?? vercel?.apiKey ?? access.token;
-      const formEncoded = request.body instanceof URLSearchParams;
-      const body = formEncoded ? request.body.toString() : JSON.stringify(request.body);
+      const payload = request.body;
+      const formEncoded = payload instanceof URLSearchParams;
+      const body = formEncoded ? payload.toString() : JSON.stringify(payload);
       let credentials: Record<string, string> = request.credentialHeader
         ? { [request.credentialHeader]: apiKey }
         : { Authorization: `Bearer ${apiKey}` };

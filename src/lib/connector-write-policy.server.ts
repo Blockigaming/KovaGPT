@@ -11,6 +11,7 @@ export type WritableConnector =
   | "outlook"
   | "google-drive"
   | "outlook-calendar"
+  | "plaid"
   | ExtraWriteConnector;
 type Preference = {
   owner_id: string;
@@ -48,6 +49,21 @@ export async function connectorWriteAllowed(
     .eq("target_id", target)
     .maybeSingle();
   return !error && data?.allows_write === true;
+}
+
+export async function connectorWriteTargets(
+  owner: string,
+  connector: WritableConnector,
+  targets: string[],
+) {
+  if (targets.length === 0) return new Set<string>();
+  const { data, error } = await preferences()
+    .select("target_id")
+    .eq("owner_id", owner)
+    .eq("connector", connector)
+    .eq("allows_write", true)
+    .in("target_id", targets);
+  return new Set(error ? [] : data.map(({ target_id }) => target_id));
 }
 
 export async function saveConnectorWritePreference(

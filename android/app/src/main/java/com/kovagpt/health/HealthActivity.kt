@@ -18,9 +18,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import java.text.DateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.util.Date
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -31,6 +38,7 @@ import org.json.JSONObject
 
 class HealthActivity : ComponentActivity() {
     private data class Session(val id: String, val owner: String)
+    private data class StepEntry(val session: Session, val count: Long, val start: Instant, val end: Instant)
 
     private lateinit var webView: WebView
     private val preferences by lazy { getSharedPreferences("kova_health", MODE_PRIVATE) }
@@ -40,6 +48,26 @@ class HealthActivity : ComponentActivity() {
     private var awaitingPermissions: Session? = null
     private var refresh: Job? = null
     private var consentDialog: AlertDialog? = null
+    private var stepDialog: AlertDialog? = null
+    private var stepEntry: StepEntry? = null
+    private var awaitingStepPermission: StepEntry? = null
+    private var readyToWriteSteps = false
+    private var stepWrite: Job? = null
+
+    private val requestStepPermission = registerForActivityResult(
+        PermissionController.createRequestPermissionResultContract(),
+    ) { granted ->
+        val entry = awaitingStepPermission
+        awaitingStepPermission = null
+        if (entry != null && current(entry.session) && stepEntry == entry) {
+            if (WRITE_STEPS in granted) {
+                readyToWriteSteps = true
+                saveSteps()
+            } else {
+                finishSteps(entry, "permission_required")
+            }
+        }
+    }
 
     private val requestPermissions = registerForActivityResult(
         PermissionController.createRequestPermissionResultContract(),
@@ -106,6 +134,7 @@ class HealthActivity : ComponentActivity() {
         super.onResume()
         foreground = true
         session?.let { startRead(it) }
+        saveSteps()
     }
 
     override fun onPause() {
@@ -134,6 +163,10 @@ class HealthActivity : ComponentActivity() {
                 preferences.edit().remove(APPROVED_OWNER).apply()
             }
             stop()
+            return
+        }
+        if (active != null && active.id == id && action == "record_steps") {
+            confirmSteps(active, message)
             return
         }
         if (active != null || !foreground || !isHealthPage() || action !in setOf("start", "resume")) return
@@ -179,6 +212,105 @@ class HealthActivity : ComponentActivity() {
             .show()
     }
 
+    private fun confirmSteps(bound: Session, message: JSONObject) {
+        if (!current(bound) || !isApproved(bound) || stepEntry != null) return
+        if (!foreground || awaitingStepPermission != null) {
+            send(bound, JSONObject().put("stepWriteState", "error"))
+            return
+        }
+        val count = message.optString("count").toLongOrNull()
+        val start = message.optString("start").toLongOrNull()
+        val end = message.optString("end").toLongOrNull()
+        if (count == null || count !in 1L..1_000_000L || start == null || end == null ||
+            start <= 0 || start >= end || end > System.currentTimeMillis()
+        ) {
+            send(bound, JSONObject().put("stepWriteState", "invalid"))
+            return
+        }
+        val entry = StepEntry(bound, count, Instant.ofEpochMilli(start), Instant.ofEpochMilli(end))
+        stepEntry = entry
+        val format = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+        stepDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.health_step_write_title)
+            .setMessage(getString(
+                R.string.health_step_write_review, count, format.format(Date(start)), format.format(Date(end)),
+            ))
+            .setNegativeButton(android.R.string.cancel) { _, _ -> finishSteps(entry, "cancelled") }
+            .setOnCancelListener { finishSteps(entry, "cancelled") }
+            .setPositiveButton(R.string.health_step_write_confirm) { _, _ -> authorizeSteps(entry) }
+            .show()
+    }
+
+    private fun authorizeSteps(entry: StepEntry) {
+        if (!foreground || !current(entry.session) || !isApproved(entry.session)) {
+            finishSteps(entry, "cancelled")
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                val client = HealthConnectClient.getOrCreate(this@HealthActivity)
+                val granted = client.permissionController.getGrantedPermissions()
+                if (stepEntry != entry || !current(entry.session) || !isApproved(entry.session)) return@launch
+                if (!foreground) {
+                    finishSteps(entry, "cancelled")
+                } else if (WRITE_STEPS in granted) {
+                    readyToWriteSteps = true
+                    saveSteps()
+                } else {
+                    awaitingStepPermission = entry
+                    requestStepPermission.launch(setOf(WRITE_STEPS))
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                if (awaitingStepPermission == entry) awaitingStepPermission = null
+                finishSteps(entry, "error")
+            }
+        }
+    }
+
+    private fun saveSteps() {
+        val entry = stepEntry ?: return
+        if (!readyToWriteSteps || !foreground || !current(entry.session) || !isApproved(entry.session)) return
+        readyToWriteSteps = false
+        stepWrite = lifecycleScope.launch {
+            try {
+                val client = HealthConnectClient.getOrCreate(this@HealthActivity)
+                val rules = ZoneId.systemDefault().rules
+                client.insertRecords(
+                    listOf(
+                        StepsRecord(
+                            count = entry.count,
+                            startTime = entry.start,
+                            endTime = entry.end,
+                            startZoneOffset = rules.getOffset(entry.start),
+                            endZoneOffset = rules.getOffset(entry.end),
+                            metadata = Metadata.manualEntry(),
+                        ),
+                    ),
+                )
+                finishSteps(entry, "saved")
+                refresh?.cancel()
+                refresh = null
+                startRead(entry.session)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: SecurityException) {
+                finishSteps(entry, "permission_required")
+            } catch (_: Exception) {
+                finishSteps(entry, "error")
+            }
+        }
+    }
+
+    private fun finishSteps(entry: StepEntry, state: String) {
+        if (stepEntry != entry) return
+        stepEntry = null
+        readyToWriteSteps = false
+        stepDialog = null
+        send(entry.session, JSONObject().put("stepWriteState", state))
+    }
+
     private fun startRead(bound: Session) {
         if (!foreground || refresh?.isActive == true || awaitingPermissions != null ||
             !current(bound) || !isApproved(bound)
@@ -195,7 +327,7 @@ class HealthActivity : ComponentActivity() {
                         stop()
                         break
                     }
-                    send(bound, JSONObject().put("report", report))
+                    send(bound, JSONObject().put("report", report).put("canWriteSteps", true))
                     delay(60_000)
                 }
             } catch (error: CancellationException) {
@@ -238,6 +370,12 @@ class HealthActivity : ComponentActivity() {
 
     private fun stop() {
         session = null
+        stepEntry = null
+        readyToWriteSteps = false
+        stepWrite?.cancel()
+        stepWrite = null
+        stepDialog?.dismiss()
+        stepDialog = null
         refresh?.cancel()
         refresh = null
         consentDialog?.dismiss()
@@ -266,5 +404,6 @@ class HealthActivity : ComponentActivity() {
         private const val ORIGIN = "https://" + BuildConfig.HEALTH_WEB_HOST
         private const val BRIDGE = "kovaAndroidHealth"
         private const val APPROVED_OWNER = "approved_owner"
+        private val WRITE_STEPS = HealthPermission.getWritePermission(StepsRecord::class)
     }
 }

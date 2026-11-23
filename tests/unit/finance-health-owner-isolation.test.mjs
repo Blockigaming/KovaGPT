@@ -20,11 +20,13 @@ function fixture() {
     receipts: new Map(),
     dbError: false,
     auditError: false,
+    writeTargets: new Set(),
   };
   const finance = {
     id: opaqueFinanceId("plaid-item", "fixture-item"),
     owner_id: owner,
     provider: "plaid",
+    country: "US",
     status: "connected",
     deleted_at: null,
     item_reference_ciphertext: "finance-ciphertext",
@@ -107,6 +109,8 @@ function fixture() {
     state.network.push([path, body]);
     await state.onNetwork?.();
     if (state.providerError) throw new Error("plaid_503");
+    if (path === "/item/webhook/update")
+      return { item: { item_id: "fixture-item", webhook: body.webhook } };
     if (path === "/accounts/get")
       return { accounts: [{ account_id: "a", name: "Checking", balances: { current: 100 } }] };
     if (path === "/transactions/get") return { transactions: [], total_transactions: 0 };
@@ -121,6 +125,18 @@ function fixture() {
     "@/lib/distributed-rate-limit.server": {
       consumeApplicationRateLimit: async () => ({ allowed: !state.rateLimited }),
     },
+    "@/lib/connector-write-policy.server": {
+      connectorWriteAllowed: async (userId, connector, id) => {
+        assert.equal(connector, "plaid");
+        return state.writeTargets.has(`${userId}:${id}`);
+      },
+      saveConnectorWritePreference: async (userId, connector, id, enabled) => {
+        assert.equal(connector, "plaid");
+        const key = `${userId}:${id}`;
+        if (enabled) state.writeTargets.add(key);
+        else state.writeTargets.delete(key);
+      },
+    },
     "@/integrations/credential-vault.server": {
       decryptCredential: async (ciphertext) => {
         state.decrypts++;
@@ -133,7 +149,7 @@ function fixture() {
     "./plaid-request.server.mjs": {
       requestPlaid,
       financeCountry: (country) => country,
-      financeLinkRequest: () => ({}),
+      financeLinkRequest: () => ({ webhook: "https://kovagpt.com/api/finances/webhook" }),
       plaidConfiguration: () => ({ mode: "production" }),
     },
     "./plaid-webhook.server.mjs": { opaqueFinanceId },
@@ -246,6 +262,43 @@ test("a failed audit cannot return finance or health results", async () => {
     /health_audit_unavailable/,
   );
 });
+test("Plaid webhook writes use the owned opted-in Item and fixed webhook target", async () => {
+  const f = fixture();
+  const { id } = f.state.finance;
+  await assert.rejects(
+    () => f.finance.restorePlaidWebhook(f.caller(), id),
+    /finance_maintenance_required/u,
+  );
+  await assert.rejects(
+    () => f.finance.setPlaidMaintenance(f.caller(stranger), id, false),
+    /finance_connection_not_found/u,
+  );
+  f.state.writeTargets.add(`${stranger}:${id}`);
+  await assert.rejects(
+    () => f.finance.restorePlaidWebhook(f.caller(stranger), id),
+    /finance_connection_not_found/u,
+  );
+  assert.equal(f.state.decrypts, 0);
+  assert.deepEqual(f.state.network, []);
+  f.state.writeTargets.add(`${owner}:${id}`);
+  assert.deepEqual(await f.finance.restorePlaidWebhook(f.caller(), id), { restored: true });
+  assert.deepEqual(f.state.network, [
+    [
+      "/item/webhook/update",
+      {
+        access_token: "access-production-fixture",
+        webhook: "https://kovagpt.com/api/finances/webhook",
+      },
+    ],
+  ]);
+  await f.finance.setPlaidMaintenance(f.caller(), id, false);
+  await assert.rejects(
+    () => f.finance.restorePlaidWebhook(f.caller(), id),
+    /finance_maintenance_required/u,
+  );
+  assert.equal(f.state.network.length, 1);
+});
+
 test("disconnect retains the finance credential until Plaid confirms removal", async () => {
   const f = fixture();
   f.state.providerError = true;

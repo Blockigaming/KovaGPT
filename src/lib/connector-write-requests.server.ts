@@ -168,6 +168,23 @@ export function connectorWriteRequest(
         },
         body: { datasetReference: { projectId: destination, datasetId: title }, location },
       };
+    case "granola": {
+      const { delivery } = input;
+      if (
+        !/^whe_[A-Za-z0-9_-]{1,124}$/u.test(destination) ||
+        !["pause", "resume"].includes(delivery)
+      )
+        return null;
+      const enabled = delivery === "resume";
+      return {
+        url: `https://public-api.granola.ai/v1/webhook-endpoints/${destination}`,
+        method: "PATCH",
+        status: 200,
+        confirmed: (data) =>
+          data.id === destination && data.object === "webhook_endpoint" && data.enabled === enabled,
+        body: { enabled },
+      };
+    }
     case "hubspot":
       return {
         url: "https://api.hubapi.com/crm/v3/objects/companies",

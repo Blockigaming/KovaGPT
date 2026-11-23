@@ -8,9 +8,12 @@ import type { AppleHealthAnalytics, AppleHealthDay } from "./apple-health-export
 
 const updateEvent = "kova-health-update-v1";
 type BridgeMessage = {
-  action: "start" | "resume" | "stop" | "disconnect";
+  action: "start" | "resume" | "stop" | "disconnect" | "record_steps";
   id: string;
   owner?: string;
+  count?: string;
+  start?: string;
+  end?: string;
 };
 type HealthPlatform = "apple" | "android";
 function getNativeHealthBridge() {
@@ -81,12 +84,23 @@ function parseSnapshot(detail: unknown, platform: HealthPlatform): AppleHealthAn
   return report;
 }
 
+const writeMessages = {
+  saved: "Steps saved on this device.",
+  cancelled: "Step entry cancelled.",
+  permission_required: "Allow step writing in your device’s health permissions, then try again.",
+  invalid: "Enter a valid step count and a time range that has already ended.",
+  error: "This device could not save the step entry.",
+};
+
 const empty = { report: null, updatedAt: null, status: "" };
 
 export function useNativeHealthLive(ownerId: string | null) {
   const [platform, setPlatform] = useState<HealthPlatform | null>(null);
   const [connected, setConnected] = useState(false);
   const [pending, setPending] = useState(false);
+  const [canWriteSteps, setCanWriteSteps] = useState(false);
+  const [writingSteps, setWritingSteps] = useState(false);
+  const [stepWriteStatus, setStepWriteStatus] = useState("");
   const active = useRef<string | null>(null);
   const [reading, setReading] = useState<{
     report: AppleHealthAnalytics | null;
@@ -103,6 +117,9 @@ export function useNativeHealthLive(ownerId: string | null) {
   }, []);
   const stop = useCallback(() => {
     closeBridge();
+    setCanWriteSteps(false);
+    setWritingSteps(false);
+    setStepWriteStatus("");
     setConnected(false);
     setPending(false);
     setReading(empty);
@@ -129,10 +146,16 @@ export function useNativeHealthLive(ownerId: string | null) {
       stop();
       return;
     }
+    stop();
     const label = bridge.platform === "apple" ? "Apple Health" : "Health Connect";
     const onUpdate = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (!active.current || detail?.id !== active.current) return;
+      if (Object.hasOwn(writeMessages, detail.stepWriteState)) {
+        setWritingSteps(false);
+        setStepWriteStatus(writeMessages[detail.stepWriteState as keyof typeof writeMessages]);
+        return;
+      }
       const report = parseSnapshot(detail.report, bridge.platform);
       if (!report) {
         if (detail.state === "not_connected") {
@@ -159,6 +182,7 @@ export function useNativeHealthLive(ownerId: string | null) {
       }
       setPending(false);
       setConnected(true);
+      setCanWriteSteps(detail.canWriteSteps === true);
       const hasData = Object.keys(report.metrics).length > 0;
       setReading({
         report: hasData ? report : null,
@@ -183,12 +207,54 @@ export function useNativeHealthLive(ownerId: string | null) {
 
   function disconnect() {
     closeBridge("disconnect");
-    setConnected(false);
-    setPending(false);
-    setReading(empty);
+    stop();
   }
 
-  return { platform, pending, connected, ...reading, start: () => connect("start"), disconnect };
+  function recordSteps(count: number, start: number, end: number) {
+    const bridge = getNativeHealthBridge();
+    const id = active.current;
+    if (!bridge || !id || !connected || !canWriteSteps || writingSteps) return;
+    if (
+      !Number.isSafeInteger(count) ||
+      count < 1 ||
+      count > 1_000_000 ||
+      !Number.isSafeInteger(start) ||
+      !Number.isSafeInteger(end) ||
+      start <= 0 ||
+      start >= end ||
+      end > Date.now()
+    ) {
+      setStepWriteStatus(writeMessages.invalid);
+      return;
+    }
+    setWritingSteps(true);
+    setStepWriteStatus("");
+    try {
+      bridge.post({
+        action: "record_steps",
+        id,
+        count: String(count),
+        start: String(start),
+        end: String(end),
+      });
+    } catch {
+      setWritingSteps(false);
+      setStepWriteStatus(writeMessages.error);
+    }
+  }
+
+  return {
+    platform,
+    pending,
+    connected,
+    ...reading,
+    canWriteSteps,
+    writingSteps,
+    stepWriteStatus,
+    recordSteps,
+    start: () => connect("start"),
+    disconnect,
+  };
 }
 
 export type NativeHealthLive = ReturnType<typeof useNativeHealthLive>;

@@ -263,10 +263,23 @@ const dedicatedConnections: Record<
         "src/components/BankConnectionsPanel.tsx",
         "src/routes/api/finances/manage.ts",
       ),
+      supported(
+        "write",
+        "Restore KovaGPT’s Plaid webhook with optional connection maintenance",
+        "src/finances/plaid.server.ts",
+      ),
     ],
   },
+  "interactive-brokers": {
+    note: "Flex credentials can read configured reports. Hosted watchlist or other Web API access requires a separate IBKR-approved integration.",
+    permissions: [],
+  },
+  "sp-global": {
+    note: "This connector matches companies using licensed Capital IQ reference data. Your license determines access.",
+    permissions: [],
+  },
   oura: {
-    note: "Manage Oura in Health. Connection requires Oura developer credentials and account consent.",
+    note: "Manage Oura in Health. Oura grants read access to your data after account consent.",
     permissions: [
       supported(
         "read",
@@ -277,27 +290,37 @@ const dedicatedConnections: Record<
     ],
   },
   "apple-health": {
-    note: "The native mobile companion reads Apple Health with iPhone permissions. Availability depends on a signed app install.",
+    note: "Apple Health requires a signed iPhone app. Reading and saving manual steps use separate device permissions.",
     permissions: [
       supported(
         "read",
         "Show approved Apple Health trends on your device",
         "ios/KovaHealth/KovaHealthApp.swift",
       ),
+      supported(
+        "write",
+        "Save manually entered steps after device permission and confirmation",
+        "ios/KovaHealth/KovaHealthApp.swift",
+      ),
     ],
   },
   "android-health-connect": {
-    note: "The native mobile companion reads Health Connect with Android permissions. Availability depends on a signed app install.",
+    note: "Health Connect requires a signed Android app. Reading and saving manual steps use separate device permissions.",
     permissions: [
       supported(
         "read",
         "Show approved Android steps, sleep and heart rate on your device",
         "android/app/src/main/java/com/kovagpt/health/HealthReport.kt",
       ),
+      supported(
+        "write",
+        "Save manually entered steps after device permission and confirmation",
+        "android/app/src/main/java/com/kovagpt/health/HealthActivity.kt",
+      ),
     ],
   },
   excalidraw: {
-    note: "Exchange .excalidraw files through Kova chat. File access starts when you select a scene.",
+    note: "Import a scene into chat or draw and export a scene directly from Connections.",
     permissions: [
       supported("read", "Import a diagram you select", "src/lib/excalidraw-scene.mjs"),
       supported(

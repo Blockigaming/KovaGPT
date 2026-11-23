@@ -49,7 +49,7 @@ export function ComposerDrawingDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAttach: (files: File[]) => Promise<boolean>;
+  onAttach?: (files: File[]) => Promise<boolean>;
   onReturnFocus: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -132,6 +132,7 @@ export function ComposerDrawingDialog({
     else onOpenChange(next);
   };
   const attach = async () => {
+    if (!onAttach) return;
     const canvas = canvasRef.current;
     if (!canvas || attaching.current || strokes.current.length === 0) return;
     attaching.current = true;
@@ -203,7 +204,9 @@ export function ComposerDrawingDialog({
           <DialogHeader>
             <DialogTitle>Drawing</DialogTitle>
             <DialogDescription>
-              Draw with your mouse, pen, or finger. Attach it as an image when you're ready.
+              {onAttach
+                ? "Draw with your mouse, pen, or finger. Attach it as an image when you're ready."
+                : "Draw with your mouse, pen, or finger, then download an editable Excalidraw file."}
             </DialogDescription>
           </DialogHeader>
           <div className="kova-drawing-toolbar" role="toolbar" aria-label="Drawing tools">
@@ -372,7 +375,7 @@ export function ComposerDrawingDialog({
           </div>
           {strokes.current.length >= MAX_STROKES ? (
             <p role="status" className="text-sm">
-              This drawing is full. Undo a stroke or attach it to continue.
+              This drawing is full. Undo a stroke to keep drawing.
             </p>
           ) : null}
           {attachmentError ? (
@@ -397,14 +400,16 @@ export function ComposerDrawingDialog({
             >
               Download Excalidraw file
             </Button>
-            <Button
-              type="button"
-              className="kova-drawing-attach"
-              onClick={() => void attach()}
-              disabled={busy || strokes.current.length === 0}
-            >
-              {busy ? "Attaching…" : "Attach drawing"}
-            </Button>
+            {onAttach && (
+              <Button
+                type="button"
+                className="kova-drawing-attach"
+                onClick={() => void attach()}
+                disabled={busy || strokes.current.length === 0}
+              >
+                {busy ? "Attaching…" : "Attach drawing"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

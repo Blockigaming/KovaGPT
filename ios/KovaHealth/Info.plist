@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>KovaGPT Health reads the activity, sleep, heart, and body measurements you allow to show daily trends on this iPhone.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>KovaGPT Health saves manually entered steps to Apple Health when you confirm the entry on this device.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
