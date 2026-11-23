@@ -38,13 +38,18 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             { error: "accounts_unavailable" },
             { status: 503, headers: { "Cache-Control": "no-store" } },
           );
-        const oauthProviders = configuredOAuthProviders(new URL(request.url).origin);
-        const accounts = await renewListedOAuthAccounts(
-          auth.userId,
-          data ?? [],
-          new Set(oauthProviders.map(({ id }) => id)),
-          auth.revalidateSession,
-        );
+        const url = new URL(request.url);
+        const oauthProviders = configuredOAuthProviders(url.origin);
+        const currentAccounts = data ?? [];
+        const accounts =
+          url.searchParams.get("renew") === "1"
+            ? await renewListedOAuthAccounts(
+                auth.userId,
+                currentAccounts,
+                new Set(oauthProviders.map(({ id }) => id)),
+                auth.revalidateSession,
+              )
+            : currentAccounts;
         return Response.json(
           {
             configuredProviders: [
