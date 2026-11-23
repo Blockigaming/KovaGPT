@@ -37,6 +37,7 @@ const mocks: Record<string, string> = {
     export const createLinearIssue=async({data})=>{window.operations.push(["create-linear-issue",data]);return {created:true}};
     export const createOutlookEvent=async({data})=>{window.operations.push(["create-event",data]);return {created:true}};
     export const createGoogleDriveFolder=async({data})=>{window.operations.push(["drive-folder",data]);return {created:true}};
+    export const runConnectorWriteAction=async({data,headers})=>{if(headers?.["X-Kova-Owner"]!==window.testOwner)throw new Error("Owner binding is required");window.operations.push(["reviewed-provider-write",data]);return {ok:true}};
   `,
   "@/lib/connector-submissions.functions": `
     export const listPublishedConnectorSubmissions=async()=>[];
@@ -316,6 +317,112 @@ test("OneDrive confirms the folder name before writing", async ({ page }) => {
       (window as FixtureWindow).operations.filter(([kind]) => kind === "create-folder"),
     ),
   ).toEqual([["create-folder", { target: "fixture-onedrive", name: "Example folder" }]]);
+});
+
+test("Slack separates write consent, Kova access, and review of the exact message", async ({
+  page,
+}) => {
+  const accountId = "00000000-0000-4000-8000-000000000002";
+  const channel = "C0123456789";
+  await boot(page, emptyGoogle, undefined, {
+    configuredProviders: [
+      {
+        id: "slack",
+        name: "Slack",
+        requiredScopes: ["search:read"],
+        optionalScopes: ["chat:write"],
+      },
+    ],
+    accounts: [
+      {
+        id: accountId,
+        provider_id: "slack",
+        account_label: "Slack test workspace",
+        status: "connected",
+        granted_scopes: ["search:read", "chat:write"],
+        token_expires_at: null,
+        deleted_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Connected Slack", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for Slack test workspace" }).click();
+  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await expect(permissions.getByRole("button", { name: "Read only" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(permissions.getByRole("button", { name: "Review action" })).toHaveCount(0);
+  await permissions.getByRole("button", { name: "Read and write" }).click();
+  await permissions.getByLabel("Slack conversation ID").fill(channel);
+  await permissions.getByLabel("Message", { exact: true }).fill("Reviewed message");
+  await permissions.getByRole("button", { name: "Review action" }).click();
+  await expect(permissions.getByText(channel, { exact: true })).toBeVisible();
+  await expect(permissions.getByText("Reviewed message", { exact: true })).toBeVisible();
+  const writes = () =>
+    page.evaluate(() =>
+      (window as FixtureWindow).operations.filter(([kind]) => kind === "reviewed-provider-write"),
+    );
+  expect(await writes()).toEqual([]);
+  await permissions.getByRole("button", { name: "Send Slack message" }).click();
+  await expect(permissions.getByRole("status")).toHaveText("The provider confirmed the change.");
+  expect(await writes()).toEqual([
+    [
+      "reviewed-provider-write",
+      {
+        connector: "slack",
+        target: accountId,
+        fields: { destination: channel, text: "Reviewed message" },
+        confirmed: true,
+      },
+    ],
+  ]);
+  await permissions.getByRole("button", { name: "Read only" }).click();
+  await expect(permissions.getByRole("button", { name: "Review action" })).toHaveCount(0);
+});
+
+test("Slack requests its additional provider scope only when write access is selected", async ({
+  page,
+}) => {
+  const accountId = "00000000-0000-4000-8000-000000000002";
+  await boot(page, emptyGoogle, undefined, {
+    configuredProviders: [
+      {
+        id: "slack",
+        name: "Slack",
+        requiredScopes: ["search:read"],
+        optionalScopes: ["chat:write"],
+      },
+    ],
+    accounts: [
+      {
+        id: accountId,
+        provider_id: "slack",
+        account_label: "Read-only Slack workspace",
+        status: "connected",
+        granted_scopes: ["search:read"],
+        token_expires_at: null,
+        deleted_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Connected Slack", exact: true }).click();
+  await page.getByRole("button", { name: "Reconnect or add read access", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for Read-only Slack workspace" }).click();
+  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await permissions.getByRole("button", { name: "Read and write" }).click();
+  const operations = await page.evaluate(() => (window as FixtureWindow).operations);
+  expect(operations.map(([kind, endpoint]) => [kind, endpoint])).toEqual([
+    ["provider-request", "/api/integrations/oauth/start"],
+    ["provider-request", "/api/integrations/oauth/start"],
+  ]);
+  const [read, write] = operations.map(([, , init]) => JSON.parse((init as { body: string }).body));
+  expect(read).toMatchObject({ existingAccountId: accountId, optionalScopes: ["search:read"] });
+  expect(write).toMatchObject({
+    existingAccountId: accountId,
+    optionalScopes: ["search:read", "chat:write"],
+  });
+  await expect(permissions.getByRole("button", { name: "Review action" })).toHaveCount(0);
 });
 
 test("Linear reviews the team and issue before writing", async ({ page }) => {

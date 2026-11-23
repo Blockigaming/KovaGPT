@@ -20,9 +20,16 @@ import {
   createOutlookEvent,
   createOutlookDraft,
   getConnectorWriteAccess,
+  runConnectorWriteAction,
   setConnectorWriteAccess,
 } from "@/lib/connector-write.functions";
 import type { WritableConnector } from "@/lib/connector-write-policy.server";
+import {
+  EXTRA_WRITE_ACTIONS,
+  isExtraWriteConnector,
+  type ExtraWriteConnector,
+  type WriteFields,
+} from "@/lib/connector-write-actions";
 
 type Props = {
   connector: WritableConnector;
@@ -78,6 +85,7 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
   const outlookDraft = useServerFn(createOutlookDraft);
   const linearIssue = useServerFn(createLinearIssue);
   const canWrite = providerCanWrite && enabled === true;
+  const extraWrite = isExtraWriteConnector(connector) ? connector : null;
   const kind =
     connector === "onedrive" || connector === "google-drive"
       ? "folder"
@@ -266,7 +274,11 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
             : "Write access requires permission from the provider."}
         </p>
       )}
+      {canWrite && owner && extraWrite && (
+        <ExtraWriteForm connector={extraWrite} target={target} owner={owner} />
+      )}
       {canWrite &&
+        !extraWrite &&
         connector !== "gmail" &&
         connector !== "google-calendar" &&
         (draft ? (
@@ -355,5 +367,112 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
         </p>
       )}
     </section>
+  );
+}
+
+function ExtraWriteForm({
+  connector,
+  target,
+  owner,
+}: {
+  connector: ExtraWriteConnector;
+  target: string;
+  owner: string;
+}) {
+  const definition = EXTRA_WRITE_ACTIONS[connector];
+  const perform = useServerFn(runConnectorWriteAction);
+  const [review, setReview] = useState<WriteFields | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [outcome, setOutcome] = useState<{ message: string; link?: string } | null>(null);
+
+  async function confirm() {
+    if (!review || busy) return;
+    setBusy(true);
+    setOutcome(null);
+    try {
+      const response = await perform({
+        data: { connector, target, fields: review, confirmed: true },
+        headers: { "X-Kova-Owner": owner },
+      });
+      setOutcome(
+        "ok" in response && response.ok
+          ? {
+              message: "The provider confirmed the change.",
+              link: "link" in response ? response.link : undefined,
+            }
+          : { message: response.error ?? "The provider did not confirm the change." },
+      );
+    } catch {
+      setOutcome({
+        message: "The change could not be confirmed. Check the provider before retrying.",
+      });
+    } finally {
+      setBusy(false);
+      setReview(null);
+    }
+  }
+
+  return (
+    <div className="kova-directory-panel">
+      <h3>{review ? `Review: ${definition.action}` : definition.action}</h3>
+      <p>{definition.summary}</p>
+      {review ? (
+        <>
+          <dl>
+            {definition.fields.map(({ name, label }) => (
+              <div key={name}>
+                <dt>{label}</dt>
+                <dd className="whitespace-pre-wrap break-words">{review[name]}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="spec400-plugin-actions">
+            <Button type="button" variant="outline" disabled={busy} onClick={() => setReview(null)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={busy} onClick={() => void confirm()}>
+              {definition.action}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            const fields = Object.fromEntries(
+              definition.fields.map(({ name }) => [name, String(data.get(name) ?? "").trim()]),
+            );
+            if (Object.values(fields).some((value) => !value)) return;
+            setOutcome(null);
+            setReview(fields);
+          }}
+        >
+          {definition.fields.map(({ name, label, maxLength, multiline }) => {
+            const Field = multiline ? Textarea : Input;
+            return (
+              <label key={name} className="grid gap-2">
+                {label}
+                <Field name={name} maxLength={maxLength} required />
+              </label>
+            );
+          })}
+          <Button type="submit">Review action</Button>
+        </form>
+      )}
+      {outcome && (
+        <p role="status">
+          {outcome.message}
+          {outcome.link && (
+            <>
+              {" "}
+              <a className="underline" href={outcome.link} target="_blank" rel="noreferrer">
+                Open scheduling link
+              </a>
+            </>
+          )}
+        </p>
+      )}
+    </div>
   );
 }

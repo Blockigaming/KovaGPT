@@ -12,16 +12,32 @@ import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { decryptCredential } from "@/integrations/credential-vault.server";
-import { canReadConnection, hasConnectionScopes } from "@/integrations/connection-flows.mjs";
-import { configuredOAuthProviders } from "@/integrations/oauth-providers.server";
+import {
+  canReadConnection,
+  CONNECTION_FLOWS,
+  hasConnectionScopes,
+} from "@/integrations/connection-flows.mjs";
+import {
+  configuredKeyProviders,
+  configuredOAuthProviders,
+} from "@/integrations/oauth-providers.server";
+import { unpackKeyCredential } from "@/integrations/key-connection-credential.server.mjs";
+import { unpackSalesforceCredential } from "@/integrations/salesforce-credential.server.mjs";
 import type { ConnectionDomainDatabase } from "@/integrations/connection-domain.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   connectorWriteAllowed,
   saveConnectorWritePreference,
 } from "@/lib/connector-write-policy.server";
+import {
+  EXTRA_WRITE_ACTIONS,
+  EXTRA_WRITE_CONNECTORS,
+  isExtraWriteConnector,
+  type ExtraWriteConnector,
+} from "@/lib/connector-write-actions";
+import { connectorWriteRequest } from "@/lib/connector-write-requests.server";
 
-const targetSchema = z.discriminatedUnion("connector", [
+const targetSchema = z.union([
   z.object({ connector: z.literal("github"), target: z.string().regex(/^[1-9][0-9]{0,18}$/u) }),
   z.object({ connector: z.literal("linear"), target: z.string().uuid() }),
   z.object({ connector: z.literal("gmail"), target: z.string().uuid() }),
@@ -30,6 +46,7 @@ const targetSchema = z.discriminatedUnion("connector", [
   z.object({ connector: z.literal("outlook"), target: z.string().uuid() }),
   z.object({ connector: z.literal("google-drive"), target: z.string().uuid() }),
   z.object({ connector: z.literal("outlook-calendar"), target: z.string().uuid() }),
+  z.object({ connector: z.enum(EXTRA_WRITE_CONNECTORS), target: z.string().uuid() }),
 ]);
 const connectorDb = () => supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
 const microsoftOperations = {
@@ -38,7 +55,7 @@ const microsoftOperations = {
   "outlook-calendar": { scope: "Calendars.ReadWrite", path: "/me/calendar/events" },
 } as const;
 type MicrosoftWriteConnector = keyof typeof microsoftOperations;
-type LinkedWriteConnector = MicrosoftWriteConnector | "linear";
+type LinkedWriteConnector = MicrosoftWriteConnector | "linear" | ExtraWriteConnector;
 const linearIssueResult = z.object({
   errors: z.array(z.unknown()).max(0).optional(),
   data: z.object({
@@ -50,9 +67,22 @@ const googleWriteCapability = {
   "google-calendar": "calendar.write",
   "google-drive": "drive.write",
 } as const;
+
+function linkedGrant(connector: LinkedWriteConnector) {
+  const extra = isExtraWriteConnector(connector) ? EXTRA_WRITE_ACTIONS[connector] : undefined;
+  const readConnection = extra?.readConnection ?? connector;
+  const provider = CONNECTION_FLOWS[readConnection].provider;
+  const scope = extra
+    ? extra.scope
+    : connector === "linear"
+      ? "issues:create"
+      : microsoftOperations[connector as MicrosoftWriteConnector].scope;
+  const label = provider === "microsoft" ? "Microsoft" : CONNECTION_FLOWS[readConnection].label;
+  return { provider, scope, label, readConnection };
+}
+
 const linkedWriteAccount = async (owner: string, id: string, connector: LinkedWriteConnector) => {
-  const provider = connector === "linear" ? "linear" : "microsoft";
-  const scope = connector === "linear" ? "issues:create" : microsoftOperations[connector].scope;
+  const { provider, scope, readConnection } = linkedGrant(connector);
   const { data, error } = await connectorDb()
     .from("integration_linked_accounts")
     .select(
@@ -66,8 +96,8 @@ const linkedWriteAccount = async (owner: string, id: string, connector: LinkedWr
     .maybeSingle();
   return !error &&
     data &&
-    canReadConnection({ ...data, account_label: null }, connector) &&
-    hasConnectionScopes(data.granted_scopes, [scope])
+    canReadConnection({ ...data, account_label: null }, readConnection) &&
+    (!scope || hasConnectionScopes(data.granted_scopes, [scope]))
     ? data
     : null;
 };
@@ -121,11 +151,12 @@ export const setConnectorWriteAccess = createServerFn({ method: "POST" })
         connector === "onedrive" ||
         connector === "outlook" ||
         connector === "outlook-calendar" ||
-        connector === "linear"
+        connector === "linear" ||
+        isExtraWriteConnector(connector)
       ) {
         if (!(await linkedWriteAccount(userId, target, connector)))
           return {
-            error: `Authorize write access with ${connector === "linear" ? "Linear" : "Microsoft"} first.`,
+            error: `Authorize write access with ${linkedGrant(connector).label} first.`,
           };
       } else {
         const account = await getGoogleConnection(userId, target);
@@ -139,9 +170,12 @@ export const setConnectorWriteAccess = createServerFn({ method: "POST" })
 
 async function linkedWriteToken(userId: string, target: string, connector: LinkedWriteConnector) {
   await limitWrites(userId);
-  const provider = connector === "linear" ? "linear" : "microsoft";
-  const label = connector === "linear" ? "Linear" : "Microsoft";
-  if (!configuredOAuthProviders().some(({ id }) => id === provider))
+  const { provider, label, readConnection } = linkedGrant(connector);
+  const providers =
+    CONNECTION_FLOWS[readConnection].authentication === "api-key"
+      ? configuredKeyProviders()
+      : configuredOAuthProviders();
+  if (!providers.some(({ id }) => id === provider))
     return { error: `${label} connection setup is unavailable.` };
   await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
   const account = await linkedWriteAccount(userId, target, connector);
@@ -158,6 +192,63 @@ async function linkedWriteToken(userId: string, target: string, connector: Linke
     return { error: "Write access changed. Review the account permissions." };
   return { token };
 }
+
+export const runConnectorWriteAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z
+      .object({
+        connector: z.enum(EXTRA_WRITE_CONNECTORS),
+        target: z.string().uuid(),
+        confirmed: z.literal(true),
+        fields: z.record(z.string(), z.string().trim().max(2000)),
+      })
+      .strict(),
+  )
+  .handler(async ({ context, data }) => {
+    const { connector, target, fields } = data;
+    const access = await linkedWriteToken(context.userId, target, connector);
+    if (!access.token) return { error: access.error };
+    const { label } = linkedGrant(connector);
+    try {
+      const notion =
+        connector === "notion-private" ? unpackKeyCredential(connector, access.token) : null;
+      const salesforce =
+        connector === "salesforce" ? unpackSalesforceCredential(access.token) : null;
+      const vercel = connector === "vercel" ? unpackKeyCredential(connector, access.token) : null;
+      const request = connectorWriteRequest(connector, fields, {
+        notionPageId: notion?.pageId,
+        salesforceQuery: salesforce?.query_url,
+        vercelTeamId: vercel?.teamId,
+      });
+      if (!request) return { error: "Review the action fields and try again." };
+      const response = await fetch(request.url, {
+        method: request.method ?? "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
+        headers: {
+          Authorization: `Bearer ${notion?.apiKey ?? salesforce?.access_token ?? vercel?.apiKey ?? access.token}`,
+          "Content-Type": "application/json",
+          ...request.header,
+        },
+        body: JSON.stringify(request.body),
+      });
+      if (response.status === request.status) {
+        const result = await readProviderJsonObject(response, 64 * 1024);
+        if (request.confirmed(result)) {
+          const link = request.outputLink?.(result);
+          return link ? { ok: true as const, link } : { ok: true as const };
+        }
+      } else {
+        await response.body?.cancel().catch(() => {});
+        if (response.status === 401 || response.status === 403)
+          return { error: `${label} denied this action. Check the provider's write permission.` };
+      }
+    } catch {
+      // The provider may have applied the operation before the connection was interrupted.
+    }
+    return { error: `${label} did not confirm the change. Check the provider before retrying.` };
+  });
 
 async function microsoftWrite(
   userId: string,

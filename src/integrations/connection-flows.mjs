@@ -1,6 +1,7 @@
 // Client-safe descriptions of implemented read operations. Deployment readiness
 // and the user's granted scopes are checked separately on the server.
 export const BIGQUERY_READ_SCOPE = "https://www.googleapis.com/auth/bigquery.readonly";
+export const BIGQUERY_WRITE_SCOPE = "https://www.googleapis.com/auth/bigquery";
 export const TANA_MCP_RESOURCE = "https://home.tana.inc/mcp";
 export const TANA_MCP_ISSUER = "https://login.tana.inc";
 export const TANA_MCP_AUTHORIZE_ENDPOINT = `${TANA_MCP_ISSUER}/oauth2/authorize`;
@@ -277,7 +278,10 @@ export function hasConnectionScopes(scopes, required) {
       granted.has(scope) ||
       (scope === "issues:create" && granted.has("write")) ||
       (scope === "root_readonly" && granted.has("root_readwrite")) ||
+      (scope === BIGQUERY_READ_SCOPE && granted.has(BIGQUERY_WRITE_SCOPE)) ||
       (scope === "Chat.Read" && granted.has("Chat.ReadWrite")) ||
+      (scope === "ChatMessage.Send" && granted.has("Chat.ReadWrite")) ||
+      (scope === "Sites.Read.All" && granted.has("Sites.ReadWrite.All")) ||
       (scope === "Files.Read" &&
         (granted.has("Files.Read.All") ||
           granted.has("Files.ReadWrite") ||

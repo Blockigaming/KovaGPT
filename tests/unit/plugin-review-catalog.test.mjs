@@ -31,6 +31,9 @@ const review = load("src/lib/plugin-review-catalog.ts", {
   "@/integrations/connection-flows.mjs": flows,
   "./connectors-catalog": original,
   "./connector-master-list.mjs": master,
+  "./connector-write-actions": load("src/lib/connector-write-actions.ts", {
+    "@/integrations/connection-flows.mjs": flows,
+  }),
   ...assetModules,
 });
 const expected = [
@@ -129,12 +132,30 @@ test("source-backed capabilities name existing local code and never imply grante
       /account grants and action approval/,
     );
   }
-  assert.equal(
-    review
-      .getPluginReview("google-drive")
-      .permissions.find((permission) => permission.access === "write").verification,
-    "proposal_unconfirmed",
-  );
+  for (const id of [
+    "box",
+    "calendly",
+    "canva",
+    "figma",
+    "google-bigquery",
+    "google-drive",
+    "hubspot",
+    "ms-teams",
+    "notion",
+    "salesforce",
+    "sharepoint",
+    "slack",
+    "vercel",
+  ]) {
+    assert.ok(
+      review
+        .getPluginReview(id)
+        .permissions.some(
+          ({ access, verification }) => access === "write" && verification === "source_contract",
+        ),
+      id,
+    );
+  }
   assert.equal(review.getPluginPreviewProvider("unknown"), undefined);
 });
 

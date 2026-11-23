@@ -7,11 +7,31 @@ import { PGlite } from "@electric-sql/pglite";
 import * as flows from "../../src/integrations/connection-flows.mjs";
 import * as google from "../../src/lib/google-account-policy.mjs";
 import * as providerResponse from "../../src/lib/provider-response.server.mjs";
+import * as keyCredential from "../../src/integrations/key-connection-credential.server.mjs";
+import * as salesforceCredential from "../../src/integrations/salesforce-credential.server.mjs";
+import { loadUiModule } from "../helpers/ui-state-harness.mjs";
 
 const owner = "00000000-0000-4000-8000-000000000001";
 const target = "00000000-0000-4000-8000-000000000002";
+const actions = loadUiModule("src/lib/connector-write-actions.ts", {
+  "@/integrations/connection-flows.mjs": flows,
+});
+const writeRequests = loadUiModule(
+  "src/lib/connector-write-requests.server.ts",
+  {
+    "./connector-write-actions": actions,
+    "@/integrations/salesforce-credential.server.mjs": salesforceCredential,
+  },
+  { URL },
+);
 
-function fixture(scope, enabled = false, ownsAccount = true, provider = "microsoft") {
+function fixture(
+  scope,
+  enabled = false,
+  ownsAccount = true,
+  provider = "microsoft",
+  { scopes, response, credential = "fixture-token" } = {},
+) {
   const requests = [];
   const access = [];
   const row = {
@@ -19,7 +39,7 @@ function fixture(scope, enabled = false, ownsAccount = true, provider = "microso
     provider_id: provider,
     status: "connected",
     account_label: "Fixture",
-    granted_scopes: provider === "linear" ? ["read", scope] : [scope],
+    granted_scopes: scopes ?? (provider === "linear" ? ["read", scope] : [scope]),
     deleted_at: null,
     token_expires_at: null,
     updated_at: "first",
@@ -92,11 +112,16 @@ function fixture(scope, enabled = false, ownsAccount = true, provider = "microso
     "@/lib/distributed-rate-limit.server": {
       consumeApplicationRateLimit: async () => ({ allowed: true }),
     },
-    "@/integrations/credential-vault.server": { decryptCredential: async () => "fixture-token" },
+    "@/integrations/credential-vault.server": { decryptCredential: async () => credential },
     "@/integrations/connection-flows.mjs": flows,
     "@/integrations/oauth-providers.server": {
       configuredOAuthProviders: () => [{ id: provider }],
+      configuredKeyProviders: () => [{ id: provider }],
     },
+    "@/integrations/key-connection-credential.server.mjs": keyCredential,
+    "@/integrations/salesforce-credential.server.mjs": salesforceCredential,
+    "@/lib/connector-write-actions": actions,
+    "@/lib/connector-write-requests.server": writeRequests,
     "@/lib/provider-response.server.mjs": providerResponse,
     "@/lib/connector-write-policy.server": {
       connectorWriteAllowed: async (...args) => {
@@ -121,6 +146,7 @@ function fixture(scope, enabled = false, ownsAccount = true, provider = "microso
     async (url, options) => {
       assert.equal(authenticatedOwner, owner);
       requests.push([url, options]);
+      if (response) return response();
       if (provider === "linear")
         return Response.json({ data: { issueCreate: { success: true, issue: { id: target } } } });
       return new Response(null, { status: 201 });
@@ -171,20 +197,38 @@ test("database keeps connector preference and private submission records server-
     await db.exec(
       readFileSync("supabase/migrations/20261123150000_kova_connector_linear_write.sql", "utf8"),
     );
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261123194500_kova_expand_reviewed_connector_writes.sql",
+        "utf8",
+      ),
+    );
     await db.exec("set role service_role");
     await db.query(
       "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'google-drive',$2), ($1,'outlook-calendar',$2), ($1,'linear',$2)",
       [owner, target],
     );
+    for (const connector of actions.EXTRA_WRITE_CONNECTORS)
+      await db.query(
+        "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,$2,$3)",
+        [owner, connector, target],
+      );
+    await assert.rejects(
+      db.query(
+        "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'unknown',$2)",
+        [owner, target],
+      ),
+      /check constraint/u,
+    );
     await db.query(
       "insert into public.connector_directory_submissions(owner_id, details) values ($1,'{}')",
       [owner],
     );
-    assert.equal(
-      (await db.query("select allows_write from public.connector_write_preferences")).rows[0]
-        .allows_write,
-      false,
+    const preferences = await db.query(
+      "select allows_write from public.connector_write_preferences",
     );
+    assert.equal(preferences.rows.length, actions.EXTRA_WRITE_CONNECTORS.length + 3);
+    assert.ok(preferences.rows.every(({ allows_write }) => allows_write === false));
     await db.exec("set role authenticated");
     await assert.rejects(
       db.query("select * from public.connector_directory_submissions"),
@@ -201,6 +245,207 @@ test("database keeps connector preference and private submission records server-
   } finally {
     await db.close();
   }
+});
+
+test("Slack requires a confirmed action, owned grant and opt-in, and checks the API receipt", async () => {
+  const connector = "slack";
+  const destination = "C0123456789";
+  const fields = { destination, text: "Fixture review" };
+  const data = { connector, target, confirmed: true, fields };
+  const settings = { subject: { connector, target }, enabled: true };
+  const scopes = ["search:read", "chat:write"];
+  for (const f of [
+    fixture("search:read", true, true, connector),
+    fixture("chat:write", true, false, connector, { scopes }),
+  ]) {
+    assert.match((await f.handlers.runConnectorWriteAction(data)).error, /permission/u);
+    assert.equal(f.requests.length, 0);
+  }
+  let result = { ok: false };
+  const f = fixture("chat:write", false, true, connector, {
+    scopes,
+    response: () => Response.json(result),
+  });
+  assert.match((await f.handlers.runConnectorWriteAction(data)).error, /Write access changed/u);
+  assert.deepEqual(await f.handlers.setConnectorWriteAccess(settings), { enabled: true });
+  assert.throws(() => f.handlers.runConnectorWriteAction({ ...data, confirmed: false }));
+  assert.match(
+    (
+      await f.handlers.runConnectorWriteAction({
+        ...data,
+        fields: { ...fields, url: "https://example.org" },
+      })
+    ).error,
+    /Review the action fields/u,
+  );
+  assert.equal(f.requests.length, 0);
+  assert.match((await f.handlers.runConnectorWriteAction(data)).error, /did not confirm/u);
+  assert.equal(f.requests.length, 1);
+  result = { ok: true, channel: destination, ts: "1234567890.123456" };
+  assert.deepEqual(await f.handlers.runConnectorWriteAction(data), { ok: true });
+  const [url, request] = f.requests.at(-1);
+  assert.equal(url, "https://slack.com/api/chat.postMessage");
+  assert.equal(request.redirect, "error");
+  assert.deepEqual(JSON.parse(request.body), {
+    channel: destination,
+    text: fields.text,
+    mrkdwn: false,
+    unfurl_links: false,
+    unfurl_media: false,
+  });
+  await f.handlers.setConnectorWriteAccess({ ...settings, enabled: false });
+  assert.match((await f.handlers.runConnectorWriteAction(data)).error, /Write access changed/u);
+  assert.equal(f.requests.length, 2);
+});
+
+test("Notion internal writes use only the page bound to the linked credential", async () => {
+  const pageId = owner;
+  const credential = keyCredential.prepareKeyCredential("notion-private", {
+    apiKey: "ntn_fixture-token",
+    pageId,
+  }).token;
+  const connector = "notion-private";
+  const f = fixture("page:read", true, true, connector, {
+    credential,
+    response: () => Response.json({ object: "list", results: [{ id: target, type: "paragraph" }] }),
+  });
+  const data = { connector, target, confirmed: true, fields: { text: "Fixture paragraph" } };
+  assert.match(
+    (
+      await f.handlers.runConnectorWriteAction({
+        ...data,
+        fields: { ...data.fields, destination: target },
+      })
+    ).error,
+    /Review the action fields/u,
+  );
+  assert.deepEqual(await f.handlers.runConnectorWriteAction(data), { ok: true });
+  const [url, request] = f.requests[0];
+  assert.equal(url, `https://api.notion.com/v1/blocks/${pageId}/children`);
+  assert.equal(request.method, "PATCH");
+  assert.equal(request.headers.Authorization, "Bearer ntn_fixture-token");
+});
+
+test("every new directory action builds a bounded request and validates a provider receipt", () => {
+  const calendlyEvent = "https://api.calendly.com/event_types/AAAAAAAAAAAAAAAA";
+  const notionReceipt = { object: "list", results: [{ id: target, type: "paragraph" }] };
+  const receipts = {
+    box: [{ title: "Folder" }, "api.box.com", "/2.0/folders", 201, { id: "321" }],
+    calendly: [
+      { destination: calendlyEvent },
+      "api.calendly.com",
+      "/scheduling_links",
+      201,
+      { resource: { owner: calendlyEvent, booking_url: "https://calendly.com/d/fixture" } },
+    ],
+    canva: [
+      { title: "Design" },
+      "api.canva.com",
+      "/rest/v1/designs",
+      200,
+      { design: { id: "ABC" } },
+    ],
+    figma: [
+      { destination: "File123", text: "Comment" },
+      "api.figma.com",
+      "/v1/files/File123/comments",
+      200,
+      { id: "123" },
+    ],
+    "google-bigquery": [
+      { destination: "project-fixture", title: "dataset_1", location: "US" },
+      "bigquery.googleapis.com",
+      "/bigquery/v2/projects/project-fixture/datasets",
+      200,
+      { datasetReference: { projectId: "project-fixture", datasetId: "dataset_1" } },
+    ],
+    hubspot: [
+      { title: "Company" },
+      "api.hubapi.com",
+      "/crm/v3/objects/companies",
+      201,
+      { id: "111" },
+    ],
+    "ms-teams": [
+      { destination: "19:team@thread.v2", text: "Message" },
+      "graph.microsoft.com",
+      "/v1.0/chats/19%3Ateam%40thread.v2/messages",
+      201,
+      { id: "111" },
+    ],
+    notion: [
+      { destination: target, text: "Paragraph" },
+      "api.notion.com",
+      `/v1/blocks/${target}/children`,
+      200,
+      notionReceipt,
+    ],
+    "notion-private": [
+      { text: "Paragraph" },
+      "api.notion.com",
+      `/v1/blocks/${owner}/children`,
+      200,
+      notionReceipt,
+    ],
+    salesforce: [
+      { title: "Account" },
+      "fixtures.my.salesforce.com",
+      "/services/data/v67.0/sobjects/Account/",
+      201,
+      { id: "001000000000001", success: true },
+    ],
+    sharepoint: [
+      { destination: `example.sharepoint.com,${owner},${target}`, listId: target, title: "Item" },
+      "graph.microsoft.com",
+      `/v1.0/sites/example.sharepoint.com%2C${owner}%2C${target}/lists/${target}/items`,
+      201,
+      { id: "111" },
+    ],
+    slack: [
+      { destination: "C0123456789", text: "Message" },
+      "slack.com",
+      "/api/chat.postMessage",
+      200,
+      { ok: true, channel: "C0123456789", ts: "1234567890.123456" },
+    ],
+    vercel: [
+      { title: "fixture-project" },
+      "api.vercel.com",
+      "/v11/projects?teamId=team_fixture",
+      200,
+      { accountId: "team_fixture", id: "prj_fixture", name: "fixture-project" },
+    ],
+  };
+  assert.deepEqual([...actions.EXTRA_WRITE_CONNECTORS].sort(), Object.keys(receipts).sort());
+  for (const [connector, [fields, host, path, status, receipt]] of Object.entries(receipts)) {
+    const request = writeRequests.connectorWriteRequest(connector, fields, {
+      notionPageId: owner,
+      salesforceQuery: "https://fixtures.my.salesforce.com/services/data/v67.0/query",
+      vercelTeamId: "team_fixture",
+    });
+    assert.equal(request.url, `https://${host}${path}`, connector);
+    assert.equal(request.status, status, connector);
+    assert.equal(request.confirmed(receipt), true, connector);
+    assert.equal(request.confirmed({}), false, connector);
+    assert.equal(writeRequests.connectorWriteRequest(connector, { ...fields, extra: "x" }), null);
+  }
+  assert.equal(
+    writeRequests.connectorWriteRequest("calendly", {
+      destination: "https://example.test/event_types/AAAAAAAAAAAAAAAA",
+    }),
+    null,
+  );
+  assert.throws(
+    () =>
+      writeRequests.connectorWriteRequest(
+        "salesforce",
+        { title: "Account" },
+        {
+          salesforceQuery: "https://example.test/services/data/v67.0/query",
+        },
+      ),
+    /invalid_salesforce_binding/u,
+  );
 });
 
 test("Linear writes require the provider scope, owned account, and a reviewed issue", async () => {

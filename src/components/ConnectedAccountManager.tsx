@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { ConnectorWriteControls } from "@/components/ConnectorWriteControls";
+import { EXTRA_WRITE_ACTIONS, isExtraWriteConnector } from "@/lib/connector-write-actions";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { searchConnectedAccount, refreshConnectedAccess } from "@/lib/connected-accounts.functions";
 import {
@@ -106,8 +107,11 @@ export function ConnectedAccountManager({
   }, []);
   if (!flow) return null;
   const accounts = connectionAccounts(data?.accounts ?? [], operationId);
-  const writeScope =
-    id === "onedrive"
+  const writeConnector = isExtraWriteConnector(id) ? id : null;
+  const extraWrite = writeConnector ? EXTRA_WRITE_ACTIONS[writeConnector] : null;
+  const writeScope = extraWrite
+    ? extraWrite.scope
+    : id === "onedrive"
       ? "Files.ReadWrite"
       : id === "outlook"
         ? "Mail.ReadWrite"
@@ -130,7 +134,10 @@ export function ConnectedAccountManager({
         headers: { "Content-Type": "application/json", "X-Kova-Owner": owner },
         body: JSON.stringify({
           provider: flow.provider,
-          optionalScopes: write && writeScope ? [...flow.scopes, writeScope] : flow.scopes,
+          optionalScopes:
+            write && writeScope
+              ? [...CONNECTION_FLOWS[extraWrite?.readConnection ?? operationId].scopes, writeScope]
+              : flow.scopes,
           returnPath: `/apps?connection_view=${id === "hubspot" ? id : operationId}`,
           existingAccountId,
         }),
@@ -508,6 +515,22 @@ export function ConnectedAccountManager({
                         label={account.account_label ?? flow.label}
                         providerCanWrite={hasConnectionScopes(account.granted_scopes, [writeScope])}
                         authorizeWrite={() => void start(account.id, true)}
+                      />
+                    )}
+                  {writeConnector &&
+                    extraWrite &&
+                    configured &&
+                    (canReadConnection(account, operationId) ||
+                      canReadConnection(account, extraWrite.readConnection)) && (
+                      <ConnectorWriteControls
+                        connector={writeConnector}
+                        target={account.id}
+                        label={account.account_label ?? flow.label}
+                        providerCanWrite={
+                          canReadConnection(account, extraWrite.readConnection) &&
+                          (!writeScope || hasConnectionScopes(account.granted_scopes, [writeScope]))
+                        }
+                        authorizeWrite={writeScope ? () => void start(account.id, true) : undefined}
                       />
                     )}
                   {!usesApiKey && (

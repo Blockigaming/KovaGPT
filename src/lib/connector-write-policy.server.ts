@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ExtraWriteConnector } from "./connector-write-actions";
 
 export type WritableConnector =
   | "gmail"
@@ -9,7 +10,8 @@ export type WritableConnector =
   | "onedrive"
   | "outlook"
   | "google-drive"
-  | "outlook-calendar";
+  | "outlook-calendar"
+  | ExtraWriteConnector;
 type Preference = {
   owner_id: string;
   connector: WritableConnector;

@@ -86,7 +86,7 @@ Verify that a known note appears and an excluded note does not. Revoke the key i
 | Mixpanel  | Use a minimum-privilege service account and specify its project, data region, and workspace ID if the project uses Data Views. Verify a known cohort and deny a different project. | Up to ten saved cohort names and aggregate counts.                  |
 | eToro     | Use public and user keys from a real account with the Read permission. Confirm the values in eToro and try a demo-only key to verify rejection.                                    | Provider-reported portfolio value, cash balance and unrealized P&L. |
 
-These adapters verify their read against the provider before saving credentials and never send provider writes. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
+These adapters verify their read against the provider before saving credentials. Vercel also supports reviewed project creation after write access is enabled. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
 
 [Meltwater saved searches](https://developer.meltwater.com/docs/meltwater-api/listening/manage-searches/) · [Vercel deployment API](https://vercel.com/docs/rest-api/deployments/list-deployments) · [Mixpanel cohorts API](https://docs.mixpanel.com/reference/cohorts-list) · [eToro API](https://builders.etoro.com/reference)
 
@@ -144,7 +144,7 @@ The user chooses files and initiates each download. This adapter exchanges files
 
 Create an External Client App for a new Salesforce registration. Salesforce restricts creation of older Connected Apps beginning with Spring '26. Register the exact callback above and enable authorization-code OAuth with PKCE S256. The adapter uses production `login.salesforce.com` authorization. Sandbox-specific sign-in is not exposed.
 
-Request `openid`, `api` and `refresh_token`. Salesforce's `api` scope permits API access according to the user's Salesforce role and can authorize writes at the provider. Kova implements only bounded GET queries here; it does not provide Salesforce write operations. Users should connect a Salesforce role with appropriate object and field permissions.
+Request `openid`, `api` and `refresh_token`. Salesforce uses the same `api` scope for reads and writes and enforces the user's object and field permissions. KovaGPT starts with search access and requires explicit opt-in and review before creating an account record.
 
 The OAuth callback verifies UserInfo before storing the credential. The access token, validated Salesforce query endpoint, organization and user identity are encrypted together. Requests reject arbitrary hosts, redirects, API paths and record types. Query text is escaped as a LIKE literal; object names, fields, order and a ten-record maximum are fixed on the server.
 
@@ -169,3 +169,20 @@ Official Salesforce references:
 Apply the connector controls and submissions migration before deploying the directory. Use the existing administrator allowlist to review submissions. Authors can save drafts and resubmit when a reviewer requests changes. A public repository must have a readable `kova-plugin.json` at its root. The directory verifies its name and description and publishes a link after approval. A remote MCP submission requires a configured, reviewed read tool before publication. Submission validation never sends a request to an unapproved MCP URL or executes bundle code.
 
 The account or repository Permissions panel starts at Read only. Write access needs both the provider grant and the KovaGPT setting. Gmail draft and send actions and Google Calendar event creation retain their chat approval. GitHub and Linear issues, new Google Drive and OneDrive folders, Outlook drafts, and personal Outlook Calendar events have a review step in the directory. Linear uses the optional `issues:create` scope and requires the selected team UUID. Google folder creation uses the per-file Drive scope. Outlook Calendar uses explicit UTC times without attendees. Outlook drafts stay in Drafts. Switching back to Read only blocks subsequent KovaGPT writes. Review the provider's account settings to remove its underlying grant.
+
+The directory also supports these reviewed actions when the connected account has the required provider permission.
+
+| Connector             | Action                                                                               | Provider permission                                                    |
+| --------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Box                   | Create a root folder                                                                 | `root_readwrite`                                                       |
+| Calendly              | Create a single-use link for an existing event type                                  | `scheduling_links:write`                                               |
+| Canva                 | Create a blank square design                                                         | `design:content:write`                                                 |
+| Figma                 | Post a comment to the selected file                                                  | `file_comments:write`                                                  |
+| Google Cloud BigQuery | Create an empty dataset in the selected project and location                         | `bigquery` scope and `bigquery.datasets.create` IAM permission         |
+| HubSpot               | Create a company record                                                              | `crm.objects.companies.write`                                          |
+| Microsoft Teams       | Send a plain-text message in an existing chat                                        | `ChatMessage.Send` with chat read access on a work or school account   |
+| Notion                | Append a paragraph to a shared page or the one page bound to an internal integration | Insert content and access to the page                                  |
+| Salesforce            | Create an Account record                                                             | `api` and permission to create the Account object                      |
+| SharePoint            | Create a list item with a title                                                      | `Sites.ReadWrite.All` and permission to add items to the selected list |
+| Slack                 | Send a message to an existing conversation                                           | `chat:write` for the connected user and access to the conversation     |
+| Vercel                | Create an empty project in the linked team                                           | Team-scoped token with Create Project permission                       |

@@ -1,6 +1,7 @@
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 import { getConnector, type ConnectorItem } from "./connectors-catalog";
 import { MASTER_CONNECTOR_IDS } from "./connector-master-list.mjs";
+import { EXTRA_WRITE_ACTIONS, isExtraWriteConnector } from "./connector-write-actions";
 import gmailLogo from "../assets/plugins/gmail.svg";
 import googleCalendarLogo from "../assets/plugins/google-calendar.svg";
 import googleDriveLogo from "../assets/plugins/google-drive.svg";
@@ -68,6 +69,27 @@ const supported = (
 function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewEntry {
   const connector = getConnector(id);
   if (!connector) throw new Error(`Missing launch review connector: ${id}`);
+  if (isExtraWriteConnector(id)) {
+    permissions = [
+      ...permissions,
+      supported(
+        "write",
+        EXTRA_WRITE_ACTIONS[id].summary,
+        "src/lib/connector-write.functions.ts",
+        "src/lib/connector-write-requests.server.ts",
+      ),
+    ];
+  }
+  if (id === "notion") {
+    permissions.push(
+      supported(
+        "write",
+        EXTRA_WRITE_ACTIONS["notion-private"].summary,
+        "src/lib/connector-write.functions.ts",
+        "src/lib/connector-write-requests.server.ts",
+      ),
+    );
+  }
   const implemented =
     permissions.some(({ verification }) => verification === "source_contract") ||
     Object.hasOwn(CONNECTION_FLOWS, id);
@@ -171,7 +193,6 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
       "src/integrations/connection-read.server.mjs",
       "src/integrations/connected-tools.server.ts",
     ),
-    proposed("write", "Proposed: send a Teams message after review; scope unconfirmed"),
   ]),
   entry("notion", [
     proposed(
@@ -201,7 +222,6 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
   ]),
   entry("slack", [
     proposed("read", "Proposed: search selected Slack conversations; scope unconfirmed"),
-    proposed("write", "Proposed: send a Slack message after review; scope unconfirmed"),
   ]),
   entry("salesforce", [
     proposed(
