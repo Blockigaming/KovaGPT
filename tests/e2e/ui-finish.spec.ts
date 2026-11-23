@@ -320,7 +320,7 @@ test("the conversation checklist collects sources, outputs and real browser meta
         },
       ];
       chat.messages[1].content =
-        "I outlined two sample outputs.\n\n```markdown\n# Editing checklist\nTrim the opening and add captions.\n```\n\n```csv\nshot,duration\nintro,5s\n```";
+        "I prepared an editing checklist and a shot schedule.\n\n```kova-docx\n# Editing checklist\nTrim the opening and add captions.\n```\n\n```kova-xlsx\n# Shot schedule\n| Shot | Duration |\n| --- | --- |\n| Intro | 5 seconds |\n```";
       chat.messages[1].sources = [
         { title: "Example reference", url: "https://example.com/reference", domain: "example.com" },
       ];
@@ -334,7 +334,7 @@ test("the conversation checklist collects sources, outputs and real browser meta
         "firecrawl_scrape",
         "library_search",
         "read_file",
-      ].map((tool) => ({ tool, label: tool, status: "done" }));
+      ].map((tool) => ({ tool, label: "Reviewed " + tool.split("_")[0], status: "done" }));
       localStorage.setItem(key, JSON.stringify(chats));
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input, init) => {
@@ -347,7 +347,7 @@ test("the conversation checklist collects sources, outputs and real browser meta
               const delta = {
                 kind: "activity",
                 tool: "browser_interact",
-                label: "Opened YouTube",
+                label: "Browsing YouTube",
                 status: "running",
                 browser: {
                   sessionId: "d840146b-ab21-4a1a-8c68-9621ea1e11f2",
@@ -447,6 +447,8 @@ test("the conversation checklist collects sources, outputs and real browser meta
   await expect(browser).toContainText("Active");
   await expect(browser).toContainText("www.youtube.com");
   await expect(browser).toContainText("1 tab");
+  await expect(panel.getByRole("button", { name: /Editing checklist/ })).toBeVisible();
+  await expect(panel.getByRole("button", { name: /Shot schedule/ })).toBeVisible();
   await expect(panel.getByText("Video brief.txt", { exact: true })).toBeVisible();
   await expect(panel.getByText("Shot list.txt", { exact: true })).toBeVisible();
   const preview = browser.getByRole("img", { name: "Current cloud browser preview" });

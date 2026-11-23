@@ -190,9 +190,9 @@ export function ConversationHeaderActions({
   };
   const restrictedTemporary = Boolean(conversation.temporary);
   const steps = useMemo(() => {
-    const rows = savedConversation.messages.flatMap((message) =>
+    const rows = conversation.messages.flatMap((message) =>
       (message.activities ?? [])
-        .filter((step) => step.tool !== "scheduled_task" && step.tool !== "browser_interact")
+        .filter((step) => step.tool !== "scheduled_task")
         .map((step, index) => ({
           key: `${message.id}:${step.activityId ?? index}`,
           label: step.label,
@@ -206,7 +206,7 @@ export function ConversationHeaderActions({
       rows.push({ key: streamingMessageId, label: "Generating a response", status: "running" });
     }
     return rows;
-  }, [savedConversation.messages, streamingMessageId]);
+  }, [conversation.messages, streamingMessageId]);
   const hasSources = Boolean(
     sourceInventory.web.length ||
     sourceInventory.memory.length ||
@@ -734,7 +734,7 @@ export function ConversationHeaderActions({
         </DialogContent>
       </Dialog>
       {selectedBrowser &&
-        (browserPresentation?.active && signedIn ? (
+        (browserPresentation?.active && signedIn && selectedBrowser.status === "active" ? (
           browserPresentation.renderDialog({
             activity: selectedBrowser,
             onClose: () => setSelectedBrowser(null),
