@@ -76,23 +76,26 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  overflow: hidden;
-  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  background: none;
 }
 .kova-activity-logo img {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
 }
-/* Brand logos keep their whole shape: a small light tile instead of a clipping circle. */
+/* Brand logos sit directly on the page background: no tile, ring or circle behind them. */
 .kova-activity-logo:has(img) {
   width: 18px;
   height: 18px;
   margin-inline: 2px;
-  border-radius: 5px;
+  border-radius: 0;
   overflow: visible;
-  background: #fff;
+  background: none;
+  box-shadow: none;
+}
+.kova-activity-logo:has(img) img {
+  width: 18px;
+  height: 18px;
 }
 .kova-activity-icon {
   width: 14px;
@@ -417,12 +420,17 @@ button.kova-response-work-time[aria-expanded="true"] .kova-response-work-chevron
     color: inherit;
   }
 }
-/* Brand logos sit on a small light tile so dark marks (GitHub, Notion) stay visible in dark mode. */
-.kova-step-group-icon:has(img) {
-  border-radius: 5px;
-  background: #fff;
+
+/* Monochrome dark marks would vanish on the dark background, so they flip to white there. */
+:is(.dark, [data-theme="dark"]) :is(.kova-activity-logo, .kova-step-group-icon) img:is([data-brand="github"], [data-brand="linear"]) {
+  filter: invert(1);
 }
-.kova-step-group-icon > img {
-  width: 14px;
-  height: 14px;
+/* Logos are not chat images: drop the framed-image fill, border, radius and shadow. */
+:is(.kova-activity-logo, .kova-step-group-icon) > img {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
