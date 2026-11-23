@@ -2,12 +2,15 @@ import {
   AlertTriangle,
   CalendarDays,
   Clock,
+  Code2,
   FileText,
   Globe,
   Loader2,
   Mail,
   Pause,
+  Search,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { ResponseSourceIcon } from "./ResponseSourceIcon";
 import type { Activity } from "@/lib/chat-store";
@@ -35,7 +38,7 @@ export function formatActivityDuration(ms: number) {
 }
 
 // A plain render function (not a component) so the list stays a hook-free tree.
-function renderActivityRow(activity: Activity, nested: boolean, key: string | number) {
+export function renderActivityRow(activity: Activity, nested: boolean, key: string | number) {
   const tool = activity.tool.toLowerCase();
   const Icon =
     tool.includes("gmail") || tool.includes("email")
@@ -44,7 +47,13 @@ function renderActivityRow(activity: Activity, nested: boolean, key: string | nu
         ? CalendarDays
         : tool.includes("drive") || tool.includes("file") || tool.includes("document")
           ? FileText
-          : Globe;
+          : /code|python|command|shell|exec|run|terminal/u.test(tool)
+            ? Code2
+            : /read|glob|grep|library|search_files/u.test(tool)
+              ? Search
+              : /web|browser|search|fetch|url/u.test(tool)
+                ? Globe
+                : Zap;
   const status = STATUS_TEXT[activity.status] ?? "Completed";
   const progress =
     typeof activity.count === "number" && typeof activity.total === "number" && activity.total > 0
@@ -124,7 +133,7 @@ function renderActivityRow(activity: Activity, nested: boolean, key: string | nu
 }
 
 /** Children follow their parent operation; orphans stay in arrival order. */
-function orderRows(rows: Activity[]) {
+export function orderRows(rows: Activity[]) {
   const ids = new Set(rows.map((row) => row.activityId).filter(Boolean));
   const ordered: { activity: Activity; nested: boolean; key: string | number }[] = [];
   rows.forEach((activity, index) => {

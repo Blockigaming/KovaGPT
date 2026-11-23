@@ -42,13 +42,13 @@ function numeric(value) {
 }
 
 /** Numbers (with currency, commas, %, k/m/b) sort numerically; everything else naturally. */
-export function compareCells(a = "", b = "") {
+export function compareCells(a = "", b = "", locale = undefined) {
   const x = numeric(a);
   const y = numeric(b);
   if (x !== null && y !== null) return x - y;
   if (x !== null) return -1;
   if (y !== null) return 1;
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  return a.localeCompare(b, locale, { numeric: true, sensitivity: "base" });
 }
 
 /** CSV (RFC 4180 quoting) or TSV text; formula-leading cells are neutralised for spreadsheets. */

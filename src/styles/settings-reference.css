@@ -782,13 +782,14 @@
   (min-width: 768px) and (pointer: fine),
   (min-width: 1024px) {
   [role="dialog"].kova-settings-dialog.is-authenticated {
-    width: min(820px, calc(100vw - 48px));
-    height: min(640px, calc(100dvh - 48px));
-    border-radius: 20px;
+    /* A roomy workspace-sized panel: most of the window, capped for very large screens. */
+    width: min(1120px, calc(100vw - 96px));
+    height: min(820px, calc(100dvh - 80px));
+    border-radius: 24px;
   }
   .kova-settings-reference .kova-settings-sidebar {
-    width: var(--kova-settings-navigation-width, 210px);
-    padding: 16px 12px;
+    width: var(--kova-settings-navigation-width, 248px);
+    padding: 20px 14px;
   }
   .kova-settings-reference .kova-settings-navigation-heading {
     min-height: 36px;

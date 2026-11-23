@@ -1,4 +1,5 @@
 import { ChatOutputTemplates } from "./ChatOutputTemplates";
+import { t } from "@/lib/localization";
 import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
 import { Grid2X2, List as ListIcon, Settings as SettingsIcon } from "lucide-react";
 import {
@@ -2032,8 +2033,8 @@ export function ChatInput({
               }}
             >
               <Target aria-hidden="true" />
-              <span>Set a goal</span>
-              <small>Keep this chat working toward one outcome</small>
+              <span>{t("Set a goal")}</span>
+              <small>{t("Keep this chat working toward one outcome")}</small>
             </button>
           </div>
         )}
@@ -2506,7 +2507,7 @@ export function ChatInput({
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
-              placeholder={placeholder ?? "Work with KovaGPT"}
+              placeholder={placeholder ?? t("Work with KovaGPT")}
               rows={1}
               spellCheck
               autoComplete="off"

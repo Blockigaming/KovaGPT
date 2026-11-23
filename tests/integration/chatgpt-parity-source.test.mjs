@@ -58,7 +58,7 @@ test("chat remains primary and Work is accessible only through direct route, not
 test("customizable core destinations precede the scrollable More disclosure", () => {
   const disclosure = sidebar.match(/<details[^>]*>[\s\S]*?<\/details>/)?.[0];
   assert.ok(disclosure);
-  assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>More<\/span>/);
+  assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>(?:More|\{t\("More"\)\})<\/span>/);
   assert.doesNotMatch(disclosure, /navLink\("\/discovery", "Discover", Compass\)/);
   assert.match(disclosure, /Customize sidebar/);
   assert.doesNotMatch(disclosure, /\/work|SHORTCUT_ICONS\.work/);
@@ -189,7 +189,10 @@ test("active chat shares scoped header actions and keeps secondary controls reac
 });
 
 test("compact composer groups actions and preserves message editing and markdown", () => {
-  assert.match(chatInput, /placeholder=\{placeholder \?\? "Work with KovaGPT"\}/);
+  assert.match(
+    chatInput,
+    /placeholder=\{placeholder \?\? (?:"Work with KovaGPT"|t\("Work with KovaGPT"\))\}/,
+  );
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,

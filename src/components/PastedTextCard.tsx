@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { t } from "@/lib/localization";
 import { Pencil, X } from "lucide-react";
 import { pastePreviewSnippet } from "@/lib/composer-local-attachments.mjs";
 import "./pasted-text-card.css";
@@ -51,7 +52,7 @@ export function PastedTextCard({
         </span>
       </button>
       <span className="kova-pasted-card-badge" aria-hidden="true">
-        Pasted
+        {t("Pasted")}
       </span>
       {onEdit && (
         <button

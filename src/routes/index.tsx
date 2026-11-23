@@ -2244,9 +2244,13 @@ function KovaGPT() {
                 nextConvId,
                 assistantMsg.id,
               );
+              // Remember how much reply text had arrived, so the step shows between paragraphs.
+              const at = assembledReply.length;
               updateAssistantMessage((message) => ({
                 ...message,
-                activities: appendActivity(message.activities),
+                activities: appendActivity(message.activities).map((activity) =>
+                  activity.at === undefined ? { ...activity, at } : activity,
+                ),
               }));
             }
             if (delta?.kind === "tool_confirm" && delta?.action_id) {

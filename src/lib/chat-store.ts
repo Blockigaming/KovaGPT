@@ -156,6 +156,8 @@ export type Activity = {
   /** Client-observed start and measured duration of a live operation. */
   startedAt?: number;
   durationMs?: number;
+  /** Reply characters received when this step began, so it shows between those paragraphs. */
+  at?: number;
 };
 const ACTIVITY_STATUSES = new Set<Activity["status"]>([
   "done",

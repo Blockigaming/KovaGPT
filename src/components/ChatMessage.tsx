@@ -1,4 +1,7 @@
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
+import { ActivityGroup } from "./ActivityGroup";
+import { segmentReply } from "@/lib/activity-groups.mjs";
+import { LiveThinking } from "./LiveThinking";
 import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
@@ -22,26 +25,27 @@ import { GenerativeCanvas } from "./generative-ui/GenerativeCanvas";
 import { splitInteractiveContent } from "@/lib/interactive-ui.mjs";
 import { InteractiveBlock } from "./interactive-ui/InteractiveBlock";
 import {
-  Copy,
-  Sparkles,
-  Check,
-  Loader2,
   Bookmark,
   Brain,
-  FileEdit,
+  Check,
+  ChevronDown,
   Code2,
-  MoreHorizontal,
-  Share2,
-  Pencil,
-  RefreshCw,
+  Copy,
+  FileEdit,
   GitBranch,
   Globe,
-  Mail,
-  ThumbsUp,
-  ThumbsDown,
-  History,
-  TextSelect,
   GraduationCap,
+  History,
+  Loader2,
+  Mail,
+  MoreHorizontal,
+  Pencil,
+  RefreshCw,
+  Share2,
+  Sparkles,
+  TextSelect,
+  ThumbsDown,
+  ThumbsUp,
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -510,6 +514,12 @@ function ChatMessageInner({
     [cleanedResponse, isUser, streaming],
   );
   const hasWidget = canvasParts.some((part) => part.kind === "widget");
+  // Steps recorded with their position show between the paragraphs they happened around.
+  const replySegments = useMemo(
+    () => (isUser || hasWidget ? null : segmentReply(message.content, message.activities)),
+    [hasWidget, isUser, message.activities, message.content],
+  );
+  const [expandSteps, setExpandSteps] = useState(false);
   // Validated kova-interactive blocks render as native controls; everything else
   // (including malformed or still-streaming blocks) stays ordinary markdown.
   const submitInteractive = onFollowUp ?? undefined;
@@ -531,7 +541,14 @@ function ChatMessageInner({
     },
     [message.id, onOpenResult],
   );
-  const renderResponseText = (text: string, key: React.Key | undefined) => {
+  // Charts, files and step groups split a reply into pieces; footnote definitions travel
+  // with every piece that cites them so references stay linked.
+  const footnoteDefinitions = (message.content.match(/^\[\^[^\]\s]+\]:.*$/gmu) ?? []).join("\n");
+  const renderResponseText = (raw: string, key: React.Key | undefined) => {
+    const text =
+      footnoteDefinitions && /\[\^[^\]\s]+\](?!:)/u.test(raw) && !/^\[\^[^\]\s]+\]:/mu.test(raw)
+        ? `${raw}\n\n${footnoteDefinitions}`
+        : raw;
     const parts = isUser || streaming ? [] : splitInteractiveContent(text);
     const markdown = (value: string, k?: React.Key) => (
       <ResponseMarkdown
@@ -908,9 +925,24 @@ function ChatMessageInner({
         <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
           <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
             {!streaming && typeof message.workedMs === "number" ? (
-              <p className="kova-response-work-time">
-                Worked for {formatResponseTime(message.workedMs / 1000)}
-              </p>
+              replySegments ? (
+                <button
+                  type="button"
+                  className="kova-response-work-time"
+                  aria-expanded={expandSteps}
+                  onClick={() => setExpandSteps((open) => !open)}
+                >
+                  Worked for {formatResponseTime(message.workedMs / 1000)}
+                  <ChevronDown aria-hidden="true" className="kova-response-work-chevron" />
+                </button>
+              ) : (
+                <p className="kova-response-work-time">
+                  Worked for {formatResponseTime(message.workedMs / 1000)}
+                </p>
+              )
+            ) : null}
+            {streaming && !message.pendingImage && !replySegments ? (
+              <LiveThinking startedAt={message.createdAt} activities={message.activities} />
             ) : null}
             {message.activities
               ?.filter((activity) => activity.tool === "scheduled_task")
@@ -918,6 +950,7 @@ function ChatMessageInner({
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
             {!streaming &&
+              !replySegments &&
               (responseFiles.some((file) => file.complete) ? (
                 <ResponseActivitySummary activities={message.activities} files={responseFiles} />
               ) : (
@@ -937,7 +970,7 @@ function ChatMessageInner({
             >
               {message.pendingImage && !message.content ? (
                 <ChatLoadingIndicator label="Generating image" />
-              ) : waitingForFirstToken ? (
+              ) : waitingForFirstToken && !replySegments ? (
                 <ChatLoadingIndicator label="Waiting for response" />
               ) : (
                 (() => {
@@ -978,6 +1011,22 @@ function ChatMessageInner({
                           />
                         ) : part.text.trim() ? (
                           renderResponseSection(part.text, index)
+                        ) : null,
+                      )}
+                    </div>
+                  ) : replySegments ? (
+                    <div className="kova-reply-segments">
+                      {replySegments.map((segment, index) =>
+                        segment.kind === "group" ? (
+                          <ActivityGroup
+                            key={`g${segment.at}:${expandSteps}`}
+                            activities={segment.activities}
+                            defaultOpen={expandSteps}
+                          />
+                        ) : segment.text.trim() ? (
+                          <div key={`t${index}`}>
+                            {renderResponseSection(cleanAssistantText(segment.text), index)}
+                          </div>
                         ) : null,
                       )}
                     </div>

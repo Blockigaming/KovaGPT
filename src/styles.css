@@ -10,6 +10,7 @@
 @import "./styles/spec400-system.css";
 @import "./styles/spec400-chat.css";
 @import "./styles/visual-tokens.css";
+@import "./styles/localization.css";
 @import "./styles/control-geometry.css";
 @import "./styles/assistant-overlays.css";
 @import "./styles/reference-surfaces.css";

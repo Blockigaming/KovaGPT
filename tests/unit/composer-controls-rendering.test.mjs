@@ -57,6 +57,7 @@ const closedSurfaces = {
   "@/components/ComposerDrawingDialog": { ComposerDrawingDialog: empty },
   "@/components/PastedTextCard": { PastedTextCard: empty },
   "@/components/ChatGoalRow": { ChatGoalRow: empty },
+  "@/lib/localization": { t: (text) => text },
   "@/components/ComposerPluginList": {
     ComposerPluginList: empty,
     useComposerPluginConnections: () => ({}),

@@ -149,6 +149,7 @@ function fixture(
       ],
     },
     "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
+    "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },

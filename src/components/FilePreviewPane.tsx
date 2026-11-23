@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { t } from "@/lib/localization";
 import {
   Check,
   ChevronDown,
@@ -156,7 +157,7 @@ export function FilePreviewPane({
               aria-label={copyState === "copied" ? "Copied" : `Copy ${file.name}`}
             >
               {copyState === "copied" ? <Check aria-hidden="true" /> : null}
-              {copyState === "copied" ? "Copied" : "Copy"}
+              {copyState === "copied" ? t("Copied") : t("Copy")}
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

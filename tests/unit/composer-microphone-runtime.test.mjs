@@ -123,6 +123,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
     "@/components/PastedTextCard": { PastedTextCard: "PastedTextCard" },
     "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
+    "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
     react,
     "lucide-react": {},

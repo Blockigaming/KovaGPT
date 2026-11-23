@@ -224,3 +224,185 @@
     transition: none;
   }
 }
+
+/* Live "Thinking" header while a reply is being made. */
+.kova-live-thinking {
+  margin-bottom: 8px;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+.kova-live-thinking > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.kova-live-thinking > summary::-webkit-details-marker {
+  display: none;
+}
+.kova-live-thinking > summary > span:nth-child(2) {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 30%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 70%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: kova-thinking-shimmer 1.8s linear infinite;
+}
+.kova-live-thinking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: kova-thinking-pulse 1.2s ease-in-out infinite;
+}
+.kova-live-thinking-time {
+  font-variant-numeric: tabular-nums;
+}
+@keyframes kova-thinking-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes kova-thinking-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-live-thinking > summary > span:nth-child(2),
+  .kova-live-thinking-dot {
+    animation: none;
+    color: inherit;
+  }
+}
+
+/* Steps between paragraphs: one quiet summary line that opens into a guided list. */
+.kova-reply-segments {
+  display: grid;
+  gap: 0;
+}
+.kova-step-group {
+  margin: 10px 0;
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+}
+.kova-step-group > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 2px 0;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 8px;
+  transition: color 120ms ease;
+}
+.kova-step-group > summary::-webkit-details-marker {
+  display: none;
+}
+.kova-step-group > summary:hover,
+.kova-step-group[open] > summary {
+  color: var(--foreground);
+}
+.kova-step-group > summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-step-group-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.kova-step-group-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-step-group-chevron {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  opacity: 0;
+  transition:
+    transform 150ms ease,
+    opacity 120ms ease;
+}
+.kova-step-group > summary:hover .kova-step-group-chevron,
+.kova-step-group > summary:focus-visible .kova-step-group-chevron,
+.kova-step-group[open] .kova-step-group-chevron {
+  opacity: 1;
+}
+.kova-step-group[open] .kova-step-group-chevron {
+  transform: rotate(90deg);
+}
+.kova-step-group-flag {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--destructive) 16%, transparent);
+  color: var(--destructive);
+  font-size: 0.75rem;
+}
+.kova-step-group-list {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 4px 7px;
+  padding: 4px 0 4px 22px;
+  border-inline-start: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  list-style: none;
+}
+.kova-step-group-list .kova-activity-row {
+  padding: 4px 0;
+}
+.kova-step-group[data-running] > summary .kova-step-group-text {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 30%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 70%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: kova-thinking-shimmer 1.8s linear infinite;
+}
+button.kova-response-work-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button.kova-response-work-time:hover {
+  color: var(--foreground);
+}
+.kova-response-work-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 150ms ease;
+}
+button.kova-response-work-time[aria-expanded="true"] .kova-response-work-chevron {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-step-group[data-running] > summary .kova-step-group-text {
+    animation: none;
+    color: inherit;
+  }
+}
+/* Brand logos sit on a small light tile so dark marks (GitHub, Notion) stay visible in dark mode. */
+.kova-step-group-icon img,
+.kova-step-group-list .kova-activity-logo img {
+  padding: 1px;
+  border-radius: 4px;
+  background: #fff;
+}

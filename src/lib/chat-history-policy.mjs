@@ -259,6 +259,7 @@ export function normalizeChatHistory(value, ownerId) {
               ...(activityNumber(extra.total, 1e9) ? { total: extra.total } : {}),
               ...(text(extra.parentId, 160) ? { parentId: extra.parentId } : {}),
               ...(activityNumber(extra.durationMs, 864e5) ? { durationMs: extra.durationMs } : {}),
+              ...(activityNumber(extra.at, 1e7) ? { at: extra.at } : {}),
               ...(receipt ? { taskReceipt: receipt } : {}),
               ...(failure ? { taskFailure: failure } : {}),
             };

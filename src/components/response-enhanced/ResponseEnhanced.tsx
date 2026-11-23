@@ -9,6 +9,8 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { t, useLocalization } from "@/lib/localization";
+import { intlLocale, searchMatches } from "@/lib/localization-format";
 import { ArrowDown, ArrowUp, Check, Copy, Download, Search, X } from "lucide-react";
 import { highlightLines } from "@/lib/code-highlight";
 import { formatMediaTime, parseMediaTitle } from "@/lib/response-media.mjs";
@@ -91,6 +93,7 @@ const EXTENSIONS: Record<string, string> = {
 };
 
 function CodeView({ language, text }: { language: string; text: string }) {
+  useLocalization();
   const [wrap, setWrap] = useState(false);
   const [numbers, setNumbers] = useState(() => text.split("\n").length > 3);
   const lines = useMemo(() => highlightLines(text, language), [text, language]);
@@ -99,10 +102,10 @@ function CodeView({ language, text }: { language: string; text: string }) {
     <div className="kova-code" data-wrap={wrap || undefined} data-numbers={numbers || undefined}>
       <div className="kova-code-tools" role="toolbar" aria-label={`${language} code options`}>
         <button type="button" aria-pressed={numbers} onClick={() => setNumbers((v) => !v)}>
-          Line numbers
+          {t("Line numbers")}
         </button>
         <button type="button" aria-pressed={wrap} onClick={() => setWrap((v) => !v)}>
-          Wrap
+          {t("Wrap lines")}
         </button>
         <button
           type="button"
@@ -110,7 +113,7 @@ function CodeView({ language, text }: { language: string; text: string }) {
             downloadText(`snippet.${EXTENSIONS[language.toLowerCase()] ?? "txt"}`, text)
           }
         >
-          <Download aria-hidden="true" /> Download
+          <Download aria-hidden="true" /> {t("Download")}
         </button>
       </div>
       <pre tabIndex={0} dir="ltr" aria-label={`${language} code block`}>
@@ -145,6 +148,7 @@ function elementChildren(node: ReactNode) {
 }
 
 function TableView({ model, children }: { model: TableModel; children: ReactNode }) {
+  useLocalization();
   const [sort, setSort] = useState<{ column: number; direction: 1 | -1 } | null>(null);
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState(false);
@@ -158,16 +162,17 @@ function TableView({ model, children }: { model: TableModel; children: ReactNode
   const bodyRows = body ? elementChildren(body.props.children) : [];
 
   const order = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = query.trim();
     let indexes = model.rows.map((_, index) => index);
     if (needle)
       indexes = indexes.filter((index) =>
-        model.rows[index].some((cell) => cell.toLowerCase().includes(needle)),
+        model.rows[index].some((cell) => searchMatches(cell, needle)),
       );
     if (sort)
       indexes.sort(
         (a, b) =>
-          compareCells(model.rows[a][sort.column], model.rows[b][sort.column]) * sort.direction,
+          compareCells(model.rows[a][sort.column], model.rows[b][sort.column], intlLocale()) *
+          sort.direction,
       );
     return indexes;
   }, [model, query, sort]);
@@ -190,11 +195,11 @@ function TableView({ model, children }: { model: TableModel; children: ReactNode
           {model.rows.length > 5 && (
             <label className="kova-table-filter" htmlFor={filterId}>
               <Search aria-hidden="true" />
-              <span className="sr-only">Filter rows</span>
+              <span className="sr-only">{t("Filter rows")}</span>
               <input
                 id={filterId}
                 type="search"
-                placeholder="Filter rows"
+                placeholder={t("Filter rows")}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -214,7 +219,7 @@ function TableView({ model, children }: { model: TableModel; children: ReactNode
             aria-label={copied ? "Table copied" : "Copy table"}
           >
             {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("Copied") : t("Copy")}
           </button>
           <button
             type="button"
