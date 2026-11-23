@@ -28,6 +28,7 @@ import {
   StickyNote,
   Code2,
   Image,
+  Settings,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -230,11 +231,11 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
   }
 }
 
-function AppLogo({ id, initial }: { id: string; initial?: string }) {
+function AppLogo({ id }: { id: string }) {
   const asset = getPluginReview(id)?.brandAsset.src;
   return (
-    <span className="spec400-plugin-logo" aria-hidden="true">
-      {asset ? <img src={asset} alt="" /> : initial ? <span>{initial}</span> : <PanelsTopLeft />}
+    <span className="spec400-plugin-logo" data-logo={id} aria-hidden="true">
+      {asset ? <img src={asset} alt="" /> : <PanelsTopLeft />}
     </span>
   );
 }
@@ -323,8 +324,9 @@ function AppCard({
               {item.label}
             </a>
           </h3>
-          {state !== "connected" && <p className="spec400-plugin-purpose">{item.description}</p>}
-          <span className="spec400-plugin-category">{item.category}</span>
+          <p className="spec400-plugin-purpose">
+            {state === "connected" ? item.category : item.description}
+          </p>
         </div>
       </div>
       <div className="spec400-plugin-card-footer">
@@ -1708,6 +1710,7 @@ function AppsPage() {
           <article
             key={`${principal}:${visibleSelectedApp.id}`}
             className="kova-connection-page"
+            data-connection-category={visibleSelectedApp.category}
             data-ui-reference="kova.connections.details"
             aria-labelledby="connection-title"
           >
@@ -1720,43 +1723,40 @@ function AppsPage() {
               <ArrowLeft aria-hidden="true" /> Back to Connections
             </Button>
             <header className="kova-connection-hero">
-              <AppLogo id={visibleSelectedApp.id} initial={visibleSelectedApp.label.slice(0, 2)} />
-              <div>
-                <h1 id="connection-title" ref={detailsHeadingRef} tabIndex={-1}>
-                  {visibleSelectedApp.label}
-                </h1>
-                <p>
-                  {selectedProfile.publisher && <>By {selectedProfile.publisher} · </>}
-                  {visibleSelectedApp.description}
-                </p>
+              <div className="kova-connection-hero-top">
+                <AppLogo id={visibleSelectedApp.id} />
+                <div className="kova-connection-header-actions">
+                  <StatusBadge
+                    state={stateOf(visibleSelectedApp.id)}
+                    configured={configuredOf(visibleSelectedApp.id)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Copy connection link"
+                    title="Copy connection link"
+                    onClick={async () => {
+                      const link = new URL("/apps", window.location.origin);
+                      link.searchParams.set("plugin", visibleSelectedApp.id);
+                      try {
+                        await navigator.clipboard.writeText(link.href);
+                        toast.success("Connection link copied");
+                      } catch {
+                        toast.error(
+                          "Could not copy the link. Use your address bar to share this page.",
+                        );
+                      }
+                    }}
+                  >
+                    <Link2 aria-hidden="true" />
+                  </Button>
+                </div>
               </div>
-              <div className="kova-connection-header-actions">
-                <StatusBadge
-                  state={stateOf(visibleSelectedApp.id)}
-                  configured={configuredOf(visibleSelectedApp.id)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-label="Copy connection link"
-                  title="Copy connection link"
-                  onClick={async () => {
-                    const link = new URL("/apps", window.location.origin);
-                    link.searchParams.set("plugin", visibleSelectedApp.id);
-                    try {
-                      await navigator.clipboard.writeText(link.href);
-                      toast.success("Connection link copied");
-                    } catch {
-                      toast.error(
-                        "Could not copy the link. Use your address bar to share this page.",
-                      );
-                    }
-                  }}
-                >
-                  <Link2 aria-hidden="true" />
-                </Button>
-              </div>
+              <h1 id="connection-title" ref={detailsHeadingRef} tabIndex={-1}>
+                {visibleSelectedApp.label}
+              </h1>
+              <p>{visibleSelectedApp.description}</p>
             </header>
             <Tabs defaultValue="overview" className="kova-connection-tabs">
               <TabsList className="kova-connection-tablist" aria-label="Connection information">
@@ -1771,8 +1771,8 @@ function AppsPage() {
                       <div className="kova-connection-example">
                         <Sparkles aria-hidden="true" />
                         <div>
-                          <h2>Example</h2>
-                          <p>{selectedProfile.example}</p>
+                          <h2>Try asking Kova</h2>
+                          <p>“{selectedProfile.example}”</p>
                         </div>
                       </div>
                     )}
@@ -1780,7 +1780,9 @@ function AppsPage() {
                       className="kova-connection-account"
                       aria-labelledby="connection-account-title"
                     >
-                      <h2 id="connection-account-title">Connector setup</h2>
+                      <h2 id="connection-account-title">
+                        <Settings aria-hidden="true" /> Connector setup
+                      </h2>
                       {["gmail", "google-docs"].includes(visibleSelectedApp.id) &&
                         tierStatus === "ready" &&
                         tier === "free" && (
@@ -2135,6 +2137,7 @@ function AppsPage() {
                   </TabsContent>
                 </div>
                 <aside className="kova-connection-sidebar" aria-label="About this connection">
+                  <h2>Connection details</h2>
                   <dl className="kova-connection-info">
                     {selectedProfile.publisher && (
                       <div>

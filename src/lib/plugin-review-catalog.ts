@@ -14,8 +14,34 @@ import githubLogo from "../assets/plugins/github.svg";
 import linearLogo from "../assets/plugins/linear.svg";
 import slackLogo from "../assets/plugins/slack.svg";
 import salesforceLogo from "../assets/plugins/salesforce.svg";
+import androidHealthLogo from "../assets/plugins/android-health-connect.png";
+import appleHealthLogo from "../assets/plugins/apple-health.png";
+import boxLogo from "../assets/plugins/box.svg";
+import calendlyLogo from "../assets/plugins/calendly.png";
+import canvaLogo from "../assets/plugins/canva.png";
+import customMcpLogo from "../assets/plugins/custom-mcp.png";
+import etoroLogo from "../assets/plugins/etoro.png";
+import excalidrawLogo from "../assets/plugins/excalidraw.svg";
+import figmaLogo from "../assets/plugins/figma.svg";
+import gammaLogo from "../assets/plugins/gamma.png";
+import bigQueryLogo from "../assets/plugins/google-bigquery.svg";
+import granolaLogo from "../assets/plugins/granola.png";
+import hubspotLogo from "../assets/plugins/hubspot.svg";
+import hyperframesLogo from "../assets/plugins/hyperframes-heygen.png";
+import interactiveBrokersLogo from "../assets/plugins/interactive-brokers.png";
+import meltwaterLogo from "../assets/plugins/meltwater.png";
+import mixpanelLogo from "../assets/plugins/mixpanel.svg";
+import ouraLogo from "../assets/plugins/oura.png";
+import outlookCalendarLogo from "../assets/plugins/outlook-calendar.png";
+import plaidLogo from "../assets/plugins/plaid.png";
+import spGlobalLogo from "../assets/plugins/sp-global.png";
+import stripeLogo from "../assets/plugins/stripe.svg";
+import tanaLogo from "../assets/plugins/tana.png";
+import vercelLogo from "../assets/plugins/vercel.svg";
+import webullLogo from "../assets/plugins/webull.png";
+import wixLogo from "../assets/plugins/wix.svg";
 
-/** Package-sourced brand assets; license and trademark provenance are recorded alongside the SVGs. */
+/** Bundled brand assets with source and trademark provenance recorded alongside the artwork. */
 export const PLUGIN_BRAND_ASSET_URLS: Readonly<Record<string, string>> = {
   gmail: gmailLogo,
   "google-calendar": googleCalendarLogo,
@@ -29,6 +55,32 @@ export const PLUGIN_BRAND_ASSET_URLS: Readonly<Record<string, string>> = {
   linear: linearLogo,
   slack: slackLogo,
   salesforce: salesforceLogo,
+  "android-health-connect": androidHealthLogo,
+  "apple-health": appleHealthLogo,
+  box: boxLogo,
+  calendly: calendlyLogo,
+  canva: canvaLogo,
+  "custom-mcp": customMcpLogo,
+  etoro: etoroLogo,
+  excalidraw: excalidrawLogo,
+  figma: figmaLogo,
+  gamma: gammaLogo,
+  "google-bigquery": bigQueryLogo,
+  granola: granolaLogo,
+  hubspot: hubspotLogo,
+  "hyperframes-heygen": hyperframesLogo,
+  "interactive-brokers": interactiveBrokersLogo,
+  meltwater: meltwaterLogo,
+  mixpanel: mixpanelLogo,
+  oura: ouraLogo,
+  "outlook-calendar": outlookCalendarLogo,
+  plaid: plaidLogo,
+  "sp-global": spGlobalLogo,
+  stripe: stripeLogo,
+  tana: tanaLogo,
+  vercel: vercelLogo,
+  webull: webullLogo,
+  wix: wixLogo,
 };
 
 /** Presentation-only launch review metadata. Never an authorization/connection registry. */

@@ -168,6 +168,18 @@
   height: 24px;
   color: var(--muted-foreground);
 }
+.spec400-plugin-logo:is(
+    [data-logo="canva"],
+    [data-logo="gamma"],
+    [data-logo="apple-health"],
+    [data-logo="android-health-connect"],
+    [data-logo="webull"],
+    [data-logo="granola"],
+    [data-logo="tana"]
+  )
+  img {
+  border-radius: 22%;
+}
 .spec400-plugin-category {
   color: var(--muted-foreground);
   font-size: 13px;
@@ -680,8 +692,6 @@
   .spec400-plugins .spec400-plugin-card .spec400-plugin-logo {
     width: 42px;
     height: 42px;
-    border: 0;
-    background: var(--muted);
   }
   .spec400-plugins .spec400-plugin-card h3 {
     overflow-wrap: anywhere;
@@ -711,7 +721,7 @@
 .spec400-plugins .kova-directory-rows {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 2px 18px;
+  gap: 4px 24px;
   padding: 0;
   list-style: none;
 }
@@ -726,15 +736,15 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  min-height: 74px;
-  padding: 12px 6px;
+  min-height: 82px;
+  padding: 12px 10px;
   border: 0;
   border-radius: var(--kova-radius-button);
   background: transparent;
 }
 .spec400-plugins .kova-directory-rows .spec400-plugin-card::after {
   position: absolute;
-  inset: auto 6px 0 56px;
+  inset: auto 10px 0 68px;
   border-bottom: 1px solid var(--border);
   content: "";
   pointer-events: none;
@@ -744,17 +754,17 @@
 }
 .kova-directory-rows .spec400-plugin-card-heading {
   min-width: 0;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
 }
 .kova-directory-rows .spec400-plugin-card-heading > div {
   min-width: 0;
 }
 .kova-directory-rows .spec400-plugin-card-heading h3 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 620;
-  line-height: 21px;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 22px;
 }
 .kova-directory-rows .spec400-plugin-card-heading a {
   text-underline-offset: 3px;
@@ -773,24 +783,19 @@
   text-decoration: underline;
 }
 .kova-directory-rows .spec400-plugin-logo {
-  width: 38px;
-  height: 38px;
-  margin-top: 2px;
-  border-radius: 11px;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
 }
 .kova-directory-rows .spec400-plugin-logo img,
 .kova-directory-rows .spec400-plugin-logo svg {
-  width: 24px;
-  height: 24px;
+  width: 29px;
+  height: 29px;
 }
 .kova-directory-rows .spec400-plugin-purpose {
   margin: 2px 0 0;
   line-height: 19px;
   overflow-wrap: anywhere;
-}
-.kova-directory-rows .spec400-plugin-category {
-  display: block;
-  margin-top: 2px;
 }
 .kova-directory-rows .spec400-plugin-card-footer {
   position: relative;
@@ -1039,49 +1044,101 @@
 }
 
 .kova-connection-page {
+  --connection-accent: #8b76ea;
   display: grid;
-  gap: 20px;
+  gap: 24px;
   min-width: 0;
   font-family: var(--font-ui);
 }
+.kova-connection-page[data-connection-category="Calendar"] {
+  --connection-accent: #5e8cf1;
+}
+.kova-connection-page[data-connection-category="Storage & Files"] {
+  --connection-accent: #359ace;
+}
+.kova-connection-page[data-connection-category="Email"] {
+  --connection-accent: #e26558;
+}
+.kova-connection-page[data-connection-category="Social & Media"] {
+  --connection-accent: #d66eaf;
+}
+.kova-connection-page[data-connection-category="Notes & Docs"] {
+  --connection-accent: #d59b4d;
+}
+.kova-connection-page[data-connection-category="Communication"] {
+  --connection-accent: #a460d8;
+}
+.kova-connection-page[data-connection-category="Development"] {
+  --connection-accent: #49ac96;
+}
 .kova-connection-back {
   justify-self: start;
+  margin-inline-start: -12px;
 }
 .kova-connection-hero {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px 16px;
-  align-items: center;
-  padding: 0 0 20px;
-  border-bottom: 1px solid var(--border);
+  justify-items: start;
+  gap: 8px;
+  padding: clamp(18px, 4cqi, 36px);
+  border: 1px solid color-mix(in srgb, var(--connection-accent) 24%, var(--border));
+  border-radius: 26px;
+  background:
+    radial-gradient(
+      ellipse at 4% 4%,
+      color-mix(in srgb, var(--connection-accent) 21%, transparent),
+      transparent 66%
+    ),
+    var(--card);
+}
+.kova-connection-hero-top {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 .kova-connection-hero .spec400-plugin-logo {
-  width: 54px;
-  height: 54px;
-  border-radius: 16px;
+  width: clamp(60px, 9cqi, 80px);
+  height: clamp(60px, 9cqi, 80px);
+  border-radius: 22px;
+  box-shadow: 0 8px 24px #00000018;
 }
-.kova-connection-hero .spec400-plugin-logo > span {
-  color: #191919;
-  font-size: 18px;
-  font-weight: 650;
-  text-transform: uppercase;
+.kova-connection-hero .spec400-plugin-logo img,
+.kova-connection-hero .spec400-plugin-logo svg {
+  width: 68%;
+  height: 68%;
 }
 .kova-connection-hero h1 {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: clamp(24px, 5vw, 34px);
-  line-height: 1.18;
-  font-weight: 650;
+  font-size: clamp(30px, 5cqi, 50px);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  font-weight: 680;
 }
 .kova-connection-hero p {
-  margin-top: 4px;
+  max-width: 62ch;
   color: var(--muted-foreground);
+  font-size: 15px;
+  line-height: 1.55;
 }
 .kova-connection-header-actions {
   display: flex;
   align-items: center;
-  grid-column: 2;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kova-connection-header-actions .spec400-plugin-status {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-app);
+}
+.kova-connection-header-actions .spec400-plugin-status svg {
+  width: 15px;
+  height: 15px;
 }
 .kova-connection-header-actions button {
   border-radius: 999px;
@@ -1090,19 +1147,21 @@
   display: flex;
   width: fit-content;
   height: auto;
-  padding: 4px;
-  gap: 4px;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--border);
   border-radius: 999px;
 }
 .kova-connection-tablist [role="tab"] {
   min-height: 34px;
+  padding-inline: 16px;
   border-radius: 999px;
 }
 .kova-connection-layout {
   display: grid;
-  gap: clamp(20px, 4cqi, 44px);
+  gap: clamp(20px, 3cqi, 32px);
   align-items: start;
-  margin-top: 22px;
+  margin-top: 24px;
 }
 .kova-connection-content,
 .kova-connection-sidebar,
@@ -1119,16 +1178,18 @@
 }
 .kova-connection-overview {
   max-width: 68ch;
+  font-size: 16px;
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
 .kova-connection-example {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--connection-accent) 25%, var(--border));
   border-radius: var(--kova-radius-panel);
-  background: var(--muted);
+  background: color-mix(in srgb, var(--connection-accent) 10%, var(--card));
 }
 .kova-connection-example > svg {
   flex: none;
@@ -1138,23 +1199,50 @@
   color: var(--muted-foreground);
 }
 .kova-connection-example p {
-  margin-top: 3px;
+  margin-top: 4px;
+  line-height: 1.55;
 }
 .kova-connection-account,
-.kova-connection-permissions {
+.kova-connection-permissions,
+.kova-connection-sidebar {
   display: grid;
   gap: 16px;
   min-width: 0;
-  padding: clamp(14px, 3cqi, 22px);
+  padding: clamp(16px, 3cqi, 24px);
   border: 1px solid var(--border);
   border-radius: var(--kova-radius-panel);
+  background: var(--card);
   overflow-wrap: anywhere;
+}
+.kova-connection-account > h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.kova-connection-account > h2 svg {
+  width: 19px;
+  height: 19px;
+  color: var(--muted-foreground);
+}
+.kova-connection-account .spec400-plugin-detail-section:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+.kova-connection-account > button {
+  justify-self: start;
+}
+.kova-connection-account button,
+.kova-connection-related button {
+  border-radius: 999px;
 }
 .kova-connection-info {
   display: grid;
   gap: 17px;
-  padding: 8px 0;
   overflow-wrap: anywhere;
+}
+.kova-connection-info > div + div {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 .kova-connection-info dt,
 .kova-connection-permissions p {
@@ -1199,18 +1287,16 @@
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }
+.kova-connection-related > h2 {
+  margin-bottom: 8px;
+}
 .kova-connection-layout h2,
 .kova-connection-related h2 {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 640;
 }
-@container (min-width: 585px) {
-  .kova-connection-hero {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-  .kova-connection-header-actions {
-    grid-column: auto;
-  }
+.kova-connection-example > div > h2 {
+  font-size: 14px;
 }
 @container (min-width: 750px) {
   .kova-connection-layout {

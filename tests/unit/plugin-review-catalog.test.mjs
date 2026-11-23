@@ -82,8 +82,6 @@ test("master directory contains the 31 requested services and seven retained ser
       item.connector.id,
     );
     if (!expected.includes(item.connector.id)) {
-      assert.equal(item.brandAsset.status, "generic_placeholder");
-      assert.equal(item.brandAsset.src, "");
       assert.equal(item.connector.status === "live", false);
     }
   }
@@ -95,7 +93,10 @@ test("master directory contains the 31 requested services and seven retained ser
     assert.ok(master.masterConnectorSearchText(id).includes(alias));
   }
   assert.equal(master.masterConnectorSearchText("unknown"), "");
-  assert.match(review.getPluginPreviewProvider("apple-health").availabilityNote, /native mobile/);
+  assert.match(
+    review.getPluginPreviewProvider("apple-health").availabilityNote,
+    /requires a signed iPhone app/,
+  );
   assert.match(review.getPluginPreviewProvider("plaid").availabilityNote, /Finances/);
 });
 
@@ -160,9 +161,12 @@ test("source-backed capabilities name existing local code and never imply grante
   assert.equal(review.getPluginPreviewProvider("unknown"), undefined);
 });
 
-test("all launch marks use verified local assets with preserved package provenance", () => {
-  assert.equal(Object.keys(review.PLUGIN_BRAND_ASSET_URLS).length, 12);
-  for (const item of review.LAUNCH_PLUGIN_REVIEW_CATALOG) {
+test("all 38 connector marks use verified local assets with recorded provenance", () => {
+  assert.deepEqual(
+    Object.keys(review.PLUGIN_BRAND_ASSET_URLS).sort(),
+    [...master.MASTER_CONNECTOR_IDS].sort(),
+  );
+  for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     const asset = provenance.assets.find(
       (asset) =>
         asset.id === item.connector.id ||
