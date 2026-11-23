@@ -8,6 +8,7 @@ export const EXTRA_WRITE_CONNECTORS = [
   "calendly",
   "canva",
   "custom-mcp",
+  "etoro",
   "figma",
   "gamma",
   "google-bigquery",
@@ -23,6 +24,7 @@ export const EXTRA_WRITE_CONNECTORS = [
   "slack",
   "stripe",
   "vercel",
+  "webull",
   "wix",
 ] as const;
 
@@ -74,6 +76,14 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
         multiline: true,
       },
     ],
+  },
+  etoro: {
+    scope: null,
+    readConnection: "etoro",
+    action: "Create eToro watchlist",
+    summary:
+      "Create an empty static watchlist on the linked eToro account using a key with watchlist write access.",
+    fields: [{ name: "title", label: "Watchlist name", maxLength: 100 }],
   },
   figma: {
     scope: "file_comments:write",
@@ -219,6 +229,14 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
     summary:
       "Create an empty project in the linked Vercel team. Your token needs permission to create projects.",
     fields: [{ name: "title", label: "Project name", maxLength: 100 }],
+  },
+  webull: {
+    scope: null,
+    readConnection: "webull",
+    action: "Create Webull watchlist",
+    summary:
+      "Create an empty watchlist in the linked Webull environment. The account needs a Webull access token with watchlist permissions.",
+    fields: [{ name: "title", label: "Watchlist name", maxLength: 100 }],
   },
   wix: {
     scope: null,

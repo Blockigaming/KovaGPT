@@ -38,7 +38,7 @@ const KEY_CONNECTION_FIELDS: Record<
     { field: "projectId", label: "Project ID" },
     { field: "workspaceId", label: "Workspace ID for Data Views", optional: true },
   ],
-  etoro: [{ field: "userKey", label: "eToro real-account read key", secret: true }],
+  etoro: [{ field: "userKey", label: "eToro user key", secret: true }],
   "interactive-brokers": [{ field: "queryId", label: "Activity Flex query ID" }],
   "sp-global": [{ field: "username", label: "Capital IQ API username" }],
   webull: [

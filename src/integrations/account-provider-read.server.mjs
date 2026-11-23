@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { readProviderJsonObject, readProviderText } from "../lib/provider-response.server.mjs";
@@ -200,15 +200,7 @@ async function matchCapitalIqCompany(query, { apiKey, username }, fetchImpl, sig
   return readResult("sp-global", rows, result.Rows.length > MAX_ROWS);
 }
 
-async function listWebullAccounts(
-  query,
-  { apiKey, appKey, environment, accessToken },
-  fetchImpl,
-  signal,
-) {
-  if (!["recent", "accounts"].includes(query.toLowerCase()))
-    throw new Error("invalid_connection_query");
-  const url = new URL("/trading/accounts/list", WEBULL_ORIGINS[environment]);
+export function webullSignedHeaders(url, { apiKey, appKey, accessToken }, body) {
   const signingHeaders = {
     "x-app-key": appKey,
     "x-signature-algorithm": "HMAC-SHA1",
@@ -216,21 +208,33 @@ async function listWebullAccounts(
     "x-signature-version": "1.0",
     "x-timestamp": new Date().toISOString().replace(/\.\d{3}Z$/u, "Z"),
   };
-  const canonical = Object.entries({ host: url.host, ...signingHeaders })
+  const canonical = Object.entries({
+    ...Object.fromEntries(url.searchParams),
+    host: url.host,
+    ...signingHeaders,
+  })
     .sort(([left], [right]) => (left < right ? -1 : 1))
     .map(([name, value]) => `${name}=${value}`)
     .join("&");
+  const digest = body ? `&${createHash("md5").update(body).digest("hex").toUpperCase()}` : "";
   const signature = createHmac("sha1", `${apiKey}&`)
-    .update(encodeURIComponent(`${url.pathname}&${canonical}`))
+    .update(encodeURIComponent(`${url.pathname}&${canonical}${digest}`))
     .digest("base64");
+  return {
+    ...signingHeaders,
+    "x-signature": signature,
+    "x-version": "v3",
+    ...(accessToken ? { "x-access-token": accessToken } : {}),
+    Accept: "application/json",
+  };
+}
+
+async function listWebullAccounts(query, credential, fetchImpl, signal) {
+  if (!["recent", "accounts"].includes(query.toLowerCase()))
+    throw new Error("invalid_connection_query");
+  const url = new URL("/trading/accounts/list", WEBULL_ORIGINS[credential.environment]);
   const response = await request(fetchImpl, url, signal, {
-    headers: {
-      ...signingHeaders,
-      "x-signature": signature,
-      "x-version": "v3",
-      ...(accessToken ? { "x-access-token": accessToken } : {}),
-      Accept: "application/json",
-    },
+    headers: webullSignedHeaders(url, credential),
   });
   const accounts = JSON.parse(await readProviderText(response, 128_000));
   if (!Array.isArray(accounts)) throw invalidResponse();

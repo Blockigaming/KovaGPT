@@ -4,12 +4,13 @@ import {
   type WriteFields,
 } from "./connector-write-actions";
 import { salesforceQueryUrl } from "@/integrations/salesforce-credential.server.mjs";
+import { WEBULL_ORIGINS } from "@/integrations/key-connection-credential.server.mjs";
 
 type WriteRequest = {
   url: string;
   method?: "PATCH";
   credentialHeader?: "apikey" | "X-Api-Key";
-  body: Record<string, unknown> | Record<string, unknown>[] | URLSearchParams;
+  body?: Record<string, unknown> | Record<string, unknown>[] | URLSearchParams;
   header?: Record<string, string>;
   status: number;
   confirmed: (data: Record<string, unknown>) => boolean;
@@ -65,6 +66,7 @@ export function connectorWriteRequest(
     salesforceQuery?: string;
     vercelTeamId?: string;
     mixpanel?: { region: keyof typeof mixpanelIngestion; projectId: string };
+    webullEnvironment?: keyof typeof WEBULL_ORIGINS;
   },
 ): WriteRequest | null {
   if (!connectorWriteFieldsValid(connector, input)) return null;
@@ -110,6 +112,22 @@ export function connectorWriteRequest(
       };
     case "custom-mcp":
       return null;
+    case "etoro": {
+      const params = new URLSearchParams({ name: title, type: "Static" });
+      return {
+        url: `https://public-api.etoro.com/api/v1/watchlists?${params}`,
+        status: 201,
+        confirmed: (data) =>
+          data.isSucceeded === true &&
+          Array.isArray(data.watchlists) &&
+          data.watchlists.some(
+            (watchlist) =>
+              watchlist?.name === title &&
+              typeof watchlist.watchlistId === "string" &&
+              /^[A-Za-z0-9_-]{1,128}$/u.test(watchlist.watchlistId),
+          ),
+      };
+    }
     case "figma":
       if (!/^[A-Za-z0-9]{1,64}$/u.test(destination)) return null;
       return {
@@ -330,6 +348,18 @@ export function connectorWriteRequest(
         url: `https://api.vercel.com/v11/projects?teamId=${teamId}`,
         status: 200,
         confirmed: (data) => data.accountId === teamId && data.name === title && hasId(data),
+        body: { name: title },
+      };
+    }
+    case "webull": {
+      const environment = binding?.webullEnvironment;
+      if (!environment || !Object.hasOwn(WEBULL_ORIGINS, environment)) return null;
+      return {
+        url: `${WEBULL_ORIGINS[environment]}/market-data/watchlists/create`,
+        status: 200,
+        confirmed: (data) =>
+          typeof data.watchlist_id === "string" &&
+          /^[A-Za-z0-9_-]{1,100}$/u.test(data.watchlist_id),
         body: { name: title },
       };
     }

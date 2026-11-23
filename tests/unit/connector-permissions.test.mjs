@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash, createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
@@ -23,6 +24,7 @@ const writeRequests = loadUiModule(
   {
     "./connector-write-actions": actions,
     "@/integrations/salesforce-credential.server.mjs": salesforceCredential,
+    "@/integrations/key-connection-credential.server.mjs": keyCredential,
   },
   { URL, URLSearchParams },
 );
@@ -391,6 +393,13 @@ test("every new directory action builds a bounded request and validates a provid
       200,
       { design: { id: "ABC" } },
     ],
+    etoro: [
+      { title: "Fixture list" },
+      "public-api.etoro.com",
+      "/api/v1/watchlists?name=Fixture+list&type=Static",
+      201,
+      { isSucceeded: true, watchlists: [{ watchlistId: "123", name: "Fixture list" }] },
+    ],
     figma: [
       { destination: "File123", text: "Comment" },
       "api.figma.com",
@@ -508,6 +517,13 @@ test("every new directory action builds a bounded request and validates a provid
       200,
       { accountId: "team_fixture", id: "prj_fixture", name: "fixture-project" },
     ],
+    webull: [
+      { title: "Fixture list" },
+      "api.sandbox.webull.com",
+      "/market-data/watchlists/create",
+      200,
+      { watchlist_id: "123" },
+    ],
     wix: [
       { title: "Fixture Company" },
       "www.wixapis.com",
@@ -526,6 +542,7 @@ test("every new directory action builds a bounded request and validates a provid
       salesforceQuery: "https://fixtures.my.salesforce.com/services/data/v67.0/query",
       vercelTeamId: "team_fixture",
       mixpanel: { projectId: "123", region: "eu" },
+      webullEnvironment: "sandbox",
     });
     assert.equal(request.url, `https://${host}${path}`, connector);
     assert.equal(request.status, status, connector);
@@ -823,4 +840,62 @@ test("Stripe creates a zero-amount invoice draft and Mixpanel binds ingestion to
       },
     },
   ]);
+});
+
+test("Watchlist writes use the existing eToro and Webull credentials without sending an order", async () => {
+  const fields = { title: "Fixture list & notes" };
+  const write = (connector) => ({ connector, target, fields, confirmed: true });
+  const etoro = fixture("etoro:portfolio:read", true, true, "etoro", {
+    credential: keyCredential.prepareKeyCredential("etoro", {
+      apiKey: "fixture-api-key",
+      userKey: "fixture-user-key",
+    }).token,
+    response: () =>
+      Response.json(
+        {
+          isSucceeded: true,
+          watchlists: [{ name: fields.title, watchlistId: "12345" }],
+        },
+        { status: 201 },
+      ),
+  });
+  assert.deepEqual(await etoro.handlers.runConnectorWriteAction(write("etoro")), { ok: true });
+  const [etoroUrl, etoroInit] = etoro.requests[0];
+  assert.equal(new URL(etoroUrl).pathname, "/api/v1/watchlists");
+  assert.equal(new URL(etoroUrl).searchParams.get("name"), fields.title);
+  assert.equal(etoroInit.headers["x-user-key"], "fixture-user-key");
+  assert.equal(etoroInit.headers.Authorization, undefined);
+  assert.equal(etoroInit.body, undefined);
+
+  const linked = {
+    apiKey: "fixture-secret",
+    appKey: "fixture-app-key",
+    environment: "sandbox",
+  };
+  const noToken = fixture("webull:accounts:list", true, true, "webull", {
+    credential: keyCredential.prepareKeyCredential("webull", linked).token,
+  });
+  assert.match(
+    (await noToken.handlers.runConnectorWriteAction(write("webull"))).error,
+    /authorized Webull access token/u,
+  );
+  assert.deepEqual(noToken.requests, []);
+  const webull = fixture("webull:accounts:list", true, true, "webull", {
+    credential: keyCredential.prepareKeyCredential("webull", {
+      ...linked,
+      accessToken: "fixture-client-token",
+    }).token,
+    response: () => Response.json({ watchlist_id: "12345" }),
+  });
+  assert.deepEqual(await webull.handlers.runConnectorWriteAction(write("webull")), { ok: true });
+  const [url, { body, headers }] = webull.requests[0];
+  assert.equal(url, "https://api.sandbox.webull.com/market-data/watchlists/create");
+  assert.equal(headers["x-access-token"], "fixture-client-token");
+  assert.deepEqual(JSON.parse(body), { name: fields.title });
+  const hash = createHash("md5").update(body).digest("hex").toUpperCase();
+  const signed = `/market-data/watchlists/create&host=api.sandbox.webull.com&x-app-key=fixture-app-key&x-signature-algorithm=HMAC-SHA1&x-signature-nonce=${headers["x-signature-nonce"]}&x-signature-version=1.0&x-timestamp=${headers["x-timestamp"]}&${hash}`;
+  assert.equal(
+    headers["x-signature"],
+    createHmac("sha1", "fixture-secret&").update(encodeURIComponent(signed)).digest("base64"),
+  );
 });

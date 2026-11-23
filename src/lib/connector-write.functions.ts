@@ -22,7 +22,10 @@ import {
   configuredOAuthProviders,
 } from "@/integrations/oauth-providers.server";
 import { unpackKeyCredential } from "@/integrations/key-connection-credential.server.mjs";
-import { getWixAccessToken } from "@/integrations/account-provider-read.server.mjs";
+import {
+  getWixAccessToken,
+  webullSignedHeaders,
+} from "@/integrations/account-provider-read.server.mjs";
 import { runReviewedMcpWrite } from "@/integrations/mcp-provider-read.server.mjs";
 import { unpackSalesforceCredential } from "@/integrations/salesforce-credential.server.mjs";
 import type { ConnectionDomainDatabase } from "@/integrations/connection-domain.types";
@@ -256,39 +259,62 @@ export const runConnectorWriteAction = createServerFn({ method: "POST" })
       const vercel = connector === "vercel" ? unpackKeyCredential(connector, access.token) : null;
       const mixpanel =
         connector === "mixpanel" ? unpackKeyCredential(connector, access.token) : null;
+      const webull = connector === "webull" ? unpackKeyCredential(connector, access.token) : null;
       const request = connectorWriteRequest(connector, fields, {
         notionPageId: notion?.pageId,
         salesforceQuery: salesforce?.query_url,
         vercelTeamId: vercel?.teamId,
         mixpanel: mixpanel ?? undefined,
+        webullEnvironment: webull?.environment,
       });
       if (!request) return { error: "Review the action fields and try again." };
       const apiKey = notion?.apiKey ?? salesforce?.access_token ?? vercel?.apiKey ?? access.token;
-      let authorization = `Bearer ${apiKey}`;
+      const formEncoded = request.body instanceof URLSearchParams;
+      const body = formEncoded ? request.body.toString() : JSON.stringify(request.body);
+      let credentials: Record<string, string> = request.credentialHeader
+        ? { [request.credentialHeader]: apiKey }
+        : { Authorization: `Bearer ${apiKey}` };
       if (mixpanel) {
-        authorization = `Basic ${Buffer.from(`${mixpanel.username}:${mixpanel.apiKey}`).toString("base64")}`;
+        credentials = {
+          Authorization: `Basic ${Buffer.from(`${mixpanel.username}:${mixpanel.apiKey}`).toString("base64")}`,
+        };
+      } else if (webull) {
+        if (!webull.accessToken)
+          return { error: "Link an authorized Webull access token for watchlists first." };
+        credentials = webullSignedHeaders(new URL(request.url), webull, body);
+      } else if (connector === "etoro") {
+        const etoro = unpackKeyCredential(connector, access.token);
+        credentials = {
+          "x-api-key": etoro.apiKey,
+          "x-user-key": etoro.userKey,
+          "x-request-id": crypto.randomUUID(),
+        };
       } else if (connector === "wix") {
-        authorization = await getWixAccessToken(
+        const authorization = await getWixAccessToken(
           unpackKeyCredential(connector, access.token),
           fetch,
           AbortSignal.timeout(10_000),
         );
         if (!(await access.stillAuthorized()))
           return { error: "Write access changed. Review the account permissions." };
+        credentials = { Authorization: authorization };
       }
-      const formEncoded = request.body instanceof URLSearchParams;
       const response = await fetch(request.url, {
         method: request.method ?? "POST",
         redirect: "error",
         signal: AbortSignal.timeout(10_000),
         headers: {
-          ...(request.credentialHeader
-            ? { [request.credentialHeader]: apiKey }
-            : { Authorization: authorization }),
-          "Content-Type": formEncoded ? "application/x-www-form-urlencoded" : "application/json",
+          ...credentials,
+          ...(body === undefined
+            ? {}
+            : {
+                "Content-Type": formEncoded
+                  ? "application/x-www-form-urlencoded"
+                  : "application/json",
+              }),
           ...request.header,
         },
-        body: formEncoded ? request.body.toString() : JSON.stringify(request.body),
+        body,
       });
       if (response.status === request.status) {
         const result = await readProviderJsonObject(response, 64 * 1024);

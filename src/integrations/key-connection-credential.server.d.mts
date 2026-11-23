@@ -24,3 +24,17 @@ export function unpackKeyCredential(
   provider: "wix",
   token: string,
 ): { apiKey: string; clientId: string };
+export const WEBULL_ORIGINS: Readonly<{ production: string; sandbox: string }>;
+export function unpackKeyCredential(
+  provider: "webull",
+  token: string,
+): {
+  apiKey: string;
+  appKey: string;
+  accessToken: string;
+  environment: keyof typeof WEBULL_ORIGINS;
+};
+export function unpackKeyCredential(
+  provider: "etoro",
+  token: string,
+): { apiKey: string; userKey: string };

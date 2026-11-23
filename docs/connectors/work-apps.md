@@ -88,6 +88,8 @@ Verify that a known note appears and an excluded note does not. Revoke the key i
 
 These adapters verify their read against the provider before saving credentials. The optional Mixpanel write imports one event into the linked project and region, using an account with ingestion access. Verify the event timestamp, distinct ID and unique event ID in a test project. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
 
+For optional eToro writes, use a user key with portfolio read and watchlist write access. Enable **Read and write** and review the name of a new static watchlist. Verify that the empty watchlist appears under the linked user's account. Test the same action with a read-only key and expect permission denial. [eToro create watchlist](https://api-portal.etoro.com/api-reference/watchlists/create-a-new-watchlist)
+
 [Meltwater saved searches](https://developer.meltwater.com/docs/meltwater-api/listening/manage-searches/) · [Vercel deployment API](https://vercel.com/docs/rest-api/deployments/list-deployments) · [Mixpanel cohorts API](https://docs.mixpanel.com/reference/cohorts-list) · [eToro API](https://builders.etoro.com/reference)
 
 ## IBKR, S&P Global, Webull and Wix acceptance
@@ -100,6 +102,8 @@ These adapters verify their read against the provider before saving credentials.
 | Wix                 | Generate a client secret for an eligible self-managed Wix Headless project. Enter its client ID and secret.                                                                                                                               | Compare the authorized site's business name and locale. Try a revoked secret and confirm that switching the project requires a new credential.                                 |
 
 Connect performs a provider read before saving the credential. Chat and Connections use the saved account binding. For the optional Wix write, use an app with Manage Business Profile permission, enable writing in Kova and review the new business name on a test site. Verify that locale and the other profile fields are unchanged. Revoke a provider credential in its issuing portal if it should stop working outside Kova.
+
+For optional Webull writes, link an authorized access token with watchlist access in the intended environment. Use **Read and write** to review the name and create an empty watchlist. Start in Webull Sandbox and verify the returned list ID there. [Webull create watchlist](https://developer.webull.com/apis/docs/reference/create-watchlist/)
 
 [IBKR Flex Web Service](https://www.interactivebrokers.com/docs/web-api/flex-web-service/) · [S&P Capital IQ developer guide](https://www.support.marketplace.spglobal.com/content/dam/spglobal/mi/en/documents/marketplace/api/guides/spglobalapidevelopersguide.pdf) · [Webull signed requests](https://developer.webull.com/apis/docs/authentication/signature/) · [Wix Headless client credentials](https://dev.wix.com/docs/go-headless/authentication/admin/make-admin-api-calls-with-client-credentials)
 

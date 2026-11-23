@@ -3,7 +3,7 @@ alter table public.connector_write_preferences
   add constraint connector_write_preferences_connector_check
     check (connector in (
       'gmail', 'google-calendar', 'github', 'linear', 'onedrive', 'outlook',
-      'google-drive', 'outlook-calendar', 'box', 'calendly', 'canva', 'custom-mcp', 'figma', 'gamma',
+      'google-drive', 'outlook-calendar', 'box', 'calendly', 'canva', 'custom-mcp', 'etoro', 'figma', 'gamma',
       'google-bigquery', 'hubspot', 'hyperframes-heygen', 'meltwater', 'mixpanel', 'ms-teams', 'notion',
-      'notion-private', 'salesforce', 'sharepoint', 'slack', 'stripe', 'vercel', 'wix'
+      'notion-private', 'salesforce', 'sharepoint', 'slack', 'stripe', 'vercel', 'webull', 'wix'
     ));

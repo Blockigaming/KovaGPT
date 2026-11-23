@@ -4777,7 +4777,7 @@
       "order": 229,
       "filename": "20261123201500_kova_extend_reviewed_connector_writes.sql",
       "timestamp": "20261123201500",
-      "sha256": "f5b289f58a198385cc4eb7dccde7865b0aa90edc3fd25b24031ace5456a78eee",
+      "sha256": "648e67ccee3008597d5be10060ec00c7e982fbd0abfeaed02ffa9806be043788",
       "tables": [],
       "functions": [],
       "destructive": false,
