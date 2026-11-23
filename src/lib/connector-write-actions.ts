@@ -7,6 +7,7 @@ export const EXTRA_WRITE_CONNECTORS = [
   "figma",
   "google-bigquery",
   "hubspot",
+  "meltwater",
   "ms-teams",
   "notion",
   "notion-private",
@@ -77,6 +78,17 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
     action: "Create HubSpot company",
     summary: "Create a company record in the connected HubSpot portal",
     fields: [{ name: "title", label: "Company name", maxLength: 120 }],
+  },
+  meltwater: {
+    scope: null,
+    readConnection: "meltwater",
+    action: "Create Meltwater saved search",
+    summary:
+      "Save the reviewed Boolean query in the linked Meltwater account. The API key needs permission to manage saved searches.",
+    fields: [
+      { name: "title", label: "Search name", maxLength: 120 },
+      { name: "text", label: "Boolean query", maxLength: 2000, multiline: true },
+    ],
   },
   "ms-teams": {
     scope: "ChatMessage.Send",

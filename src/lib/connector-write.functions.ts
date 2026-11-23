@@ -222,12 +222,15 @@ export const runConnectorWriteAction = createServerFn({ method: "POST" })
         vercelTeamId: vercel?.teamId,
       });
       if (!request) return { error: "Review the action fields and try again." };
+      const apiKey = notion?.apiKey ?? salesforce?.access_token ?? vercel?.apiKey ?? access.token;
       const response = await fetch(request.url, {
         method: request.method ?? "POST",
         redirect: "error",
         signal: AbortSignal.timeout(10_000),
         headers: {
-          Authorization: `Bearer ${notion?.apiKey ?? salesforce?.access_token ?? vercel?.apiKey ?? access.token}`,
+          ...(request.credentialHeader
+            ? { [request.credentialHeader]: apiKey }
+            : { Authorization: `Bearer ${apiKey}` }),
           "Content-Type": "application/json",
           ...request.header,
         },

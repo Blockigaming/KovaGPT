@@ -140,6 +140,7 @@ test("source-backed capabilities name existing local code and never imply grante
     "google-bigquery",
     "google-drive",
     "hubspot",
+    "meltwater",
     "ms-teams",
     "notion",
     "salesforce",

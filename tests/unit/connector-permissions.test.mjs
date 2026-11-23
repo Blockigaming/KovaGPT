@@ -326,6 +326,42 @@ test("Notion internal writes use only the page bound to the linked credential", 
   assert.equal(request.headers.Authorization, "Bearer ntn_fixture-token");
 });
 
+test("Meltwater and Vercel use the linked API key and fixed account destinations", async () => {
+  const meltwater = fixture("meltwater:searches:list", true, true, "meltwater", {
+    response: () => Response.json({ search: { id: 123, name: "Saved search" } }, { status: 201 }),
+  });
+  const vercel = fixture("vercel:deployments:list", true, true, "vercel", {
+    credential: keyCredential.prepareKeyCredential("vercel", {
+      apiKey: "fixture-token",
+      teamId: "team_fixture",
+    }).token,
+    response: () =>
+      Response.json({ accountId: "team_fixture", id: "prj_fixture", name: "fixture" }),
+  });
+  assert.deepEqual(
+    await meltwater.handlers.runConnectorWriteAction({
+      connector: "meltwater",
+      target,
+      confirmed: true,
+      fields: { title: "Saved search", text: '"Fixture brand"' },
+    }),
+    { ok: true },
+  );
+  assert.equal(meltwater.requests[0][1].headers.apikey, "fixture-token");
+  assert.equal(meltwater.requests[0][1].headers.Authorization, undefined);
+  assert.deepEqual(
+    await vercel.handlers.runConnectorWriteAction({
+      connector: "vercel",
+      target,
+      confirmed: true,
+      fields: { title: "fixture" },
+    }),
+    { ok: true },
+  );
+  assert.equal(vercel.requests[0][0], "https://api.vercel.com/v11/projects?teamId=team_fixture");
+  assert.equal(vercel.requests[0][1].headers.Authorization, "Bearer fixture-token");
+});
+
 test("every new directory action builds a bounded request and validates a provider receipt", () => {
   const calendlyEvent = "https://api.calendly.com/event_types/AAAAAAAAAAAAAAAA";
   const notionReceipt = { object: "list", results: [{ id: target, type: "paragraph" }] };
@@ -365,6 +401,13 @@ test("every new directory action builds a bounded request and validates a provid
       "/crm/v3/objects/companies",
       201,
       { id: "111" },
+    ],
+    meltwater: [
+      { title: "Fixture search", text: '"Fixture brand"' },
+      "api.meltwater.com",
+      "/v3/searches",
+      201,
+      { search: { id: 123, name: "Fixture search" } },
     ],
     "ms-teams": [
       { destination: "19:team@thread.v2", text: "Message" },

@@ -86,7 +86,7 @@ Verify that a known note appears and an excluded note does not. Revoke the key i
 | Mixpanel  | Use a minimum-privilege service account and specify its project, data region, and workspace ID if the project uses Data Views. Verify a known cohort and deny a different project. | Up to ten saved cohort names and aggregate counts.                  |
 | eToro     | Use public and user keys from a real account with the Read permission. Confirm the values in eToro and try a demo-only key to verify rejection.                                    | Provider-reported portfolio value, cash balance and unrealized P&L. |
 
-These adapters verify their read against the provider before saving credentials. Vercel also supports reviewed project creation after write access is enabled. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
+These adapters verify their read against the provider before saving credentials. Meltwater and Vercel also support reviewed creation of saved searches and projects, respectively, after write access is enabled. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
 
 [Meltwater saved searches](https://developer.meltwater.com/docs/meltwater-api/listening/manage-searches/) · [Vercel deployment API](https://vercel.com/docs/rest-api/deployments/list-deployments) · [Mixpanel cohorts API](https://docs.mixpanel.com/reference/cohorts-list) · [eToro API](https://builders.etoro.com/reference)
 
@@ -181,6 +181,7 @@ The directory also supports these reviewed actions when the connected account ha
 | Google Cloud BigQuery | Create an empty dataset in the selected project and location                         | `bigquery` scope and `bigquery.datasets.create` IAM permission         |
 | HubSpot               | Create a company record                                                              | `crm.objects.companies.write`                                          |
 | Microsoft Teams       | Send a plain-text message in an existing chat                                        | `ChatMessage.Send` with chat read access on a work or school account   |
+| Meltwater             | Create a saved search from a reviewed Boolean query                                  | API key with saved-search write access                                 |
 | Notion                | Append a paragraph to a shared page or the one page bound to an internal integration | Insert content and access to the page                                  |
 | Salesforce            | Create an Account record                                                             | `api` and permission to create the Account object                      |
 | SharePoint            | Create a list item with a title                                                      | `Sites.ReadWrite.All` and permission to add items to the selected list |

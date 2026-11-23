@@ -8,6 +8,7 @@ import { salesforceQueryUrl } from "@/integrations/salesforce-credential.server.
 type WriteRequest = {
   url: string;
   method?: "PATCH";
+  credentialHeader?: "apikey";
   body: Record<string, unknown>;
   header?: Record<string, string>;
   status: number;
@@ -115,6 +116,22 @@ export function connectorWriteRequest(
         status: 201,
         confirmed: hasId,
         body: { properties: { name: title } },
+      };
+    case "meltwater":
+      return {
+        url: "https://api.meltwater.com/v3/searches",
+        credentialHeader: "apikey",
+        status: 201,
+        confirmed: (data) => {
+          const search = object(data.search);
+          return Number.isSafeInteger(search?.id) && search?.name === title;
+        },
+        body: {
+          search: {
+            name: title,
+            query: { boolean: text, case_sensitivity: "no", type: "boolean" },
+          },
+        },
       };
     case "ms-teams":
       if (!/^19:[A-Za-z0-9_.@-]+@thread\.(?:v2|skype)$/u.test(destination)) return null;

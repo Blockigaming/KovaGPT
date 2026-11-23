@@ -4,6 +4,6 @@ alter table public.connector_write_preferences
     check (connector in (
       'gmail', 'google-calendar', 'github', 'linear', 'onedrive', 'outlook',
       'google-drive', 'outlook-calendar', 'box', 'calendly', 'canva', 'figma',
-      'google-bigquery', 'hubspot', 'ms-teams', 'notion', 'notion-private',
+      'google-bigquery', 'hubspot', 'meltwater', 'ms-teams', 'notion', 'notion-private',
       'salesforce', 'sharepoint', 'slack', 'vercel'
     ));
