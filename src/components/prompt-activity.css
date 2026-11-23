@@ -315,9 +315,18 @@
   outline-offset: 2px;
 }
 .kova-step-group-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.kova-step-group-icon > img,
+.kova-step-group-icon > svg {
+  display: block;
   width: 16px;
   height: 16px;
-  flex: none;
 }
 .kova-step-group-text {
   min-width: 0;

@@ -1047,7 +1047,9 @@ function ChatMessageInner({
                   return markdown;
                 })()
               )}
-              {streaming && message.content && <span className="cursor-blink" />}
+              {streaming && message.content && replySegments?.at(-1)?.kind !== "group" && (
+                <span className="cursor-blink" />
+              )}
             </div>
             {!streaming && message.generationStatus === "stopped" && (
               <div

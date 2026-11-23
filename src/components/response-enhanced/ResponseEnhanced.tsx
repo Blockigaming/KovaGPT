@@ -92,6 +92,32 @@ const EXTENSIONS: Record<string, string> = {
   diff: "diff",
 };
 
+const glyph = {
+  width: 16,
+  height: 16,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
+function LineNumbersGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M4 6h1v4M4 10h2M4 14.5a1 1 0 0 1 2 0c0 .8-2 1.5-2 3h2M10 7h10M10 12h10M10 17h10" />
+    </svg>
+  );
+}
+function WrapGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M4 6h16M4 12h13a3 3 0 0 1 0 6h-4m0 0 2-2m-2 2 2 2M4 18h5" />
+    </svg>
+  );
+}
+
 function CodeView({ language, text }: { language: string; text: string }) {
   useLocalization();
   const [wrap, setWrap] = useState(false);
@@ -101,19 +127,33 @@ function CodeView({ language, text }: { language: string; text: string }) {
   return (
     <div className="kova-code" data-wrap={wrap || undefined} data-numbers={numbers || undefined}>
       <div className="kova-code-tools" role="toolbar" aria-label={`${language} code options`}>
-        <button type="button" aria-pressed={numbers} onClick={() => setNumbers((v) => !v)}>
-          {t("Line numbers")}
-        </button>
-        <button type="button" aria-pressed={wrap} onClick={() => setWrap((v) => !v)}>
-          {t("Wrap lines")}
+        <button
+          type="button"
+          aria-pressed={numbers}
+          aria-label={t("Line numbers")}
+          title={t("Line numbers")}
+          onClick={() => setNumbers((v) => !v)}
+        >
+          <LineNumbersGlyph />
         </button>
         <button
           type="button"
+          aria-pressed={wrap}
+          aria-label={t("Wrap lines")}
+          title={t("Wrap lines")}
+          onClick={() => setWrap((v) => !v)}
+        >
+          <WrapGlyph />
+        </button>
+        <button
+          type="button"
+          aria-label={t("Download")}
+          title={t("Download")}
           onClick={() =>
             downloadText(`snippet.${EXTENSIONS[language.toLowerCase()] ?? "txt"}`, text)
           }
         >
-          <Download aria-hidden="true" /> {t("Download")}
+          <Download aria-hidden="true" />
         </button>
       </div>
       <pre tabIndex={0} dir="ltr" aria-label={`${language} code block`}>

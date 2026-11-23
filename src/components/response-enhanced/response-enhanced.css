@@ -371,3 +371,52 @@
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
+
+/* Code blocks: every tool is an icon in the header row, with Copy on the far right. */
+@media (min-width: 768px) and (pointer: fine) {
+  .kova-response-output:has(.kova-code) {
+    position: relative;
+  }
+  .kova-response-output:has(.kova-code) .kova-code-tools {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 48px;
+    margin: 0;
+    gap: 2px;
+  }
+  .kova-code-tools button {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+  .kova-code-tools svg {
+    width: 16px;
+    height: 16px;
+  }
+  .kova-response-output:has(.kova-code) .kova-response-copy-panel {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 8px;
+    border: 0;
+  }
+  .kova-response-output:has(.kova-code) .kova-response-copy-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border-radius: 8px;
+  }
+  .kova-response-output:has(.kova-code) .kova-response-copy-button svg {
+    width: 16px;
+    height: 16px;
+  }
+  .kova-response-output:has(.kova-code) .kova-copy-label-stack {
+    display: none;
+  }
+  .kova-response-output:has(.kova-code) .kova-response-output-header {
+    padding-inline-end: 168px;
+  }
+}
