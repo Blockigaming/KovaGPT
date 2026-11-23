@@ -296,7 +296,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading projects": "Cargando proyectos",
     "Sign in to use Projects": "Inicia sesión para usar Proyectos",
     "Organize your conversations, files, and instructions in one place.":
-      "Organiza tus conversaciones, archivos e instrucciones en un solo lugar.",
+      "Organiza conversaciones, archivos e instrucciones en un solo lugar.",
     "Couldn't load your projects": "No se pudieron cargar tus proyectos",
     "No projects yet": "Aún no hay proyectos",
     "Create project": "Crear proyecto",
@@ -319,7 +319,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep editing": "Seguir editando",
     "Discard changes": "Descartar cambios",
     "Give your project a name, then personalize its workspace.":
-      "Ponle nombre a tu proyecto y personaliza su espacio.",
+      "Ponle nombre al proyecto y personaliza su espacio.",
     "Marketing campaign": "Campaña de marketing",
     "What's this project about?": "¿De qué trata este proyecto?",
     "Check Projects": "Revisar proyectos",
@@ -620,21 +620,21 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The recipient will no longer be able to open this snapshot.":
       "El destinatario ya no podrá abrir esta captura.",
     "Plan, draft, and coordinate launch content across channels.":
-      "Planifica, redacta y coordina contenido de lanzamiento en todos los canales.",
+      "Planifica, redacta y coordina contenido de lanzamiento.",
     "User interviews, competitive notes, and opportunity briefs.":
-      "Entrevistas con usuarios, notas de la competencia y resúmenes de oportunidades.",
+      "Entrevistas, notas de competencia y oportunidades.",
     "Track posts, deadlines, and drafts for the upcoming quarter.":
       "Sigue publicaciones, plazos y borradores del próximo trimestre.",
     "Docs, checklists, and resources for new hires.":
       "Documentos, listas y recursos para nuevas incorporaciones.",
     "Keep related chats, files, and instructions together.":
-      "Mantén juntos los chats, archivos e instrucciones relacionados.",
+      "Mantén juntos chats, archivos e instrucciones relacionados.",
     "Last opened uses project visits on this device. Projects not opened here fall back to last activity.":
       "«Abierto por última vez» usa las visitas en este dispositivo. Los proyectos no abiertos aquí usan su última actividad.",
     "Your projects are temporarily unavailable. Try again in a moment.":
-      "Tus proyectos no están disponibles temporalmente. Inténtalo de nuevo en un momento.",
+      "Tus proyectos no están disponibles. Inténtalo en un momento.",
     "Create a project to keep related chats, files, and instructions together.":
-      "Crea un proyecto para mantener juntos chats, archivos e instrucciones.",
+      "Crea un proyecto para agrupar chats, archivos e instrucciones.",
     Owner: "Propietario",
     "Retry deletion": "Reintentar eliminación",
     "No shared projects yet": "Aún no hay proyectos compartidos",
@@ -808,7 +808,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading project…": "Cargando proyecto…",
     "Sign in required": "Inicio de sesión necesario",
     "Sign in to open this project and its shared workspace.":
-      "Inicia sesión para abrir este proyecto y su espacio compartido.",
+      "Inicia sesión para abrir este proyecto.",
     "Project could not be opened": "No se pudo abrir el proyecto",
     "This project is unavailable right now, or you no longer have access.":
       "Este proyecto no está disponible o ya no tienes acceso.",
@@ -833,24 +833,24 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Collaboration: "Colaboración",
     "Project knowledge": "Conocimiento del proyecto",
     "Instructions and files used across conversations in this project.":
-      "Instrucciones y archivos usados en todas las conversaciones del proyecto.",
+      "Instrucciones y archivos usados en las conversaciones del proyecto.",
     "Project instructions": "Instrucciones del proyecto",
     "Browse the sources available in this project": "Explora las fuentes de este proyecto",
     "Keep the files and instructions for this project together. Manage other saved items in Library.":
-      "Mantén juntos los archivos e instrucciones de este proyecto. Gestiona lo demás en la biblioteca.",
+      "Mantén juntos los archivos e instrucciones. Gestiona lo demás en la Biblioteca.",
     "Could not confirm": "No se pudo confirmar",
     "Restore this project before changing its settings.":
       "Restaura este proyecto antes de cambiar su configuración.",
     "You will lose access, but the project and its content will stay available to its owner and other members.":
-      "Perderás el acceso, pero el proyecto y su contenido seguirán disponibles para su propietario y demás miembros.",
+      "Perderás el acceso, pero el proyecto seguirá disponible para su propietario y demás miembros.",
     "Project overview could not be loaded": "No se pudo cargar el resumen del proyecto",
     "Project activity and tasks are temporarily unavailable. Try again in a moment.":
-      "La actividad y las tareas no están disponibles por ahora. Inténtalo de nuevo en un momento.",
+      "La actividad y tareas no están disponibles. Inténtalo en un momento.",
     "Open tasks": "Tareas abiertas",
     "View all": "Ver todo",
     "No open tasks.": "No hay tareas abiertas.",
     "No activity yet. Get started by adding chats, files, or tasks.":
-      "Aún no hay actividad. Empieza añadiendo chats, archivos o tareas.",
+      "Aún no hay actividad. Añade chats, archivos o tareas.",
     "Connected project work": "Trabajo conectado del proyecto",
     "Project chats": "Chats del proyecto",
     "No chats yet": "Aún no hay chats",
@@ -915,7 +915,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Description: "Descripción",
     "Custom instructions": "Instrucciones personalizadas",
     "Persistent instructions added to every chat in this project (e.g. brand voice, product details).":
-      "Instrucciones que se añaden a cada chat del proyecto (p. ej., tono de marca, datos del producto).",
+      "Instrucciones que se añaden a cada chat del proyecto (p. ej., tono de marca, detalles del producto).",
     "Danger zone": "Zona de peligro",
     "You can retry or cancel.": "Puedes reintentar o cancelar.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
@@ -1825,6 +1825,98 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep your work in your account": "Guarda tu trabajo en tu cuenta",
     "Sign in to prepare plans and review your tasks. Execution requires an eligible plan and verified account. Nothing starts until you submit it.":
       "Inicia sesión para preparar planes y revisar tareas. La ejecución requiere un plan válido y cuenta verificada. Nada empieza hasta que lo envíes.",
+    "KovaGPT Onboarding": "Introducción a KovaGPT",
+    "1. Start a chat": "1. Inicia un chat",
+    "2. Choose a mode": "2. Elige un modo",
+    "3. Sign in to save your work": "3. Inicia sesión para guardar tu trabajo",
+    "4. Generate images": "4. Genera imágenes",
+    "5. Check your usage": "5. Revisa tu uso",
+    "6. Get help": "6. Obtén ayuda",
+    "Getting Started with KovaGPT": "Primeros pasos con KovaGPT",
+    "KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and everyday questions.":
+      "KovaGPT es un asistente de IA para escribir, estudiar, programar, investigar, crear imágenes y resolver dudas diarias.",
+    "Explore modes": "Explorar modos",
+    "Generate images": "Generar imágenes",
+    "View pricing": "Ver precios",
+    "AI Image Generator": "Generador de imágenes con IA",
+    "Humanize Text Now": "Humanizar texto ahora",
+    "This assistant was removed": "Este asistente se eliminó",
+    "Why am I seeing this?": "¿Por qué veo esto?",
+    "An owner or moderator can unpublish an assistant. Private assistant data is not revealed.":
+      "Un propietario o moderador puede despublicar un asistente. No se revelan datos privados.",
+    Creator: "Creador",
+    "Safety and reporting": "Seguridad y denuncias",
+    "Assistant tools remain subject to server authorization. Reporting requires a signed-in review flow.":
+      "Las herramientas siguen sujetas a autorización del servidor. Para denunciar hay que iniciar sesión.",
+    "Prepare an integration": "Preparar una integración",
+    "Open developer console": "Abrir consola para desarrolladores",
+    "Version 1 request contract": "Contrato de solicitudes v1",
+    "Billing and retries": "Facturación y reintentos",
+    "MCP and supported boundaries": "MCP y límites admitidos",
+    "Recent actions KovaGPT performed on your connected accounts.":
+      "Acciones recientes de KovaGPT en tus cuentas conectadas.",
+    "Refresh activity": "Actualizar actividad",
+    "Loading activity…": "Cargando actividad…",
+    "Activity unavailable": "Actividad no disponible",
+    "Your connected-account activity could not be loaded. Try again.":
+      "No se pudo cargar la actividad. Inténtalo de nuevo.",
+    "No connected-account activity yet. Connect Google from the Apps page to get started.":
+      "Aún no hay actividad. Conecta Google desde Apps para empezar.",
+    "The Activity page could not be loaded. Try again.":
+      "No se pudo cargar la página Actividad. Inténtalo de nuevo.",
+    "KovaGPT Activity": "Actividad de KovaGPT",
+    "Opening checkout…": "Abriendo pago…",
+    "Choose a plan to continue.": "Elige un plan para continuar.",
+    "Back to plans": "Volver a los planes",
+    "KovaGPT Billing": "Facturación de KovaGPT",
+    "Plans and pricing": "Planes y precios",
+    "Upgrade your plan": "Mejora tu plan",
+    "Choose the plan that fits how you work. Some features depend on connected services.":
+      "Elige el plan que se adapte a tu forma de trabajar. Algunas funciones dependen de servicios conectados.",
+    "Plan types": "Tipos de plan",
+    "KovaGPT plans": "Planes de KovaGPT",
+    "Stripe hosts checkout. Review your payment, renewal price, tax, and available payment methods before purchase.":
+      "Stripe gestiona el pago. Revisa el importe, la renovación, los impuestos y los métodos de pago antes de comprar.",
+    "Pricing FAQ": "Preguntas frecuentes sobre precios",
+    "Can I cancel anytime?": "¿Puedo cancelar cuando quiera?",
+    "Open Billing in Settings to see the options available for your subscription and when a change takes effect.":
+      "Abre Facturación en Configuración para ver las opciones y cuándo se aplican los cambios.",
+    "What happens if I hit my limit?": "¿Qué pasa si llego al límite?",
+    "Chat pauses when your plan allowance is used. Usage varies with the model and task. Check Usage for your next refresh, or choose an eligible plan for more capacity.":
+      "El chat se pausa al agotar la asignación. El uso varía según modelo y tarea. Consulta Uso para la próxima renovación o elige un plan con más capacidad.",
+    "Can I switch plans?": "¿Puedo cambiar de plan?",
+    "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.":
+      "Los cambios disponibles aparecen en Facturación. Revisa fecha y precio antes de aceptar.",
+    "Do unused credits roll over?": "¿Se acumulan los créditos no usados?",
+    "Unused allowances do not roll over. Reset schedules appear in Usage.":
+      "No se acumulan. Las fechas de renovación aparecen en Uso.",
+    "Plans that grow with you": "Planes que crecen contigo",
+    "Choose Team seats directly, or contact sales for Enterprise.":
+      "Elige puestos de Team o contacta con ventas para Enterprise.",
+    "2–150 users": "2–150 usuarios",
+    Team: "Team",
+    "Predictable usage per seat": "Uso predecible por puesto",
+    "All Kova models with shared team billing": "Todos los modelos Kova con facturación compartida",
+    "5× Standard metered usage": "5× el uso medido de Standard",
+    "Billed annually": "Facturación anual",
+    "Buy seats, invite verified accounts, and manage billing in your Team workspace.":
+      "Compra puestos, invita cuentas verificadas y gestiona la facturación en tu espacio Team.",
+    "Get Team": "Obtener Team",
+    "20+ users": "Más de 20 usuarios",
+    "Flexible pooled usage": "Uso compartido flexible",
+    "Seat price + usage at API rates": "Precio por puesto + uso a tarifas de API",
+    "$20 per seat per month plus tax, billed annually. Usage costs vary by model and task.":
+      "20 $ por puesto al mes más impuestos, facturación anual. El coste de uso varía según modelo y tarea.",
+    "Contact sales about Enterprise": "Contactar con ventas sobre Enterprise",
+    "Discuss with sales": "Hablar con ventas",
+    "Role:": "Rol:",
+    "Unvisited projects use last activity": "Los proyectos no visitados usan la última actividad",
+    "Deleting stored files…": "Eliminando archivos…",
+    "Access:": "Acceso:",
+    "Modified date unavailable": "Fecha de modificación no disponible",
+    "Your changes are still here. Use Save project to try again.":
+      "Tus cambios siguen aquí. Usa Guardar proyecto para reintentar.",
+    "KovaGPT Support": "Soporte de KovaGPT",
   },
   fr: {
     Neutral: "Neutre",
@@ -2123,7 +2215,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading projects": "Chargement des projets",
     "Sign in to use Projects": "Connectez-vous pour utiliser les projets",
     "Organize your conversations, files, and instructions in one place.":
-      "Organisez vos discussions, fichiers et instructions au même endroit.",
+      "Organisez discussions, fichiers et instructions au même endroit.",
     "Couldn't load your projects": "Impossible de charger vos projets",
     "No projects yet": "Aucun projet pour l'instant",
     "Create project": "Créer un projet",
@@ -2146,7 +2238,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep editing": "Continuer à modifier",
     "Discard changes": "Annuler les modifications",
     "Give your project a name, then personalize its workspace.":
-      "Donnez un nom à votre projet, puis personnalisez son espace.",
+      "Nommez votre projet, puis personnalisez son espace.",
     "Marketing campaign": "Campagne marketing",
     "What's this project about?": "De quoi parle ce projet ?",
     "Check Projects": "Vérifier les projets",
@@ -2447,19 +2539,19 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The recipient will no longer be able to open this snapshot.":
       "Le destinataire ne pourra plus ouvrir cet instantané.",
     "Plan, draft, and coordinate launch content across channels.":
-      "Planifiez, rédigez et coordonnez le contenu de lancement sur tous les canaux.",
+      "Planifiez, rédigez et coordonnez le contenu de lancement.",
     "User interviews, competitive notes, and opportunity briefs.":
-      "Entretiens utilisateurs, notes concurrentielles et synthèses d'opportunités.",
+      "Entretiens, notes concurrentielles et opportunités.",
     "Track posts, deadlines, and drafts for the upcoming quarter.":
-      "Suivez publications, échéances et brouillons du prochain trimestre.",
+      "Suivez publications, échéances et brouillons du trimestre.",
     "Docs, checklists, and resources for new hires.":
       "Documents, listes et ressources pour les nouvelles recrues.",
     "Keep related chats, files, and instructions together.":
-      "Regroupez les discussions, fichiers et instructions liés.",
+      "Regroupez discussions, fichiers et instructions liés.",
     "Last opened uses project visits on this device. Projects not opened here fall back to last activity.":
       "« Dernière ouverture » utilise les visites sur cet appareil. Les autres projets utilisent leur dernière activité.",
     "Your projects are temporarily unavailable. Try again in a moment.":
-      "Vos projets sont momentanément indisponibles. Réessayez dans un instant.",
+      "Vos projets sont momentanément indisponibles.",
     "Create a project to keep related chats, files, and instructions together.":
       "Créez un projet pour regrouper discussions, fichiers et instructions.",
     Owner: "Propriétaire",
@@ -2469,7 +2561,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Les projets que d'autres partagent avec vous apparaîtront ici.",
     "Save project": "Enregistrer le projet",
     "Your unsaved name and description will be lost. The saved project will not change.":
-      "Le nom et la description non enregistrés seront perdus. Le projet enregistré ne changera pas.",
+      "Le nom et la description non enregistrés seront perdus. Le projet ne changera pas.",
     "Creating…": "Création…",
     "Delete project": "Supprimer le projet",
     "KovaGPT could not verify Task access for this session. Your account is still signed in. Retry without leaving this page.":
@@ -2635,7 +2727,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading project…": "Chargement du projet…",
     "Sign in required": "Connexion requise",
     "Sign in to open this project and its shared workspace.":
-      "Connectez-vous pour ouvrir ce projet et son espace partagé.",
+      "Connectez-vous pour ouvrir ce projet.",
     "Project could not be opened": "Impossible d'ouvrir le projet",
     "This project is unavailable right now, or you no longer have access.":
       "Ce projet est indisponible ou vous n'y avez plus accès.",
@@ -2660,24 +2752,24 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Collaboration: "Collaboration",
     "Project knowledge": "Connaissances du projet",
     "Instructions and files used across conversations in this project.":
-      "Instructions et fichiers utilisés dans toutes les discussions du projet.",
+      "Instructions et fichiers utilisés dans les discussions du projet.",
     "Project instructions": "Instructions du projet",
     "Browse the sources available in this project": "Parcourir les sources du projet",
     "Keep the files and instructions for this project together. Manage other saved items in Library.":
-      "Regroupez les fichiers et instructions du projet. Gérez les autres éléments dans la bibliothèque.",
+      "Regroupez fichiers et instructions. Gérez le reste dans la Bibliothèque.",
     "Could not confirm": "Confirmation impossible",
     "Restore this project before changing its settings.":
       "Restaurez ce projet avant de modifier ses paramètres.",
     "You will lose access, but the project and its content will stay available to its owner and other members.":
-      "Vous perdrez l'accès, mais le projet restera disponible pour son propriétaire et les autres membres.",
+      "Vous perdrez l'accès, mais le projet restera disponible pour son propriétaire et les membres.",
     "Project overview could not be loaded": "Impossible de charger l'aperçu du projet",
     "Project activity and tasks are temporarily unavailable. Try again in a moment.":
-      "L'activité et les tâches sont momentanément indisponibles. Réessayez dans un instant.",
+      "Activité et tâches momentanément indisponibles. Réessayez.",
     "Open tasks": "Tâches ouvertes",
     "View all": "Tout voir",
     "No open tasks.": "Aucune tâche ouverte.",
     "No activity yet. Get started by adding chats, files, or tasks.":
-      "Aucune activité. Commencez par ajouter des discussions, fichiers ou tâches.",
+      "Aucune activité. Ajoutez discussions, fichiers ou tâches.",
     "Connected project work": "Travail connecté du projet",
     "Project chats": "Discussions du projet",
     "No chats yet": "Aucune discussion",
@@ -2701,7 +2793,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "These instructions are injected into project chats once and combined with authorized project file context.":
       "Ces instructions sont ajoutées une fois aux discussions du projet, avec le contexte autorisé des fichiers.",
     "Your instructions could not be saved. Your draft is preserved.":
-      "Impossible d'enregistrer les instructions. Votre brouillon est conservé.",
+      "Instructions non enregistrées. Votre brouillon est conservé.",
     "Loading tasks…": "Chargement des tâches…",
     "Retry loading tasks": "Recharger les tâches",
     "New task…": "Nouvelle tâche…",
@@ -3655,6 +3747,99 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep your work in your account": "Gardez votre travail dans votre compte",
     "Sign in to prepare plans and review your tasks. Execution requires an eligible plan and verified account. Nothing starts until you submit it.":
       "Connectez-vous pour préparer des plans et suivre vos tâches. L'exécution exige un forfait éligible et un compte vérifié. Rien ne démarre sans votre envoi.",
+    "KovaGPT Onboarding": "Prise en main de KovaGPT",
+    "1. Start a chat": "1. Lancez une discussion",
+    "2. Choose a mode": "2. Choisissez un mode",
+    "3. Sign in to save your work": "3. Connectez-vous pour enregistrer",
+    "4. Generate images": "4. Générez des images",
+    "5. Check your usage": "5. Vérifiez votre utilisation",
+    "6. Get help": "6. Obtenez de l'aide",
+    "Getting Started with KovaGPT": "Bien démarrer avec KovaGPT",
+    "KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and everyday questions.":
+      "KovaGPT est un assistant IA pour écrire, étudier, coder, rechercher, créer des images et répondre au quotidien.",
+    "Explore modes": "Découvrir les modes",
+    "Generate images": "Générer des images",
+    "View pricing": "Voir les tarifs",
+    "AI Image Generator": "Générateur d'images IA",
+    "Humanize Text Now": "Humaniser le texte",
+    "This assistant was removed": "Cet assistant a été retiré",
+    "Why am I seeing this?": "Pourquoi ce message ?",
+    "An owner or moderator can unpublish an assistant. Private assistant data is not revealed.":
+      "Un propriétaire ou modérateur peut dépublier un assistant. Les données privées ne sont pas révélées.",
+    Creator: "Créateur",
+    "Safety and reporting": "Sécurité et signalement",
+    "Assistant tools remain subject to server authorization. Reporting requires a signed-in review flow.":
+      "Les outils restent soumis à l'autorisation du serveur. Le signalement nécessite une connexion.",
+    "Prepare an integration": "Préparer une intégration",
+    "Open developer console": "Ouvrir la console développeur",
+    "Version 1 request contract": "Contrat de requête v1",
+    "Billing and retries": "Facturation et nouvelles tentatives",
+    "MCP and supported boundaries": "MCP et limites prises en charge",
+    "Recent actions KovaGPT performed on your connected accounts.":
+      "Actions récentes de KovaGPT sur vos comptes connectés.",
+    "Refresh activity": "Actualiser l'activité",
+    "Loading activity…": "Chargement de l'activité…",
+    "Activity unavailable": "Activité indisponible",
+    "Your connected-account activity could not be loaded. Try again.":
+      "Impossible de charger l'activité. Réessayez.",
+    "No connected-account activity yet. Connect Google from the Apps page to get started.":
+      "Aucune activité. Connectez Google depuis Apps pour commencer.",
+    "The Activity page could not be loaded. Try again.":
+      "Impossible de charger la page Activité. Réessayez.",
+    "KovaGPT Activity": "Activité KovaGPT",
+    "Opening checkout…": "Ouverture du paiement…",
+    "Choose a plan to continue.": "Choisissez un forfait pour continuer.",
+    "Back to plans": "Retour aux forfaits",
+    "KovaGPT Billing": "Facturation KovaGPT",
+    "Plans and pricing": "Forfaits et tarifs",
+    "Upgrade your plan": "Passez à un forfait supérieur",
+    "Choose the plan that fits how you work. Some features depend on connected services.":
+      "Choisissez le forfait adapté à votre façon de travailler. Certaines fonctions dépendent de services connectés.",
+    "Plan types": "Types de forfait",
+    "KovaGPT plans": "Forfaits KovaGPT",
+    "Stripe hosts checkout. Review your payment, renewal price, tax, and available payment methods before purchase.":
+      "Stripe gère le paiement. Vérifiez montant, renouvellement, taxes et moyens de paiement avant l'achat.",
+    "Pricing FAQ": "FAQ tarifs",
+    "Can I cancel anytime?": "Puis-je résilier à tout moment ?",
+    "Open Billing in Settings to see the options available for your subscription and when a change takes effect.":
+      "Ouvrez Facturation dans Paramètres pour voir les options et leur date d'effet.",
+    "What happens if I hit my limit?": "Que se passe-t-il si j'atteins ma limite ?",
+    "Chat pauses when your plan allowance is used. Usage varies with the model and task. Check Usage for your next refresh, or choose an eligible plan for more capacity.":
+      "Le chat se met en pause une fois l'allocation épuisée. L'usage varie selon le modèle et la tâche. Consultez Utilisation ou choisissez un forfait plus large.",
+    "Can I switch plans?": "Puis-je changer de forfait ?",
+    "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.":
+      "Les changements possibles figurent dans Facturation. Vérifiez date et prix avant d'accepter.",
+    "Do unused credits roll over?": "Les crédits non utilisés sont-ils reportés ?",
+    "Unused allowances do not roll over. Reset schedules appear in Usage.":
+      "Non, ils ne sont pas reportés. Les dates de réinitialisation sont dans Utilisation.",
+    "Plans that grow with you": "Des forfaits qui évoluent avec vous",
+    "Choose Team seats directly, or contact sales for Enterprise.":
+      "Choisissez des sièges Team ou contactez les ventes pour Enterprise.",
+    "2–150 users": "2 à 150 utilisateurs",
+    Team: "Team",
+    "Predictable usage per seat": "Utilisation prévisible par siège",
+    "All Kova models with shared team billing": "Tous les modèles Kova avec facturation d'équipe",
+    "5× Standard metered usage": "5× l'usage Standard",
+    "Billed annually": "Facturé annuellement",
+    "Buy seats, invite verified accounts, and manage billing in your Team workspace.":
+      "Achetez des sièges, invitez des comptes vérifiés et gérez la facturation dans Team.",
+    "Get Team": "Choisir Team",
+    "20+ users": "20 utilisateurs et plus",
+    "Flexible pooled usage": "Usage mutualisé flexible",
+    "Seat price + usage at API rates": "Prix du siège + usage au tarif API",
+    "$20 per seat per month plus tax, billed annually. Usage costs vary by model and task.":
+      "20 $ par siège et par mois hors taxes, facturé annuellement. Le coût d'usage varie selon le modèle et la tâche.",
+    "Contact sales about Enterprise": "Contacter les ventes pour Enterprise",
+    "Discuss with sales": "Échanger avec les ventes",
+    "Role:": "Rôle :",
+    "Unvisited projects use last activity":
+      "Les projets non ouverts utilisent la dernière activité",
+    "Deleting stored files…": "Suppression des fichiers…",
+    "Access:": "Accès :",
+    "Modified date unavailable": "Date de modification indisponible",
+    "Your changes are still here. Use Save project to try again.":
+      "Vos modifications sont conservées. Réessayez avec Enregistrer le projet.",
+    "KovaGPT Support": "Assistance KovaGPT",
   },
   de: {
     Neutral: "Neutral",
@@ -3950,7 +4135,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading projects": "Projekte werden geladen",
     "Sign in to use Projects": "Melde dich an, um Projekte zu nutzen",
     "Organize your conversations, files, and instructions in one place.":
-      "Organisiere Unterhaltungen, Dateien und Anweisungen an einem Ort.",
+      "Gespräche, Dateien und Anweisungen an einem Ort.",
     "Couldn't load your projects": "Deine Projekte konnten nicht geladen werden",
     "No projects yet": "Noch keine Projekte",
     "Create project": "Projekt erstellen",
@@ -3973,7 +4158,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep editing": "Weiter bearbeiten",
     "Discard changes": "Änderungen verwerfen",
     "Give your project a name, then personalize its workspace.":
-      "Gib deinem Projekt einen Namen und passe dann seinen Arbeitsbereich an.",
+      "Gib deinem Projekt einen Namen und passe es an.",
     "Marketing campaign": "Marketingkampagne",
     "What's this project about?": "Worum geht es in diesem Projekt?",
     "Check Projects": "Projekte prüfen",
@@ -4275,21 +4460,21 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The recipient will no longer be able to open this snapshot.":
       "Der Empfänger kann diesen Schnappschuss nicht mehr öffnen.",
     "Plan, draft, and coordinate launch content across channels.":
-      "Launch-Inhalte über alle Kanäle planen, entwerfen und abstimmen.",
+      "Launch-Inhalte kanalübergreifend planen, entwerfen und koordinieren.",
     "User interviews, competitive notes, and opportunity briefs.":
-      "Nutzerinterviews, Wettbewerbsnotizen und Chancen-Briefings.",
+      "Nutzerinterviews, Wettbewerbsnotizen und Chancen.",
     "Track posts, deadlines, and drafts for the upcoming quarter.":
-      "Beiträge, Fristen und Entwürfe für das nächste Quartal verfolgen.",
+      "Beiträge, Fristen und Entwürfe fürs nächste Quartal verfolgen.",
     "Docs, checklists, and resources for new hires.":
       "Dokumente, Checklisten und Ressourcen für neue Mitarbeitende.",
     "Keep related chats, files, and instructions together.":
-      "Zusammengehörige Chats, Dateien und Anweisungen beisammen halten.",
+      "Zusammengehörige Chats, Dateien und Anweisungen bündeln.",
     "Last opened uses project visits on this device. Projects not opened here fall back to last activity.":
       "„Zuletzt geöffnet“ nutzt Besuche auf diesem Gerät. Andere Projekte nutzen ihre letzte Aktivität.",
     "Your projects are temporarily unavailable. Try again in a moment.":
-      "Deine Projekte sind vorübergehend nicht verfügbar. Versuche es gleich noch einmal.",
+      "Deine Projekte sind kurz nicht verfügbar.",
     "Create a project to keep related chats, files, and instructions together.":
-      "Erstelle ein Projekt, um Chats, Dateien und Anweisungen zu bündeln.",
+      "Erstelle ein Projekt für zusammengehörige Chats, Dateien und Anweisungen.",
     Owner: "Eigentümer",
     "Retry deletion": "Löschen wiederholen",
     "No shared projects yet": "Noch keine geteilten Projekte",
@@ -4297,7 +4482,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Projekte, die andere mit dir teilen, erscheinen hier.",
     "Save project": "Projekt speichern",
     "Your unsaved name and description will be lost. The saved project will not change.":
-      "Nicht gespeicherter Name und Beschreibung gehen verloren. Das gespeicherte Projekt bleibt unverändert.",
+      "Ungespeicherter Name und Beschreibung gehen verloren. Das Projekt bleibt unverändert.",
     "Creating…": "Wird erstellt…",
     "Delete project": "Projekt löschen",
     "KovaGPT could not verify Task access for this session. Your account is still signed in. Retry without leaving this page.":
@@ -4464,7 +4649,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading project…": "Projekt wird geladen…",
     "Sign in required": "Anmeldung erforderlich",
     "Sign in to open this project and its shared workspace.":
-      "Melde dich an, um dieses Projekt und seinen Arbeitsbereich zu öffnen.",
+      "Melde dich an, um dieses Projekt zu öffnen.",
     "Project could not be opened": "Projekt konnte nicht geöffnet werden",
     "This project is unavailable right now, or you no longer have access.":
       "Dieses Projekt ist nicht verfügbar oder du hast keinen Zugriff mehr.",
@@ -4489,19 +4674,19 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Collaboration: "Zusammenarbeit",
     "Project knowledge": "Projektwissen",
     "Instructions and files used across conversations in this project.":
-      "Anweisungen und Dateien für alle Unterhaltungen in diesem Projekt.",
+      "Anweisungen und Dateien für alle Gespräche im Projekt.",
     "Project instructions": "Projektanweisungen",
     "Browse the sources available in this project": "Quellen in diesem Projekt durchsuchen",
     "Keep the files and instructions for this project together. Manage other saved items in Library.":
-      "Halte Dateien und Anweisungen dieses Projekts zusammen. Andere Elemente verwaltest du in der Bibliothek.",
+      "Halte Dateien und Anweisungen zusammen. Andere Elemente verwaltest du in der Bibliothek.",
     "Could not confirm": "Konnte nicht bestätigt werden",
     "Restore this project before changing its settings.":
       "Stelle das Projekt wieder her, bevor du Einstellungen änderst.",
     "You will lose access, but the project and its content will stay available to its owner and other members.":
-      "Du verlierst den Zugriff, aber Projekt und Inhalte bleiben für Inhaber und andere Mitglieder verfügbar.",
+      "Du verlierst den Zugriff, aber das Projekt bleibt für Eigentümer und Mitglieder verfügbar.",
     "Project overview could not be loaded": "Projektübersicht konnte nicht geladen werden",
     "Project activity and tasks are temporarily unavailable. Try again in a moment.":
-      "Aktivität und Aufgaben sind vorübergehend nicht verfügbar. Versuche es gleich noch einmal.",
+      "Aktivität und Aufgaben sind kurz nicht verfügbar.",
     "Open tasks": "Offene Aufgaben",
     "View all": "Alle anzeigen",
     "No open tasks.": "Keine offenen Aufgaben.",
@@ -4531,7 +4716,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "These instructions are injected into project chats once and combined with authorized project file context.":
       "Diese Anweisungen werden einmal in Projektchats eingefügt und mit erlaubtem Dateikontext kombiniert.",
     "Your instructions could not be saved. Your draft is preserved.":
-      "Anweisungen konnten nicht gespeichert werden. Dein Entwurf bleibt erhalten.",
+      "Anweisungen nicht gespeichert. Dein Entwurf bleibt erhalten.",
     "Loading tasks…": "Aufgaben werden geladen…",
     "Retry loading tasks": "Aufgaben erneut laden",
     "New task…": "Neue Aufgabe…",
@@ -4543,7 +4728,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Move down": "Nach unten",
     "Delete task": "Aufgabe löschen",
     "Persistent facts and preferences the team wants remembered in this project.":
-      "Dauerhafte Fakten und Vorlieben, die das Team im Projekt behalten möchte.",
+      "Fakten und Vorlieben, die sich das Team im Projekt merken will.",
     "New project memory": "Neue Projekterinnerung",
     "Adding…": "Wird hinzugefügt…",
     "Could not confirm that this memory was added. Your draft is kept. Check the list before trying again.":
@@ -5480,6 +5665,98 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep your work in your account": "Behalte deine Arbeit im Konto",
     "Sign in to prepare plans and review your tasks. Execution requires an eligible plan and verified account. Nothing starts until you submit it.":
       "Melde dich an, um Pläne vorzubereiten. Ausführung erfordert passenden Tarif und bestätigtes Konto. Nichts startet ohne dein Absenden.",
+    "KovaGPT Onboarding": "KovaGPT-Einführung",
+    "1. Start a chat": "1. Chat starten",
+    "2. Choose a mode": "2. Modus wählen",
+    "3. Sign in to save your work": "3. Anmelden zum Speichern",
+    "4. Generate images": "4. Bilder erstellen",
+    "5. Check your usage": "5. Nutzung prüfen",
+    "6. Get help": "6. Hilfe erhalten",
+    "Getting Started with KovaGPT": "Erste Schritte mit KovaGPT",
+    "KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and everyday questions.":
+      "KovaGPT ist ein KI-Assistent fürs Schreiben, Lernen, Programmieren, Recherchieren, Bilder und Alltagsfragen.",
+    "Explore modes": "Modi entdecken",
+    "Generate images": "Bilder erstellen",
+    "View pricing": "Preise ansehen",
+    "AI Image Generator": "KI-Bildgenerator",
+    "Humanize Text Now": "Text jetzt vermenschlichen",
+    "This assistant was removed": "Dieser Assistent wurde entfernt",
+    "Why am I seeing this?": "Warum sehe ich das?",
+    "An owner or moderator can unpublish an assistant. Private assistant data is not revealed.":
+      "Eigentümer oder Moderatoren können Assistenten zurückziehen. Private Daten werden nicht offengelegt.",
+    Creator: "Ersteller",
+    "Safety and reporting": "Sicherheit und Meldungen",
+    "Assistant tools remain subject to server authorization. Reporting requires a signed-in review flow.":
+      "Tools unterliegen der Serverfreigabe. Melden erfordert Anmeldung.",
+    "Prepare an integration": "Integration vorbereiten",
+    "Open developer console": "Entwicklerkonsole öffnen",
+    "Version 1 request contract": "Anfragevertrag Version 1",
+    "Billing and retries": "Abrechnung und Wiederholungen",
+    "MCP and supported boundaries": "MCP und unterstützte Grenzen",
+    "Recent actions KovaGPT performed on your connected accounts.":
+      "Letzte Aktionen von KovaGPT in deinen verbundenen Konten.",
+    "Refresh activity": "Aktivität aktualisieren",
+    "Loading activity…": "Aktivität wird geladen…",
+    "Activity unavailable": "Aktivität nicht verfügbar",
+    "Your connected-account activity could not be loaded. Try again.":
+      "Aktivität konnte nicht geladen werden. Versuche es erneut.",
+    "No connected-account activity yet. Connect Google from the Apps page to get started.":
+      "Noch keine Aktivität. Verbinde Google auf der Apps-Seite.",
+    "The Activity page could not be loaded. Try again.":
+      "Die Aktivitätsseite konnte nicht geladen werden.",
+    "KovaGPT Activity": "KovaGPT-Aktivität",
+    "Opening checkout…": "Kasse wird geöffnet…",
+    "Choose a plan to continue.": "Wähle einen Tarif, um fortzufahren.",
+    "Back to plans": "Zurück zu den Tarifen",
+    "KovaGPT Billing": "KovaGPT-Abrechnung",
+    "Plans and pricing": "Tarife und Preise",
+    "Upgrade your plan": "Tarif upgraden",
+    "Choose the plan that fits how you work. Some features depend on connected services.":
+      "Wähle den Tarif, der zu deiner Arbeitsweise passt. Manche Funktionen hängen von verbundenen Diensten ab.",
+    "Plan types": "Tarifarten",
+    "KovaGPT plans": "KovaGPT-Tarife",
+    "Stripe hosts checkout. Review your payment, renewal price, tax, and available payment methods before purchase.":
+      "Stripe wickelt die Zahlung ab. Prüfe Betrag, Verlängerungspreis, Steuern und Zahlungsarten vor dem Kauf.",
+    "Pricing FAQ": "Preis-FAQ",
+    "Can I cancel anytime?": "Kann ich jederzeit kündigen?",
+    "Open Billing in Settings to see the options available for your subscription and when a change takes effect.":
+      "Öffne Abrechnung in den Einstellungen, um Optionen und Wirksamkeit zu sehen.",
+    "What happens if I hit my limit?": "Was passiert, wenn ich mein Limit erreiche?",
+    "Chat pauses when your plan allowance is used. Usage varies with the model and task. Check Usage for your next refresh, or choose an eligible plan for more capacity.":
+      "Der Chat pausiert, wenn das Kontingent aufgebraucht ist. Die Nutzung hängt von Modell und Aufgabe ab. Sieh unter Nutzung nach oder wähle einen größeren Tarif.",
+    "Can I switch plans?": "Kann ich den Tarif wechseln?",
+    "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.":
+      "Mögliche Wechsel stehen unter Abrechnung. Prüfe Zeitpunkt und Preis vor dem Bestätigen.",
+    "Do unused credits roll over?": "Werden ungenutzte Credits übertragen?",
+    "Unused allowances do not roll over. Reset schedules appear in Usage.":
+      "Nein. Zurücksetzungstermine stehen unter Nutzung.",
+    "Plans that grow with you": "Tarife, die mitwachsen",
+    "Choose Team seats directly, or contact sales for Enterprise.":
+      "Wähle Team-Plätze direkt oder kontaktiere den Vertrieb für Enterprise.",
+    "2–150 users": "2–150 Nutzer",
+    Team: "Team",
+    "Predictable usage per seat": "Planbare Nutzung pro Platz",
+    "All Kova models with shared team billing": "Alle Kova-Modelle mit gemeinsamer Abrechnung",
+    "5× Standard metered usage": "5× Standard-Nutzung",
+    "Billed annually": "Jährliche Abrechnung",
+    "Buy seats, invite verified accounts, and manage billing in your Team workspace.":
+      "Kaufe Plätze, lade bestätigte Konten ein und verwalte die Abrechnung im Team-Bereich.",
+    "Get Team": "Team holen",
+    "20+ users": "20+ Nutzer",
+    "Flexible pooled usage": "Flexible gemeinsame Nutzung",
+    "Seat price + usage at API rates": "Platzpreis + Nutzung zu API-Preisen",
+    "$20 per seat per month plus tax, billed annually. Usage costs vary by model and task.":
+      "20 $ pro Platz und Monat zzgl. Steuern, jährlich abgerechnet. Nutzungskosten variieren je nach Modell und Aufgabe.",
+    "Contact sales about Enterprise": "Vertrieb zu Enterprise kontaktieren",
+    "Discuss with sales": "Mit dem Vertrieb sprechen",
+    "Role:": "Rolle:",
+    "Unvisited projects use last activity": "Nicht besuchte Projekte nutzen letzte Aktivität",
+    "Deleting stored files…": "Dateien werden gelöscht…",
+    "Access:": "Zugriff:",
+    "Modified date unavailable": "Änderungsdatum nicht verfügbar",
+    "Your changes are still here. Use Save project to try again.":
+      "Deine Änderungen sind noch da. Nutze „Projekt speichern“.",
+    "KovaGPT Support": "KovaGPT-Support",
   },
   "pt-BR": {
     Neutral: "Neutro",
@@ -5771,7 +6048,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading projects": "Carregando projetos",
     "Sign in to use Projects": "Entre para usar Projetos",
     "Organize your conversations, files, and instructions in one place.":
-      "Organize suas conversas, arquivos e instruções em um só lugar.",
+      "Organize conversas, arquivos e instruções em um só lugar.",
     "Couldn't load your projects": "Não foi possível carregar seus projetos",
     "No projects yet": "Nenhum projeto ainda",
     "Create project": "Criar projeto",
@@ -6093,9 +6370,9 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The recipient will no longer be able to open this snapshot.":
       "O destinatário não poderá mais abrir esta captura.",
     "Plan, draft, and coordinate launch content across channels.":
-      "Planeje, escreva e coordene conteúdo de lançamento em todos os canais.",
+      "Planeje, escreva e coordene conteúdo de lançamento.",
     "User interviews, competitive notes, and opportunity briefs.":
-      "Entrevistas com usuários, notas da concorrência e resumos de oportunidades.",
+      "Entrevistas, notas de concorrência e oportunidades.",
     "Track posts, deadlines, and drafts for the upcoming quarter.":
       "Acompanhe posts, prazos e rascunhos do próximo trimestre.",
     "Docs, checklists, and resources for new hires.":
@@ -6105,9 +6382,9 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Last opened uses project visits on this device. Projects not opened here fall back to last activity.":
       '"Último aberto" usa as visitas neste dispositivo. Os outros projetos usam a última atividade.',
     "Your projects are temporarily unavailable. Try again in a moment.":
-      "Seus projetos estão temporariamente indisponíveis. Tente de novo em instantes.",
+      "Seus projetos estão indisponíveis no momento.",
     "Create a project to keep related chats, files, and instructions together.":
-      "Crie um projeto para manter chats, arquivos e instruções juntos.",
+      "Crie um projeto para agrupar chats, arquivos e instruções.",
     Owner: "Proprietário",
     "Retry deletion": "Tentar excluir de novo",
     "No shared projects yet": "Nenhum projeto compartilhado ainda",
@@ -6115,7 +6392,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Projetos compartilhados com você aparecerão aqui.",
     "Save project": "Salvar projeto",
     "Your unsaved name and description will be lost. The saved project will not change.":
-      "O nome e a descrição não salvos serão perdidos. O projeto salvo não mudará.",
+      "Nome e descrição não salvos serão perdidos. O projeto não muda.",
     "Creating…": "Criando…",
     "Delete project": "Excluir projeto",
     "KovaGPT could not verify Task access for this session. Your account is still signed in. Retry without leaving this page.":
@@ -6279,8 +6556,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Project": "Projeto do KovaGPT",
     "Loading project…": "Carregando projeto…",
     "Sign in required": "Login necessário",
-    "Sign in to open this project and its shared workspace.":
-      "Entre para abrir este projeto e seu espaço compartilhado.",
+    "Sign in to open this project and its shared workspace.": "Entre para abrir este projeto.",
     "Project could not be opened": "Não foi possível abrir o projeto",
     "This project is unavailable right now, or you no longer have access.":
       "Este projeto está indisponível ou você não tem mais acesso.",
@@ -6305,24 +6581,24 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Collaboration: "Colaboração",
     "Project knowledge": "Conhecimento do projeto",
     "Instructions and files used across conversations in this project.":
-      "Instruções e arquivos usados em todas as conversas do projeto.",
+      "Instruções e arquivos usados nas conversas do projeto.",
     "Project instructions": "Instruções do projeto",
     "Browse the sources available in this project": "Veja as fontes deste projeto",
     "Keep the files and instructions for this project together. Manage other saved items in Library.":
-      "Mantenha arquivos e instruções do projeto juntos. Gerencie o resto na biblioteca.",
+      "Mantenha arquivos e instruções juntos. Gerencie o resto na Biblioteca.",
     "Could not confirm": "Não foi possível confirmar",
     "Restore this project before changing its settings.":
       "Restaure o projeto antes de mudar as configurações.",
     "You will lose access, but the project and its content will stay available to its owner and other members.":
-      "Você perderá o acesso, mas o projeto continua disponível para o dono e os demais membros.",
+      "Você perderá o acesso, mas o projeto continuará disponível ao dono e membros.",
     "Project overview could not be loaded": "Não foi possível carregar a visão geral",
     "Project activity and tasks are temporarily unavailable. Try again in a moment.":
-      "Atividade e tarefas estão temporariamente indisponíveis. Tente de novo em instantes.",
+      "Atividade e tarefas indisponíveis no momento.",
     "Open tasks": "Tarefas abertas",
     "View all": "Ver tudo",
     "No open tasks.": "Nenhuma tarefa aberta.",
     "No activity yet. Get started by adding chats, files, or tasks.":
-      "Nenhuma atividade ainda. Comece adicionando chats, arquivos ou tarefas.",
+      "Nenhuma atividade. Adicione chats, arquivos ou tarefas.",
     "Connected project work": "Trabalho conectado do projeto",
     "Project chats": "Chats do projeto",
     "No chats yet": "Nenhum chat ainda",
@@ -6347,7 +6623,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "These instructions are injected into project chats once and combined with authorized project file context.":
       "Estas instruções são inseridas uma vez nos chats do projeto, junto com o contexto autorizado dos arquivos.",
     "Your instructions could not be saved. Your draft is preserved.":
-      "Não foi possível salvar as instruções. Seu rascunho foi mantido.",
+      "Não foi possível salvar. Seu rascunho foi mantido.",
     "Loading tasks…": "Carregando tarefas…",
     "Retry loading tasks": "Recarregar tarefas",
     "New task…": "Nova tarefa…",
@@ -6359,7 +6635,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Move down": "Mover para baixo",
     "Delete task": "Excluir tarefa",
     "Persistent facts and preferences the team wants remembered in this project.":
-      "Fatos e preferências que a equipe quer lembrar neste projeto.",
+      "Fatos e preferências que a equipe quer lembrar no projeto.",
     "New project memory": "Nova memória do projeto",
     "Adding…": "Adicionando…",
     "Could not confirm that this memory was added. Your draft is kept. Check the list before trying again.":
@@ -6387,7 +6663,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Description: "Descrição",
     "Custom instructions": "Instruções personalizadas",
     "Persistent instructions added to every chat in this project (e.g. brand voice, product details).":
-      "Instruções adicionadas a cada chat do projeto (ex.: tom da marca, detalhes do produto).",
+      "Instruções adicionadas a todo chat do projeto (ex.: voz da marca, detalhes do produto).",
     "Danger zone": "Zona de perigo",
     "You can retry or cancel.": "Você pode tentar de novo ou cancelar.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
@@ -7293,6 +7569,98 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep your work in your account": "Mantenha seu trabalho na conta",
     "Sign in to prepare plans and review your tasks. Execution requires an eligible plan and verified account. Nothing starts until you submit it.":
       "Entre para preparar planos e revisar tarefas. A execução exige plano elegível e conta verificada. Nada começa até você enviar.",
+    "KovaGPT Onboarding": "Introdução ao KovaGPT",
+    "1. Start a chat": "1. Comece um chat",
+    "2. Choose a mode": "2. Escolha um modo",
+    "3. Sign in to save your work": "3. Entre para salvar seu trabalho",
+    "4. Generate images": "4. Gere imagens",
+    "5. Check your usage": "5. Confira seu uso",
+    "6. Get help": "6. Obtenha ajuda",
+    "Getting Started with KovaGPT": "Primeiros passos com o KovaGPT",
+    "KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and everyday questions.":
+      "O KovaGPT é um assistente de IA para escrever, estudar, programar, pesquisar, gerar imagens e tirar dúvidas.",
+    "Explore modes": "Explorar modos",
+    "Generate images": "Gerar imagens",
+    "View pricing": "Ver preços",
+    "AI Image Generator": "Gerador de imagens com IA",
+    "Humanize Text Now": "Humanizar texto agora",
+    "This assistant was removed": "Este assistente foi removido",
+    "Why am I seeing this?": "Por que estou vendo isto?",
+    "An owner or moderator can unpublish an assistant. Private assistant data is not revealed.":
+      "Um dono ou moderador pode despublicar um assistente. Dados privados não são revelados.",
+    Creator: "Criador",
+    "Safety and reporting": "Segurança e denúncias",
+    "Assistant tools remain subject to server authorization. Reporting requires a signed-in review flow.":
+      "As ferramentas dependem de autorização do servidor. Denunciar exige login.",
+    "Prepare an integration": "Preparar uma integração",
+    "Open developer console": "Abrir console do desenvolvedor",
+    "Version 1 request contract": "Contrato de solicitação v1",
+    "Billing and retries": "Cobrança e novas tentativas",
+    "MCP and supported boundaries": "MCP e limites suportados",
+    "Recent actions KovaGPT performed on your connected accounts.":
+      "Ações recentes do KovaGPT nas suas contas conectadas.",
+    "Refresh activity": "Atualizar atividade",
+    "Loading activity…": "Carregando atividade…",
+    "Activity unavailable": "Atividade indisponível",
+    "Your connected-account activity could not be loaded. Try again.":
+      "Não foi possível carregar a atividade. Tente de novo.",
+    "No connected-account activity yet. Connect Google from the Apps page to get started.":
+      "Nenhuma atividade ainda. Conecte o Google em Apps para começar.",
+    "The Activity page could not be loaded. Try again.":
+      "Não foi possível carregar a página Atividade.",
+    "KovaGPT Activity": "Atividade do KovaGPT",
+    "Opening checkout…": "Abrindo pagamento…",
+    "Choose a plan to continue.": "Escolha um plano para continuar.",
+    "Back to plans": "Voltar aos planos",
+    "KovaGPT Billing": "Cobrança do KovaGPT",
+    "Plans and pricing": "Planos e preços",
+    "Upgrade your plan": "Faça upgrade do plano",
+    "Choose the plan that fits how you work. Some features depend on connected services.":
+      "Escolha o plano ideal para você. Alguns recursos dependem de serviços conectados.",
+    "Plan types": "Tipos de plano",
+    "KovaGPT plans": "Planos do KovaGPT",
+    "Stripe hosts checkout. Review your payment, renewal price, tax, and available payment methods before purchase.":
+      "O Stripe processa o pagamento. Revise valor, renovação, impostos e formas de pagamento antes de comprar.",
+    "Pricing FAQ": "Perguntas sobre preços",
+    "Can I cancel anytime?": "Posso cancelar quando quiser?",
+    "Open Billing in Settings to see the options available for your subscription and when a change takes effect.":
+      "Abra Cobrança em Configurações para ver opções e quando valem.",
+    "What happens if I hit my limit?": "O que acontece se eu atingir o limite?",
+    "Chat pauses when your plan allowance is used. Usage varies with the model and task. Check Usage for your next refresh, or choose an eligible plan for more capacity.":
+      "O chat pausa quando a cota acaba. O uso varia por modelo e tarefa. Veja Uso para a próxima renovação ou escolha um plano maior.",
+    "Can I switch plans?": "Posso trocar de plano?",
+    "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.":
+      "As mudanças aparecem em Cobrança. Confira data e preço antes de aceitar.",
+    "Do unused credits roll over?": "Créditos não usados acumulam?",
+    "Unused allowances do not roll over. Reset schedules appear in Usage.":
+      "Não acumulam. As datas de renovação aparecem em Uso.",
+    "Plans that grow with you": "Planos que crescem com você",
+    "Choose Team seats directly, or contact sales for Enterprise.":
+      "Escolha assentos Team ou fale com vendas sobre Enterprise.",
+    "2–150 users": "2–150 usuários",
+    Team: "Team",
+    "Predictable usage per seat": "Uso previsível por assento",
+    "All Kova models with shared team billing": "Todos os modelos Kova com cobrança compartilhada",
+    "5× Standard metered usage": "5× o uso do Standard",
+    "Billed annually": "Cobrança anual",
+    "Buy seats, invite verified accounts, and manage billing in your Team workspace.":
+      "Compre assentos, convide contas verificadas e gerencie a cobrança no Team.",
+    "Get Team": "Assinar Team",
+    "20+ users": "20+ usuários",
+    "Flexible pooled usage": "Uso compartilhado flexível",
+    "Seat price + usage at API rates": "Preço por assento + uso a preço de API",
+    "$20 per seat per month plus tax, billed annually. Usage costs vary by model and task.":
+      "US$ 20 por assento ao mês mais impostos, cobrança anual. O custo de uso varia por modelo e tarefa.",
+    "Contact sales about Enterprise": "Falar com vendas sobre Enterprise",
+    "Discuss with sales": "Falar com vendas",
+    "Role:": "Função:",
+    "Unvisited projects use last activity": "Projetos não visitados usam a última atividade",
+    "Deleting stored files…": "Excluindo arquivos…",
+    "Access:": "Acesso:",
+    "Modified date unavailable": "Data de modificação indisponível",
+    "Your changes are still here. Use Save project to try again.":
+      "Suas alterações continuam aqui. Use Salvar projeto.",
+    "KovaGPT Support": "Suporte do KovaGPT",
   },
   ja: {
     Neutral: "ニュートラル",
@@ -7588,7 +7956,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading projects": "プロジェクトを読み込み中",
     "Sign in to use Projects": "プロジェクトを使うにはサインインしてください",
     "Organize your conversations, files, and instructions in one place.":
-      "会話、ファイル、指示を1か所で整理します。",
+      "会話、ファイル、指示を1か所で整理。",
     "Couldn't load your projects": "プロジェクトを読み込めませんでした",
     "No projects yet": "プロジェクトはまだありません",
     "Create project": "プロジェクトを作成",
@@ -7910,21 +8278,21 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The recipient will no longer be able to open this snapshot.":
       "受信者はこのスナップショットを開けなくなります。",
     "Plan, draft, and coordinate launch content across channels.":
-      "チャネルをまたいだローンチコンテンツの計画・下書き・調整。",
+      "ローンチ用コンテンツをチャネル横断で計画・作成・調整。",
     "User interviews, competitive notes, and opportunity briefs.":
       "ユーザーインタビュー、競合メモ、機会の概要。",
     "Track posts, deadlines, and drafts for the upcoming quarter.":
-      "次の四半期の投稿、締め切り、下書きを管理。",
+      "次の四半期の投稿、締切、下書きを管理。",
     "Docs, checklists, and resources for new hires.":
       "新入社員向けのドキュメント、チェックリスト、資料。",
     "Keep related chats, files, and instructions together.":
-      "関連するチャット、ファイル、指示をまとめておきます。",
+      "関連するチャット、ファイル、指示をまとめる。",
     "Last opened uses project visits on this device. Projects not opened here fall back to last activity.":
       "「最後に開いた日」はこのデバイスでの訪問を使います。ここで開いていないプロジェクトは最終アクティビティを使います。",
     "Your projects are temporarily unavailable. Try again in a moment.":
-      "プロジェクトは一時的に利用できません。しばらくしてからお試しください。",
+      "プロジェクトは一時的に利用できません。",
     "Create a project to keep related chats, files, and instructions together.":
-      "プロジェクトを作成して、関連するチャット、ファイル、指示をまとめましょう。",
+      "プロジェクトを作成して関連するチャット、ファイル、指示をまとめましょう。",
     Owner: "オーナー",
     "Retry deletion": "削除を再試行",
     "No shared projects yet": "共有プロジェクトはまだありません",
@@ -8097,7 +8465,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Loading project…": "プロジェクトを読み込み中…",
     "Sign in required": "サインインが必要です",
     "Sign in to open this project and its shared workspace.":
-      "このプロジェクトと共有ワークスペースを開くにはサインインしてください。",
+      "このプロジェクトを開くにはサインインしてください。",
     "Project could not be opened": "プロジェクトを開けませんでした",
     "This project is unavailable right now, or you no longer have access.":
       "このプロジェクトは現在利用できないか、アクセス権がありません。",
@@ -8122,24 +8490,24 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Collaboration: "共同作業",
     "Project knowledge": "プロジェクトのナレッジ",
     "Instructions and files used across conversations in this project.":
-      "このプロジェクトのすべての会話で使う指示とファイル。",
+      "このプロジェクトの会話全体で使う指示とファイル。",
     "Project instructions": "プロジェクトの指示",
     "Browse the sources available in this project": "このプロジェクトのソースを見る",
     "Keep the files and instructions for this project together. Manage other saved items in Library.":
-      "このプロジェクトのファイルと指示をまとめます。その他の保存アイテムはライブラリで管理します。",
+      "このプロジェクトのファイルと指示をまとめます。その他の項目はライブラリで管理します。",
     "Could not confirm": "確認できませんでした",
     "Restore this project before changing its settings.":
       "設定を変更する前にプロジェクトを復元してください。",
     "You will lose access, but the project and its content will stay available to its owner and other members.":
-      "アクセスできなくなりますが、プロジェクトと内容はオーナーと他のメンバーには残ります。",
+      "アクセスできなくなりますが、プロジェクトと内容は所有者や他のメンバーが引き続き利用できます。",
     "Project overview could not be loaded": "プロジェクトの概要を読み込めませんでした",
     "Project activity and tasks are temporarily unavailable. Try again in a moment.":
-      "アクティビティとタスクは一時的に利用できません。しばらくしてからお試しください。",
+      "プロジェクトのアクティビティとタスクは一時的に利用できません。",
     "Open tasks": "未完了のタスク",
     "View all": "すべて表示",
     "No open tasks.": "未完了のタスクはありません。",
     "No activity yet. Get started by adding chats, files, or tasks.":
-      "まだアクティビティはありません。チャット、ファイル、タスクを追加して始めましょう。",
+      "まだアクティビティはありません。チャット、ファイル、タスクを追加しましょう。",
     "Connected project work": "接続されたプロジェクト作業",
     "Project chats": "プロジェクトのチャット",
     "No chats yet": "チャットはまだありません",
@@ -8176,7 +8544,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Move down": "下へ移動",
     "Delete task": "タスクを削除",
     "Persistent facts and preferences the team wants remembered in this project.":
-      "チームがこのプロジェクトで覚えておきたい事実や好み。",
+      "チームがこのプロジェクトで覚えておきたい事実と好み。",
     "New project memory": "新しいプロジェクトメモリ",
     "Adding…": "追加中…",
     "Could not confirm that this memory was added. Your draft is kept. Check the list before trying again.":
@@ -9101,6 +9469,98 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep your work in your account": "作業をアカウントに保存",
     "Sign in to prepare plans and review your tasks. Execution requires an eligible plan and verified account. Nothing starts until you submit it.":
       "サインインして計画を準備し、タスクを確認しましょう。実行には対象プランと確認済みアカウントが必要です。送信するまで何も始まりません。",
+    "KovaGPT Onboarding": "KovaGPTのはじめかた",
+    "1. Start a chat": "1. チャットを始める",
+    "2. Choose a mode": "2. モードを選ぶ",
+    "3. Sign in to save your work": "3. サインインして保存",
+    "4. Generate images": "4. 画像を生成",
+    "5. Check your usage": "5. 使用状況を確認",
+    "6. Get help": "6. ヘルプ",
+    "Getting Started with KovaGPT": "KovaGPTを始めよう",
+    "KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and everyday questions.":
+      "KovaGPTは、文章、学習、コーディング、リサーチ、画像生成、日常の質問に使えるAIアシスタントです。",
+    "Explore modes": "モードを見る",
+    "Generate images": "画像を生成",
+    "View pricing": "料金を見る",
+    "AI Image Generator": "AI画像ジェネレーター",
+    "Humanize Text Now": "今すぐ自然な文章に",
+    "This assistant was removed": "このアシスタントは削除されました",
+    "Why am I seeing this?": "なぜこれが表示されますか？",
+    "An owner or moderator can unpublish an assistant. Private assistant data is not revealed.":
+      "所有者またはモデレーターはアシスタントを非公開にできます。非公開データは表示されません。",
+    Creator: "作成者",
+    "Safety and reporting": "安全と報告",
+    "Assistant tools remain subject to server authorization. Reporting requires a signed-in review flow.":
+      "アシスタントのツールはサーバーの認可に従います。報告にはサインインが必要です。",
+    "Prepare an integration": "連携を準備",
+    "Open developer console": "開発者コンソールを開く",
+    "Version 1 request contract": "バージョン1のリクエスト仕様",
+    "Billing and retries": "請求と再試行",
+    "MCP and supported boundaries": "MCPと対応範囲",
+    "Recent actions KovaGPT performed on your connected accounts.":
+      "KovaGPTが接続アカウントで最近行った操作。",
+    "Refresh activity": "アクティビティを更新",
+    "Loading activity…": "アクティビティを読み込み中…",
+    "Activity unavailable": "アクティビティを利用できません",
+    "Your connected-account activity could not be loaded. Try again.":
+      "アクティビティを読み込めませんでした。再試行してください。",
+    "No connected-account activity yet. Connect Google from the Apps page to get started.":
+      "まだアクティビティはありません。アプリページでGoogleを接続して始めましょう。",
+    "The Activity page could not be loaded. Try again.":
+      "アクティビティページを読み込めませんでした。再試行してください。",
+    "KovaGPT Activity": "KovaGPTアクティビティ",
+    "Opening checkout…": "決済を開いています…",
+    "Choose a plan to continue.": "続けるにはプランを選んでください。",
+    "Back to plans": "プランに戻る",
+    "KovaGPT Billing": "KovaGPTの請求",
+    "Plans and pricing": "プランと料金",
+    "Upgrade your plan": "プランをアップグレード",
+    "Choose the plan that fits how you work. Some features depend on connected services.":
+      "働き方に合ったプランを選んでください。一部の機能は接続サービスが必要です。",
+    "Plan types": "プランの種類",
+    "KovaGPT plans": "KovaGPTのプラン",
+    "Stripe hosts checkout. Review your payment, renewal price, tax, and available payment methods before purchase.":
+      "決済はStripeが処理します。購入前に支払額、更新料金、税、支払方法を確認してください。",
+    "Pricing FAQ": "料金に関するよくある質問",
+    "Can I cancel anytime?": "いつでも解約できますか？",
+    "Open Billing in Settings to see the options available for your subscription and when a change takes effect.":
+      "「設定」の「請求」で、サブスクリプションの選択肢と変更の適用時期を確認できます。",
+    "What happens if I hit my limit?": "上限に達するとどうなりますか？",
+    "Chat pauses when your plan allowance is used. Usage varies with the model and task. Check Usage for your next refresh, or choose an eligible plan for more capacity.":
+      "プランの利用枠を使い切るとチャットは一時停止します。使用量はモデルやタスクで変わります。「使用状況」で次の更新を確認するか、上位プランを選んでください。",
+    "Can I switch plans?": "プランを変更できますか？",
+    "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.":
+      "変更可能なプランは「請求」に表示されます。承諾前に時期と料金を確認してください。",
+    "Do unused credits roll over?": "未使用分は繰り越されますか？",
+    "Unused allowances do not roll over. Reset schedules appear in Usage.":
+      "未使用分は繰り越されません。リセット日は「使用状況」に表示されます。",
+    "Plans that grow with you": "成長に合わせて選べるプラン",
+    "Choose Team seats directly, or contact sales for Enterprise.":
+      "Teamの席数を直接選ぶか、Enterpriseは営業にお問い合わせください。",
+    "2–150 users": "2〜150ユーザー",
+    Team: "Team",
+    "Predictable usage per seat": "席ごとの予測しやすい使用量",
+    "All Kova models with shared team billing": "全Kovaモデルとチーム一括請求",
+    "5× Standard metered usage": "Standardの5倍の従量利用",
+    "Billed annually": "年払い",
+    "Buy seats, invite verified accounts, and manage billing in your Team workspace.":
+      "Teamワークスペースで席を購入し、確認済みアカウントを招待し、請求を管理できます。",
+    "Get Team": "Teamを始める",
+    "20+ users": "20ユーザー以上",
+    "Flexible pooled usage": "柔軟な共有利用枠",
+    "Seat price + usage at API rates": "席料金＋API料金での従量課金",
+    "$20 per seat per month plus tax, billed annually. Usage costs vary by model and task.":
+      "1席あたり月額20ドル（税別）、年払い。使用料はモデルやタスクによって異なります。",
+    "Contact sales about Enterprise": "Enterpriseについて営業に問い合わせ",
+    "Discuss with sales": "営業に相談",
+    "Role:": "ロール：",
+    "Unvisited projects use last activity": "未訪問のプロジェクトは最終アクティビティ順",
+    "Deleting stored files…": "ファイルを削除中…",
+    "Access:": "アクセス：",
+    "Modified date unavailable": "更新日を取得できません",
+    "Your changes are still here. Use Save project to try again.":
+      "変更内容は残っています。「プロジェクトを保存」で再試行してください。",
+    "KovaGPT Support": "KovaGPTサポート",
   },
   ko: {
     Neutral: "중립",
@@ -9414,7 +9874,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep editing": "계속 편집",
     "Discard changes": "변경사항 버리기",
     "Give your project a name, then personalize its workspace.":
-      "프로젝트 이름을 정하고 작업 공간을 꾸며 보세요.",
+      "프로젝트 이름을 정하고 작업 공간을 꾸미세요.",
     "Marketing campaign": "마케팅 캠페인",
     "What's this project about?": "이 프로젝트는 무엇에 관한 것인가요?",
     "Check Projects": "프로젝트 확인",
@@ -9713,20 +10173,19 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The recipient will no longer be able to open this snapshot.":
       "받는 사람은 더 이상 이 스냅샷을 열 수 없습니다.",
     "Plan, draft, and coordinate launch content across channels.":
-      "채널 전반의 출시 콘텐츠를 계획, 작성, 조율합니다.",
+      "채널 전반의 출시 콘텐츠를 계획, 작성, 조율하세요.",
     "User interviews, competitive notes, and opportunity briefs.":
-      "사용자 인터뷰, 경쟁사 메모, 기회 요약.",
+      "사용자 인터뷰, 경쟁 메모, 기회 요약.",
     "Track posts, deadlines, and drafts for the upcoming quarter.":
-      "다음 분기의 게시물, 마감일, 초안을 관리합니다.",
+      "다음 분기의 게시물, 마감, 초안을 추적하세요.",
     "Docs, checklists, and resources for new hires.": "신규 입사자를 위한 문서, 체크리스트, 자료.",
-    "Keep related chats, files, and instructions together.":
-      "관련 채팅, 파일, 지침을 함께 보관하세요.",
+    "Keep related chats, files, and instructions together.": "관련 채팅, 파일, 지침을 함께 두세요.",
     "Last opened uses project visits on this device. Projects not opened here fall back to last activity.":
       "'마지막으로 연 날짜'는 이 기기의 방문 기록을 사용합니다. 여기서 열지 않은 프로젝트는 마지막 활동을 사용합니다.",
     "Your projects are temporarily unavailable. Try again in a moment.":
-      "프로젝트를 잠시 사용할 수 없습니다. 잠시 후 다시 시도하세요.",
+      "프로젝트를 잠시 사용할 수 없습니다.",
     "Create a project to keep related chats, files, and instructions together.":
-      "프로젝트를 만들어 관련 채팅, 파일, 지침을 함께 보관하세요.",
+      "프로젝트를 만들어 관련 채팅, 파일, 지침을 묶으세요.",
     Owner: "소유자",
     "Retry deletion": "삭제 다시 시도",
     "No shared projects yet": "공유된 프로젝트가 아직 없습니다",
@@ -9734,7 +10193,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "다른 사람이 공유한 프로젝트가 여기에 표시됩니다.",
     "Save project": "프로젝트 저장",
     "Your unsaved name and description will be lost. The saved project will not change.":
-      "저장하지 않은 이름과 설명이 사라집니다. 저장된 프로젝트는 바뀌지 않습니다.",
+      "저장하지 않은 이름과 설명은 사라집니다. 저장된 프로젝트는 바뀌지 않습니다.",
     "Creating…": "만드는 중…",
     "Delete project": "프로젝트 삭제",
     "KovaGPT could not verify Task access for this session. Your account is still signed in. Retry without leaving this page.":
@@ -9896,11 +10355,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Project": "KovaGPT 프로젝트",
     "Loading project…": "프로젝트 불러오는 중…",
     "Sign in required": "로그인 필요",
-    "Sign in to open this project and its shared workspace.":
-      "이 프로젝트와 공유 작업 공간을 열려면 로그인하세요.",
+    "Sign in to open this project and its shared workspace.": "이 프로젝트를 열려면 로그인하세요.",
     "Project could not be opened": "프로젝트를 열 수 없음",
     "This project is unavailable right now, or you no longer have access.":
-      "이 프로젝트를 지금 사용할 수 없거나 더 이상 접근 권한이 없습니다.",
+      "이 프로젝트를 지금 사용할 수 없거나 접근 권한이 없습니다.",
     "Back to projects": "프로젝트로 돌아가기",
     "Project deletion is incomplete": "프로젝트 삭제가 완료되지 않았습니다",
     "Retrying deletion…": "삭제 다시 시도 중…",
@@ -9922,24 +10380,24 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Collaboration: "협업",
     "Project knowledge": "프로젝트 지식",
     "Instructions and files used across conversations in this project.":
-      "이 프로젝트의 모든 대화에 쓰이는 지침과 파일.",
+      "이 프로젝트의 대화 전반에 쓰이는 지침과 파일.",
     "Project instructions": "프로젝트 지침",
     "Browse the sources available in this project": "이 프로젝트의 출처 둘러보기",
     "Keep the files and instructions for this project together. Manage other saved items in Library.":
-      "이 프로젝트의 파일과 지침을 함께 보관하세요. 다른 저장 항목은 라이브러리에서 관리합니다.",
+      "이 프로젝트의 파일과 지침을 함께 두세요. 다른 항목은 라이브러리에서 관리하세요.",
     "Could not confirm": "확인할 수 없음",
     "Restore this project before changing its settings.":
       "설정을 바꾸기 전에 프로젝트를 복원하세요.",
     "You will lose access, but the project and its content will stay available to its owner and other members.":
-      "접근 권한을 잃지만 프로젝트와 내용은 소유자와 다른 구성원에게 남습니다.",
+      "접근 권한을 잃지만 프로젝트와 내용은 소유자와 다른 구성원에게 계속 남습니다.",
     "Project overview could not be loaded": "프로젝트 개요를 불러올 수 없음",
     "Project activity and tasks are temporarily unavailable. Try again in a moment.":
-      "활동과 작업을 잠시 사용할 수 없습니다. 잠시 후 다시 시도하세요.",
+      "프로젝트 활동과 작업을 잠시 사용할 수 없습니다.",
     "Open tasks": "열린 작업",
     "View all": "모두 보기",
     "No open tasks.": "열린 작업이 없습니다.",
     "No activity yet. Get started by adding chats, files, or tasks.":
-      "아직 활동이 없습니다. 채팅, 파일, 작업을 추가해 시작하세요.",
+      "아직 활동이 없습니다. 채팅, 파일, 작업을 추가하세요.",
     "Connected project work": "연결된 프로젝트 작업",
     "Project chats": "프로젝트 채팅",
     "No chats yet": "아직 채팅이 없습니다",
@@ -10003,7 +10461,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Description: "설명",
     "Custom instructions": "맞춤 지침",
     "Persistent instructions added to every chat in this project (e.g. brand voice, product details).":
-      "이 프로젝트의 모든 채팅에 추가되는 지침(예: 브랜드 어조, 제품 정보).",
+      "이 프로젝트의 모든 채팅에 추가되는 지침(예: 브랜드 톤, 제품 정보).",
     "Danger zone": "위험 구역",
     "You can retry or cancel.": "다시 시도하거나 취소할 수 있습니다.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
@@ -10898,6 +11356,98 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep your work in your account": "작업을 계정에 보관",
     "Sign in to prepare plans and review your tasks. Execution requires an eligible plan and verified account. Nothing starts until you submit it.":
       "로그인해 계획을 준비하고 작업을 검토하세요. 실행에는 해당 요금제와 인증된 계정이 필요하며 제출 전에는 아무것도 시작되지 않습니다.",
+    "KovaGPT Onboarding": "KovaGPT 시작하기",
+    "1. Start a chat": "1. 채팅 시작",
+    "2. Choose a mode": "2. 모드 선택",
+    "3. Sign in to save your work": "3. 로그인해 작업 저장",
+    "4. Generate images": "4. 이미지 생성",
+    "5. Check your usage": "5. 사용량 확인",
+    "6. Get help": "6. 도움 받기",
+    "Getting Started with KovaGPT": "KovaGPT 시작 가이드",
+    "KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and everyday questions.":
+      "KovaGPT는 글쓰기, 공부, 코딩, 리서치, 이미지 생성, 일상 질문을 위한 AI 어시스턴트입니다.",
+    "Explore modes": "모드 살펴보기",
+    "Generate images": "이미지 생성",
+    "View pricing": "요금 보기",
+    "AI Image Generator": "AI 이미지 생성기",
+    "Humanize Text Now": "지금 자연스럽게 다듬기",
+    "This assistant was removed": "이 어시스턴트는 삭제되었습니다",
+    "Why am I seeing this?": "왜 이게 보이나요?",
+    "An owner or moderator can unpublish an assistant. Private assistant data is not revealed.":
+      "소유자나 운영자가 어시스턴트를 게시 취소할 수 있습니다. 비공개 데이터는 공개되지 않습니다.",
+    Creator: "제작자",
+    "Safety and reporting": "안전 및 신고",
+    "Assistant tools remain subject to server authorization. Reporting requires a signed-in review flow.":
+      "어시스턴트 도구는 서버 승인을 따릅니다. 신고하려면 로그인이 필요합니다.",
+    "Prepare an integration": "연동 준비",
+    "Open developer console": "개발자 콘솔 열기",
+    "Version 1 request contract": "버전 1 요청 계약",
+    "Billing and retries": "청구 및 재시도",
+    "MCP and supported boundaries": "MCP 및 지원 범위",
+    "Recent actions KovaGPT performed on your connected accounts.":
+      "KovaGPT가 연결된 계정에서 최근 수행한 작업.",
+    "Refresh activity": "활동 새로고침",
+    "Loading activity…": "활동 불러오는 중…",
+    "Activity unavailable": "활동을 사용할 수 없음",
+    "Your connected-account activity could not be loaded. Try again.":
+      "활동을 불러올 수 없습니다. 다시 시도하세요.",
+    "No connected-account activity yet. Connect Google from the Apps page to get started.":
+      "아직 활동이 없습니다. 앱 페이지에서 Google을 연결해 시작하세요.",
+    "The Activity page could not be loaded. Try again.":
+      "활동 페이지를 불러올 수 없습니다. 다시 시도하세요.",
+    "KovaGPT Activity": "KovaGPT 활동",
+    "Opening checkout…": "결제 여는 중…",
+    "Choose a plan to continue.": "계속하려면 요금제를 선택하세요.",
+    "Back to plans": "요금제로 돌아가기",
+    "KovaGPT Billing": "KovaGPT 결제",
+    "Plans and pricing": "요금제 및 가격",
+    "Upgrade your plan": "요금제 업그레이드",
+    "Choose the plan that fits how you work. Some features depend on connected services.":
+      "작업 방식에 맞는 요금제를 고르세요. 일부 기능은 연결된 서비스가 필요합니다.",
+    "Plan types": "요금제 유형",
+    "KovaGPT plans": "KovaGPT 요금제",
+    "Stripe hosts checkout. Review your payment, renewal price, tax, and available payment methods before purchase.":
+      "결제는 Stripe에서 처리됩니다. 구매 전 결제 금액, 갱신 가격, 세금, 결제 수단을 확인하세요.",
+    "Pricing FAQ": "요금 FAQ",
+    "Can I cancel anytime?": "언제든 해지할 수 있나요?",
+    "Open Billing in Settings to see the options available for your subscription and when a change takes effect.":
+      "설정의 결제에서 구독 옵션과 변경 적용 시점을 확인하세요.",
+    "What happens if I hit my limit?": "한도에 도달하면 어떻게 되나요?",
+    "Chat pauses when your plan allowance is used. Usage varies with the model and task. Check Usage for your next refresh, or choose an eligible plan for more capacity.":
+      "요금제 한도를 다 쓰면 채팅이 일시 중지됩니다. 사용량은 모델과 작업에 따라 다릅니다. 사용량에서 다음 갱신을 확인하거나 더 큰 요금제를 고르세요.",
+    "Can I switch plans?": "요금제를 바꿀 수 있나요?",
+    "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.":
+      "가능한 변경은 결제에 표시됩니다. 수락 전에 시점과 가격을 확인하세요.",
+    "Do unused credits roll over?": "남은 크레딧이 이월되나요?",
+    "Unused allowances do not roll over. Reset schedules appear in Usage.":
+      "남은 한도는 이월되지 않습니다. 초기화 일정은 사용량에 표시됩니다.",
+    "Plans that grow with you": "함께 성장하는 요금제",
+    "Choose Team seats directly, or contact sales for Enterprise.":
+      "Team 좌석을 직접 고르거나 Enterprise는 영업팀에 문의하세요.",
+    "2–150 users": "2–150명",
+    Team: "Team",
+    "Predictable usage per seat": "좌석당 예측 가능한 사용량",
+    "All Kova models with shared team billing": "팀 통합 결제로 모든 Kova 모델",
+    "5× Standard metered usage": "Standard의 5배 사용량",
+    "Billed annually": "연간 청구",
+    "Buy seats, invite verified accounts, and manage billing in your Team workspace.":
+      "Team 작업 공간에서 좌석 구매, 인증 계정 초대, 결제 관리를 하세요.",
+    "Get Team": "Team 시작하기",
+    "20+ users": "20명 이상",
+    "Flexible pooled usage": "유연한 공유 사용량",
+    "Seat price + usage at API rates": "좌석 가격 + API 요금 기준 사용량",
+    "$20 per seat per month plus tax, billed annually. Usage costs vary by model and task.":
+      "좌석당 월 20달러(세금 별도), 연간 청구. 사용 비용은 모델과 작업에 따라 다릅니다.",
+    "Contact sales about Enterprise": "Enterprise 영업 문의",
+    "Discuss with sales": "영업팀과 상담",
+    "Role:": "역할:",
+    "Unvisited projects use last activity": "방문하지 않은 프로젝트는 최근 활동 기준",
+    "Deleting stored files…": "파일 삭제 중…",
+    "Access:": "접근:",
+    "Modified date unavailable": "수정 날짜 없음",
+    "Your changes are still here. Use Save project to try again.":
+      "변경 사항은 그대로 있습니다. 프로젝트 저장으로 다시 시도하세요.",
+    "KovaGPT Support": "KovaGPT 지원",
   },
   ar: {
     Neutral: "محايد",
@@ -11211,8 +11761,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Discard project changes?": "تجاهل تغييرات المشروع؟",
     "Keep editing": "متابعة التعديل",
     "Discard changes": "تجاهل التغييرات",
-    "Give your project a name, then personalize its workspace.":
-      "أعطِ مشروعك اسمًا ثم خصّص مساحة عمله.",
+    "Give your project a name, then personalize its workspace.": "سمِّ مشروعك ثم خصّص مساحته.",
     "Marketing campaign": "حملة تسويقية",
     "What's this project about?": "ما موضوع هذا المشروع؟",
     "Check Projects": "التحقق من المشاريع",
@@ -11511,20 +12060,20 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The recipient will no longer be able to open this snapshot.":
       "لن يتمكن المستلم من فتح هذه اللقطة بعد الآن.",
     "Plan, draft, and coordinate launch content across channels.":
-      "خطّط وصِغ ونسّق محتوى الإطلاق عبر القنوات.",
+      "خطّط لمحتوى الإطلاق وصِغه ونسّقه عبر القنوات.",
     "User interviews, competitive notes, and opportunity briefs.":
       "مقابلات المستخدمين وملاحظات المنافسين وملخصات الفرص.",
     "Track posts, deadlines, and drafts for the upcoming quarter.":
-      "تتبّع المنشورات والمواعيد والمسودات للربع القادم.",
+      "تابع المنشورات والمواعيد والمسودات للربع القادم.",
     "Docs, checklists, and resources for new hires.": "مستندات وقوائم تحقق وموارد للموظفين الجدد.",
     "Keep related chats, files, and instructions together.":
-      "احتفظ بالمحادثات والملفات والتعليمات المرتبطة معًا.",
+      "اجمع المحادثات والملفات والتعليمات المرتبطة معًا.",
     "Last opened uses project visits on this device. Projects not opened here fall back to last activity.":
       'يعتمد "آخر فتح" على زيارات هذا الجهاز. تستخدم المشاريع الأخرى آخر نشاط لها.',
     "Your projects are temporarily unavailable. Try again in a moment.":
-      "مشاريعك غير متاحة مؤقتًا. حاول مرة أخرى بعد قليل.",
+      "مشاريعك غير متاحة مؤقتًا.",
     "Create a project to keep related chats, files, and instructions together.":
-      "أنشئ مشروعًا لتجمع المحادثات والملفات والتعليمات المرتبطة.",
+      "أنشئ مشروعًا لجمع المحادثات والملفات والتعليمات.",
     Owner: "المالك",
     "Retry deletion": "إعادة محاولة الحذف",
     "No shared projects yet": "لا توجد مشاريع مشتركة بعد",
@@ -11532,7 +12081,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "ستظهر هنا المشاريع التي يشاركها الآخرون معك.",
     "Save project": "حفظ المشروع",
     "Your unsaved name and description will be lost. The saved project will not change.":
-      "سيُفقد الاسم والوصف غير المحفوظين. لن يتغير المشروع المحفوظ.",
+      "سيُفقد الاسم والوصف غير المحفوظين، ولن يتغير المشروع المحفوظ.",
     "Creating…": "جارٍ الإنشاء…",
     "Delete project": "حذف المشروع",
     "KovaGPT could not verify Task access for this session. Your account is still signed in. Retry without leaving this page.":
@@ -11696,11 +12245,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Project": "مشروع KovaGPT",
     "Loading project…": "جارٍ تحميل المشروع…",
     "Sign in required": "يلزم تسجيل الدخول",
-    "Sign in to open this project and its shared workspace.":
-      "سجّل الدخول لفتح هذا المشروع ومساحته المشتركة.",
+    "Sign in to open this project and its shared workspace.": "سجّل الدخول لفتح هذا المشروع.",
     "Project could not be opened": "تعذّر فتح المشروع",
     "This project is unavailable right now, or you no longer have access.":
-      "هذا المشروع غير متاح الآن أو لم تعد لديك صلاحية الوصول.",
+      "هذا المشروع غير متاح حاليًا أو لم تعد لديك صلاحية.",
     "Back to projects": "العودة إلى المشاريع",
     "Project deletion is incomplete": "لم يكتمل حذف المشروع",
     "Retrying deletion…": "جارٍ إعادة محاولة الحذف…",
@@ -11722,23 +12270,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Collaboration: "التعاون",
     "Project knowledge": "معرفة المشروع",
     "Instructions and files used across conversations in this project.":
-      "تعليمات وملفات تُستخدم في كل محادثات هذا المشروع.",
+      "التعليمات والملفات المستخدمة في محادثات هذا المشروع.",
     "Project instructions": "تعليمات المشروع",
     "Browse the sources available in this project": "تصفّح مصادر هذا المشروع",
     "Keep the files and instructions for this project together. Manage other saved items in Library.":
-      "اجمع ملفات هذا المشروع وتعليماته معًا، وأدِر العناصر الأخرى في المكتبة.",
+      "اجمع ملفات المشروع وتعليماته معًا، وأدِر العناصر الأخرى في المكتبة.",
     "Could not confirm": "تعذّر التأكيد",
     "Restore this project before changing its settings.": "استعد هذا المشروع قبل تغيير إعداداته.",
     "You will lose access, but the project and its content will stay available to its owner and other members.":
-      "ستفقد الوصول، لكن المشروع ومحتواه سيبقيان متاحين لمالكه وبقية الأعضاء.",
+      "ستفقد الوصول، لكن المشروع ومحتواه يبقيان متاحين للمالك والأعضاء.",
     "Project overview could not be loaded": "تعذّر تحميل نظرة المشروع العامة",
     "Project activity and tasks are temporarily unavailable. Try again in a moment.":
-      "نشاط المشروع ومهامه غير متاحة مؤقتًا. حاول مرة أخرى بعد قليل.",
+      "نشاط المشروع ومهامه غير متاحة مؤقتًا.",
     "Open tasks": "المهام المفتوحة",
     "View all": "عرض الكل",
     "No open tasks.": "لا توجد مهام مفتوحة.",
     "No activity yet. Get started by adding chats, files, or tasks.":
-      "لا يوجد نشاط بعد. ابدأ بإضافة محادثات أو ملفات أو مهام.",
+      "لا يوجد نشاط بعد. أضف محادثات أو ملفات أو مهام.",
     "Connected project work": "أعمال المشروع المتصلة",
     "Project chats": "محادثات المشروع",
     "No chats yet": "لا توجد محادثات بعد",
@@ -11762,7 +12310,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "These instructions are injected into project chats once and combined with authorized project file context.":
       "تُضاف هذه التعليمات مرة واحدة إلى محادثات المشروع مع سياق ملفاته المصرّح به.",
     "Your instructions could not be saved. Your draft is preserved.":
-      "تعذّر حفظ التعليمات. تم الاحتفاظ بمسودتك.",
+      "تعذّر حفظ التعليمات، ومسودتك محفوظة.",
     "Loading tasks…": "جارٍ تحميل المهام…",
     "Retry loading tasks": "إعادة تحميل المهام",
     "New task…": "مهمة جديدة…",
@@ -11774,7 +12322,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Move down": "نقل لأسفل",
     "Delete task": "حذف المهمة",
     "Persistent facts and preferences the team wants remembered in this project.":
-      "حقائق وتفضيلات يريد الفريق تذكرها في هذا المشروع.",
+      "حقائق وتفضيلات يريد الفريق تذكّرها في هذا المشروع.",
     "New project memory": "ذكرى مشروع جديدة",
     "Adding…": "جارٍ الإضافة…",
     "Could not confirm that this memory was added. Your draft is kept. Check the list before trying again.":
@@ -12690,5 +13238,96 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Keep your work in your account": "احتفظ بعملك في حسابك",
     "Sign in to prepare plans and review your tasks. Execution requires an eligible plan and verified account. Nothing starts until you submit it.":
       "سجّل الدخول لإعداد الخطط ومراجعة مهامك. يتطلب التنفيذ خطة مؤهلة وحسابًا موثّقًا، ولا يبدأ شيء حتى ترسله.",
+    "KovaGPT Onboarding": "التعريف بـ KovaGPT",
+    "1. Start a chat": "1. ابدأ محادثة",
+    "2. Choose a mode": "2. اختر وضعًا",
+    "3. Sign in to save your work": "3. سجّل الدخول لحفظ عملك",
+    "4. Generate images": "4. أنشئ الصور",
+    "5. Check your usage": "5. تحقّق من استخدامك",
+    "6. Get help": "6. احصل على المساعدة",
+    "Getting Started with KovaGPT": "البدء مع KovaGPT",
+    "KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and everyday questions.":
+      "KovaGPT مساعد ذكاء اصطناعي للكتابة والدراسة والبرمجة والبحث وإنشاء الصور والأسئلة اليومية.",
+    "Explore modes": "استكشف الأوضاع",
+    "Generate images": "إنشاء الصور",
+    "View pricing": "عرض الأسعار",
+    "AI Image Generator": "مولّد الصور بالذكاء الاصطناعي",
+    "Humanize Text Now": "اجعل النص طبيعيًا الآن",
+    "This assistant was removed": "أُزيل هذا المساعد",
+    "Why am I seeing this?": "لماذا أرى هذا؟",
+    "An owner or moderator can unpublish an assistant. Private assistant data is not revealed.":
+      "يمكن للمالك أو المشرف إلغاء نشر المساعد دون كشف بياناته الخاصة.",
+    Creator: "المنشئ",
+    "Safety and reporting": "السلامة والإبلاغ",
+    "Assistant tools remain subject to server authorization. Reporting requires a signed-in review flow.":
+      "تظل أدوات المساعد خاضعة لتفويض الخادم، ويتطلب الإبلاغ تسجيل الدخول.",
+    "Prepare an integration": "تجهيز تكامل",
+    "Open developer console": "فتح وحدة تحكم المطوّر",
+    "Version 1 request contract": "عقد الطلب للإصدار 1",
+    "Billing and retries": "الفوترة وإعادة المحاولة",
+    "MCP and supported boundaries": "MCP والحدود المدعومة",
+    "Recent actions KovaGPT performed on your connected accounts.":
+      "الإجراءات الأخيرة التي نفّذها KovaGPT على حساباتك المتصلة.",
+    "Refresh activity": "تحديث النشاط",
+    "Loading activity…": "جارٍ تحميل النشاط…",
+    "Activity unavailable": "النشاط غير متاح",
+    "Your connected-account activity could not be loaded. Try again.":
+      "تعذّر تحميل النشاط. حاول مجددًا.",
+    "No connected-account activity yet. Connect Google from the Apps page to get started.":
+      "لا يوجد نشاط بعد. اربط Google من صفحة التطبيقات للبدء.",
+    "The Activity page could not be loaded. Try again.": "تعذّر تحميل صفحة النشاط. حاول مجددًا.",
+    "KovaGPT Activity": "نشاط KovaGPT",
+    "Opening checkout…": "جارٍ فتح الدفع…",
+    "Choose a plan to continue.": "اختر خطة للمتابعة.",
+    "Back to plans": "العودة إلى الخطط",
+    "KovaGPT Billing": "فوترة KovaGPT",
+    "Plans and pricing": "الخطط والأسعار",
+    "Upgrade your plan": "ترقية خطتك",
+    "Choose the plan that fits how you work. Some features depend on connected services.":
+      "اختر الخطة المناسبة لطريقة عملك. تعتمد بعض الميزات على خدمات متصلة.",
+    "Plan types": "أنواع الخطط",
+    "KovaGPT plans": "خطط KovaGPT",
+    "Stripe hosts checkout. Review your payment, renewal price, tax, and available payment methods before purchase.":
+      "يستضيف Stripe الدفع. راجع المبلغ وسعر التجديد والضريبة وطرق الدفع قبل الشراء.",
+    "Pricing FAQ": "الأسئلة الشائعة عن الأسعار",
+    "Can I cancel anytime?": "هل يمكنني الإلغاء في أي وقت؟",
+    "Open Billing in Settings to see the options available for your subscription and when a change takes effect.":
+      "افتح الفوترة في الإعدادات لرؤية خيارات اشتراكك وموعد سريان التغيير.",
+    "What happens if I hit my limit?": "ماذا يحدث إذا بلغت الحد؟",
+    "Chat pauses when your plan allowance is used. Usage varies with the model and task. Check Usage for your next refresh, or choose an eligible plan for more capacity.":
+      "يتوقف الدردشة مؤقتًا عند استنفاد حصة خطتك. يختلف الاستخدام حسب النموذج والمهمة. راجع الاستخدام أو اختر خطة أكبر.",
+    "Can I switch plans?": "هل يمكنني تغيير الخطة؟",
+    "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.":
+      "تظهر التغييرات المتاحة في الفوترة. راجع التوقيت والسعر قبل القبول.",
+    "Do unused credits roll over?": "هل يُرحّل الرصيد غير المستخدم؟",
+    "Unused allowances do not roll over. Reset schedules appear in Usage.":
+      "لا يُرحّل. تظهر مواعيد إعادة التعيين في الاستخدام.",
+    "Plans that grow with you": "خطط تنمو معك",
+    "Choose Team seats directly, or contact sales for Enterprise.":
+      "اختر مقاعد Team مباشرة أو تواصل مع المبيعات لـ Enterprise.",
+    "2–150 users": "2–150 مستخدمًا",
+    Team: "Team",
+    "Predictable usage per seat": "استخدام متوقع لكل مقعد",
+    "All Kova models with shared team billing": "جميع نماذج Kova مع فوترة مشتركة للفريق",
+    "5× Standard metered usage": "5 أضعاف استخدام Standard",
+    "Billed annually": "يُدفع سنويًا",
+    "Buy seats, invite verified accounts, and manage billing in your Team workspace.":
+      "اشترِ المقاعد وادعُ حسابات موثّقة وأدِر الفوترة في مساحة Team.",
+    "Get Team": "احصل على Team",
+    "20+ users": "أكثر من 20 مستخدمًا",
+    "Flexible pooled usage": "استخدام مشترك مرن",
+    "Seat price + usage at API rates": "سعر المقعد + الاستخدام بأسعار API",
+    "$20 per seat per month plus tax, billed annually. Usage costs vary by model and task.":
+      "20 دولارًا لكل مقعد شهريًا مع الضريبة، تُدفع سنويًا. تختلف تكلفة الاستخدام حسب النموذج والمهمة.",
+    "Contact sales about Enterprise": "تواصل مع المبيعات بشأن Enterprise",
+    "Discuss with sales": "تحدّث مع المبيعات",
+    "Role:": "الدور:",
+    "Unvisited projects use last activity": "المشاريع غير المزارة تستخدم آخر نشاط",
+    "Deleting stored files…": "جارٍ حذف الملفات…",
+    "Access:": "الوصول:",
+    "Modified date unavailable": "تاريخ التعديل غير متاح",
+    "Your changes are still here. Use Save project to try again.":
+      "ما زالت تغييراتك هنا. استخدم حفظ المشروع للمحاولة مجددًا.",
+    "KovaGPT Support": "دعم KovaGPT",
   },
 };
