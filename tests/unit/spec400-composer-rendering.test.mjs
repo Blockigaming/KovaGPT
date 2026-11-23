@@ -59,6 +59,7 @@ const closedSurfaces = {
   "@/components/ResponsiveModelSelector": { ResponsiveModelSelector: empty },
   "@/components/ConsumerModelSelector": { ConsumerModelSelector: empty },
   "@/components/ComposerDrawingDialog": { ComposerDrawingDialog: empty },
+  "@/components/PastedTextCard": { PastedTextCard: empty },
   "@/components/ComposerPluginList": {
     ComposerPluginList: empty,
     useComposerPluginConnections: () => ({}),

@@ -67,6 +67,8 @@ export type Attachment =
       content: string;
       fileType?: string | null;
       size?: number | null;
+      /** Pasted message text shown as a card; not a file upload. */
+      pasted?: boolean;
     }
   | {
       kind: "library_file";
@@ -94,6 +96,7 @@ export function storedMessageAttachments(items: PendingAttachment[]): Attachment
             content: a.textContent ?? "",
             fileType: a.fileType ?? null,
             size: a.size ?? null,
+            ...(a.pasted ? { pasted: true } : {}),
           }
         : { kind: "image" as const, dataUrl: a.dataUrl },
   );
@@ -117,6 +120,7 @@ export function pendingMessageAttachments(items: Message["attachments"]): Pendin
             size: attachment.size ?? undefined,
             fileType: attachment.fileType,
             textContent: attachment.content,
+            ...(attachment.pasted ? { pasted: true, localPaste: true } : {}),
             status: COMPLETE,
           }
         : {

@@ -1,0 +1,215 @@
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Code2, Download, Eye, Maximize2, RefreshCw, X } from "lucide-react";
+import { toast } from "sonner";
+import { buildFilePreviewDocument, type ResponseFile } from "@/lib/response-files.mjs";
+import { downloadResponseFile, fileIcon } from "@/lib/response-file-actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import "./response-files.css";
+
+// Loaded only for Markdown files so the preview pane does not split the main renderer.
+const ResponseMarkdown = lazy(() =>
+  import("./ResponseMarkdown").then((module) => ({ default: module.ResponseMarkdown })),
+);
+
+type View = "preview" | "code";
+type CopyState = "idle" | "copied" | "error";
+
+/**
+ * Side preview for a file Kova made: Preview/Code toggle, Copy with a Download menu,
+ * restart, full screen and close. HTML runs in an opaque-origin sandbox with no
+ * network; SVG and Markdown never run scripts.
+ */
+export function FilePreviewPane({ file, onClose }: { file: ResponseFile; onClose: () => void }) {
+  const [view, setView] = useState<View>(file.preview ? "preview" : "code");
+  const [fullscreen, setFullscreen] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+  const [run, setRun] = useState(0);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const headingId = useId();
+  const Icon = fileIcon(file);
+
+  useEffect(() => {
+    setView(file.preview ? "preview" : "code");
+    setCopyState("idle");
+  }, [file.name, file.content, file.preview]);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    },
+    [],
+  );
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
+  const previewDoc = useMemo(
+    () =>
+      file.language === "html" || file.language === "svg" ? buildFilePreviewDocument(file) : "",
+    [file],
+  );
+
+  const copy = async () => {
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    try {
+      await navigator.clipboard.writeText(file.content);
+      setCopyState("copied");
+      copyTimer.current = setTimeout(() => setCopyState("idle"), 1_600);
+    } catch {
+      setCopyState("error");
+      toast.error("Couldn’t copy. Switch to Code to select the file.");
+    }
+  };
+
+  return (
+    <section
+      className="kova-file-pane"
+      data-fullscreen={fullscreen || undefined}
+      aria-labelledby={headingId}
+    >
+      <header className="kova-file-pane-header">
+        <span className="kova-file-pane-icon" aria-hidden="true">
+          <Icon />
+        </span>
+        <h2 id={headingId} className="kova-file-pane-name" title={file.name}>
+          {file.name}
+        </h2>
+        <div className="kova-file-pane-tools">
+          {file.preview && (
+            <div className="kova-file-pane-toggle" role="group" aria-label="View">
+              <button
+                type="button"
+                aria-pressed={view === "preview"}
+                aria-label="Preview"
+                title="Preview"
+                onClick={() => setView("preview")}
+              >
+                <Eye aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "code"}
+                aria-label="Code"
+                title="Code"
+                onClick={() => setView("code")}
+              >
+                <Code2 aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {file.language === "html" && view === "preview" && (
+            <button
+              type="button"
+              className="kova-file-pane-icon-button"
+              aria-label="Restart preview"
+              title="Restart preview"
+              onClick={() => setRun((value) => value + 1)}
+            >
+              <RefreshCw aria-hidden="true" />
+            </button>
+          )}
+          <div className="kova-file-pane-copy">
+            <button
+              type="button"
+              className="kova-file-pane-copy-main"
+              onClick={() => void copy()}
+              aria-label={copyState === "copied" ? "Copied" : `Copy ${file.name}`}
+            >
+              {copyState === "copied" ? <Check aria-hidden="true" /> : null}
+              {copyState === "copied" ? "Copied" : "Copy"}
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="kova-file-pane-copy-more"
+                  aria-label="More file actions"
+                >
+                  <ChevronDown aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-44">
+                <DropdownMenuItem onSelect={() => void copy()}>Copy</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => downloadResponseFile(file)}>
+                  <Download aria-hidden="true" /> Download {file.name}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <button
+            type="button"
+            className="kova-file-pane-icon-button"
+            aria-label={fullscreen ? "Exit full screen" : "Full screen"}
+            title={fullscreen ? "Exit full screen" : "Full screen"}
+            aria-pressed={fullscreen}
+            onClick={() => setFullscreen((value) => !value)}
+          >
+            <Maximize2 aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="kova-file-pane-icon-button"
+            aria-label="Close preview"
+            title="Close"
+            onClick={onClose}
+          >
+            <X aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+      <span role="status" className="sr-only">
+        {copyState === "copied" ? `${file.name} copied.` : ""}
+      </span>
+      <div className="kova-file-pane-body" data-view={view}>
+        {view === "preview" && file.language === "html" ? (
+          <iframe
+            key={run}
+            title={`Preview of ${file.name}`}
+            className="kova-file-pane-frame"
+            // Opaque origin: never add allow-same-origin, forms, popups or navigation.
+            sandbox="allow-scripts"
+            referrerPolicy="no-referrer"
+            srcDoc={previewDoc}
+          />
+        ) : view === "preview" && file.language === "svg" ? (
+          <iframe
+            title={`Preview of ${file.name}`}
+            className="kova-file-pane-frame"
+            sandbox=""
+            referrerPolicy="no-referrer"
+            srcDoc={previewDoc}
+          />
+        ) : view === "preview" && file.language === "markdown" ? (
+          <div className="kova-file-pane-document prose-chat" tabIndex={0}>
+            <Suspense fallback={<p role="status">Loading preview…</p>}>
+              <ResponseMarkdown boxLongProse={false}>{file.content}</ResponseMarkdown>
+            </Suspense>
+          </div>
+        ) : (
+          <pre
+            className="kova-file-pane-code"
+            tabIndex={0}
+            aria-label={`${file.languageLabel} source of ${file.name}`}
+          >
+            <code>
+              {file.content.split("\n").map((line, index) => (
+                <span key={index} className="kova-file-pane-line">
+                  {line || " "}
+                </span>
+              ))}
+            </code>
+          </pre>
+        )}
+      </div>
+    </section>
+  );
+}

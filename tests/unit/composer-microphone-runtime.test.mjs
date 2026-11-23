@@ -121,6 +121,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     ),
     "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/components/PastedTextCard": { PastedTextCard: "PastedTextCard" },
     "@/lib/link-preview.mjs": linkPreview,
     react,
     "lucide-react": {},

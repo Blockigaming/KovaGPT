@@ -900,7 +900,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   font-size: 0;
   line-height: 0;
 
-  > [data-kind="image"] {
+  > :is([data-kind="image"], [data-kind="pasted"]) {
     float: inline-start;
     margin-inline-end: 8px;
   }
@@ -918,7 +918,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   }
 
   @media (width >= 1024px) {
-    > [data-kind="image"] {
+    > :is([data-kind="image"], [data-kind="pasted"]) {
       margin-block-end: 8px;
     }
 
@@ -927,6 +927,12 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
       margin-block-end: 11px;
     }
   }
+}
+.spec400-pasted-item {
+  flex: none;
+  list-style: none;
+  font-size: initial;
+  line-height: normal;
 }
 .spec400-attachment-chip {
   position: relative;

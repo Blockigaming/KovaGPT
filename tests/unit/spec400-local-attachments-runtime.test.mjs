@@ -127,6 +127,7 @@ function fixture(
     ),
     "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/components/PastedTextCard": { PastedTextCard: "PastedTextCard" },
     "@/lib/link-preview.mjs": linkPreview,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },

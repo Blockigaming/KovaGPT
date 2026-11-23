@@ -4,6 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import { splitGenerativeContent } from "../../src/lib/generative-ui.mjs";
+import { extractResponseFiles } from "../../src/lib/response-files.mjs";
 import { loadUiModule } from "../helpers/ui-state-harness.mjs";
 
 // Execute the route's actual callbacks/effect and the message's actual widget
@@ -101,6 +102,13 @@ function fixture() {
   const context = {
     sameNextPromptScope,
     splitGenerativeContent,
+    extractResponseFiles,
+    fileResultDescriptor: (messageId, file) => ({
+      title: file.name,
+      canvasSourceKey: `${messageId}:file:${file.name}`,
+      file,
+    }),
+    wideResultRef: { current: true },
     storagePrincipal: "owner-a",
     activeId: "chat-a",
     principalReady: true,

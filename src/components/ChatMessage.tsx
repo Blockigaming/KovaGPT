@@ -6,6 +6,9 @@ import { PromptMessage } from "./PromptMessage";
 import { ChatLoadingIndicator, formatResponseTime } from "./StreamingStatus";
 import { SafeResponseAdvertisement } from "./SafeResponseAdvertisement";
 import { MessageActivityList } from "./MessageActivityList";
+import { ResponseActivitySummary } from "./ResponseActivitySummary";
+import { extractResponseFiles, type ResponseFile } from "@/lib/response-files.mjs";
+import { fileResultDescriptor } from "@/lib/response-file-result";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
 import { ResponseMarkdown } from "./ResponseMarkdown";
 import { TaskCreatedBubble } from "./TaskCreatedBubble";
@@ -168,7 +171,7 @@ function ChatMessageInner({
   /** Applies an accepted selection edit / restored version to this message. */
   onReplaceContent?: (messageId: string, nextContent: string) => void;
   onOpenResult?: (
-    result: ResultDescriptor & { canvasSourceKey?: string },
+    result: ResultDescriptor & { canvasSourceKey?: string; file?: ResponseFile },
     trigger?: HTMLElement,
   ) => void;
   onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
@@ -506,11 +509,22 @@ function ChatMessageInner({
   // Validated kova-interactive blocks render as native controls; everything else
   // (including malformed or still-streaming blocks) stays ordinary markdown.
   const submitInteractive = onFollowUp ?? undefined;
+  const responseFiles = useMemo(
+    () => (isUser ? [] : extractResponseFiles(message.content)),
+    [isUser, message.content],
+  );
+  const openFile = useCallback(
+    (file: ResponseFile, trigger?: HTMLElement) => {
+      onOpenResult?.(fileResultDescriptor(message.id, file), trigger);
+    },
+    [message.id, onOpenResult],
+  );
   const renderResponseText = (text: string, key: React.Key | undefined) => {
     const parts = isUser || streaming ? [] : splitInteractiveContent(text);
     const markdown = (value: string, k?: React.Key) => (
       <ResponseMarkdown
         key={k}
+        onOpenFile={onOpenResult ? openFile : undefined}
         sources={message.sources}
         onSourceClick={openSource}
         onSaveImage={saveResponseImage}
@@ -891,7 +905,12 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            {!streaming && <MessageActivityList activities={message.activities} />}
+            {!streaming &&
+              (responseFiles.some((file) => file.complete) ? (
+                <ResponseActivitySummary activities={message.activities} files={responseFiles} />
+              ) : (
+                <MessageActivityList activities={message.activities} />
+              ))}
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}

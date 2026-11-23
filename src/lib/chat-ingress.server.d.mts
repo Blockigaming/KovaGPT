@@ -4,6 +4,7 @@ export const CHAT_MAX_MESSAGE_CHARS: number;
 export const CHAT_MAX_ATTACHMENTS_PER_MESSAGE: number;
 export const CHAT_MAX_IMAGE_BYTES: number;
 export const CHAT_MAX_TEXT_ATTACHMENT_CHARS: number;
+export const CHAT_MAX_PASTED_TEXT_PER_MESSAGE: number;
 export const CHAT_MAX_ANON_BUCKETS: number;
 
 export type ChatModeId =
@@ -33,6 +34,7 @@ export type ChatAttachment =
       content: string;
       fileType?: string;
       size?: number;
+      pasted?: boolean;
     }
   | {
       kind: "library_file";

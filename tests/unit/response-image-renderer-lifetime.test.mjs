@@ -1,3 +1,4 @@
+import * as responseFiles from "../../src/lib/response-files.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
@@ -68,6 +69,8 @@ function fixture(initial = {}) {
     "lucide-react": icons,
     "./response-output-blocks.css": {},
     "@/lib/table-overflow": { observeTableOverflow },
+    "@/lib/response-files.mjs": responseFiles,
+    "./ResponseFileCard": { ResponseFileCard: () => null },
   });
   const markdownHooks = createHookHarness();
   let imageHooks;

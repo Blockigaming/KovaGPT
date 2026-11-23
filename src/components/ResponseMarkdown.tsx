@@ -22,12 +22,15 @@ import type { ResponseSource } from "@/lib/response-sources";
 import "katex/dist/katex.min.css";
 import "./response-output-blocks.css";
 import { observeTableOverflow } from "@/lib/table-overflow";
+import { describeFile, type ResponseFile } from "@/lib/response-files.mjs";
+import { ResponseFileCard } from "./ResponseFileCard";
 
 declare module "hast" {
   interface ElementData {
     kovaTextOutput?: string;
     kovaOutputLabel?: string;
     kovaCodeFilename?: string;
+    kovaCodeComplete?: boolean;
   }
 }
 
@@ -236,6 +239,7 @@ const writingLanguages = new Set([
   "document",
 ]);
 function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & ExtraProps) {
+  const { onOpenFile, activeFileName } = useContext(MarkdownActionsContext);
   const code = node?.children.length === 1 ? node.children[0] : undefined;
   if (
     code?.type !== "element" ||
@@ -262,6 +266,13 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
     "kova-xlsx": "Spreadsheet",
   }[language];
   const writing = Boolean(officeLabel) || writingLanguages.has(language.toLowerCase());
+  const filename = node?.data?.kovaCodeFilename;
+  if (filename && !officeLabel && onOpenFile) {
+    const file = describeFile(filename, language.toLowerCase(), text, node?.data?.kovaCodeComplete);
+    return (
+      <ResponseFileCard file={file} active={activeFileName === filename} onOpen={onOpenFile} />
+    );
+  }
   return (
     <ResponseContentBox
       text={text}
@@ -309,11 +320,24 @@ function separateTextOutputs(options: { boxLongProse: boolean } = { boxLongProse
           const filename = /\b(?:filename|file)=(["'])(.*?)\1|\b(?:filename|file)=([^\s]+)/.exec(
             firstLine,
           );
-          if (filename)
+          if (filename) {
+            const end = child.position?.end.offset;
+            const raw = start === undefined || end === undefined ? "" : source.slice(start, end);
+            const fence = /^ {0,3}(`{3,}|~{3,})/.exec(raw)?.[1];
+            const lastLine = raw.trimEnd().split("\n").pop() ?? "";
             child.data = {
               ...child.data,
               kovaCodeFilename: safeOutputFilename(filename[2] || filename[3]),
+              // An unclosed fence is a file still being written by a streaming reply.
+              kovaCodeComplete: Boolean(
+                fence &&
+                raw.trimEnd().includes("\n") &&
+                new RegExp(`^ {0,3}${fence[0] === "`" ? "`" : "~"}{${fence.length},}\\s*$`).test(
+                  lastLine,
+                ),
+              ),
             };
+          }
         }
         visit(child);
       }
@@ -371,6 +395,9 @@ function separateTextOutputs(options: { boxLongProse: boolean } = { boxLongProse
 }
 
 type MarkdownActions = {
+  /** Named files (```html filename="game.html") render as cards that open this preview. */
+  onOpenFile?: (file: ResponseFile, trigger: HTMLButtonElement) => void;
+  activeFileName?: string;
   sources?: ResponseSource[];
   onSourceClick?: (sourceId: string, trigger: HTMLButtonElement) => void;
   onSaveImage?: (src: string, title: string) => Promise<void>;
@@ -475,13 +502,15 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
   onSourceClick,
   onSaveImage,
   imageActions,
+  onOpenFile,
+  activeFileName,
 }: MarkdownActions & {
   children: string;
   boxLongProse?: boolean;
 }) {
   const actions = useMemo(
-    () => ({ sources, onSourceClick, onSaveImage, imageActions }),
-    [sources, onSourceClick, onSaveImage, imageActions],
+    () => ({ sources, onSourceClick, onSaveImage, imageActions, onOpenFile, activeFileName }),
+    [sources, onSourceClick, onSaveImage, imageActions, onOpenFile, activeFileName],
   );
   return (
     <MarkdownActionsContext.Provider value={actions}>

@@ -31,6 +31,8 @@ import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
+import { extractResponseFiles } from "@/lib/response-files.mjs";
+import { fileResultDescriptor } from "@/lib/response-file-result";
 import { restoreDialogFocus, scheduleDialogFocusReturn } from "@/lib/dialog-return-focus";
 import {
   beginChatEdit,
@@ -774,6 +776,8 @@ function KovaGPT() {
   const resizeAttachmentPane = (next: number) =>
     setAttachmentPaneRatio(Math.max(0.3, Math.min(0.7, next)));
   const wideResult = workspaceWidth >= 1000;
+  const wideResultRef = useRef(wideResult);
+  wideResultRef.current = wideResult;
   const setLayoutRatio = (next: number) => {
     const usableWidth = Math.max(workspaceWidth - 12, 840);
     const minimum = 420 / usableWidth;
@@ -1283,11 +1287,20 @@ function KovaGPT() {
       pending.scope !== scope ||
       latest?.id !== pending.messageId ||
       latest.role !== "assistant" ||
-      latest.generationStatus ||
-      resultRef.current ||
-      resultDraftsRef.current.has(scope)
+      latest.generationStatus
     )
       return;
+    // A file the reply just made opens in the side preview, replacing an earlier file
+    // preview but never another kind of result. Narrow layouts keep the tap-to-open card.
+    const file = extractResponseFiles(latest.content)
+      .filter((candidate) => candidate.complete)
+      .at(-1);
+    if (file) {
+      if (wideResultRef.current && (!resultRef.current || resultRef.current.file))
+        openResultRef.current(fileResultDescriptor(latest.id, file));
+      return;
+    }
+    if (resultRef.current || resultDraftsRef.current.has(scope)) return;
     const parts = splitGenerativeContent(latest.content);
     const index = parts.findIndex((part) => part.kind === "widget");
     const part = parts[index];

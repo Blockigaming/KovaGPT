@@ -85,6 +85,7 @@ function attachment(value) {
     if (value.kind === "text_file") {
       if (!text(value.content, 262144)) throw new Error("chat_history_invalid");
       result.content = value.content;
+      if (value.pasted === true) result.pasted = true;
     } else result.libraryItemId = chatHistoryUuid(value.libraryItemId);
     if (value.fileType != null) {
       if (!text(value.fileType, 100)) throw new Error("chat_history_invalid");

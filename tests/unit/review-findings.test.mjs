@@ -116,7 +116,12 @@ test("uploads retain authoritative tier quotas and reject invalid sizes before a
   );
   assert.match(
     chat,
-    /reserveUploads\(\s*auth,\s*currentAttachments,\s*DAILY_UPLOAD_LIMIT_BY_TIER\[callerTier\],\s*signal/,
+    /reserveUploads\(\s*auth,\s*uploadedAttachments,\s*DAILY_UPLOAD_LIMIT_BY_TIER\[callerTier\],\s*signal/,
+  );
+  // Only pasted cards (validated at ingress to the typed-message limit) skip the allowance.
+  assert.match(
+    chat,
+    /const uploadedAttachments = currentAttachments\.filter\(\s*\(attachment\) => !\(attachment\.kind === "text_file" && attachment\.pasted\),\s*\);/,
   );
   assert.match(chat, /if \(!uploadAllowed\)[\s\S]*?status: 429/);
   assert.match(quota, /try_reserve_daily_uploads/);

@@ -116,6 +116,7 @@ function fixture(
     ),
     "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/components/PastedTextCard": { PastedTextCard: "PastedTextCard" },
     "@/lib/link-preview.mjs": linkPreview,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
