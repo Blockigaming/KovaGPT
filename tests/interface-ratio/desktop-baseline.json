@@ -519,23 +519,7 @@
       "columns": "none"
     }
   ],
-  "settings": [
-    {
-      "selector": ".kova-topbar",
-      "index": 0,
-      "width": 1380,
-      "height": 64,
-      "font": "15px",
-      "line": "22.0001px",
-      "weight": "400",
-      "family": "ui-sans-serif, system-ui, sans-serif",
-      "padding": "0px 16px",
-      "gap": "4px",
-      "radius": "0px",
-      "display": "flex",
-      "columns": "none"
-    }
-  ],
+  "settings": [],
   "images": [
     {
       "selector": ".kova-sidebar",
