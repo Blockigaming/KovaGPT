@@ -100,17 +100,17 @@ async function loadLabels() {
     }
     return;
   }
-  const [{ LOCALIZED_LABELS }, { APP_LABELS }, { HELP_LABELS }, { applyInterfaceTranslation }] =
+  const [{ LOCALIZED_LABELS }, appLabels, { HELP_LABELS }, { applyInterfaceTranslation }] =
     await Promise.all([
       import("@/lib/localization-labels"),
-      import("@/lib/localization-app-labels"),
+      import("@/lib/localization-app-labels").then((m) => m.loadAppLabels(language)),
       import("@/lib/localization-help-labels"),
       import("@/lib/dom-translator"),
     ]);
   if (effectiveLanguage() !== language) return;
   labels = {
     ...(HELP_LABELS[language] ?? {}),
-    ...(APP_LABELS[language] ?? {}),
+    ...appLabels,
     ...(LOCALIZED_LABELS[language] ?? {}),
   };
   labelsFor = language;

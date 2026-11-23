@@ -21,11 +21,11 @@ const labelsUrl = `data:text/javascript;base64,${Buffer.from(
 const localesUrl = `data:text/javascript;base64,${Buffer.from(
   stripTypeScriptTypes(await readFile("src/lib/locales.ts", "utf8")),
 ).toString("base64")}`;
+const appLabelsByLocale = {};
+for (const locale of ["es", "fr", "de", "pt-BR", "ja", "ko", "ar"])
+  appLabelsByLocale[locale] = JSON.parse(await readFile(`src/lib/app-labels/${locale}.json`, "utf8"));
 const appLabelsUrl = `data:text/javascript;base64,${Buffer.from(
-  stripTypeScriptTypes(await readFile("src/lib/localization-app-labels.ts", "utf8")).replace(
-    /import type[^;]+;/,
-    "",
-  ),
+  `const all = ${JSON.stringify(appLabelsByLocale)}; export async function loadAppLabels(locale) { return all[locale] ?? {}; }`,
 ).toString("base64")}`;
 const helpLabelsUrl = `data:text/javascript;base64,${Buffer.from(
   stripTypeScriptTypes(await readFile("src/lib/localization-help-labels.ts", "utf8")).replace(
@@ -151,11 +151,11 @@ test("code, math and logos stay left to right inside right-to-left pages", async
 });
 
 test("the rest of the interface has the same labels in every language", async () => {
-  const source = stripTypeScriptTypes(
+  const APP_LABELS = appLabelsByLocale;
+  assert.match(
     await readFile("src/lib/localization-app-labels.ts", "utf8"),
-  ).replace(/import type[^;]+;/, "");
-  const { APP_LABELS } = await import(
-    `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
+    /import\.meta\.glob/,
+    "each language loads as its own chunk",
   );
   const english = Object.keys(APP_LABELS.es).sort();
   assert.ok(english.length > 500);
