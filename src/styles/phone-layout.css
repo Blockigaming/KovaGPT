@@ -59,7 +59,11 @@
 
   /* Phone-app home: greeting at the top, composer pinned to the bottom.
      The website keeps the centered desktop home on every screen size. */
-  :root[data-kova-surface="app"] {
+  :where(:root[data-kova-surface="app"]) {
+    .kova-assistant .kova-empty-chat {
+      padding-block: 0;
+    }
+
     .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
       flex: 1 0 auto;
       align-items: stretch;

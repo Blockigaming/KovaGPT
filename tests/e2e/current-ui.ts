@@ -10,6 +10,7 @@ export async function expectsSeparateModeRow(composer: Locator) {
       container.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
     // A model name needs 22.5rem beside the actions; the Thinking toggle fits down to 20rem.
     const thinkingOnly =
+      document.documentElement.dataset.kovaSurface !== "app" &&
       frame.querySelector(".kova-thinking-toggle") !== null &&
       frame.querySelector(".kova-consumer-model-trigger, .kova-home-model-placeholder") === null;
     const threshold = thinkingOnly ? 20 : 22.5;

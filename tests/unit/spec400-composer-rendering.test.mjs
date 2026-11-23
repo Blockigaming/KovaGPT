@@ -296,8 +296,8 @@ test("spec400 guards repeated activation with the same pending request", () => {
     },
   });
   const send = controlProps.get("Send message").onClick;
-  send();
-  send();
+  send({ detail: 1 });
+  send({ detail: 1 });
   assert.equal(sends, 1);
 });
 

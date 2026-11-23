@@ -10,7 +10,8 @@ test("generic OAuth uses hashed one-time state, PKCE and encrypted token custody
     read("supabase/migrations/20260727210000_constellation_connectors_agents.sql"),
   ]);
   assert.match(oauth, /state_hash: await sha256\(state\)/);
-  assert.match(oauth, /code_challenge_method", "S256"/);
+  // Every provider uses SHA-256 PKCE; Canva documents the method name in lowercase.
+  assert.match(oauth, /code_challenge_method", provider\.id === "canva" \? "s256" : "S256"/);
   assert.match(oauth, /is\("consumed_at", null\)/);
   assert.match(vault, /AES-GCM/);
   assert.match(vault, /bytes\.length !== 32/);

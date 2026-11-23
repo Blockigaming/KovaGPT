@@ -126,9 +126,16 @@ test("the single phone composer and drawer retain every workspace destination an
   const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(composer).toBeInViewport({ ratio: 1 });
   await expect(tabs).toHaveCount(0);
-  await expect(page.locator(".kova-composer-tray")).toBeHidden();
-  const box = (await page.locator(".spec400-composer:visible").boundingBox())!;
-  expect(viewport.height - box.y - box.height).toBeLessThanOrEqual(24);
+  const appShell = await page.evaluate(
+    () => document.documentElement.dataset.kovaSurface === "app",
+  );
+  // The app shell pins one composer to the bottom; the website keeps the
+  // desktop composer and its project, files and plugins tray.
+  if (appShell) {
+    await expect(page.locator(".kova-composer-tray")).toBeHidden();
+    const box = (await page.locator(".spec400-composer:visible").boundingBox())!;
+    expect(viewport.height - box.y - box.height).toBeLessThanOrEqual(24);
+  } else await expect(page.locator(".kova-composer-tray")).toBeInViewport();
   await composer.fill("Keep this draft while I change pages");
 
   for (const name of ["Projects", "Library", "Connections"]) {

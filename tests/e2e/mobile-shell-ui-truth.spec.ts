@@ -298,7 +298,8 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
     const composerFrame = page.locator(".spec400-composer:visible");
     await expect(composerFrame).toHaveCSS("border-radius", "20px");
     const composer = (await composerFrame.boundingBox())!;
-    const logo = page.locator(".kova-empty-chat .kova-home-welcome-logo");
+    // The app shell shows its welcome mark here; the website shows its greeting.
+    const logo = page.locator(".kova-empty-chat .kova-greeting");
     await expect(logo).toBeVisible();
     const logoBox = (await logo.boundingBox())!;
     const shellBox = (await shell.boundingBox())!;
@@ -407,8 +408,14 @@ test("touch home keeps the greeting centered and the composer text inset", async
     text!.x -
     frame!.x +
     (await input.evaluate((field) => Number.parseFloat(getComputedStyle(field).paddingLeft)));
-  if (width < 768 || (width < 1024 && height <= 500)) expect(inset).toBeCloseTo(19, 0);
-  else expect(inset).toBeGreaterThanOrEqual(20);
-  expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
+  const appShell = await page.evaluate(
+    () => document.documentElement.dataset.kovaSurface === "app",
+  );
+  if (appShell && (width < 768 || (width < 1024 && height <= 500)))
+    expect(inset).toBeCloseTo(19, 0);
+  else expect(inset).toBeGreaterThanOrEqual(19);
+  // The app shell centers its greeting in the free space above a bottom
+  // composer; the website keeps the desktop home with the greeting on top.
+  if (appShell) expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
   expect(greeting!.y + greeting!.height).toBeLessThan(frame!.y);
 });

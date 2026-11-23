@@ -120,6 +120,7 @@ function fixture() {
     page: false,
     document,
     window,
+    stableHref: () => window.location.href,
     HTMLElement,
     returnFocusRef,
     returnFocusContextRef,

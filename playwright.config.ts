@@ -46,33 +46,32 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "off",
   },
-  // Compact projects exercise narrow CSS viewports at 1:1. The web desktop
-  // layout test separately opens the app in actual mobile viewport mode.
+  // Phones run in real mobile viewport mode: the website uses the device width.
   projects: [
     {
       name: "phone-320x700",
-      use: { viewport: { width: 320, height: 700 }, hasTouch: true },
+      use: { viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true },
     },
     {
       name: "phone-375x812",
-      use: { viewport: { width: 375, height: 812 }, hasTouch: true },
+      use: { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true },
     },
     {
       name: "phone-390x844",
-      use: { viewport: { width: 390, height: 844 }, hasTouch: true },
+      use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
     },
     {
       name: "phone-412x915",
-      use: { viewport: { width: 412, height: 915 }, hasTouch: true },
+      use: { viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true },
     },
     {
       name: "phone-430x932",
-      use: { viewport: { width: 430, height: 932 }, hasTouch: true },
+      use: { viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true },
     },
     { name: "tablet-768x1024", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
     {
       name: "phone-landscape-844x390",
-      use: { viewport: { width: 844, height: 390 }, hasTouch: true },
+      use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true },
     },
     { name: "tablet-1024x768", use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
     { name: "desktop-1280x800", use: { viewport: { width: 1280, height: 800 } } },
