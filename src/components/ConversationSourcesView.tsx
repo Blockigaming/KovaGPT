@@ -14,6 +14,7 @@ import {
   Database,
   Zap,
   LibraryBig,
+  Maximize2,
   CloudSun,
 } from "lucide-react";
 import githubLogo from "@/assets/plugins/github.svg";
@@ -58,6 +59,7 @@ export function ConversationSourcesView({
   browserTabCount,
   showActivity = true,
   activeBrowserOnly = false,
+  compactBrowser = false,
   separateInputs = false,
   hideSourcesHeading = false,
 }: {
@@ -69,6 +71,7 @@ export function ConversationSourcesView({
   browserTabCount?: number;
   showActivity?: boolean;
   activeBrowserOnly?: boolean;
+  compactBrowser?: boolean;
   separateInputs?: boolean;
   hideSourcesHeading?: boolean;
 }) {
@@ -94,6 +97,50 @@ export function ConversationSourcesView({
           inventory.memory.length +
           (!separateInputs ? inventory.attachments.length : 0) >
           0 && <h2>Sources</h2>}
+      {compactBrowser && browsers.length > 0 && (
+        <div className="kova-browser-source-list" role="group" aria-label="Cloud browser">
+          {browsers.map((activity) => {
+            const latest = activity === latestBrowser;
+            const active =
+              latest && activity.status === "active" && browserActivityIsFresh(activity.browser);
+            const tabs = active ? (browserTabCount ?? activity.browser?.tabCount) : undefined;
+            const status = active
+              ? "Active"
+              : activity.status === "failed"
+                ? "Failed"
+                : activity.status === "canceled"
+                  ? "Canceled"
+                  : "Recorded";
+            return (
+              <button
+                key={activity.id}
+                type="button"
+                className="kova-browser-source-row"
+                aria-label={`Open browser activity${activity.browser?.hostname ? ` for ${activity.browser.hostname}` : ""}`}
+                onClick={() => onOpenBrowser?.(activity)}
+                disabled={!onOpenBrowser}
+              >
+                <span className="kova-browser-source-thumbnail">
+                  {active && browserPreview ? browserPreview : <Monitor aria-hidden="true" />}
+                </span>
+                <span className="kova-browser-source-copy">
+                  <span>Cloud browser</span>
+                  <small>{activity.browser?.hostname ?? activity.label}</small>
+                </span>
+                <span className="kova-browser-source-status" data-active={active}>
+                  {status}
+                  {!!tabs && (
+                    <small>
+                      {tabs} {tabs === 1 ? "tab" : "tabs"}
+                    </small>
+                  )}
+                </span>
+                <Maximize2 className="kova-browser-source-expand" aria-hidden="true" />
+              </button>
+            );
+          })}
+        </div>
+      )}
       {providers.map((entry) => {
         const Icon = {
           github: GitBranch,
@@ -207,7 +254,7 @@ export function ConversationSourcesView({
           Attached to this chat. Use in a response is not confirmed.
         </p>
       )}
-      {browsers.length > 0 && (
+      {!compactBrowser && browsers.length > 0 && (
         <section className="kova-browser-section" aria-label="Cloud browser">
           {showActivity ? (
             <ConversationActivitySummary inventory={inventory} browserTabCount={browserTabCount} />

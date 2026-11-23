@@ -21,10 +21,12 @@ export function ConversationSourcesPanel({
   separateInputs = false,
   hideSourcesHeading = false,
   browserOnly = false,
+  compactBrowser = false,
   hideBrowser = false,
 }: {
   showActivity?: boolean;
   browserOnly?: boolean;
+  compactBrowser?: boolean;
   hideBrowser?: boolean;
   activeBrowserOnly?: boolean;
   separateInputs?: boolean;
@@ -49,7 +51,8 @@ export function ConversationSourcesPanel({
     browserActivityIsFresh(latest.browser)
       ? latest.browser
       : null;
-  const requestedPreview = browserOnly && !browserPreview ? preview : null;
+  const requestedPreview =
+    (browserOnly || compactBrowser) && !browserPreview && !hideBrowser ? preview : null;
   const previewUrl = useCloudBrowserPreview(requestedPreview, ownerId);
   const browserRows = activeBrowserOnly && requestedPreview && !previewUrl ? [] : inventory.browser;
   return (
@@ -63,6 +66,7 @@ export function ConversationSourcesPanel({
               : inventory
         }
         activeBrowserOnly={activeBrowserOnly}
+        compactBrowser={compactBrowser}
         separateInputs={separateInputs}
         hideSourcesHeading={hideSourcesHeading}
         browserPreview={

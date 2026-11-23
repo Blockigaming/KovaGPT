@@ -1,3 +1,4 @@
+import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { CloudBrowserTakeover } from "./CloudBrowserTakeover";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -210,7 +211,8 @@ export function ConversationHeaderActions({
     sourceInventory.web.length ||
     sourceInventory.memory.length ||
     sourceInventory.attachments.length ||
-    sourceInventory.providers?.length,
+    sourceInventory.providers?.length ||
+    (signedIn && sourceInventory.browser.length),
   );
   const formatIcons = { docx: FileText, pptx: PanelsTopLeft, xlsx: Table2 };
   const handOff = (action: () => void, opensDialog = false) => {
@@ -491,11 +493,22 @@ export function ConversationHeaderActions({
         {!sourcesCollapsed &&
           (hasSources ? (
             <ConversationSourcesPanel
-              hideBrowser
+              hideBrowser={!signedIn}
+              compactBrowser
               hideSourcesHeading
               showActivity={false}
               conversation={conversation}
-              onOpenBrowser={() => {}}
+              browserTabCount={
+                browserPresentation?.active ? browserPresentation.tabCount : undefined
+              }
+              browserPreview={
+                browserPresentation?.active ? browserPresentation.thumbnail : undefined
+              }
+              onOpenBrowser={(activity) => {
+                rememberFocus(outputsRef.current);
+                setOutputsOpen(false);
+                setSelectedBrowser(activity);
+              }}
               onOpenMemory={(sources) => {
                 rememberFocus(outputsRef.current);
                 setOutputsOpen(false);
@@ -520,23 +533,6 @@ export function ConversationHeaderActions({
             </button>
           ))}
       </section>
-      {signedIn && (
-        <ConversationSourcesPanel
-          browserOnly
-          activeBrowserOnly
-          showActivity={false}
-          conversation={conversation}
-          browserTabCount={browserPresentation?.active ? browserPresentation.tabCount : undefined}
-          browserPreview={browserPresentation?.active ? browserPresentation.thumbnail : undefined}
-          onOpenAttachment={() => {}}
-          onOpenMemory={() => {}}
-          onOpenBrowser={(activity) => {
-            rememberFocus(outputsRef.current);
-            setOutputsOpen(false);
-            setSelectedBrowser(activity);
-          }}
-        />
-      )}
     </>
   );
   return (
@@ -744,7 +740,11 @@ export function ConversationHeaderActions({
             onClose: () => setSelectedBrowser(null),
             onCloseAutoFocus: restoreFocus,
           })
-        ) : signedIn && user?.id && selectedBrowser.browser?.previewPath ? (
+        ) : signedIn &&
+          user?.id &&
+          selectedBrowser.status === "active" &&
+          selectedBrowser.browser?.previewPath &&
+          browserActivityIsFresh(selectedBrowser.browser) ? (
           <CloudBrowserTakeover
             key={selectedBrowser.browser.sessionId}
             browser={selectedBrowser.browser}

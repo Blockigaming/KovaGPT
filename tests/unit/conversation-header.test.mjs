@@ -180,12 +180,13 @@ function fixture(overrides = {}, desktop = true) {
     "@/components/auth/ClerkSafe": {
       useUser: () => ({ user: { id: "owner" }, isLoaded: true, isSignedIn: true }),
     },
+    "@/lib/browser-activity-contract.mjs": { browserActivityIsFresh: () => true },
     "@/lib/conversation-sources": {
       conversationSources: (conversation) => ({
         web: [],
         memory: overrides.sourceMemory ?? [],
         attachments: conversation.messages.flatMap((message) => message.attachments ?? []),
-        browser: [],
+        browser: overrides.sourceBrowser ?? [],
       }),
     },
     "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: desktop }) },
@@ -277,10 +278,6 @@ test("Activity shows Outputs and Sources before any content exists", () => {
   const activity = nodes(root).find((node) => node.type === "PopoverContent");
   assert.equal(activity.props["aria-label"], "Activity");
   assert.match(text(activity), /Outputs.*Create an output.*Sources.*Attach files or connect apps/);
-  const browserPanel = nodes(activity).find(
-    (node) => node.type === "ConversationSourcesPanel" && node.props.browserOnly,
-  );
-  assert.equal(browserPanel.props.conversation, chat);
   assert.equal(
     nodes(activity).filter((node) => node.props.className === "kova-output-row").length,
     0,
@@ -578,14 +575,14 @@ test("memory inspection closes the popover and restores the Activity trigger", (
 });
 
 test("unbound browser activity opens an honest detail dialog and restores Activity", () => {
-  const f = fixture();
+  const f = fixture({ sourceBrowser: [{}] });
   let root = f.render();
   const target = { id: "outputs" };
   nodes(root).find(
     (n) => n.type === "button" && n.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
-    .find((n) => n.type === "ConversationSourcesPanel" && n.props.browserOnly)
+    .find((n) => n.type === "ConversationSourcesPanel" && n.props.compactBrowser)
     .props.onOpenBrowser({ id: "event", label: "Recorded sample" });
   root = f.render();
   assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, false);
@@ -612,6 +609,7 @@ test("unbound browser activity opens an honest detail dialog and restores Activi
 test("Free recorded browser history never grants sample takeover or claims a live session", () => {
   const f = fixture({
     userTier: "free",
+    sourceBrowser: [{}],
     browserPresentation: {
       thumbnail: "fake",
       renderDialog() {
@@ -621,7 +619,7 @@ test("Free recorded browser history never grants sample takeover or claims a liv
   });
   let root = f.render();
   const sources = nodes(root).find(
-    (n) => n.type === "ConversationSourcesPanel" && n.props.browserOnly,
+    (n) => n.type === "ConversationSourcesPanel" && n.props.compactBrowser,
   );
   assert.equal(sources.props.browserPreview, undefined);
   sources.props.onOpenBrowser({ id: "sample", label: "Recorded event" });

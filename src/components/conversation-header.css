@@ -777,3 +777,83 @@
 .dark .kova-activity-submenu.kova-activity-floating {
   background: #2c2c2c;
 }
+
+.kova-browser-source-list {
+  display: grid;
+  gap: 3px;
+}
+
+.kova-browser-source-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 5px 8px;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.kova-browser-source-row:hover,
+.kova-browser-source-row:focus-visible {
+  background: var(--accent);
+}
+
+.kova-browser-source-row:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.kova-browser-source-thumbnail {
+  display: grid;
+  place-items: center;
+  flex: 0 0 54px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--muted);
+}
+
+.kova-browser-source-thumbnail > svg,
+.kova-browser-source-expand {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--muted-foreground);
+}
+
+.kova-browser-source-thumbnail .kova-browser-live-preview {
+  height: 34px;
+  border-radius: inherit;
+}
+
+.kova-browser-source-thumbnail .kova-browser-live-preview small {
+  display: none;
+}
+
+.kova-browser-source-copy {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.kova-browser-source-copy small,
+.kova-browser-source-status small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.kova-browser-source-status {
+  flex: none;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-align: end;
+}
+
+.kova-browser-source-status[data-active="true"] {
+  color: var(--kova-default-reading-accent);
+}

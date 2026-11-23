@@ -308,7 +308,19 @@ test("the conversation checklist collects sources, outputs and real browser meta
       const key = `nova-gpt-conversations-v3:user:${owner}`;
       const chats = JSON.parse(localStorage.getItem(key)!);
       const chat = chats.find((row: { id: string }) => row.id === chatA);
-      chat.messages[1].content = "Fixture output:\n```js\nconsole.log('review');\n```";
+      chat.title = "YouTube research · example";
+      chat.messages[0].content =
+        "Use YouTube to plan a short video edit. Use my notes and draft two outputs.";
+      chat.messages[0].attachments = [
+        { kind: "text_file", name: "Video brief.txt", content: "Make a short editing tutorial." },
+        {
+          kind: "text_file",
+          name: "Shot list.txt",
+          content: "Opening shot, screen capture, final cut.",
+        },
+      ];
+      chat.messages[1].content =
+        "I outlined two sample outputs.\n\n```markdown\n# Editing checklist\nTrim the opening and add captions.\n```\n\n```csv\nshot,duration\nintro,5s\n```";
       chat.messages[1].sources = [
         { title: "Example reference", url: "https://example.com/reference", domain: "example.com" },
       ];
@@ -335,17 +347,17 @@ test("the conversation checklist collects sources, outputs and real browser meta
               const delta = {
                 kind: "activity",
                 tool: "browser_interact",
-                label: "Fixture browser session",
+                label: "Opened YouTube",
                 status: "running",
                 browser: {
                   sessionId: "d840146b-ab21-4a1a-8c68-9621ea1e11f2",
-                  tabCount: 5,
+                  tabCount: 1,
                   observedAt: Date.now(),
-                  url: "https://example.com/reference",
+                  url: "https://www.youtube.com/",
                   previewPath: "/api/browser/preview/d840146b-ab21-4a1a-8c68-9621ea1e11f2",
                 },
               };
-              const frame = `data: ${JSON.stringify({ choices: [{ delta }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: { content: "Fixture browser session active." } }] })}\n\n`;
+              const frame = `data: ${JSON.stringify({ choices: [{ delta }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: { content: "YouTube is open in Cloud Browser. This chat uses sample files and outputs." } }] })}\n\n`;
               controller.enqueue(new TextEncoder().encode(frame));
               init?.signal?.addEventListener(
                 "abort",
@@ -382,16 +394,33 @@ test("the conversation checklist collects sources, outputs and real browser meta
     }
     return route.fulfill({
       contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240"><rect width="400" height="240" fill="#e9edf4"/><text x="35" y="125" fill="#243246" font-size="24">Fixture browser preview</text></svg>',
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240">
+        <rect width="400" height="240" fill="#0f0f0f"/>
+        <rect x="16" y="17" width="35" height="24" rx="7" fill="#ff0033"/>
+        <path fill="#fff" d="M30 23l12 6-12 6z"/>
+        <text x="58" y="36" fill="#fff" font-family="sans-serif" font-size="22" font-weight="bold">YouTube</text>
+        <rect x="172" y="17" width="211" height="24" rx="12" fill="#282828"/>
+        <text x="185" y="33" fill="#aaa" font-family="sans-serif" font-size="12">Search</text>
+        <rect x="16" y="61" width="171" height="83" rx="8" fill="#35476f"/>
+        <rect x="202" y="61" width="181" height="83" rx="8" fill="#812c49"/>
+        <path d="M85 83l31 19-31 20zM277 83l31 19-31 20z" fill="#fff"/>
+        <text x="16" y="164" fill="#fff" font-family="sans-serif" font-size="14">Editing basics</text>
+        <text x="202" y="164" fill="#fff" font-family="sans-serif" font-size="14">Short-form video tips</text>
+        <path d="M16 188h171v37H16zM202 188h181v37H202z" fill="#272727"/>
+      </svg>`,
     });
   });
   await page.goto("/");
   await waitForKovaHydration(page);
   await page
     .getByRole("textbox", { name: "Message KovaGPT", exact: true })
-    .fill("Review the browser activity fixture");
+    .fill("Open YouTube in Cloud Browser.");
   await page.getByTestId("send-button").click();
-  await expect(page.getByText("Fixture browser session active.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("YouTube is open in Cloud Browser. This chat uses sample files and outputs.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   const previewRequest = page.waitForRequest(
     "**/api/browser/preview/d840146b-ab21-4a1a-8c68-9621ea1e11f2",
   );
@@ -412,9 +441,14 @@ test("the conversation checklist collects sources, outputs and real browser meta
     "Memory",
   ])
     await expect(panel.getByText(name, { exact: true })).toBeVisible();
-  const browser = panel.getByRole("region", { name: "Cloud browser", exact: true });
+  const browser = panel
+    .getByRole("region", { name: "Sources", exact: true })
+    .getByRole("group", { name: "Cloud browser", exact: true });
   await expect(browser).toContainText("Active");
-  await expect(browser).toContainText("example.com");
+  await expect(browser).toContainText("www.youtube.com");
+  await expect(browser).toContainText("1 tab");
+  await expect(panel.getByText("Video brief.txt", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Shot list.txt", { exact: true })).toBeVisible();
   const preview = browser.getByRole("img", { name: "Current cloud browser preview" });
   await expect(preview).toBeVisible();
   await expect(preview).toHaveAttribute("src", /^blob:/);
@@ -425,7 +459,7 @@ test("the conversation checklist collects sources, outputs and real browser meta
     path: `artifacts/ui-finish-${test.info().project.name}-checklist.png`,
     fullPage: true,
   });
-  await browser.getByRole("button", { name: "Open browser activity" }).click();
+  await browser.getByRole("button", { name: /Open browser activity/ }).click();
   const workspace = page.getByRole("dialog", { name: "Cloud browser", exact: true });
   await expect(workspace.getByRole("img", { name: "Current cloud browser preview" })).toBeVisible();
   const bounds = await workspace.boundingBox();

@@ -217,7 +217,7 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
 });
 
-test("activity shows default sections and progress while hiding completed browser sessions", async ({
+test("activity shows default sections and progress and recorded browser sessions", async ({
   page,
 }) => {
   await coreFixture(page, "dark", "free", {
@@ -252,7 +252,12 @@ test("activity shows default sections and progress while hiding completed browse
   await expect(panel).toHaveCSS("border-top-width", "0px");
   await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Sources", exact: true })).toBeVisible();
-  await expect(panel.getByRole("heading", { name: "Cloud browser", exact: true })).toHaveCount(0);
+  const browser = panel
+    .getByRole("region", { name: "Sources", exact: true })
+    .getByRole("group", { name: "Cloud browser", exact: true });
+  await expect(
+    browser.getByRole("button", { name: "Open browser activity", exact: true }),
+  ).toContainText("Recorded");
   await expect(panel.getByRole("button", { name: "Progress", exact: true })).toBeVisible();
   await expect(
     panel.getByRole("listitem").filter({ hasText: "Read the supplied notes" }),
