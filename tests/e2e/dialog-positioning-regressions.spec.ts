@@ -90,14 +90,10 @@ for (const theme of ["light", "dark"] as const) {
     await coreFixture(page, theme, "free", { preserveStorageOnReload: true });
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const fullpage = page.locator(".kova-settings-page");
-    const pageColor = await page
-      .locator("body")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
-    await expect(fullpage).toHaveCSS("background-color", pageColor);
-    await expect(fullpage.locator(".kova-settings-content")).toHaveCSS(
-      "background-color",
-      "rgba(0, 0, 0, 0)",
+    const chatSettings = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(chatSettings).toBeVisible();
+    const settingsColor = await chatSettings.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
     );
     await page.goto("/images");
     await waitForKovaHydration(page);
@@ -117,7 +113,7 @@ for (const theme of ["light", "dark"] as const) {
       exact: true,
     });
     await usableClose(page, close);
-    await expect(modal).toHaveCSS("background-color", pageColor);
+    await expect(modal).toHaveCSS("background-color", settingsColor);
     const content = modal.locator(".kova-settings-content");
     await expect(content).toHaveCSS("overflow-y", "auto");
     await expect

@@ -114,7 +114,7 @@ test("appearance controls change the application and persist after reload", asyn
       page.evaluate(() => document.documentElement.style.getPropertyValue("--kova-reading-width")),
     )
     .toBe("900px");
-  await page.reload();
+  await page.goto("/settings/appearance");
   await waitForKovaHydration(page);
   for (const [label, value] of [
     ["Theme", "Light"],
