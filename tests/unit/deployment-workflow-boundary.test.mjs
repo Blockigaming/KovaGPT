@@ -363,6 +363,16 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.ok(!passing.paths.includes("/assets/assets/preloaded.js"));
     assert.ok(!passing.paths.includes("/stripe.js"));
 
+    const entry = scripts.get("/assets/index.js");
+    const chunks = Array.from({ length: 273 }, (_, i) => `bundle-${i}.js`);
+    for (const chunk of chunks) scripts.set(`/assets/${chunk}`, "export const content = true;");
+    scripts.set("/assets/index.js", entry + chunks.map((chunk) => `import "./${chunk}";`).join(""));
+    const stagingBundle = await runSmoke();
+    assert.equal(stagingBundle.code, 0, stagingBundle.stderr);
+    assert.ok(stagingBundle.paths.includes("/assets/bundle-272.js"));
+    scripts.set("/assets/index.js", entry);
+    for (const chunk of chunks) scripts.delete(`/assets/${chunk}`);
+
     htmlCacheControl = "public, max-age=300";
     const cacheableHtml = await runSmoke();
     assert.notEqual(cacheableHtml.code, 0);

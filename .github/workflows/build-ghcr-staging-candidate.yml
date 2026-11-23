@@ -82,7 +82,42 @@ jobs:
           test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")" = "$SOURCE_SHA"
           test "$(docker inspect --format '{{index .Config.Labels "com.kovagpt.source.tree"}}' "$image")" = "$source_tree"
           test "$(docker inspect --format '{{index .Config.Labels "com.kovagpt.browser.config-verified"}}' "$image")" = true
-          docker run --rm --network none --entrypoint node "$image" --check dist/server/index.mjs
+          docker run --rm -i --network none \
+            --mount "type=bind,src=$context/scripts/post-deploy-smoke.mjs,dst=/app/staging-smoke.mjs,readonly" \
+            --env KOVA_EXPECTED_SHA="$SOURCE_SHA" \
+            --env AZURE_ENVIRONMENT=staging \
+            --env AI_GENERATION_ENABLED=false \
+            --env KOVA_GENERATION_DISABLED=true \
+            --entrypoint sh "$image" -eu -s <<'STAGING_SMOKE'
+          export HOST=127.0.0.1 PORT=3000 KOVA_SMOKE_BASE_URL=http://127.0.0.1:3000
+          export KOVA_EXPECTED_SUPABASE_URL="$(node -p "require(\"./dist/browser-config-provenance.json\").supabaseUrl")"
+          export KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256="$(node -p "require(\"./dist/browser-config-provenance.json\").publishableKeySha256")"
+          node dist/server/index.mjs > /tmp/staging-container.log 2>&1 &
+          server_pid=$!
+          trap "kill $server_pid 2>/dev/null || true" EXIT
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { setTimeout } from "node:timers/promises";
+          const get = (path) => fetch(process.env.KOVA_SMOKE_BASE_URL + path, {
+            redirect: "manual", signal: AbortSignal.timeout(3000),
+          });
+          let health;
+          for (let attempt = 0; attempt < 24; attempt += 1) {
+            try { health = await get("/api/health"); break; }
+            catch { await setTimeout(250); }
+          }
+          assert.equal(health?.status, 200);
+          const data = await health.json();
+          assert.equal(data.build, process.env.KOVA_EXPECTED_SHA);
+          assert.equal(data.environment, "staging");
+          const tana = await get("/.well-known/tana-mcp-client.json");
+          assert.equal(tana.status, 200);
+          assert.equal((await tana.json()).client_id, "https://kovagpt.com/.well-known/tana-mcp-client.json");
+          assert.equal((await get("/api/admin/diagnostics")).status, 401);
+          assert.equal((await get("/api/integrations/accounts")).status, 401);
+          NODE
+          node /app/staging-smoke.mjs
+          STAGING_SMOKE
       - name: Publish and record the verified staging digest
         shell: bash
         env:
