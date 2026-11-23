@@ -1724,6 +1724,14 @@ function AppsPage() {
               <ArrowLeft aria-hidden="true" /> Back to Connections
             </Button>
             <header className="kova-connection-hero">
+              <div className="kova-connection-hero-motion" aria-hidden="true">
+                <span className="kova-connection-wisp" />
+                <span className="kova-connection-wisp" />
+                <span className="kova-connection-wisp" />
+                <span className="kova-connection-spark" />
+                <span className="kova-connection-spark" />
+                <span className="kova-connection-spark" />
+              </div>
               <div className="kova-connection-hero-top">
                 <AppLogo id={visibleSelectedApp.id} />
                 <div className="kova-connection-header-actions">

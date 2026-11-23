@@ -787,7 +787,7 @@ test("unavailable providers have readable details and no connection action", asy
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
-test("connector headers use a dithered diagonal fade and respect reduced motion", async ({
+test("connector header wisps and sparks drift down and fade, respecting reduced motion", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -800,46 +800,39 @@ test("connector headers use a dithered diagonal fade and respect reduced motion"
   await expect(page.getByLabel("MCP bearer token")).toHaveCSS("margin-block-start", "2px");
   await expect(page.locator(".kova-connection-example")).toHaveCSS("border-top-width", "0px");
 
-  const hero = page.locator(".kova-connection-hero");
-  const layers = await hero.evaluate((node) => ({
-    glow: getComputedStyle(node, "::before").backgroundImage,
-    dither: getComputedStyle(node, "::after").backgroundImage,
-  }));
-  expect(layers.glow).toMatch(/^radial-gradient\(/u);
-  expect(layers.dither).toContain("/images/connector-tint-dither.png");
-  await expect
-    .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))
-    .toBe("kova-connection-hero-drift, kova-connection-hero-fade");
-  const [start, bright, fading, end] = await hero.evaluate(async (node) => {
-    const animations = document
-      .getAnimations()
-      .filter(
-        (animation) =>
-          animation instanceof CSSAnimation &&
-          animation.animationName.startsWith("kova-connection-hero-"),
-      );
-    for (const animation of animations) animation.pause();
-    await Promise.all(animations.map((animation) => animation.ready));
+  const motion = page.locator(".kova-connection-hero-motion");
+  await expect(motion).toBeVisible();
+  await expect(motion).toHaveAttribute("aria-hidden", "true");
+  const wisps = motion.locator(".kova-connection-wisp");
+  const sparks = motion.locator(".kova-connection-spark");
+  await expect(wisps).toHaveCount(3);
+  await expect(sparks).toHaveCount(3);
+  for (const particle of [wisps.first(), sparks.first()]) {
+    const [start, bright, fading, end] = await particle.evaluate(async (node) => {
+      const animation = node.getAnimations()[0];
+      if (!animation?.effect) throw new Error("Missing header particle animation");
+      const duration = Number(animation.effect.getTiming().duration);
+      animation.effect.updateTiming({ delay: 0 });
+      animation.pause();
+      await animation.ready;
 
-    return [0, 4500, 12500, 17999].map((time) => {
-      for (const animation of animations) animation.currentTime = time;
-      const style = getComputedStyle(node, "::before");
-      const position = new DOMMatrixReadOnly(style.transform);
-      return { x: position.m41, y: position.m42, opacity: Number(style.opacity) };
+      return [0, 0.34, 0.72, 0.9999].map((fraction) => {
+        animation.currentTime = duration * fraction;
+        const style = getComputedStyle(node);
+        const transform = new DOMMatrixReadOnly(style.transform);
+        return { x: transform.m41, y: transform.m42, opacity: Number(style.opacity) };
+      });
     });
-  });
-  expect(start.opacity).toBe(0);
-  expect(bright.opacity).toBe(1);
-  expect(fading.opacity).toBeGreaterThan(0);
-  expect(fading.opacity).toBeLessThan(bright.opacity);
-  expect(fading.x).toBeGreaterThan(bright.x);
-  expect(fading.y).toBeGreaterThan(bright.y);
-  expect(end.opacity).toBeLessThan(0.01);
+    expect(start.opacity).toBe(0);
+    expect(bright.opacity).toBeGreaterThan(fading.opacity);
+    expect(fading.opacity).toBeGreaterThan(0);
+    expect(fading.x).toBeGreaterThan(bright.x);
+    expect(fading.y).toBeGreaterThan(bright.y);
+    expect(end.opacity).toBeLessThan(0.01);
+  }
 
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect
-    .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))
-    .toBe("none");
+  await expect(motion).toBeHidden();
 });
 
 test("Manage shows verified account scopes and confirms a disconnect with workflow impact", async ({
