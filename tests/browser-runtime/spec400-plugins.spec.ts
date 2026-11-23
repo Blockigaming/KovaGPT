@@ -14,8 +14,21 @@ if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE) {
 const root = process.cwd();
 const mocks: Record<string, string> = {
   "@tanstack/react-router": `
-    export const useLocation = ({select}) => select({searchStr: window.location.search});
-    export const useNavigate = () => () => Promise.resolve();
+    import {useCallback,useSyncExternalStore} from "react";
+    const subscribe = (notify) => {
+      addEventListener("popstate",notify);
+      return () => removeEventListener("popstate",notify);
+    };
+    export const useLocation = ({select}) => select({
+      searchStr:useSyncExternalStore(subscribe,()=>window.location.search)
+    });
+    export const useNavigate = () => useCallback(({to,search,replace}={})=>{
+      const url=new URL(to??location.pathname,location.href);
+      if (search) url.search=new URLSearchParams(search).toString();
+      history[replace?"replaceState":"pushState"]({}, "", url);
+      dispatchEvent(new PopStateEvent("popstate"));
+      return Promise.resolve();
+    },[]);
     export const createFileRoute = () => (route) => route;
     export const Link = ({ to, ...props }) => <a href={to} {...props} />;
   `,
@@ -169,7 +182,7 @@ async function boot(
     content: `:root { --background:#fff; --foreground:#222; --card:#fafafa; --muted:#eee; --muted-foreground:#666; --border:#ddd; --input:#aaa; --ring:#369; --text-success:#286137; --text-warning:#815300; }*{box-sizing:border-box}body{margin:0;padding:32px;font:15px/1.5 Arial;background:var(--background);color:var(--foreground)}button,input,select{font:inherit}h1,h2,h3,p{margin:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.spec400-plugins{margin:auto}button{cursor:pointer}.spec400-plugin-detail{position:fixed;background:white;z-index:50;overflow-y:auto;translate:-50% -50%}.spec400-plugin-detail [data-kova-dialog-close]{position:absolute;right:12px;top:12px;width:44px;height:44px}.spec400-plugin-detail svg{width:20px;height:20px}[role="alertdialog"]{position:fixed;inset:20%;background:white;border:1px solid #888;padding:24px;z-index:100}.spec400-plugin-management button{margin:4px}${css}`,
   });
   await page.addScriptTag({ content: script });
-  if (!url.includes("directory=")) {
+  if (!url.includes("directory=") && !url.includes("plugin=")) {
     await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
     await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText(
       "Checking connection…",
@@ -707,20 +720,20 @@ test("new master entries show the correct native and OAuth setup requirements", 
     await expect(page.locator(`[data-plugin-id="${id}"]`)).toBeVisible();
   }
   await page.getByRole("button", { name: "Details Apple Health", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("Native app required");
-  await expect(page.getByRole("dialog")).toContainText("signed iPhone app");
-  await expect(page.getByRole("dialog")).toContainText("separate device permissions");
+  await expect(page.getByRole("article")).toContainText("Native app required");
+  await expect(page.getByRole("article")).toContainText("signed iPhone app");
+  await expect(page.getByRole("article")).toContainText("separate device permissions");
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+    page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Close connection details" }).click();
+  await page.getByRole("button", { name: "Back to Connections" }).click();
   await search.fill("HubSpot");
   await page.getByRole("button", { name: "Coming soon HubSpot", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText(
+  await expect(page.getByRole("article")).toContainText(
     "Connection setup is incomplete in this deployment",
   );
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+    page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
   ).toBeDisabled();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
@@ -729,25 +742,30 @@ test("Free accounts cannot initiate Gmail OAuth", async ({ page }) => {
   await boot(page);
   await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+    page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
   ).toBeDisabled();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
-test("opening and dismissing details never starts OAuth; Connect is explicit", async ({ page }) => {
+test("opening and leaving a connector page never starts OAuth; Connect is explicit", async ({
+  page,
+}) => {
   await boot(page, undefined, undefined, undefined, "plus");
   const trigger = page.getByRole("button", { name: "Connect Gmail", exact: true });
   await trigger.click();
-  await expect(page.getByRole("dialog")).toContainText("Capabilities and permissions");
-  await expect(page.getByRole("dialog")).toContainText("Google’s consent screen");
+  await expect(page).toHaveURL(/\/apps\?plugin=gmail$/u);
+  await expect(page.getByRole("heading", { level: 1, name: "Gmail" })).toBeFocused();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("article")).toContainText("Capabilities and permissions");
+  await expect(page.getByRole("article")).toContainText("Google’s consent screen");
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
-  await page.getByRole("button", { name: "Close connection details" }).click();
+  await page.getByRole("button", { name: "Back to Connections" }).click();
   await expect(trigger).toBeFocused();
   await trigger.click();
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+    page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
   ).toBeEnabled();
-  await page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByRole("article").getByRole("button", { name: "Connect", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as FixtureWindow).operations.length)).toBe(1);
   expect((await page.evaluate(() => (window as FixtureWindow).operations))[0][0]).toBe(
     "google-connect",
@@ -757,11 +775,11 @@ test("opening and dismissing details never starts OAuth; Connect is explicit", a
 test("unavailable providers have readable details and no connection action", async ({ page }) => {
   await boot(page);
   await page.getByRole("button", { name: "Coming soon Slack" }).click();
-  await expect(page.getByRole("dialog")).toContainText(
+  await expect(page.getByRole("article")).toContainText(
     "Connection setup is incomplete in this deployment.",
   );
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+    page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
   ).toBeDisabled();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
@@ -771,9 +789,9 @@ test("Manage shows verified account scopes and confirms a disconnect with workfl
 }) => {
   await boot(page, healthyGoogle);
   await page.getByRole("button", { name: "Connected Gmail", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("connected@example.test");
+  await expect(page.getByRole("article")).toContainText("connected@example.test");
   await page.getByText("Current permission scope", { exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("gmail.readonly");
+  await expect(page.getByRole("article")).toContainText("gmail.readonly");
   await page
     .getByRole("button", { name: "Disconnect connected@example.test", exact: true })
     .click();
@@ -791,7 +809,7 @@ test("Manage shows verified account scopes and confirms a disconnect with workfl
   expect((await page.evaluate(() => (window as FixtureWindow).operations))[0][0]).toBe(
     "google-disconnect",
   );
-  await expect(page.getByRole("dialog")).toContainText("No Google accounts are connected");
+  await expect(page.getByRole("article")).toContainText("No Google accounts are connected");
 });
 
 test("authorization redirect alone never declares a verified connection", async ({ page }) => {
@@ -811,9 +829,7 @@ test("authorization redirect alone never declares a verified connection", async 
   await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText("Checking connection…");
 });
 
-test("connection cards fit the phone and details stay centered with viewport gutters", async ({
-  page,
-}) => {
+test("the list and full connector page fit the phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await boot(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -823,14 +839,53 @@ test("connection cards fit the phone and details stay centered with viewport gut
   expect(frame!.width).toBeGreaterThanOrEqual(38);
   expect(frame!.width).toBeLessThanOrEqual(48);
   await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
-  const panel = await page.getByRole("dialog").boundingBox();
+  const panel = await page.getByRole("article").boundingBox();
   expect(panel).not.toBeNull();
   expect(panel!.x).toBeGreaterThanOrEqual(11);
   expect(panel!.x + panel!.width).toBeLessThanOrEqual(379);
-  expect(panel!.y).toBeGreaterThanOrEqual(11);
-  expect(panel!.y + panel!.height).toBeLessThanOrEqual(833);
-  expect(Math.abs(panel!.x + panel!.width / 2 - 195)).toBeLessThan(1);
-  await expect(page.getByRole("button", { name: "Close connection details" })).toBeVisible();
+  expect(panel!.y).toBeGreaterThanOrEqual(0);
+  expect(panel!.height).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole("button", { name: "Back to Connections" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("the first and last selected connection tabs have even outer insets", async ({ page }) => {
+  await boot(page);
+  const tabs = page.getByRole("tablist", { name: "Connections" });
+  for (const name of ["All", "Finances"]) {
+    await tabs.getByRole("tab", { name, exact: true }).click();
+    const outer = (await tabs.boundingBox())!;
+    const selected = (await tabs.getByRole("tab", { name, exact: true }).boundingBox())!;
+    const top = selected.y - outer.y;
+    const bottom = outer.y + outer.height - selected.y - selected.height;
+    const outerSide =
+      name === "All" ? selected.x - outer.x : outer.x + outer.width - selected.x - selected.width;
+    expect(top).toBeGreaterThan(0);
+    expect(Math.abs(top - bottom)).toBeLessThan(1);
+    expect(Math.abs(top - outerSide)).toBeLessThan(1);
+  }
+});
+
+test("connector title links, deep links and browser history restore the directory", async ({
+  page,
+}) => {
+  await boot(page);
+  const search = page.getByRole("textbox", { name: "Search connections" });
+  await search.fill("Canva");
+  const link = page.getByRole("link", { name: "Canva", exact: true });
+  await link.click();
+  await expect(page).toHaveURL(/\/apps\?plugin=canva$/u);
+  await expect(page.getByRole("article", { name: "Canva" })).toBeVisible();
+  await page.goBack();
+  await expect(search).toHaveValue("Canva");
+  await expect(link).toBeFocused();
+  await page.goForward();
+  await expect(page.getByRole("article", { name: "Canva" })).toBeVisible();
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps?plugin=github");
+  await expect(page.getByRole("article", { name: "GitHub" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
 test("Microsoft account management searches only the explicitly selected authorized account", async ({
@@ -850,7 +905,7 @@ test("Microsoft account management searches only the explicitly selected authori
     ],
   });
   await page.getByRole("button", { name: "Connected Outlook", exact: true }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("article");
   await expect(dialog).toContainText("mail@example.test");
   await dialog.getByRole("textbox", { name: "Search Outlook", exact: true }).fill("receipt");
   await dialog.getByRole("button", { name: "Search this account", exact: true }).click();
@@ -898,7 +953,7 @@ test("Outlook Calendar reuses only a calendar-authorized account and requests ba
     ],
   });
   await page.getByRole("button", { name: "Connected Outlook Calendar", exact: true }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("article");
   await expect(dialog).toContainText("subject starts with");
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
   await dialog
@@ -953,7 +1008,7 @@ test("Notion can read a linked page without a public OAuth app", async ({ page }
     ],
   });
   await page.getByRole("button", { name: "Connected Notion", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Notion", exact: true });
+  const dialog = page.getByRole("article", { name: "Notion", exact: true });
   await expect(dialog.getByLabel("Notion page ID", { exact: true })).toBeVisible();
   await expect(dialog.getByLabel("Notion internal integration token")).toHaveAttribute(
     "type",
@@ -984,7 +1039,7 @@ test("Salesforce management sends the selected record type with the owner-bound 
     ],
   });
   await page.getByRole("button", { name: "Connected Salesforce", exact: true }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("article");
   await dialog.getByRole("combobox", { name: "Record type", exact: true }).click();
   await page.getByRole("option", { name: "Opportunities", exact: true }).click();
   await dialog.getByRole("textbox", { name: "Search Salesforce", exact: true }).fill("renewal");
@@ -1012,7 +1067,7 @@ test("opening a configured provider never starts OAuth until Connect is clicked"
   });
   await page.getByRole("button", { name: "Connect Outlook", exact: true }).click();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
-  await page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByRole("article").getByRole("button", { name: "Connect", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as FixtureWindow).operations.length)).toBe(1);
   const operation = (await page.evaluate(() => (window as FixtureWindow).operations))[0];
   expect(operation[1]).toBe("/api/integrations/oauth/start");

@@ -18,6 +18,9 @@ import {
   AlertCircle,
   LogIn,
   ArrowRight,
+  ArrowLeft,
+  ArrowUpRight,
+  Ellipsis,
   Layers3,
   Folder,
   Calendar,
@@ -287,7 +290,7 @@ function AppCard({
   item: ConnectorItem;
   state: ConnState;
   configured: boolean;
-  onDetails: (trigger: HTMLButtonElement) => void;
+  onDetails: (source: "title" | "action") => void;
 }) {
   const pending = state === "connecting" || state === "syncing";
   const reconnect = ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state);
@@ -309,18 +312,28 @@ function AppCard({
       <div className="spec400-plugin-card-heading">
         <AppLogo id={item.id} />
         <div>
-          <h3>{item.label}</h3>
+          <h3>
+            <a
+              href={`/apps?plugin=${encodeURIComponent(item.id)}`}
+              onClick={(event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                onDetails("title");
+              }}
+            >
+              {item.label}
+            </a>
+          </h3>
+          {state !== "connected" && <p className="spec400-plugin-purpose">{item.description}</p>}
           <span className="spec400-plugin-category">{item.category}</span>
         </div>
       </div>
-      <p className="spec400-plugin-purpose">{item.description}</p>
       <div className="spec400-plugin-card-footer">
         <StatusBadge state={state} configured={configured} />
         <Button
           type="button"
           variant="outline"
-          onClick={(event) => onDetails(event.currentTarget)}
-          aria-haspopup="dialog"
+          onClick={() => onDetails("action")}
           aria-label={`${action} ${item.label}`}
           className="spec400-plugin-card-action"
           data-coming-soon={!configured || undefined}
@@ -334,7 +347,7 @@ function AppCard({
                   : undefined
           }
         >
-          {action}
+          {state === "connected" ? <Ellipsis aria-hidden="true" /> : action}
         </Button>
       </div>
     </li>
@@ -888,7 +901,6 @@ function AppsPage() {
   const userKey = user?.id ?? null;
   const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
-  const [teamsMessagesAfterConsent, setTeamsMessagesAfterConsent] = useState(false);
   const otherConnections = useConnectedAccounts(principal, Boolean(isLoaded && isSignedIn));
   const refreshOtherConnections = otherConnections.reload;
   const activityKey = isLoaded ? principalScopedStorageKey("kova-app-activity", userKey) : null;
@@ -904,18 +916,15 @@ function AppsPage() {
     );
   const navigate = useNavigate({ from: "/apps" });
   const searchString = useLocation({ select: (location) => location.searchStr });
-  const [connectionGroup, setConnectionGroup] = useState<"health" | "finances" | null>(null);
-  useEffect(() => {
-    const params = new URLSearchParams(searchString);
-    const view = params.get("connection_view");
-    if (params.has("oauth_state_id") || view === "finances") setConnectionGroup("finances");
-    else if (
-      view === "health" ||
-      ["oura", "whoop"].includes(params.get("integration_connected") ?? "")
-    )
-      setConnectionGroup("health");
-    else setConnectionGroup(null);
-  }, [searchString]);
+  const routeSearch = new URLSearchParams(searchString);
+  const connectionView = routeSearch.get("connection_view");
+  const connectionGroup =
+    routeSearch.has("oauth_state_id") || connectionView === "finances"
+      ? "finances"
+      : connectionView === "health" ||
+          ["oura", "whoop"].includes(routeSearch.get("integration_connected") ?? "")
+        ? "health"
+        : null;
   const setQuery = (query: string) => setListPreferences({ query });
   const setConnectionFilter = (value: string) =>
     setListPreferences({ connectionFilter: value === "connected" ? "connected" : "all" });
@@ -942,10 +951,12 @@ function AppsPage() {
   const [verificationBusy, setVerificationBusy] = useState(false);
   const googleBusyRef = useRef(false);
   const googleRequestRef = useRef(0);
-  const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
-  const detailsReturnRef = useRef<{
-    trigger: HTMLButtonElement;
-    url: string;
+  const detailsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const directoryRef = useRef<HTMLElement>(null);
+  const previousDetailsRef = useRef<{ id: string; principal: string | null } | null>(null);
+  const detailTriggerRef = useRef<{
+    id: string;
+    source: "title" | "action";
     principal: string | null;
   } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -957,16 +968,34 @@ function AppsPage() {
   const visibleActivity = activityReady ? activity : [];
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
-  const visibleSelectedApp = activityReady ? selectedApp : null;
+  const pluginId = routeSearch.get("plugin");
+  const visibleSelectedApp =
+    isLoaded && activityReady && pluginId ? getPluginReview(pluginId)?.connector : undefined;
+  const detailId = visibleSelectedApp?.id;
+  const teamsMessagesAfterConsent = routeSearch.get("teams_view") === "messages";
   useEffect(() => {
-    if (!activityReady || !isSignedIn) return;
-    const id = new URLSearchParams(searchString).get("plugin");
-    if (!id) return;
-    const item = MASTER_PLUGIN_REVIEW_CATALOG.find((entry) => entry.connector.id === id)?.connector;
-    if (!item) return;
-    detailsReturnRef.current = null;
-    setSelectedApp(item);
-  }, [activityReady, isSignedIn, searchString]);
+    if (!activityReady) return;
+    const previous = previousDetailsRef.current;
+    if (detailId) {
+      previousDetailsRef.current = { id: detailId, principal };
+      directoryRef.current?.scrollIntoView({ block: "start" });
+      detailsHeadingRef.current?.focus({ preventScroll: true });
+    } else if (previous) {
+      previousDetailsRef.current = null;
+      if (previous.principal !== principal || connectionGroup) return;
+      const trigger = detailTriggerRef.current;
+      detailTriggerRef.current = null;
+      const fromAction =
+        trigger?.id === previous.id &&
+        trigger.principal === principal &&
+        trigger.source === "action";
+      const target = directoryRef.current
+        ?.querySelector(`[data-plugin-id="${previous.id}"]`)
+        ?.querySelector<HTMLElement>(fromAction ? ".spec400-plugin-card-action" : "h3 a");
+      (target ?? searchRef.current)?.focus();
+    }
+  }, [activityReady, connectionGroup, detailId, principal]);
+  useEffect(() => setPendingGoogleDisconnect(null), [detailId]);
   const googleStatusRef = useRef<HTMLElement>(null);
   const googleRefreshContext = `${principal}:${visibleSelectedApp?.id ?? "closed"}:${lifecycleVersion}`;
   const googleRefreshScopeRef = useRef({ context: googleRefreshContext, epoch: 0 });
@@ -1016,7 +1045,6 @@ function AppsPage() {
     setActivityPersistenceError(false);
     setGoogleStatus(null);
     setGoogleLoading(true);
-    setSelectedApp(null);
     setConnecting({});
     setFailed({});
     if (!principal || !activityKey) return;
@@ -1050,7 +1078,6 @@ function AppsPage() {
       setActivityPersistenceError(false);
       setGoogleStatus(null);
       setGoogleLoading(true);
-      setSelectedApp(null);
       setConnecting({});
       setFailed({});
       setGithubData(null);
@@ -1377,8 +1404,8 @@ function AppsPage() {
         (entry) => entry.connector.id === (messages ? "ms-teams" : id),
       )?.connector;
       if (item) {
-        setTeamsMessagesAfterConsent(messages);
-        setSelectedApp(item);
+        url.searchParams.set("plugin", item.id);
+        if (messages) url.searchParams.set("teams_view", "messages");
       }
     }
     if (url.searchParams.has("integration_error"))
@@ -1387,9 +1414,9 @@ function AppsPage() {
       );
     else toast.message("Authorization returned. Review the account and search to verify access.");
     for (const key of ["integration_connected", "integration_error"]) url.searchParams.delete(key);
-    window.history.replaceState(window.history.state, "", url);
+    void navigate({ search: Object.fromEntries(url.searchParams) as never, replace: true });
     void refreshOtherConnections();
-  }, [activityReady, isSignedIn, refreshOtherConnections]);
+  }, [activityReady, isSignedIn, navigate, refreshOtherConnections]);
 
   const notionKeyConfigured =
     otherConnections.data?.configuredProviders.some(({ id }) => id === "notion-private") === true;
@@ -1629,20 +1656,21 @@ function AppsPage() {
           item={item}
           state={stateOf(item.id)}
           configured={configuredOf(item.id)}
-          onDetails={(trigger) => {
-            detailsReturnRef.current = {
-              trigger,
-              url: window.location.href,
-              principal: principalRef.current,
-            };
-            setSelectedApp(item);
+          onDetails={(source) => {
+            detailTriggerRef.current = { id: item.id, source, principal };
+            void navigate({ search: { plugin: item.id } as never });
           }}
         />
       ))}
     </ul>
   );
 
-  const developerView = new URLSearchParams(searchString).get("directory");
+  const related = visibleSelectedApp
+    ? catalog
+        .filter((item) => item.id !== detailId && item.category === visibleSelectedApp.category)
+        .slice(0, 4)
+    : [];
+  const developerView = routeSearch.get("directory");
   if (developerView === "submissions" || developerView === "guide")
     return (
       <AppShell hideUtilities>
@@ -1665,73 +1693,47 @@ function AppsPage() {
       <main
         id="main-content"
         tabIndex={-1}
-        aria-labelledby="apps-title"
+        ref={directoryRef}
+        aria-labelledby={visibleSelectedApp ? "connection-title" : "apps-title"}
         className="kova-page kova-secondary-page spec400-plugins"
-        data-ui-reference="kova.connections.directory"
+        data-ui-reference={visibleSelectedApp ? undefined : "kova.connections.directory"}
       >
-        <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
-          <DialogContent
-            className="spec400-plugin-detail"
+        {visibleSelectedApp && (
+          <article
+            key={`${principal}:${visibleSelectedApp.id}`}
+            className="kova-connection-page"
             data-ui-reference="kova.connections.details"
-            closeLabel="Close connection details"
-            onCloseAutoFocus={(event) => {
-              event.preventDefault();
-              const origin = detailsReturnRef.current;
-              restoreDialogFocus(
-                origin?.trigger.isConnected ? origin.trigger : searchRef.current,
-                origin?.url ?? window.location.href,
-                Boolean(origin && origin.principal !== principalRef.current),
-              );
-            }}
+            aria-labelledby="connection-title"
           >
-            <DialogHeader>
-              {visibleSelectedApp && <AppLogo id={visibleSelectedApp.id} />}
-              <DialogTitle>{visibleSelectedApp?.label}</DialogTitle>
-              <DialogDescription>{visibleSelectedApp?.description}</DialogDescription>
-            </DialogHeader>
-            {visibleSelectedApp && (
-              <div className="spec400-plugin-detail-body">
-                <StatusBadge
-                  state={stateOf(visibleSelectedApp.id)}
-                  configured={configuredOf(visibleSelectedApp.id)}
-                />
-                {(visibleSelectedApp.id === "gmail" || visibleSelectedApp.id === "google-docs") && (
-                  <p>{visibleSelectedApp.label} requires Kova Plus or Pro.</p>
-                )}
-                <section className="spec400-plugin-detail-section">
-                  <h3>Capabilities and permissions</h3>
-                  {selectedReview && (
-                    <>
-                      <ul className="spec400-plugin-permissions">
-                        {selectedReview.permissions.map((permission) => (
-                          <li key={permission}>{permission}</li>
-                        ))}
-                      </ul>
-                      <p className="spec400-plugin-notice">{selectedReview.availabilityNote}</p>
-                      {getPluginReview(visibleSelectedApp.id)?.availability === "planned" && (
-                        <p className="spec400-plugin-notice">
-                          This plugin is coming soon. Its listed capabilities are proposals. No
-                          account is connected and no permissions have been requested.
-                        </p>
-                      )}
-                    </>
-                  )}
-                  {isGoogleId(visibleSelectedApp.id) && (
-                    <>
-                      <p>
-                        Connect to read from {visibleSelectedApp.label}. Use Permissions to review
-                        or enable supported writes for a connected account.
-                      </p>
-                      <p>Review the permissions on Google’s consent screen before approving.</p>
-                    </>
-                  )}
-                  {visibleSelectedApp.id === "github" && (
-                    <p>
-                      GitHub will ask you to choose an account and approve access. Only authorized
-                      installations and explicitly granted repositories are available to Kova.
-                    </p>
-                  )}
-                </section>
+            <Button
+              type="button"
+              variant="ghost"
+              className="kova-connection-back"
+              onClick={() => void navigate({ search: {} as never, resetScroll: false })}
+            >
+              <ArrowLeft aria-hidden="true" /> Back to Connections
+            </Button>
+            <header className="kova-connection-hero">
+              <AppLogo id={visibleSelectedApp.id} />
+              <div>
+                <h1 id="connection-title" ref={detailsHeadingRef} tabIndex={-1}>
+                  {visibleSelectedApp.label}
+                </h1>
+                <p>{visibleSelectedApp.description}</p>
+              </div>
+              <StatusBadge
+                state={stateOf(visibleSelectedApp.id)}
+                configured={configuredOf(visibleSelectedApp.id)}
+              />
+            </header>
+            <nav className="kova-connection-shortcuts" aria-label="Connection details">
+              <a href="#connection-account">Account</a>
+              <a href="#connection-permissions">Capabilities and permissions</a>
+              {related.length > 0 && <a href="#connection-related">Related connections</a>}
+            </nav>
+            <div className="kova-connection-layout">
+              <div id="connection-account" tabIndex={-1} className="kova-connection-account">
+                <h2>Manage connection</h2>
                 {["gmail", "google-docs"].includes(visibleSelectedApp.id) &&
                   tierStatus === "ready" &&
                   tier === "free" && (
@@ -1955,14 +1957,12 @@ function AppsPage() {
                     onClick={() => {
                       const id = visibleSelectedApp.id;
                       const view = id === "plaid" ? "finances" : "health";
-                      const params = new URLSearchParams(searchString);
-                      params.delete("plugin");
-                      params.set("connection_view", view);
-                      if (id === "oura") params.set("health_provider", id);
-                      else params.delete("health_provider");
-                      setSelectedApp(null);
-                      setConnectionGroup(view);
-                      void navigate({ search: Object.fromEntries(params) as never, replace: true });
+                      void navigate({
+                        search: {
+                          connection_view: view,
+                          ...(id === "oura" && { health_provider: id }),
+                        } as never,
+                      });
                     }}
                   >
                     {visibleSelectedApp.id === "plaid" ? "Open Finances" : "Open Health"}
@@ -2039,11 +2039,83 @@ function AppsPage() {
                   )}
                 </section>
               </div>
+              <aside className="kova-connection-sidebar" aria-label="About this connection">
+                <section className="kova-connection-info">
+                  <h2>About this connection</h2>
+                  <p>{visibleSelectedApp.category}</p>
+                  <p>
+                    {["apple-health", "android-health-connect"].includes(visibleSelectedApp.id)
+                      ? "Requires the Kova mobile app"
+                      : visibleSelectedApp.id === "excalidraw"
+                        ? "Local files"
+                        : "Connect an authorized account to use this service"}
+                  </p>
+                  {/^[a-z0-9.-]+\.[a-z]{2,}$/u.test(visibleSelectedApp.domain) && (
+                    <a
+                      href={`https://${visibleSelectedApp.domain}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Provider website <ArrowUpRight aria-hidden="true" />
+                    </a>
+                  )}
+                </section>
+                <section
+                  id="connection-permissions"
+                  tabIndex={-1}
+                  className="kova-connection-permissions"
+                >
+                  <h2>Capabilities and permissions</h2>
+                  {selectedReview && (
+                    <>
+                      <ul className="spec400-plugin-permissions">
+                        {selectedReview.permissions.map((permission) => (
+                          <li key={permission}>{permission}</li>
+                        ))}
+                      </ul>
+                      <p className="spec400-plugin-notice">{selectedReview.availabilityNote}</p>
+                      {getPluginReview(visibleSelectedApp.id)?.availability === "planned" && (
+                        <p className="spec400-plugin-notice">
+                          This plugin is coming soon. Its listed capabilities are proposals. No
+                          account is connected and no permissions have been requested.
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {isGoogleId(visibleSelectedApp.id) && (
+                    <>
+                      <p>
+                        Connect to read from {visibleSelectedApp.label}. Use Permissions to review
+                        or enable supported writes for a connected account.
+                      </p>
+                      <p>Review the permissions on Google’s consent screen before approving.</p>
+                    </>
+                  )}
+                  {visibleSelectedApp.id === "github" && (
+                    <p>
+                      GitHub will ask you to choose an account and approve access. Only authorized
+                      installations and explicitly granted repositories are available to Kova.
+                    </p>
+                  )}
+                </section>
+              </aside>
+            </div>
+            {related.length > 0 && (
+              <section id="connection-related" tabIndex={-1} className="kova-connection-related">
+                <h2>Related connections</h2>
+                {renderGrid(related)}
+              </section>
             )}
-          </DialogContent>
-        </Dialog>
+          </article>
+        )}
+
         <ConfirmActionDialog
-          open={activityReady && isSignedIn && pendingGoogleDisconnect !== null}
+          open={
+            activityReady &&
+            isSignedIn &&
+            Boolean(detailId && isGoogleId(detailId)) &&
+            pendingGoogleDisconnect !== null
+          }
           onOpenChange={(open) => !open && setPendingGoogleDisconnect(null)}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
@@ -2075,230 +2147,250 @@ function AppsPage() {
             />
           )}
         </ConfirmActionDialog>
-        <WorkspacePageHeader
-          title="Connections"
-          titleId="apps-title"
-          description="Browse and manage the tools you use with KovaGPT."
-          reference="kova.connections.header"
-          actions={
-            <Button asChild variant="outline">
-              <a href="/apps?directory=submissions">
-                Submissions <ArrowRight aria-hidden="true" />
-              </a>
-            </Button>
-          }
-        />
-        {activityPersistenceError && (
-          <p role="status" className="spec400-plugin-notice">
-            Recent connection activity could not be saved in this browser and will be lost when you
-            leave or reload this page.
-          </p>
-        )}
-        {!isLoaded ? (
-          <section role="status" aria-label="Loading connections" className="spec400-plugin-grid">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div
-                key={item}
-                aria-hidden="true"
-                className="spec400-plugin-skeleton animate-pulse motion-reduce:animate-none"
-              />
-            ))}
-          </section>
-        ) : (
+        {!visibleSelectedApp && (
           <>
-            {!isSignedIn && (
-              <section className="spec400-plugin-signin" aria-labelledby="apps-sign-in-title">
-                <LogIn aria-hidden="true" />
-                <div>
-                  <h2 id="apps-sign-in-title">Sign in to connect tools</h2>
-                  <p>
-                    Browse available tools, then sign in to manage your accounts and permissions.
-                  </p>
-                </div>
-                <SignInButton mode="modal">
-                  <Button variant="outline">Sign in</Button>
-                </SignInButton>
-              </section>
+            <WorkspacePageHeader
+              title="Connections"
+              titleId="apps-title"
+              description="Browse and manage the tools you use with KovaGPT."
+              reference="kova.connections.header"
+              actions={
+                <Button asChild variant="outline">
+                  <a href="/apps?directory=submissions">
+                    Submissions <ArrowRight aria-hidden="true" />
+                  </a>
+                </Button>
+              }
+            />
+            {activityPersistenceError && (
+              <p role="status" className="spec400-plugin-notice">
+                Recent connection activity could not be saved in this browser and will be lost when
+                you leave or reload this page.
+              </p>
             )}
-            <Tabs
-              value={connectionGroup ?? connectionFilter}
-              onValueChange={(value) => {
-                const view = value === "health" || value === "finances" ? value : null;
-                setConnectionGroup(view);
-                if (!view) setConnectionFilter(value);
-                const params = new URLSearchParams(searchString);
-                if (view) params.set("connection_view", view);
-                else params.delete("connection_view");
-                void navigate({ search: Object.fromEntries(params) as never, replace: true });
-              }}
-              className="spec400-plugin-directory"
-            >
-              <TabsList className="spec400-plugin-tabs" aria-label="Connections">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="connected">Connected</TabsTrigger>
-                <TabsTrigger value="health">Health</TabsTrigger>
-                <TabsTrigger value="finances">Finances</TabsTrigger>
-              </TabsList>
-              <div className="spec400-plugin-filters" hidden={connectionGroup !== null}>
-                <label className="spec400-plugin-search">
-                  <span className="sr-only">Search connections</span>
-                  <Search aria-hidden="true" />
-                  <Input
-                    ref={searchRef}
-                    value={query}
-                    maxLength={MAX_MANAGEMENT_QUERY_LENGTH}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search connections"
+            {!isLoaded ? (
+              <section
+                role="status"
+                aria-label="Loading connections"
+                className="spec400-plugin-grid"
+              >
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div
+                    key={item}
+                    aria-hidden="true"
+                    className="spec400-plugin-skeleton animate-pulse motion-reduce:animate-none"
                   />
-                </label>
-                {category !== "all" && (
-                  <Button variant="outline" onClick={() => setListPreferences({ category: "all" })}>
-                    {category} · Clear category
-                  </Button>
-                )}
-              </div>
-              <TabsContent value={connectionFilter} className="spec400-plugin-results">
-                {connectedStatusUnverified && <p role="status">{connectedStatusMessage}</p>}
-                {filtered.length ? (
-                  [0, 1, 2, 3].map((group) => {
-                    const items = filtered.filter(
-                      (item) => groupOf(item.id) === group && !featuredIds.has(item.id),
-                    );
-                    const recommended = group === 2 && featured.length > 0;
-                    if (!items.length && !recommended) return null;
-                    const label = ["Connected", "Reconnect required", "Available", "Coming soon"][
-                      group
-                    ];
-                    return (
-                      <div key={group}>
-                        {recommended && (
-                          <section
-                            className="spec400-plugin-status-group"
-                            aria-labelledby="plugins-featured-title"
-                          >
-                            <h2 id="plugins-featured-title">Get started</h2>
-                            {renderGrid(featured)}
-                          </section>
-                        )}
-                        <section aria-label={label} className="spec400-plugin-status-group">
-                          {connectionFilter === "all" && (
-                            <div className="kova-directory-section-head">
-                              <h2>{group === 0 ? "Your connections" : label}</h2>
-                              {group === 0 && browsing && (
-                                <Button
-                                  variant="ghost"
-                                  onClick={() => setConnectionFilter("connected")}
-                                >
-                                  Manage connections <ArrowRight aria-hidden="true" />
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                          {renderGrid(items, group === 0 || connectionFilter === "connected")}
-                        </section>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <section className="spec400-plugin-empty" aria-labelledby="apps-empty-title">
-                    <Search aria-hidden="true" />
-                    <h2 id="apps-empty-title">
-                      {connectedStatusUnverified
-                        ? connectionCountState === "checking"
-                          ? "Checking connections"
-                          : connectionCountState === "unavailable"
-                            ? "Connection status unavailable"
-                            : "Connection status unknown"
-                        : connectionFilter === "connected" && !query
-                          ? "No connections yet"
-                          : "No matching connections"}
-                    </h2>
-                    <p>
-                      {connectedStatusUnverified
-                        ? connectionCountState === "checking"
-                          ? "Wait for the current status check to finish."
-                          : "Choose a plugin from All to review and refresh its connection status."
-                        : connectionFilter === "connected" && !query
-                          ? "Choose a plugin from All to review its permissions and connect an account."
-                          : "Try another connection name."}
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setListPreferences({ query: "", connectionFilter: "all", category: "all" });
-                      }}
-                    >
-                      {connectionFilter === "connected"
-                        ? "Browse all connections"
-                        : "Clear filters"}
-                    </Button>
+                ))}
+              </section>
+            ) : (
+              <>
+                {!isSignedIn && (
+                  <section className="spec400-plugin-signin" aria-labelledby="apps-sign-in-title">
+                    <LogIn aria-hidden="true" />
+                    <div>
+                      <h2 id="apps-sign-in-title">Sign in to connect tools</h2>
+                      <p>
+                        Browse available tools, then sign in to manage your accounts and
+                        permissions.
+                      </p>
+                    </div>
+                    <SignInButton mode="modal">
+                      <Button variant="outline">Sign in</Button>
+                    </SignInButton>
                   </section>
                 )}
-                {connectionFilter === "all" && (
-                  <>
-                    {browsing && <PublishedConnectorListings />}
-                    <section
-                      className="kova-directory-categories"
-                      aria-labelledby="plugin-categories-title"
-                    >
-                      <div className="kova-directory-section-head">
-                        <h2 id="plugin-categories-title">Browse categories</h2>
-                        {category !== "all" && (
-                          <Button
-                            variant="ghost"
-                            onClick={() => setListPreferences({ category: "all" })}
-                          >
-                            Show all
-                          </Button>
-                        )}
-                      </div>
-                      <div className="kova-directory-category-grid">
-                        {PLUGIN_CATEGORIES.map((item) => {
-                          const Icon = categoryIcons[item] ?? Layers3;
-                          return (
-                            <Button
-                              key={item}
-                              variant={category === item ? "secondary" : "outline"}
-                              aria-pressed={category === item}
-                              onClick={() => {
-                                setListPreferences({
-                                  category: item,
-                                  query: "",
-                                  connectionFilter: "all",
-                                });
-                                searchRef.current?.focus({ preventScroll: false });
-                              }}
-                            >
-                              <Icon aria-hidden="true" /> {item}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    </section>
-                    <ConnectorDirectoryBuilder />
-                  </>
-                )}
-              </TabsContent>
-              <TabsContent forceMount value="finances" className="spec400-connection-group">
-                <BankConnectionsPanel
-                  key={`banks:${userKey ?? "guest"}`}
-                  visible={connectionGroup === "finances"}
-                  ownerId={isSignedIn ? userKey : null}
-                />
-              </TabsContent>
-              <TabsContent forceMount value="health" className="spec400-connection-group">
-                <HealthConnectionsPanel
-                  key={`health:${userKey ?? "guest"}`}
-                  visible={connectionGroup === "health"}
-                  manageOura={new URLSearchParams(searchString).get("health_provider") === "oura"}
-                  ownerId={isSignedIn ? userKey : null}
-                  data={otherConnections.data}
-                  loading={otherConnections.loading}
-                  error={otherConnections.error}
-                  reload={otherConnections.reload}
-                />
-              </TabsContent>
-            </Tabs>
+                <Tabs
+                  value={connectionGroup ?? connectionFilter}
+                  onValueChange={(value) => {
+                    const view = value === "health" || value === "finances" ? value : null;
+                    if (!view) setConnectionFilter(value);
+                    const params = new URLSearchParams(searchString);
+                    if (view) params.set("connection_view", view);
+                    else params.delete("connection_view");
+                    void navigate({ search: Object.fromEntries(params) as never, replace: true });
+                  }}
+                  className="spec400-plugin-directory"
+                >
+                  <TabsList className="spec400-plugin-tabs" aria-label="Connections">
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="connected">Connected</TabsTrigger>
+                    <TabsTrigger value="health">Health</TabsTrigger>
+                    <TabsTrigger value="finances">Finances</TabsTrigger>
+                  </TabsList>
+                  <div className="spec400-plugin-filters" hidden={connectionGroup !== null}>
+                    <label className="spec400-plugin-search">
+                      <span className="sr-only">Search connections</span>
+                      <Search aria-hidden="true" />
+                      <Input
+                        ref={searchRef}
+                        value={query}
+                        maxLength={MAX_MANAGEMENT_QUERY_LENGTH}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder="Search connections"
+                      />
+                    </label>
+                    {category !== "all" && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setListPreferences({ category: "all" })}
+                      >
+                        {category} · Clear category
+                      </Button>
+                    )}
+                  </div>
+                  <TabsContent value={connectionFilter} className="spec400-plugin-results">
+                    {connectedStatusUnverified && <p role="status">{connectedStatusMessage}</p>}
+                    {filtered.length ? (
+                      [0, 1, 2, 3].map((group) => {
+                        const items = filtered.filter(
+                          (item) => groupOf(item.id) === group && !featuredIds.has(item.id),
+                        );
+                        const recommended = group === 2 && featured.length > 0;
+                        if (!items.length && !recommended) return null;
+                        const label = [
+                          "Connected",
+                          "Reconnect required",
+                          "Available",
+                          "Coming soon",
+                        ][group];
+                        return (
+                          <div key={group}>
+                            {recommended && (
+                              <section
+                                className="spec400-plugin-status-group"
+                                aria-labelledby="plugins-featured-title"
+                              >
+                                <h2 id="plugins-featured-title">Featured connections</h2>
+                                {renderGrid(featured)}
+                              </section>
+                            )}
+                            <section aria-label={label} className="spec400-plugin-status-group">
+                              {connectionFilter === "all" && (
+                                <div className="kova-directory-section-head">
+                                  <h2>{group === 0 ? "Your connections" : label}</h2>
+                                  {group === 0 && browsing && (
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() => setConnectionFilter("connected")}
+                                    >
+                                      Show all connected <ArrowRight aria-hidden="true" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                              {renderGrid(items, group === 0 || connectionFilter === "connected")}
+                            </section>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <section className="spec400-plugin-empty" aria-labelledby="apps-empty-title">
+                        <Search aria-hidden="true" />
+                        <h2 id="apps-empty-title">
+                          {connectedStatusUnverified
+                            ? connectionCountState === "checking"
+                              ? "Checking connections"
+                              : connectionCountState === "unavailable"
+                                ? "Connection status unavailable"
+                                : "Connection status unknown"
+                            : connectionFilter === "connected" && !query
+                              ? "No connections yet"
+                              : "No matching connections"}
+                        </h2>
+                        <p>
+                          {connectedStatusUnverified
+                            ? connectionCountState === "checking"
+                              ? "Wait for the current status check to finish."
+                              : "Choose a plugin from All to review and refresh its connection status."
+                            : connectionFilter === "connected" && !query
+                              ? "Choose a plugin from All to review its permissions and connect an account."
+                              : "Try another connection name."}
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setListPreferences({
+                              query: "",
+                              connectionFilter: "all",
+                              category: "all",
+                            });
+                          }}
+                        >
+                          {connectionFilter === "connected"
+                            ? "Browse all connections"
+                            : "Clear filters"}
+                        </Button>
+                      </section>
+                    )}
+                    {connectionFilter === "all" && (
+                      <>
+                        {browsing && <PublishedConnectorListings />}
+                        <section
+                          className="kova-directory-categories"
+                          aria-labelledby="plugin-categories-title"
+                        >
+                          <div className="kova-directory-section-head">
+                            <h2 id="plugin-categories-title">Browse categories</h2>
+                            {category !== "all" && (
+                              <Button
+                                variant="ghost"
+                                onClick={() => setListPreferences({ category: "all" })}
+                              >
+                                Show all
+                              </Button>
+                            )}
+                          </div>
+                          <div className="kova-directory-category-grid">
+                            {PLUGIN_CATEGORIES.map((item) => {
+                              const Icon = categoryIcons[item] ?? Layers3;
+                              return (
+                                <Button
+                                  key={item}
+                                  variant={category === item ? "secondary" : "outline"}
+                                  aria-pressed={category === item}
+                                  onClick={() => {
+                                    setListPreferences({
+                                      category: item,
+                                      query: "",
+                                      connectionFilter: "all",
+                                    });
+                                    searchRef.current?.focus({ preventScroll: false });
+                                  }}
+                                >
+                                  <Icon aria-hidden="true" /> {item}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </section>
+                        <ConnectorDirectoryBuilder />
+                      </>
+                    )}
+                  </TabsContent>
+                  <TabsContent forceMount value="finances" className="spec400-connection-group">
+                    <BankConnectionsPanel
+                      key={`banks:${userKey ?? "guest"}`}
+                      visible={connectionGroup === "finances"}
+                      ownerId={isSignedIn ? userKey : null}
+                    />
+                  </TabsContent>
+                  <TabsContent forceMount value="health" className="spec400-connection-group">
+                    <HealthConnectionsPanel
+                      key={`health:${userKey ?? "guest"}`}
+                      visible={connectionGroup === "health"}
+                      manageOura={
+                        new URLSearchParams(searchString).get("health_provider") === "oura"
+                      }
+                      ownerId={isSignedIn ? userKey : null}
+                      data={otherConnections.data}
+                      loading={otherConnections.loading}
+                      error={otherConnections.error}
+                      reload={otherConnections.reload}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </>
+            )}
           </>
         )}
       </main>
