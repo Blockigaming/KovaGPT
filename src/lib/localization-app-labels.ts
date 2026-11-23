@@ -3126,6 +3126,64 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Hasta 50 registros recientes. Quitar uno finalizado lo elimina para ambos.",
     "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
       "Redacta, revisa, corrige, resume y cuenta texto en espacios centrados con la interfaz de Kova.",
+    "AI market research guide": "Guía de investigación de mercado con IA",
+    "How to Use AI for Market Research Without Losing the Evidence":
+      "Cómo usar la IA en estudios de mercado sin perder la evidencia",
+    "Updated August 1, 2026 · 8 min read": "Actualizado el 1 de agosto de 2026 · 8 min de lectura",
+    "Updated August 1, 2026 · 7 min read": "Actualizado el 1 de agosto de 2026 · 7 min de lectura",
+    "1. Start with a decision": "1. Empieza por una decisión",
+    "Write the decision in one sentence, then define geography, customer, time period, and the confidence you need. For example:":
+      "Escribe la decisión en una frase y define zona, cliente, periodo y confianza necesaria. Por ejemplo:",
+    "Should we test a paid bookkeeping product with UK freelancers in Q4 2026?":
+      "¿Deberíamos probar un producto de contabilidad de pago con autónomos del Reino Unido en el 4.º trimestre de 2026?",
+    "A bounded question makes it easier to reject irrelevant data.":
+      "Una pregunta acotada facilita descartar datos irrelevantes.",
+    "2. Build an evidence plan": "2. Prepara un plan de evidencias",
+    "List the minimum evidence needed before searching:":
+      "Enumera la evidencia mínima antes de buscar:",
+    "3. Use KovaGPT Search deliberately": "3. Usa la búsqueda de KovaGPT con intención",
+    "Ask for the source title, publisher, publication date, and the exact claim each source is meant to support. Then open the links yourself. A well-formatted citation can still point to a weak, outdated, or misread page.":
+      "Pide el título, editor, fecha y la afirmación exacta que respalda cada fuente. Luego abre los enlaces tú mismo. Una cita bien formateada puede apuntar a una página débil, antigua o mal leída.",
+    "4. Use source-backed search when needed": "4. Usa búsqueda con fuentes cuando haga falta",
+    "5. Triangulate important claims": "5. Contrasta las afirmaciones importantes",
+    "6. Label facts, inferences, and estimates": "6. Etiqueta hechos, inferencias y estimaciones",
+    "Use three explicit buckets in the draft:": "Usa tres categorías claras en el borrador:",
+    "Sourced fact:": "Hecho con fuente:",
+    "Inference:": "Inferencia:",
+    "Estimate:": "Estimación:",
+    "This prevents a polished paragraph from making assumptions look as certain as published data.":
+      "Así un párrafo pulido no hace que una suposición parezca tan cierta como un dato publicado.",
+    "7. Pressure-test the result": "7. Pon a prueba el resultado",
+    "Availability and verification": "Disponibilidad y verificación",
+    "KovaGPT can make mistakes, including with retrieved material. Search are provider-dependent. The":
+      "KovaGPT puede equivocarse, también con material recuperado. La búsqueda depende del proveedor. La",
+    "Market research tools": "Herramientas de investigación de mercado",
+    "How to Choose AI Market Research Tools in 2026":
+      "Cómo elegir herramientas de IA para investigación de mercado en 2026",
+    "Build a tool stack by evidence type": "Arma tus herramientas según el tipo de evidencia",
+    "Useful for": "Útil para",
+    "What to verify": "Qué verificar",
+    "Where KovaGPT fits": "Dónde encaja KovaGPT",
+    "Source-backed Search depends on available search and AI providers. It can plan a longer research pass and produce a cited draft. Neither plan access nor the citations guarantee that a claim is correct.":
+      "La búsqueda con fuentes depende de los proveedores disponibles. Puede planificar una investigación más larga y redactar con citas. Ni el plan ni las citas garantizan que algo sea correcto.",
+    "A practical selection scorecard": "Una tabla práctica de selección",
+    "Coverage:": "Cobertura:",
+    "Method:": "Método:",
+    "Traceability:": "Trazabilidad:",
+    "Freshness:": "Actualidad:",
+    "Rights:": "Derechos:",
+    "Reliability:": "Fiabilidad:",
+    "Cost:": "Coste:",
+    "Red flags": "Señales de alerta",
+    "Bottom line": "En resumen",
+    "Use AI to reduce the time spent organizing and drafting, then spend the saved time checking evidence. For KovaGPT, consult the":
+      "Usa la IA para ahorrar tiempo organizando y redactando, y dedica ese tiempo a comprobar la evidencia. Para KovaGPT, consulta la",
+    "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.":
+      "Usa KovaGPT para revisar errores, explicar código, redactar pruebas y proponer refactorizaciones, y valida cada cambio en tu entorno.",
+    "KovaGPT does not currently offer a standards-complete remote MCP connection for ChatGPT, Claude, Claude Code, or other external assistants.":
+      "KovaGPT no ofrece actualmente una conexión MCP remota completa para ChatGPT, Claude, Claude Code u otros asistentes.",
+    "An internal metadata endpoint may exist while this work is in development. It is not an installable MCP server and should not be added to an assistant.":
+      "Puede existir un endpoint interno mientras esto se desarrolla. No es un servidor MCP instalable y no debe añadirse a un asistente.",
     Cooking: "Cocina",
     "Plan and adapt recipes with food safety in view.":
       "Planifica y adapta recetas teniendo en cuenta la seguridad alimentaria.",
@@ -7393,6 +7451,64 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Jusqu'à 50 enregistrements récents. Supprimer un enregistrement terminé le retire pour les deux parties.",
     "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
       "Rédigez, révisez, vérifiez, résumez et comptez du texte dans des espaces dédiés de Kova.",
+    "AI market research guide": "Guide d'étude de marché avec l'IA",
+    "How to Use AI for Market Research Without Losing the Evidence":
+      "Utiliser l'IA pour l'étude de marché sans perdre les preuves",
+    "Updated August 1, 2026 · 8 min read": "Mis à jour le 1er août 2026 · 8 min de lecture",
+    "Updated August 1, 2026 · 7 min read": "Mis à jour le 1er août 2026 · 7 min de lecture",
+    "1. Start with a decision": "1. Partez d'une décision",
+    "Write the decision in one sentence, then define geography, customer, time period, and the confidence you need. For example:":
+      "Écrivez la décision en une phrase, puis définissez zone, client, période et niveau de confiance. Par exemple :",
+    "Should we test a paid bookkeeping product with UK freelancers in Q4 2026?":
+      "Faut-il tester une offre de comptabilité payante auprès de freelances britanniques au T4 2026 ?",
+    "A bounded question makes it easier to reject irrelevant data.":
+      "Une question bornée aide à écarter les données inutiles.",
+    "2. Build an evidence plan": "2. Bâtissez un plan de preuves",
+    "List the minimum evidence needed before searching:":
+      "Listez les preuves minimales avant de chercher :",
+    "3. Use KovaGPT Search deliberately": "3. Utilisez la recherche KovaGPT avec méthode",
+    "Ask for the source title, publisher, publication date, and the exact claim each source is meant to support. Then open the links yourself. A well-formatted citation can still point to a weak, outdated, or misread page.":
+      "Demandez titre, éditeur, date et l'affirmation précise de chaque source, puis ouvrez les liens vous-même. Une citation soignée peut renvoyer à une page faible, datée ou mal lue.",
+    "4. Use source-backed search when needed": "4. Utilisez la recherche sourcée si besoin",
+    "5. Triangulate important claims": "5. Recoupez les affirmations importantes",
+    "6. Label facts, inferences, and estimates": "6. Distinguez faits, déductions et estimations",
+    "Use three explicit buckets in the draft:": "Utilisez trois catégories explicites :",
+    "Sourced fact:": "Fait sourcé :",
+    "Inference:": "Déduction :",
+    "Estimate:": "Estimation :",
+    "This prevents a polished paragraph from making assumptions look as certain as published data.":
+      "Cela évite qu'un paragraphe soigné fasse passer une hypothèse pour une donnée publiée.",
+    "7. Pressure-test the result": "7. Mettez le résultat à l'épreuve",
+    "Availability and verification": "Disponibilité et vérification",
+    "KovaGPT can make mistakes, including with retrieved material. Search are provider-dependent. The":
+      "KovaGPT peut se tromper, y compris sur les contenus récupérés. La recherche dépend du fournisseur. La",
+    "Market research tools": "Outils d'étude de marché",
+    "How to Choose AI Market Research Tools in 2026":
+      "Choisir ses outils d'étude de marché IA en 2026",
+    "Build a tool stack by evidence type": "Composez vos outils par type de preuve",
+    "Useful for": "Utile pour",
+    "What to verify": "À vérifier",
+    "Where KovaGPT fits": "La place de KovaGPT",
+    "Source-backed Search depends on available search and AI providers. It can plan a longer research pass and produce a cited draft. Neither plan access nor the citations guarantee that a claim is correct.":
+      "La recherche sourcée dépend des fournisseurs disponibles. Elle peut planifier une recherche plus longue et produire un brouillon cité, sans garantir l'exactitude.",
+    "A practical selection scorecard": "Une grille de sélection pratique",
+    "Coverage:": "Couverture :",
+    "Method:": "Méthode :",
+    "Traceability:": "Traçabilité :",
+    "Freshness:": "Fraîcheur :",
+    "Rights:": "Droits :",
+    "Reliability:": "Fiabilité :",
+    "Cost:": "Coût :",
+    "Red flags": "Signaux d'alerte",
+    "Bottom line": "En résumé",
+    "Use AI to reduce the time spent organizing and drafting, then spend the saved time checking evidence. For KovaGPT, consult the":
+      "Utilisez l'IA pour gagner du temps sur l'organisation et la rédaction, puis vérifiez les preuves. Pour KovaGPT, consultez la",
+    "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.":
+      "Utilisez KovaGPT pour analyser les erreurs, expliquer du code, rédiger des tests et proposer des refactorisations, puis validez chaque changement.",
+    "KovaGPT does not currently offer a standards-complete remote MCP connection for ChatGPT, Claude, Claude Code, or other external assistants.":
+      "KovaGPT ne propose pas encore de connexion MCP distante complète pour ChatGPT, Claude, Claude Code ou d'autres assistants.",
+    "An internal metadata endpoint may exist while this work is in development. It is not an installable MCP server and should not be added to an assistant.":
+      "Un point interne peut exister pendant le développement. Ce n'est pas un serveur MCP installable.",
     Cooking: "Cuisine",
     "Plan and adapt recipes with food safety in view.":
       "Planifiez et adaptez des recettes en tenant compte de la sécurité alimentaire.",
@@ -11654,6 +11770,64 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Bis zu 50 Einträge. Entfernen gilt für beide Seiten.",
     "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
       "Entwerfen, überarbeiten, prüfen, zusammenfassen und zählen in fokussierten Kova-Bereichen.",
+    "AI market research guide": "Leitfaden: Marktforschung mit KI",
+    "How to Use AI for Market Research Without Losing the Evidence":
+      "Marktforschung mit KI, ohne die Belege zu verlieren",
+    "Updated August 1, 2026 · 8 min read": "Aktualisiert am 1. August 2026 · 8 Min. Lesezeit",
+    "Updated August 1, 2026 · 7 min read": "Aktualisiert am 1. August 2026 · 7 Min. Lesezeit",
+    "1. Start with a decision": "1. Mit einer Entscheidung beginnen",
+    "Write the decision in one sentence, then define geography, customer, time period, and the confidence you need. For example:":
+      "Formuliere die Entscheidung in einem Satz und lege Region, Kunde, Zeitraum und nötige Sicherheit fest. Zum Beispiel:",
+    "Should we test a paid bookkeeping product with UK freelancers in Q4 2026?":
+      "Sollten wir im 4. Quartal 2026 ein kostenpflichtiges Buchhaltungsprodukt mit britischen Freelancern testen?",
+    "A bounded question makes it easier to reject irrelevant data.":
+      "Eine klar umrissene Frage erleichtert es, Unwichtiges auszusortieren.",
+    "2. Build an evidence plan": "2. Einen Belegplan erstellen",
+    "List the minimum evidence needed before searching:":
+      "Liste vor der Suche die nötigen Mindestbelege:",
+    "3. Use KovaGPT Search deliberately": "3. KovaGPT-Suche gezielt nutzen",
+    "Ask for the source title, publisher, publication date, and the exact claim each source is meant to support. Then open the links yourself. A well-formatted citation can still point to a weak, outdated, or misread page.":
+      "Frag nach Titel, Herausgeber, Datum und der genauen Aussage jeder Quelle und öffne die Links selbst. Ein sauberes Zitat kann auf eine schwache oder veraltete Seite zeigen.",
+    "4. Use source-backed search when needed": "4. Quellengestützte Suche bei Bedarf",
+    "5. Triangulate important claims": "5. Wichtige Aussagen gegenprüfen",
+    "6. Label facts, inferences, and estimates": "6. Fakten, Schlüsse und Schätzungen kennzeichnen",
+    "Use three explicit buckets in the draft:": "Nutze drei klare Kategorien im Entwurf:",
+    "Sourced fact:": "Belegte Tatsache:",
+    "Inference:": "Schlussfolgerung:",
+    "Estimate:": "Schätzung:",
+    "This prevents a polished paragraph from making assumptions look as certain as published data.":
+      "So wirkt eine Annahme nicht so sicher wie veröffentlichte Daten.",
+    "7. Pressure-test the result": "7. Ergebnis auf die Probe stellen",
+    "Availability and verification": "Verfügbarkeit und Prüfung",
+    "KovaGPT can make mistakes, including with retrieved material. Search are provider-dependent. The":
+      "KovaGPT kann Fehler machen, auch bei abgerufenem Material. Die Suche hängt vom Anbieter ab. Die",
+    "Market research tools": "Marktforschungstools",
+    "How to Choose AI Market Research Tools in 2026":
+      "So wählst du 2026 KI-Tools für Marktforschung",
+    "Build a tool stack by evidence type": "Tools nach Belegart zusammenstellen",
+    "Useful for": "Nützlich für",
+    "What to verify": "Was zu prüfen ist",
+    "Where KovaGPT fits": "Wo KovaGPT passt",
+    "Source-backed Search depends on available search and AI providers. It can plan a longer research pass and produce a cited draft. Neither plan access nor the citations guarantee that a claim is correct.":
+      "Quellengestützte Suche hängt von verfügbaren Anbietern ab. Sie kann längere Recherchen planen und einen Entwurf mit Zitaten liefern – ohne Richtigkeitsgarantie.",
+    "A practical selection scorecard": "Eine praktische Bewertungsliste",
+    "Coverage:": "Abdeckung:",
+    "Method:": "Methode:",
+    "Traceability:": "Nachvollziehbarkeit:",
+    "Freshness:": "Aktualität:",
+    "Rights:": "Rechte:",
+    "Reliability:": "Zuverlässigkeit:",
+    "Cost:": "Kosten:",
+    "Red flags": "Warnsignale",
+    "Bottom line": "Fazit",
+    "Use AI to reduce the time spent organizing and drafting, then spend the saved time checking evidence. For KovaGPT, consult the":
+      "Nutze KI, um Zeit beim Ordnen und Schreiben zu sparen, und investiere sie in die Belegprüfung. Für KovaGPT siehe die",
+    "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.":
+      "Nutze KovaGPT, um Fehler zu prüfen, Code zu erklären, Tests zu entwerfen und Refactorings vorzuschlagen, und prüfe jede Änderung selbst.",
+    "KovaGPT does not currently offer a standards-complete remote MCP connection for ChatGPT, Claude, Claude Code, or other external assistants.":
+      "KovaGPT bietet derzeit keine vollständige Remote-MCP-Verbindung für ChatGPT, Claude, Claude Code oder andere Assistenten.",
+    "An internal metadata endpoint may exist while this work is in development. It is not an installable MCP server and should not be added to an assistant.":
+      "Ein interner Endpunkt kann während der Entwicklung existieren. Er ist kein installierbarer MCP-Server.",
     Cooking: "Kochen",
     "Plan and adapt recipes with food safety in view.":
       "Rezepte planen und anpassen, mit Blick auf Lebensmittelsicherheit.",
@@ -15892,6 +16066,64 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Até 50 registros recentes. Remover um finalizado o remove para ambos.",
     "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
       "Escreva, revise, confira, resuma e conte texto em espaços focados com a interface do Kova.",
+    "AI market research guide": "Guia de pesquisa de mercado com IA",
+    "How to Use AI for Market Research Without Losing the Evidence":
+      "Como usar IA em pesquisa de mercado sem perder as evidências",
+    "Updated August 1, 2026 · 8 min read": "Atualizado em 1º de agosto de 2026 · 8 min de leitura",
+    "Updated August 1, 2026 · 7 min read": "Atualizado em 1º de agosto de 2026 · 7 min de leitura",
+    "1. Start with a decision": "1. Comece com uma decisão",
+    "Write the decision in one sentence, then define geography, customer, time period, and the confidence you need. For example:":
+      "Escreva a decisão em uma frase e defina região, cliente, período e confiança necessária. Por exemplo:",
+    "Should we test a paid bookkeeping product with UK freelancers in Q4 2026?":
+      "Devemos testar um produto pago de contabilidade com freelancers do Reino Unido no 4º tri de 2026?",
+    "A bounded question makes it easier to reject irrelevant data.":
+      "Uma pergunta delimitada facilita descartar dados irrelevantes.",
+    "2. Build an evidence plan": "2. Monte um plano de evidências",
+    "List the minimum evidence needed before searching:":
+      "Liste a evidência mínima antes de buscar:",
+    "3. Use KovaGPT Search deliberately": "3. Use a busca do KovaGPT com propósito",
+    "Ask for the source title, publisher, publication date, and the exact claim each source is meant to support. Then open the links yourself. A well-formatted citation can still point to a weak, outdated, or misread page.":
+      "Peça título, editora, data e a afirmação exata de cada fonte e abra os links você mesmo. Uma citação bem formatada pode levar a uma página fraca ou desatualizada.",
+    "4. Use source-backed search when needed": "4. Use busca com fontes quando necessário",
+    "5. Triangulate important claims": "5. Triangule afirmações importantes",
+    "6. Label facts, inferences, and estimates": "6. Rotule fatos, inferências e estimativas",
+    "Use three explicit buckets in the draft:": "Use três categorias claras no rascunho:",
+    "Sourced fact:": "Fato com fonte:",
+    "Inference:": "Inferência:",
+    "Estimate:": "Estimativa:",
+    "This prevents a polished paragraph from making assumptions look as certain as published data.":
+      "Assim um parágrafo bem escrito não faz suposições parecerem dados publicados.",
+    "7. Pressure-test the result": "7. Teste o resultado",
+    "Availability and verification": "Disponibilidade e verificação",
+    "KovaGPT can make mistakes, including with retrieved material. Search are provider-dependent. The":
+      "O KovaGPT pode errar, inclusive com material recuperado. A busca depende do provedor. A",
+    "Market research tools": "Ferramentas de pesquisa de mercado",
+    "How to Choose AI Market Research Tools in 2026":
+      "Como escolher ferramentas de IA para pesquisa de mercado em 2026",
+    "Build a tool stack by evidence type": "Monte suas ferramentas por tipo de evidência",
+    "Useful for": "Útil para",
+    "What to verify": "O que verificar",
+    "Where KovaGPT fits": "Onde o KovaGPT se encaixa",
+    "Source-backed Search depends on available search and AI providers. It can plan a longer research pass and produce a cited draft. Neither plan access nor the citations guarantee that a claim is correct.":
+      "A busca com fontes depende dos provedores. Pode planejar uma pesquisa maior e gerar um rascunho citado, sem garantir que algo esteja correto.",
+    "A practical selection scorecard": "Uma tabela prática de seleção",
+    "Coverage:": "Cobertura:",
+    "Method:": "Método:",
+    "Traceability:": "Rastreabilidade:",
+    "Freshness:": "Atualidade:",
+    "Rights:": "Direitos:",
+    "Reliability:": "Confiabilidade:",
+    "Cost:": "Custo:",
+    "Red flags": "Sinais de alerta",
+    "Bottom line": "Conclusão",
+    "Use AI to reduce the time spent organizing and drafting, then spend the saved time checking evidence. For KovaGPT, consult the":
+      "Use a IA para ganhar tempo organizando e escrevendo, e use esse tempo para checar evidências. Para o KovaGPT, consulte a",
+    "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.":
+      "Use o KovaGPT para analisar erros, explicar código, criar testes e sugerir refatorações, e valide cada mudança no seu ambiente.",
+    "KovaGPT does not currently offer a standards-complete remote MCP connection for ChatGPT, Claude, Claude Code, or other external assistants.":
+      "O KovaGPT ainda não oferece conexão MCP remota completa para ChatGPT, Claude, Claude Code ou outros assistentes.",
+    "An internal metadata endpoint may exist while this work is in development. It is not an installable MCP server and should not be added to an assistant.":
+      "Pode existir um endpoint interno durante o desenvolvimento. Não é um servidor MCP instalável.",
     Cooking: "Culinária",
     "Plan and adapt recipes with food safety in view.":
       "Planeje e adapte receitas pensando na segurança alimentar.",
@@ -20133,6 +20365,63 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "最近の記録を最大50件表示。完了した記録を削除すると双方から削除されます。",
     "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
       "おなじみのKovaの画面で、文章の下書き、推敲、チェック、要約、文字数カウントができます。",
+    "AI market research guide": "AIで市場調査をするガイド",
+    "How to Use AI for Market Research Without Losing the Evidence":
+      "根拠を失わずにAIで市場調査をする方法",
+    "Updated August 1, 2026 · 8 min read": "2026年8月1日更新・8分で読めます",
+    "Updated August 1, 2026 · 7 min read": "2026年8月1日更新・7分で読めます",
+    "1. Start with a decision": "1. 決めたいことから始める",
+    "Write the decision in one sentence, then define geography, customer, time period, and the confidence you need. For example:":
+      "決めたいことを1文で書き、地域、顧客、期間、必要な確度を定めます。例：",
+    "Should we test a paid bookkeeping product with UK freelancers in Q4 2026?":
+      "2026年第4四半期に、英国のフリーランス向けに有料の帳簿サービスを試すべきか？",
+    "A bounded question makes it easier to reject irrelevant data.":
+      "範囲を絞った問いなら、無関係なデータを除外しやすくなります。",
+    "2. Build an evidence plan": "2. 根拠の計画を立てる",
+    "List the minimum evidence needed before searching:":
+      "検索の前に、最低限必要な根拠を挙げます：",
+    "3. Use KovaGPT Search deliberately": "3. KovaGPTの検索を意図的に使う",
+    "Ask for the source title, publisher, publication date, and the exact claim each source is meant to support. Then open the links yourself. A well-formatted citation can still point to a weak, outdated, or misread page.":
+      "情報源のタイトル、発行元、公開日、それぞれが裏付ける具体的な主張を尋ね、リンクは自分で開いて確認しましょう。体裁の整った引用でも、弱い・古い・誤読されたページを指していることがあります。",
+    "4. Use source-backed search when needed": "4. 必要なら情報源付きの検索を使う",
+    "5. Triangulate important claims": "5. 重要な主張は複数の情報で確かめる",
+    "6. Label facts, inferences, and estimates": "6. 事実・推論・推定を区別する",
+    "Use three explicit buckets in the draft:": "下書きでは3つの区分を明示します：",
+    "Sourced fact:": "出典のある事実：",
+    "Inference:": "推論：",
+    "Estimate:": "推定：",
+    "This prevents a polished paragraph from making assumptions look as certain as published data.":
+      "こうすると、整った文章のせいで仮定が公表データと同じくらい確かに見えることを防げます。",
+    "7. Pressure-test the result": "7. 結果を厳しく検証する",
+    "Availability and verification": "提供状況と確認",
+    "KovaGPT can make mistakes, including with retrieved material. Search are provider-dependent. The":
+      "KovaGPTは取得した資料についても間違えることがあります。検索はプロバイダーに依存します。",
+    "Market research tools": "市場調査ツール",
+    "How to Choose AI Market Research Tools in 2026": "2026年のAI市場調査ツールの選び方",
+    "Build a tool stack by evidence type": "根拠の種類ごとにツールを組み合わせる",
+    "Useful for": "向いている用途",
+    "What to verify": "確認すべきこと",
+    "Where KovaGPT fits": "KovaGPTの役割",
+    "Source-backed Search depends on available search and AI providers. It can plan a longer research pass and produce a cited draft. Neither plan access nor the citations guarantee that a claim is correct.":
+      "情報源付きの検索は、利用できる検索・AIプロバイダーに依存します。長めの調査を計画し、引用付きの下書きを作れますが、プランや引用があっても主張の正しさは保証されません。",
+    "A practical selection scorecard": "実用的な選定スコアカード",
+    "Coverage:": "網羅性：",
+    "Method:": "手法：",
+    "Traceability:": "追跡可能性：",
+    "Freshness:": "鮮度：",
+    "Rights:": "権利：",
+    "Reliability:": "信頼性：",
+    "Cost:": "コスト：",
+    "Red flags": "要注意のサイン",
+    "Bottom line": "まとめ",
+    "Use AI to reduce the time spent organizing and drafting, then spend the saved time checking evidence. For KovaGPT, consult the":
+      "整理や下書きの時間をAIで短縮し、浮いた時間を根拠の確認に使いましょう。KovaGPTについては次を参照：",
+    "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.":
+      "KovaGPTでエラーを調べ、コードを説明し、テストを下書きし、リファクタリングを提案させたうえで、すべての変更を自分の開発環境で検証しましょう。",
+    "KovaGPT does not currently offer a standards-complete remote MCP connection for ChatGPT, Claude, Claude Code, or other external assistants.":
+      "KovaGPTは現在、ChatGPT、Claude、Claude Codeなど外部アシスタント向けの標準準拠のリモートMCP接続を提供していません。",
+    "An internal metadata endpoint may exist while this work is in development. It is not an installable MCP server and should not be added to an assistant.":
+      "開発中は内部向けのメタデータ用エンドポイントが存在する場合がありますが、インストール可能なMCPサーバーではなく、アシスタントに追加すべきではありません。",
     Cooking: "料理",
     "Plan and adapt recipes with food safety in view.": "食品の安全に配慮してレシピを計画・調整。",
     "Science and medicine": "科学と医療",
@@ -24352,6 +24641,63 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "최근 기록 최대 50개. 완료된 기록을 삭제하면 양쪽 모두에서 사라집니다.",
     "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
       "익숙한 Kova 화면에서 텍스트를 작성, 수정, 확인, 요약, 집계하세요.",
+    "AI market research guide": "AI 시장 조사 가이드",
+    "How to Use AI for Market Research Without Losing the Evidence":
+      "근거를 잃지 않고 AI로 시장 조사하는 법",
+    "Updated August 1, 2026 · 8 min read": "2026년 8월 1일 업데이트 · 8분 분량",
+    "Updated August 1, 2026 · 7 min read": "2026년 8월 1일 업데이트 · 7분 분량",
+    "1. Start with a decision": "1. 결정부터 시작하기",
+    "Write the decision in one sentence, then define geography, customer, time period, and the confidence you need. For example:":
+      "결정을 한 문장으로 쓰고 지역, 고객, 기간, 필요한 확신 수준을 정하세요. 예:",
+    "Should we test a paid bookkeeping product with UK freelancers in Q4 2026?":
+      "2026년 4분기에 영국 프리랜서 대상 유료 장부 관리 제품을 시험해야 할까?",
+    "A bounded question makes it easier to reject irrelevant data.":
+      "범위가 정해진 질문은 관련 없는 데이터를 걸러내기 쉽게 합니다.",
+    "2. Build an evidence plan": "2. 근거 계획 세우기",
+    "List the minimum evidence needed before searching:":
+      "검색 전에 필요한 최소 근거를 나열하세요:",
+    "3. Use KovaGPT Search deliberately": "3. KovaGPT 검색을 신중하게 쓰기",
+    "Ask for the source title, publisher, publication date, and the exact claim each source is meant to support. Then open the links yourself. A well-formatted citation can still point to a weak, outdated, or misread page.":
+      "출처 제목, 게시자, 게시일, 각 출처가 뒷받침하는 정확한 주장을 요청하고 링크를 직접 열어 보세요. 형식이 잘 갖춰진 인용도 약하거나 오래되었거나 잘못 읽힌 페이지일 수 있습니다.",
+    "4. Use source-backed search when needed": "4. 필요하면 출처 기반 검색 사용",
+    "5. Triangulate important claims": "5. 중요한 주장은 교차 검증하기",
+    "6. Label facts, inferences, and estimates": "6. 사실, 추론, 추정을 구분하기",
+    "Use three explicit buckets in the draft:": "초안에서 세 가지 범주를 분명히 쓰세요:",
+    "Sourced fact:": "출처 있는 사실:",
+    "Inference:": "추론:",
+    "Estimate:": "추정:",
+    "This prevents a polished paragraph from making assumptions look as certain as published data.":
+      "이렇게 하면 다듬어진 문단이 가정을 공개 데이터만큼 확실해 보이게 만드는 일을 막을 수 있습니다.",
+    "7. Pressure-test the result": "7. 결과를 검증하기",
+    "Availability and verification": "이용 가능 여부와 검증",
+    "KovaGPT can make mistakes, including with retrieved material. Search are provider-dependent. The":
+      "KovaGPT는 가져온 자료에서도 실수할 수 있습니다. 검색은 공급자에 따라 다릅니다.",
+    "Market research tools": "시장 조사 도구",
+    "How to Choose AI Market Research Tools in 2026": "2026년 AI 시장 조사 도구 고르는 법",
+    "Build a tool stack by evidence type": "근거 유형별로 도구 구성하기",
+    "Useful for": "유용한 용도",
+    "What to verify": "확인할 사항",
+    "Where KovaGPT fits": "KovaGPT의 역할",
+    "Source-backed Search depends on available search and AI providers. It can plan a longer research pass and produce a cited draft. Neither plan access nor the citations guarantee that a claim is correct.":
+      "출처 기반 검색은 이용 가능한 검색 및 AI 공급자에 따라 다릅니다. 긴 조사를 계획하고 인용이 있는 초안을 만들 수 있지만 요금제나 인용이 주장의 정확성을 보장하지는 않습니다.",
+    "A practical selection scorecard": "실용적인 선택 평가표",
+    "Coverage:": "범위:",
+    "Method:": "방법:",
+    "Traceability:": "추적 가능성:",
+    "Freshness:": "최신성:",
+    "Rights:": "권리:",
+    "Reliability:": "신뢰성:",
+    "Cost:": "비용:",
+    "Red flags": "위험 신호",
+    "Bottom line": "결론",
+    "Use AI to reduce the time spent organizing and drafting, then spend the saved time checking evidence. For KovaGPT, consult the":
+      "AI로 정리와 작성 시간을 줄이고 남은 시간에 근거를 확인하세요. KovaGPT는 다음을 참고하세요:",
+    "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.":
+      "KovaGPT로 오류를 살피고 코드를 설명하며 테스트를 작성하고 리팩터링을 제안받은 뒤, 모든 변경을 직접 개발 환경에서 검증하세요.",
+    "KovaGPT does not currently offer a standards-complete remote MCP connection for ChatGPT, Claude, Claude Code, or other external assistants.":
+      "KovaGPT는 현재 ChatGPT, Claude, Claude Code 등 외부 어시스턴트를 위한 표준 완비 원격 MCP 연결을 제공하지 않습니다.",
+    "An internal metadata endpoint may exist while this work is in development. It is not an installable MCP server and should not be added to an assistant.":
+      "개발 중에는 내부 메타데이터 엔드포인트가 있을 수 있지만 설치 가능한 MCP 서버가 아니므로 어시스턴트에 추가하면 안 됩니다.",
     Cooking: "요리",
     "Plan and adapt recipes with food safety in view.":
       "식품 안전을 고려해 레시피를 계획하고 조정하세요.",
@@ -28544,6 +28890,63 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "حتى 50 سجلًا حديثًا، وإزالة سجل منتهٍ تزيله لدى الطرفين.",
     "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
       "صِغ النص وراجعه وتحقق منه ولخّصه وعدّه في مساحات مركّزة بواجهة Kova المألوفة.",
+    "AI market research guide": "دليل أبحاث السوق بالذكاء الاصطناعي",
+    "How to Use AI for Market Research Without Losing the Evidence":
+      "كيف تستخدم الذكاء الاصطناعي في أبحاث السوق دون فقدان الأدلة",
+    "Updated August 1, 2026 · 8 min read": "حُدّث في 1 أغسطس 2026 · قراءة 8 دقائق",
+    "Updated August 1, 2026 · 7 min read": "حُدّث في 1 أغسطس 2026 · قراءة 7 دقائق",
+    "1. Start with a decision": "1. ابدأ بقرار",
+    "Write the decision in one sentence, then define geography, customer, time period, and the confidence you need. For example:":
+      "اكتب القرار في جملة واحدة ثم حدّد المنطقة والعميل والفترة ودرجة الثقة. مثلًا:",
+    "Should we test a paid bookkeeping product with UK freelancers in Q4 2026?":
+      "هل نختبر منتج محاسبة مدفوعًا مع المستقلين في المملكة المتحدة في الربع الرابع 2026؟",
+    "A bounded question makes it easier to reject irrelevant data.":
+      "السؤال المحدود يسهّل استبعاد البيانات غير المهمة.",
+    "2. Build an evidence plan": "2. ضع خطة للأدلة",
+    "List the minimum evidence needed before searching:": "اذكر الحد الأدنى من الأدلة قبل البحث:",
+    "3. Use KovaGPT Search deliberately": "3. استخدم بحث KovaGPT بوعي",
+    "Ask for the source title, publisher, publication date, and the exact claim each source is meant to support. Then open the links yourself. A well-formatted citation can still point to a weak, outdated, or misread page.":
+      "اطلب العنوان والناشر والتاريخ والادعاء الذي يدعمه كل مصدر، ثم افتح الروابط بنفسك. قد يشير استشهاد منسّق إلى صفحة ضعيفة أو قديمة.",
+    "4. Use source-backed search when needed": "4. استخدم البحث المدعوم بالمصادر عند الحاجة",
+    "5. Triangulate important claims": "5. تحقق من الادعاءات المهمة من عدة مصادر",
+    "6. Label facts, inferences, and estimates": "6. ميّز الحقائق والاستنتاجات والتقديرات",
+    "Use three explicit buckets in the draft:": "استخدم ثلاث فئات واضحة في المسودة:",
+    "Sourced fact:": "حقيقة موثّقة:",
+    "Inference:": "استنتاج:",
+    "Estimate:": "تقدير:",
+    "This prevents a polished paragraph from making assumptions look as certain as published data.":
+      "يمنع ذلك الفقرة المصقولة من إظهار الافتراضات بيقين البيانات المنشورة.",
+    "7. Pressure-test the result": "7. اختبر النتيجة بصرامة",
+    "Availability and verification": "التوفر والتحقق",
+    "KovaGPT can make mistakes, including with retrieved material. Search are provider-dependent. The":
+      "قد يخطئ KovaGPT حتى في المواد المسترجعة، ويعتمد البحث على المزوّد.",
+    "Market research tools": "أدوات أبحاث السوق",
+    "How to Choose AI Market Research Tools in 2026":
+      "كيف تختار أدوات أبحاث السوق بالذكاء الاصطناعي في 2026",
+    "Build a tool stack by evidence type": "ابنِ أدواتك حسب نوع الدليل",
+    "Useful for": "مفيد لـ",
+    "What to verify": "ما يجب التحقق منه",
+    "Where KovaGPT fits": "أين يناسب KovaGPT",
+    "Source-backed Search depends on available search and AI providers. It can plan a longer research pass and produce a cited draft. Neither plan access nor the citations guarantee that a claim is correct.":
+      "يعتمد البحث المدعوم بالمصادر على المزوّدين المتاحين، ويمكنه تخطيط بحث أطول وإنتاج مسودة موثّقة دون ضمان صحة الادعاءات.",
+    "A practical selection scorecard": "بطاقة اختيار عملية",
+    "Coverage:": "التغطية:",
+    "Method:": "المنهج:",
+    "Traceability:": "قابلية التتبع:",
+    "Freshness:": "الحداثة:",
+    "Rights:": "الحقوق:",
+    "Reliability:": "الموثوقية:",
+    "Cost:": "التكلفة:",
+    "Red flags": "علامات تحذير",
+    "Bottom line": "الخلاصة",
+    "Use AI to reduce the time spent organizing and drafting, then spend the saved time checking evidence. For KovaGPT, consult the":
+      "استخدم الذكاء الاصطناعي لتوفير وقت التنظيم والصياغة، وخصّصه للتحقق من الأدلة. بالنسبة لـ KovaGPT راجع",
+    "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.":
+      "استخدم KovaGPT لفحص الأخطاء وشرح الكود وصياغة الاختبارات واقتراح إعادة الهيكلة، ثم تحقق من كل تغيير في بيئتك.",
+    "KovaGPT does not currently offer a standards-complete remote MCP connection for ChatGPT, Claude, Claude Code, or other external assistants.":
+      "لا يوفر KovaGPT حاليًا اتصال MCP بعيدًا مكتملًا لـ ChatGPT أو Claude أو Claude Code أو غيرها.",
+    "An internal metadata endpoint may exist while this work is in development. It is not an installable MCP server and should not be added to an assistant.":
+      "قد توجد نقطة نهاية داخلية أثناء التطوير، لكنها ليست خادم MCP قابلًا للتثبيت.",
     Cooking: "الطبخ",
     "Plan and adapt recipes with food safety in view.":
       "خطّط للوصفات وعدّلها مع مراعاة سلامة الغذاء.",
