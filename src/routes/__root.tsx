@@ -38,6 +38,13 @@ const HYDRATION_READY_EVENT = "kova:hydrated";
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
 // applyThemeMode restores them atomically after setting the hydrated root class.
 const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
+  // The website keeps the desktop experience on every device. A native KovaGPT
+  // app shell identifies itself in its user agent and gets the phone-app
+  // presentation before first paint.
+  try {
+    if (/\bKovaGPTApp\//.test(navigator.userAgent))
+      document.documentElement.setAttribute("data-kova-surface", "app");
+  } catch {}
   let mode = "dark";
   try {
     const stored = localStorage.getItem("kova-theme-mode");

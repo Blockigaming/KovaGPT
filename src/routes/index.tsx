@@ -85,7 +85,7 @@ import {
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
-import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
+import { type Settings, DEFAULT_SETTINGS } from "@/lib/settings-types";
 
 const FreeOfferButton = lazy(() =>
   import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
@@ -524,40 +524,16 @@ function KovaGPT() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
-  const openSettings = useCallback(
-    (tab?: string) => {
-      // Keep Settings above the mobile drawer and preserve in-memory chat work.
-      if (
-        window.matchMedia(SIDEBAR_DRAWER_QUERY).matches ||
-        attachments.length ||
-        tempChat ||
-        isStreaming ||
-        result
-      ) {
-        settingsReturnFocusRef.current =
-          document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setSettingsTab(tab);
-        setSettingsOpen(true);
-        return;
-      }
-      if (principalReady) {
-        saveDraft(userKey, activeId, input);
-        if (activeId) savePendingActive(userKey, activeId);
-      }
-      void navigate({ to: "/settings/$section", params: { section: settingsSectionForTab(tab) } });
-    },
-    [
-      activeId,
-      attachments.length,
-      input,
-      isStreaming,
-      navigate,
-      principalReady,
-      result,
-      tempChat,
-      userKey,
-    ],
-  );
+  // Settings opens as a modal over the current chat on every screen, so the
+  // draft, attachments and any stream stay in place. /settings/$section deep
+  // links redirect here and dispatch kova-open-settings; navigating back to
+  // that route from this handler would bounce between the two forever.
+  const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }, []);
   // Listen for global open-settings events (fired from UserButton profile click).
   useEffect(() => {
     const h = (e: Event) => {
@@ -1055,14 +1031,22 @@ function KovaGPT() {
   useEffect(() => {
     if (!settingsReady || !settingsState.persist || typeof window === "undefined") return;
     const generation = storageGenerationRef.current;
-    const t = setTimeout(() => {
-      if (generation !== storageGenerationRef.current) return;
+    let saved = false;
+    const save = () => {
+      if (saved || generation !== storageGenerationRef.current) return;
+      saved = true;
       safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
       window.dispatchEvent(
         new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
       );
-    }, 400);
-    return () => clearTimeout(t);
+    };
+    const t = setTimeout(save, 400);
+    // A reload or tab close inside the debounce window still keeps the edit.
+    window.addEventListener("pagehide", save);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("pagehide", save);
+    };
   }, [settings, settingsReady, settingsState.persist, userKey]);
 
   useEffect(() => {
