@@ -379,7 +379,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Memory": "Memoria de KovaGPT",
     "Memory summary": "Resumen de memoria",
     "Your latest saved notes. Edit any memory below to keep it accurate.":
-      "Tus notas guardadas más recientes. Edita cualquier recuerdo para mantenerlo exacto.",
+      "Tus notas más recientes. Edita cualquier recuerdo para mantenerlo preciso.",
     "Search memories": "Buscar recuerdos",
     "Filter memories by source": "Filtrar recuerdos por origen",
     "Merge duplicates": "Combinar duplicados",
@@ -672,14 +672,14 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Connect tools and sources to Kova": "Conecta herramientas y fuentes a Kova",
     "Browse all connections": "Ver todas las conexiones",
     "Review saved account memories and project context. Temporary chats are never stored here.":
-      "Revisa los recuerdos guardados y el contexto de proyectos. Los chats temporales nunca se guardan aquí.",
+      "Revisa los recuerdos y el contexto de proyectos. Los chats temporales nunca se guardan aquí.",
     "No matching memories": "No hay recuerdos que coincidan",
     "No memories yet": "Aún no hay recuerdos",
     "Try a different search or show all memory sources.":
       "Prueba otra búsqueda o muestra todos los orígenes.",
     "Saved account memory": "Memoria guardada de la cuenta",
     "This saved memory will no longer be available as context. This cannot be undone.":
-      "Este recuerdo dejará de estar disponible como contexto. No se puede deshacer.",
+      "Este recuerdo dejará de usarse como contexto. No se puede deshacer.",
     "Updates from scheduled tasks, shared workspaces, and account activity.":
       "Novedades de tareas programadas, espacios compartidos y actividad de la cuenta.",
     "Notifications are private to your account.": "Las notificaciones son privadas de tu cuenta.",
@@ -2032,6 +2032,127 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Retention, Export, and Deletion": "Conservación, exportación y eliminación",
     "Sale and Advertising": "Venta y publicidad",
     "Children and Teens": "Niños y adolescentes",
+    "Privacy questions or requests:": "Preguntas o solicitudes de privacidad:",
+    "Generate an Image": "Generar una imagen",
+    "Invalid authorization request. Restart from your client.":
+      "Solicitud de autorización no válida. Reinicia desde tu cliente.",
+    "KovaGPT Service Status": "Estado del servicio de KovaGPT",
+    "This page is not connected to automated incident monitoring and does not claim that all systems are operational.":
+      "Esta página no está conectada a la monitorización automática y no afirma que todo funcione.",
+    "Check application health": "Comprobar estado de la aplicación",
+    "The health endpoint confirms whether the application server can respond. It does not guarantee that every external provider or account-specific feature is available.":
+      "El endpoint de estado confirma si el servidor responde. No garantiza que todos los proveedores o funciones estén disponibles.",
+    "Open health endpoint": "Abrir endpoint de estado",
+    "If KovaGPT is not loading, retry once and then":
+      "Si KovaGPT no carga, reinténtalo una vez y luego",
+    "Review Pricing": "Ver precios",
+    "Choosing an AI assistant": "Elegir un asistente de IA",
+    "How to Choose an AI Assistant in 2026": "Cómo elegir un asistente de IA en 2026",
+    "Use a task-based comparison": "Compara según tus tareas",
+    "Answer quality:": "Calidad de las respuestas:",
+    "Sources:": "Fuentes:",
+    "Workflow:": "Flujo de trabajo:",
+    "Privacy and control:": "Privacidad y control:",
+    "Total cost:": "Coste total:",
+    "Current KovaGPT mode access": "Acceso actual a modos de KovaGPT",
+    Plan: "Plan",
+    Modes: "Modos",
+    "Daily images": "Imágenes diarias",
+    "Run a short evaluation before subscribing": "Haz una prueba breve antes de suscribirte",
+    "Choose five real tasks, including one where a wrong answer would be obvious.":
+      "Elige cinco tareas reales, incluida una en la que un error sería evidente.",
+    "Use the same input and source files in each product where permitted.":
+      "Usa la misma entrada y archivos en cada producto cuando se permita.",
+    "Record whether the answer is correct, useful, editable, and easy to verify.":
+      "Anota si la respuesta es correcta, útil, editable y fácil de verificar.",
+    "Test the usage limit and recovery behavior that matters to your workflow.":
+      "Prueba el límite de uso y la recuperación relevantes para tu flujo.",
+    "Review the live price and terms immediately before purchase.":
+      "Revisa el precio y los términos justo antes de comprar.",
+    "KovaGPT availability notes": "Notas de disponibilidad de KovaGPT",
+    "Frequently asked questions": "Preguntas frecuentes",
+    "Finances · KovaGPT": "Finanzas · KovaGPT",
+    "Back to Connections": "Volver a Conexiones",
+    "Sign in to connect a bank": "Inicia sesión para conectar un banco",
+    "Review shared text · KovaGPT": "Revisar texto compartido · KovaGPT",
+    "Review shared text": "Revisar texto compartido",
+    "Sign in to review this share. It expires after five minutes.":
+      "Inicia sesión para revisarlo. Caduca en cinco minutos.",
+    "Loading the shared text…": "Cargando el texto compartido…",
+    "Review this text before adding it to a chat. Nothing is sent to a model until you send the message.":
+      "Revisa este texto antes de añadirlo. No se envía nada al modelo hasta que envíes el mensaje.",
+    Discard: "Descartar",
+    "Storage is unavailable or full. Free space and retry.":
+      "El almacenamiento no está disponible o está lleno. Libera espacio y reintenta.",
+    "Regular chat continues. Earlier temporary turns stay out of memory.":
+      "El chat normal continúa. Los turnos temporales anteriores no pasan a la memoria.",
+    "Message kept after usage limit": "Mensaje conservado tras el límite de uso",
+    "Discard kept version": "Descartar versión conservada",
+    "Temporary chat. Start a new chat to change this setting.":
+      "Chat temporal. Inicia uno nuevo para cambiar este ajuste.",
+    "Resize conversation and result": "Cambiar tamaño de conversación y resultado",
+    "Loading result editor…": "Cargando editor de resultados…",
+    "Resize conversation and attachment preview": "Cambiar tamaño de conversación y vista previa",
+    "Review and edit the durable context KovaGPT can reuse in future conversations.":
+      "Revisa y edita el contexto que KovaGPT puede reutilizar en futuras conversaciones.",
+    "Your saved memories are temporarily unavailable. Try again in a moment.":
+      "Tus recuerdos no están disponibles. Inténtalo en un momento.",
+    "Pricing administration": "Administración de precios",
+    "Saved browser data was cleared. Reload this page to reopen administration.":
+      "Se borraron los datos del navegador. Recarga para volver a la administración.",
+    "New proposal": "Nueva propuesta",
+    "Proposal type": "Tipo de propuesta",
+    "Developer pricing": "Precios para desarrolladores",
+    "Prepaid credit offer": "Oferta de crédito prepago",
+    "Proposal JSON": "JSON de la propuesta",
+    "Validate and save draft": "Validar y guardar borrador",
+    "Status:": "Estado:",
+    "Review SHA-256:": "SHA-256 de revisión:",
+    "Approve this exact revision": "Aprobar esta revisión exacta",
+    "Retirement reason": "Motivo de retirada",
+    "Retire these terms": "Retirar estos términos",
+    "KovaGPT Graph": "Grafo de KovaGPT",
+    "Knowledge Graph": "Grafo de conocimiento",
+    "Explore explicit relationships among your authorized Projects, chats, files, artifacts, memories, and Context Packs.":
+      "Explora las relaciones entre tus proyectos, chats, archivos, artefactos, recuerdos y paquetes de contexto.",
+    "Search knowledge graph": "Buscar en el grafo",
+    "Search graph": "Buscar en el grafo",
+    "Knowledge types": "Tipos de conocimiento",
+    Graph: "Grafo",
+    Timeline: "Cronología",
+    "Sign in to build your authorized Knowledge Graph.":
+      "Inicia sesión para crear tu grafo de conocimiento.",
+    "Loading knowledge graph": "Cargando grafo",
+    "No connected knowledge found": "No se encontró conocimiento conectado",
+    "Adjust filters or add Projects, files, memories, and Context Packs.":
+      "Ajusta los filtros o añade proyectos, archivos, recuerdos y paquetes.",
+    "Reset filters": "Restablecer filtros",
+    "Open Projects": "Abrir proyectos",
+    "Knowledge timeline": "Cronología del conocimiento",
+    Strength: "Intensidad",
+    "Relationship clusters": "Grupos de relaciones",
+    "Clusters use explicit Project membership and Context Pack inclusion only.":
+      "Los grupos solo usan la pertenencia a proyectos y paquetes de contexto.",
+    "Selected knowledge": "Conocimiento seleccionado",
+    "Open resource": "Abrir recurso",
+    Relationships: "Relaciones",
+    "Select a node to inspect its explicit relationships.":
+      "Selecciona un nodo para ver sus relaciones.",
+    "Sign in to moderation": "Iniciar sesión en moderación",
+    "Device data was cleared. Reload to reopen moderation.":
+      "Se borraron los datos. Recarga para volver a moderación.",
+    "Kova moderation": "Moderación de Kovas",
+    "Refresh reports": "Actualizar denuncias",
+    "Kova ID": "ID de Kova",
+    "Inspect moderation state": "Ver estado de moderación",
+    "Decision reason": "Motivo de la decisión",
+    "Loading moderation state…": "Cargando estado…",
+    "No open reports.": "No hay denuncias abiertas.",
+    "Published snapshot": "Versión publicada",
+    "Use the Kova ID lookup to inspect its current published snapshot. Private drafts are excluded.":
+      "Usa la búsqueda por ID para ver la versión publicada. Los borradores privados se excluyen.",
+    "Block Kova": "Bloquear Kova",
+    "Restore access": "Restaurar acceso",
   },
   fr: {
     Neutral: "Neutre",
@@ -2413,7 +2534,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Memory": "Mémoire KovaGPT",
     "Memory summary": "Résumé de la mémoire",
     "Your latest saved notes. Edit any memory below to keep it accurate.":
-      "Vos dernières notes. Modifiez un souvenir ci-dessous pour qu'il reste exact.",
+      "Vos dernières notes. Modifiez un souvenir pour le garder exact.",
     "Search memories": "Rechercher des souvenirs",
     "Filter memories by source": "Filtrer les souvenirs par source",
     "Merge duplicates": "Fusionner les doublons",
@@ -2706,14 +2827,14 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Connect tools and sources to Kova": "Connectez des outils et sources à Kova",
     "Browse all connections": "Voir toutes les connexions",
     "Review saved account memories and project context. Temporary chats are never stored here.":
-      "Consultez les souvenirs du compte et le contexte des projets. Les discussions temporaires ne sont jamais stockées ici.",
+      "Consultez mémoires et contexte de projet. Les discussions temporaires ne sont jamais stockées ici.",
     "No matching memories": "Aucun souvenir correspondant",
     "No memories yet": "Aucun souvenir pour l'instant",
     "Try a different search or show all memory sources.":
       "Essayez une autre recherche ou affichez toutes les sources.",
     "Saved account memory": "Mémoire du compte",
     "This saved memory will no longer be available as context. This cannot be undone.":
-      "Ce souvenir ne sera plus disponible comme contexte. Action irréversible.",
+      "Ce souvenir ne sera plus utilisé comme contexte. Action irréversible.",
     "Updates from scheduled tasks, shared workspaces, and account activity.":
       "Mises à jour des tâches planifiées, espaces partagés et activité du compte.",
     "Notifications are private to your account.": "Les notifications sont privées.",
@@ -4072,6 +4193,126 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Retention, Export, and Deletion": "Conservation, export et suppression",
     "Sale and Advertising": "Vente et publicité",
     "Children and Teens": "Enfants et adolescents",
+    "Privacy questions or requests:": "Questions ou demandes de confidentialité :",
+    "Generate an Image": "Générer une image",
+    "Invalid authorization request. Restart from your client.":
+      "Demande d'autorisation invalide. Recommencez depuis votre client.",
+    "KovaGPT Service Status": "État du service KovaGPT",
+    "This page is not connected to automated incident monitoring and does not claim that all systems are operational.":
+      "Cette page n'est pas reliée à une surveillance automatique et n'affirme pas que tout fonctionne.",
+    "Check application health": "Vérifier l'état de l'application",
+    "The health endpoint confirms whether the application server can respond. It does not guarantee that every external provider or account-specific feature is available.":
+      "Le point de santé confirme que le serveur répond, sans garantir chaque fournisseur ou fonction.",
+    "Open health endpoint": "Ouvrir le point de santé",
+    "If KovaGPT is not loading, retry once and then": "Si KovaGPT ne se charge pas, réessayez puis",
+    "Review Pricing": "Voir les tarifs",
+    "Choosing an AI assistant": "Choisir un assistant IA",
+    "How to Choose an AI Assistant in 2026": "Comment choisir un assistant IA en 2026",
+    "Use a task-based comparison": "Comparez selon vos tâches",
+    "Answer quality:": "Qualité des réponses :",
+    "Sources:": "Sources :",
+    "Workflow:": "Flux de travail :",
+    "Privacy and control:": "Confidentialité et contrôle :",
+    "Total cost:": "Coût total :",
+    "Current KovaGPT mode access": "Accès actuel aux modes KovaGPT",
+    Plan: "Forfait",
+    Modes: "Modes",
+    "Daily images": "Images par jour",
+    "Run a short evaluation before subscribing": "Faites un court essai avant de vous abonner",
+    "Choose five real tasks, including one where a wrong answer would be obvious.":
+      "Choisissez cinq tâches réelles, dont une où une erreur serait évidente.",
+    "Use the same input and source files in each product where permitted.":
+      "Utilisez les mêmes entrées et fichiers dans chaque produit si permis.",
+    "Record whether the answer is correct, useful, editable, and easy to verify.":
+      "Notez si la réponse est juste, utile, modifiable et vérifiable.",
+    "Test the usage limit and recovery behavior that matters to your workflow.":
+      "Testez la limite d'usage et la reprise utiles à votre flux.",
+    "Review the live price and terms immediately before purchase.":
+      "Vérifiez le prix et les conditions juste avant l'achat.",
+    "KovaGPT availability notes": "Notes de disponibilité KovaGPT",
+    "Frequently asked questions": "Questions fréquentes",
+    "Finances · KovaGPT": "Finances · KovaGPT",
+    "Back to Connections": "Retour aux connexions",
+    "Sign in to connect a bank": "Connectez-vous pour relier une banque",
+    "Review shared text · KovaGPT": "Vérifier le texte partagé · KovaGPT",
+    "Review shared text": "Vérifier le texte partagé",
+    "Sign in to review this share. It expires after five minutes.":
+      "Connectez-vous pour le vérifier. Il expire après cinq minutes.",
+    "Loading the shared text…": "Chargement du texte partagé…",
+    "Review this text before adding it to a chat. Nothing is sent to a model until you send the message.":
+      "Vérifiez ce texte avant de l'ajouter. Rien n'est envoyé au modèle avant votre envoi.",
+    Discard: "Abandonner",
+    "Storage is unavailable or full. Free space and retry.":
+      "Stockage indisponible ou plein. Libérez de l'espace et réessayez.",
+    "Regular chat continues. Earlier temporary turns stay out of memory.":
+      "La discussion normale reprend. Les échanges temporaires restent hors mémoire.",
+    "Message kept after usage limit": "Message conservé après la limite",
+    "Discard kept version": "Abandonner la version conservée",
+    "Temporary chat. Start a new chat to change this setting.":
+      "Discussion temporaire. Lancez-en une nouvelle pour changer ce réglage.",
+    "Resize conversation and result": "Redimensionner discussion et résultat",
+    "Loading result editor…": "Chargement de l'éditeur…",
+    "Resize conversation and attachment preview": "Redimensionner discussion et aperçu",
+    "Review and edit the durable context KovaGPT can reuse in future conversations.":
+      "Consultez et modifiez le contexte que KovaGPT peut réutiliser.",
+    "Your saved memories are temporarily unavailable. Try again in a moment.":
+      "Vos mémoires sont momentanément indisponibles.",
+    "Pricing administration": "Administration des tarifs",
+    "Saved browser data was cleared. Reload this page to reopen administration.":
+      "Données du navigateur effacées. Rechargez pour rouvrir l'administration.",
+    "New proposal": "Nouvelle proposition",
+    "Proposal type": "Type de proposition",
+    "Developer pricing": "Tarifs développeurs",
+    "Prepaid credit offer": "Offre de crédit prépayé",
+    "Proposal JSON": "JSON de la proposition",
+    "Validate and save draft": "Valider et enregistrer",
+    "Status:": "Statut :",
+    "Review SHA-256:": "SHA-256 de révision :",
+    "Approve this exact revision": "Approuver cette révision précise",
+    "Retirement reason": "Motif du retrait",
+    "Retire these terms": "Retirer ces conditions",
+    "KovaGPT Graph": "Graphe KovaGPT",
+    "Knowledge Graph": "Graphe de connaissances",
+    "Explore explicit relationships among your authorized Projects, chats, files, artifacts, memories, and Context Packs.":
+      "Explorez les liens entre vos projets, discussions, fichiers, artefacts, mémoires et packs de contexte.",
+    "Search knowledge graph": "Rechercher dans le graphe",
+    "Search graph": "Rechercher",
+    "Knowledge types": "Types de connaissances",
+    Graph: "Graphe",
+    Timeline: "Chronologie",
+    "Sign in to build your authorized Knowledge Graph.":
+      "Connectez-vous pour créer votre graphe de connaissances.",
+    "Loading knowledge graph": "Chargement du graphe",
+    "No connected knowledge found": "Aucune connaissance liée trouvée",
+    "Adjust filters or add Projects, files, memories, and Context Packs.":
+      "Ajustez les filtres ou ajoutez projets, fichiers, mémoires et packs.",
+    "Reset filters": "Réinitialiser les filtres",
+    "Open Projects": "Ouvrir les projets",
+    "Knowledge timeline": "Chronologie des connaissances",
+    Strength: "Force",
+    "Relationship clusters": "Groupes de relations",
+    "Clusters use explicit Project membership and Context Pack inclusion only.":
+      "Les groupes reposent seulement sur l'appartenance aux projets et packs.",
+    "Selected knowledge": "Connaissance sélectionnée",
+    "Open resource": "Ouvrir la ressource",
+    Relationships: "Relations",
+    "Select a node to inspect its explicit relationships.":
+      "Sélectionnez un nœud pour voir ses relations.",
+    "Sign in to moderation": "Connexion à la modération",
+    "Device data was cleared. Reload to reopen moderation.":
+      "Données effacées. Rechargez pour rouvrir la modération.",
+    "Kova moderation": "Modération des Kovas",
+    "Refresh reports": "Actualiser les signalements",
+    "Kova ID": "ID Kova",
+    "Inspect moderation state": "Voir l'état de modération",
+    "Decision reason": "Motif de la décision",
+    "Loading moderation state…": "Chargement de l'état…",
+    "No open reports.": "Aucun signalement ouvert.",
+    "Published snapshot": "Instantané publié",
+    "Use the Kova ID lookup to inspect its current published snapshot. Private drafts are excluded.":
+      "Utilisez la recherche par ID pour voir la version publiée. Brouillons privés exclus.",
+    "Block Kova": "Bloquer le Kova",
+    "Restore access": "Rétablir l'accès",
   },
   de: {
     Neutral: "Neutral",
@@ -4449,7 +4690,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Memory": "KovaGPT-Gedächtnis",
     "Memory summary": "Gedächtnis-Zusammenfassung",
     "Your latest saved notes. Edit any memory below to keep it accurate.":
-      "Deine neuesten Notizen. Bearbeite Erinnerungen unten, damit sie stimmen.",
+      "Deine neuesten Notizen. Bearbeite Erinnerungen, damit sie stimmen.",
     "Search memories": "Erinnerungen durchsuchen",
     "Filter memories by source": "Erinnerungen nach Quelle filtern",
     "Merge duplicates": "Duplikate zusammenführen",
@@ -4744,16 +4985,16 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Connect tools and sources to Kova": "Tools und Quellen mit Kova verbinden",
     "Browse all connections": "Alle Verbindungen ansehen",
     "Review saved account memories and project context. Temporary chats are never stored here.":
-      "Gespeicherte Erinnerungen und Projektkontext prüfen. Temporäre Chats werden hier nie gespeichert.",
+      "Gespeicherte Erinnerungen und Projektkontext prüfen. Temporäre Chats werden nie gespeichert.",
     "No matching memories": "Keine passenden Erinnerungen",
     "No memories yet": "Noch keine Erinnerungen",
     "Try a different search or show all memory sources.":
       "Versuche eine andere Suche oder zeige alle Quellen.",
     "Saved account memory": "Gespeichertes Kontogedächtnis",
     "This saved memory will no longer be available as context. This cannot be undone.":
-      "Diese Erinnerung steht nicht mehr als Kontext zur Verfügung. Das kann nicht rückgängig gemacht werden.",
+      "Diese Erinnerung steht nicht mehr als Kontext zur Verfügung. Nicht umkehrbar.",
     "Updates from scheduled tasks, shared workspaces, and account activity.":
-      "Neuigkeiten aus geplanten Aufgaben, geteilten Arbeitsbereichen und Kontoaktivität.",
+      "Neuigkeiten aus geplanten Aufgaben, geteilten Bereichen und Kontoaktivität.",
     "Notifications are private to your account.": "Benachrichtigungen sind privat.",
     "No matching notifications": "Keine passenden Benachrichtigungen",
     "No notifications": "Keine Benachrichtigungen",
@@ -6103,6 +6344,127 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Retention, Export, and Deletion": "Aufbewahrung, Export und Löschung",
     "Sale and Advertising": "Verkauf und Werbung",
     "Children and Teens": "Kinder und Jugendliche",
+    "Privacy questions or requests:": "Datenschutzfragen oder -anfragen:",
+    "Generate an Image": "Bild erstellen",
+    "Invalid authorization request. Restart from your client.":
+      "Ungültige Autorisierungsanfrage. Starte erneut im Client.",
+    "KovaGPT Service Status": "KovaGPT-Dienststatus",
+    "This page is not connected to automated incident monitoring and does not claim that all systems are operational.":
+      "Diese Seite ist nicht mit automatischer Überwachung verbunden und behauptet nicht, dass alles läuft.",
+    "Check application health": "App-Zustand prüfen",
+    "The health endpoint confirms whether the application server can respond. It does not guarantee that every external provider or account-specific feature is available.":
+      "Der Health-Endpunkt bestätigt, dass der Server antwortet – nicht, dass jeder Anbieter verfügbar ist.",
+    "Open health endpoint": "Health-Endpunkt öffnen",
+    "If KovaGPT is not loading, retry once and then":
+      "Wenn KovaGPT nicht lädt, versuche es einmal erneut und dann",
+    "Review Pricing": "Preise ansehen",
+    "Choosing an AI assistant": "Einen KI-Assistenten wählen",
+    "How to Choose an AI Assistant in 2026": "So wählst du 2026 einen KI-Assistenten",
+    "Use a task-based comparison": "Nach Aufgaben vergleichen",
+    "Answer quality:": "Antwortqualität:",
+    "Sources:": "Quellen:",
+    "Workflow:": "Arbeitsablauf:",
+    "Privacy and control:": "Datenschutz und Kontrolle:",
+    "Total cost:": "Gesamtkosten:",
+    "Current KovaGPT mode access": "Aktueller Zugriff auf KovaGPT-Modi",
+    Plan: "Tarif",
+    Modes: "Modi",
+    "Daily images": "Bilder pro Tag",
+    "Run a short evaluation before subscribing": "Vor dem Abo kurz testen",
+    "Choose five real tasks, including one where a wrong answer would be obvious.":
+      "Wähle fünf echte Aufgaben, darunter eine mit offensichtlicher Fehlerkennung.",
+    "Use the same input and source files in each product where permitted.":
+      "Nutze, wo erlaubt, dieselben Eingaben und Dateien in jedem Produkt.",
+    "Record whether the answer is correct, useful, editable, and easy to verify.":
+      "Notiere, ob die Antwort korrekt, nützlich, bearbeitbar und prüfbar ist.",
+    "Test the usage limit and recovery behavior that matters to your workflow.":
+      "Teste Nutzungslimit und Wiederaufnahme, die für dich zählen.",
+    "Review the live price and terms immediately before purchase.":
+      "Prüfe Preis und Bedingungen direkt vor dem Kauf.",
+    "KovaGPT availability notes": "Hinweise zur Verfügbarkeit von KovaGPT",
+    "Frequently asked questions": "Häufige Fragen",
+    "Finances · KovaGPT": "Finanzen · KovaGPT",
+    "Back to Connections": "Zurück zu Verbindungen",
+    "Sign in to connect a bank": "Melde dich an, um eine Bank zu verbinden",
+    "Review shared text · KovaGPT": "Geteilten Text prüfen · KovaGPT",
+    "Review shared text": "Geteilten Text prüfen",
+    "Sign in to review this share. It expires after five minutes.":
+      "Melde dich an, um es zu prüfen. Läuft nach fünf Minuten ab.",
+    "Loading the shared text…": "Geteilter Text wird geladen…",
+    "Review this text before adding it to a chat. Nothing is sent to a model until you send the message.":
+      "Prüfe den Text vor dem Einfügen. Nichts geht ans Modell, bevor du sendest.",
+    Discard: "Verwerfen",
+    "Storage is unavailable or full. Free space and retry.":
+      "Speicher nicht verfügbar oder voll. Platz schaffen und erneut versuchen.",
+    "Regular chat continues. Earlier temporary turns stay out of memory.":
+      "Normaler Chat geht weiter. Frühere temporäre Runden bleiben aus dem Gedächtnis.",
+    "Message kept after usage limit": "Nachricht nach Limit behalten",
+    "Discard kept version": "Behaltene Version verwerfen",
+    "Temporary chat. Start a new chat to change this setting.":
+      "Temporärer Chat. Starte einen neuen Chat, um das zu ändern.",
+    "Resize conversation and result": "Gespräch und Ergebnis skalieren",
+    "Loading result editor…": "Ergebniseditor wird geladen…",
+    "Resize conversation and attachment preview": "Gespräch und Vorschau skalieren",
+    "Review and edit the durable context KovaGPT can reuse in future conversations.":
+      "Prüfe und bearbeite den Kontext, den KovaGPT künftig nutzen kann.",
+    "Your saved memories are temporarily unavailable. Try again in a moment.":
+      "Deine Erinnerungen sind kurz nicht verfügbar.",
+    "Pricing administration": "Preisverwaltung",
+    "Saved browser data was cleared. Reload this page to reopen administration.":
+      "Browserdaten gelöscht. Lade neu, um die Verwaltung zu öffnen.",
+    "New proposal": "Neuer Vorschlag",
+    "Proposal type": "Vorschlagstyp",
+    "Developer pricing": "Entwicklerpreise",
+    "Prepaid credit offer": "Prepaid-Guthabenangebot",
+    "Proposal JSON": "Vorschlags-JSON",
+    "Validate and save draft": "Prüfen und Entwurf speichern",
+    "Status:": "Status:",
+    "Review SHA-256:": "Prüf-SHA-256:",
+    "Approve this exact revision": "Genau diese Version freigeben",
+    "Retirement reason": "Grund für die Ausmusterung",
+    "Retire these terms": "Diese Bedingungen ausmustern",
+    "KovaGPT Graph": "KovaGPT-Graph",
+    "Knowledge Graph": "Wissensgraph",
+    "Explore explicit relationships among your authorized Projects, chats, files, artifacts, memories, and Context Packs.":
+      "Erkunde Beziehungen zwischen Projekten, Chats, Dateien, Artefakten, Erinnerungen und Kontextpaketen.",
+    "Search knowledge graph": "Wissensgraph durchsuchen",
+    "Search graph": "Graph durchsuchen",
+    "Knowledge types": "Wissenstypen",
+    Graph: "Graph",
+    Timeline: "Zeitachse",
+    "Sign in to build your authorized Knowledge Graph.":
+      "Melde dich an, um deinen Wissensgraphen aufzubauen.",
+    "Loading knowledge graph": "Wissensgraph wird geladen",
+    "No connected knowledge found": "Kein verbundenes Wissen gefunden",
+    "Adjust filters or add Projects, files, memories, and Context Packs.":
+      "Passe Filter an oder füge Projekte, Dateien, Erinnerungen und Pakete hinzu.",
+    "Reset filters": "Filter zurücksetzen",
+    "Open Projects": "Projekte öffnen",
+    "Knowledge timeline": "Wissens-Zeitachse",
+    Strength: "Stärke",
+    "Relationship clusters": "Beziehungscluster",
+    "Clusters use explicit Project membership and Context Pack inclusion only.":
+      "Cluster nutzen nur Projekt- und Kontextpaket-Zugehörigkeit.",
+    "Selected knowledge": "Ausgewähltes Wissen",
+    "Open resource": "Ressource öffnen",
+    Relationships: "Beziehungen",
+    "Select a node to inspect its explicit relationships.":
+      "Wähle einen Knoten, um seine Beziehungen zu sehen.",
+    "Sign in to moderation": "Bei Moderation anmelden",
+    "Device data was cleared. Reload to reopen moderation.":
+      "Gerätedaten gelöscht. Lade neu für die Moderation.",
+    "Kova moderation": "Kova-Moderation",
+    "Refresh reports": "Meldungen aktualisieren",
+    "Kova ID": "Kova-ID",
+    "Inspect moderation state": "Moderationsstatus prüfen",
+    "Decision reason": "Entscheidungsgrund",
+    "Loading moderation state…": "Status wird geladen…",
+    "No open reports.": "Keine offenen Meldungen.",
+    "Published snapshot": "Veröffentlichter Stand",
+    "Use the Kova ID lookup to inspect its current published snapshot. Private drafts are excluded.":
+      "Nutze die ID-Suche für den veröffentlichten Stand. Private Entwürfe sind ausgeschlossen.",
+    "Block Kova": "Kova sperren",
+    "Restore access": "Zugriff wiederherstellen",
   },
   "pt-BR": {
     Neutral: "Neutro",
@@ -6476,7 +6838,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Memory": "Memória do KovaGPT",
     "Memory summary": "Resumo da memória",
     "Your latest saved notes. Edit any memory below to keep it accurate.":
-      "Suas notas mais recentes. Edite qualquer memória abaixo para mantê-la correta.",
+      "Suas notas mais recentes. Edite qualquer memória para mantê-la correta.",
     "Search memories": "Pesquisar memórias",
     "Filter memories by source": "Filtrar memórias por origem",
     "Merge duplicates": "Mesclar duplicados",
@@ -6768,16 +7130,16 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Connect tools and sources to Kova": "Conecte ferramentas e fontes ao Kova",
     "Browse all connections": "Ver todas as conexões",
     "Review saved account memories and project context. Temporary chats are never stored here.":
-      "Revise as memórias salvas e o contexto dos projetos. Chats temporários nunca ficam aqui.",
+      "Revise memórias e contexto de projetos. Chats temporários nunca ficam aqui.",
     "No matching memories": "Nenhuma memória correspondente",
     "No memories yet": "Nenhuma memória ainda",
     "Try a different search or show all memory sources.":
       "Tente outra pesquisa ou mostre todas as origens.",
     "Saved account memory": "Memória salva da conta",
     "This saved memory will no longer be available as context. This cannot be undone.":
-      "Esta memória não estará mais disponível como contexto. Não é possível desfazer.",
+      "Esta memória deixará de ser usada como contexto. Não dá para desfazer.",
     "Updates from scheduled tasks, shared workspaces, and account activity.":
-      "Atualizações de tarefas agendadas, espaços compartilhados e atividade da conta.",
+      "Atualizações de tarefas agendadas, espaços compartilhados e da conta.",
     "Notifications are private to your account.": "As notificações são privadas da sua conta.",
     "No matching notifications": "Nenhuma notificação correspondente",
     "No notifications": "Nenhuma notificação",
@@ -8122,6 +8484,127 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Retention, Export, and Deletion": "Retenção, exportação e exclusão",
     "Sale and Advertising": "Venda e publicidade",
     "Children and Teens": "Crianças e adolescentes",
+    "Privacy questions or requests:": "Dúvidas ou solicitações de privacidade:",
+    "Generate an Image": "Gerar uma imagem",
+    "Invalid authorization request. Restart from your client.":
+      "Solicitação de autorização inválida. Reinicie pelo cliente.",
+    "KovaGPT Service Status": "Status do serviço KovaGPT",
+    "This page is not connected to automated incident monitoring and does not claim that all systems are operational.":
+      "Esta página não está ligada a monitoramento automático e não afirma que tudo funciona.",
+    "Check application health": "Verificar saúde do app",
+    "The health endpoint confirms whether the application server can respond. It does not guarantee that every external provider or account-specific feature is available.":
+      "O endpoint confirma se o servidor responde, sem garantir todos os provedores e recursos.",
+    "Open health endpoint": "Abrir endpoint de saúde",
+    "If KovaGPT is not loading, retry once and then":
+      "Se o KovaGPT não carregar, tente uma vez e depois",
+    "Review Pricing": "Ver preços",
+    "Choosing an AI assistant": "Escolher um assistente de IA",
+    "How to Choose an AI Assistant in 2026": "Como escolher um assistente de IA em 2026",
+    "Use a task-based comparison": "Compare por tarefas",
+    "Answer quality:": "Qualidade das respostas:",
+    "Sources:": "Fontes:",
+    "Workflow:": "Fluxo de trabalho:",
+    "Privacy and control:": "Privacidade e controle:",
+    "Total cost:": "Custo total:",
+    "Current KovaGPT mode access": "Acesso atual aos modos do KovaGPT",
+    Plan: "Plano",
+    Modes: "Modos",
+    "Daily images": "Imagens diárias",
+    "Run a short evaluation before subscribing": "Faça um teste curto antes de assinar",
+    "Choose five real tasks, including one where a wrong answer would be obvious.":
+      "Escolha cinco tarefas reais, incluindo uma em que um erro seria óbvio.",
+    "Use the same input and source files in each product where permitted.":
+      "Use a mesma entrada e arquivos em cada produto, quando permitido.",
+    "Record whether the answer is correct, useful, editable, and easy to verify.":
+      "Anote se a resposta é correta, útil, editável e fácil de verificar.",
+    "Test the usage limit and recovery behavior that matters to your workflow.":
+      "Teste o limite de uso e a recuperação relevantes para você.",
+    "Review the live price and terms immediately before purchase.":
+      "Revise o preço e os termos logo antes de comprar.",
+    "KovaGPT availability notes": "Notas de disponibilidade do KovaGPT",
+    "Frequently asked questions": "Perguntas frequentes",
+    "Finances · KovaGPT": "Finanças · KovaGPT",
+    "Back to Connections": "Voltar a Conexões",
+    "Sign in to connect a bank": "Entre para conectar um banco",
+    "Review shared text · KovaGPT": "Revisar texto compartilhado · KovaGPT",
+    "Review shared text": "Revisar texto compartilhado",
+    "Sign in to review this share. It expires after five minutes.":
+      "Entre para revisar. Expira em cinco minutos.",
+    "Loading the shared text…": "Carregando o texto…",
+    "Review this text before adding it to a chat. Nothing is sent to a model until you send the message.":
+      "Revise o texto antes de adicionar. Nada vai ao modelo até você enviar.",
+    Discard: "Descartar",
+    "Storage is unavailable or full. Free space and retry.":
+      "Armazenamento indisponível ou cheio. Libere espaço e tente de novo.",
+    "Regular chat continues. Earlier temporary turns stay out of memory.":
+      "O chat normal continua. Turnos temporários anteriores ficam fora da memória.",
+    "Message kept after usage limit": "Mensagem mantida após o limite",
+    "Discard kept version": "Descartar versão mantida",
+    "Temporary chat. Start a new chat to change this setting.":
+      "Chat temporário. Inicie outro para mudar esta opção.",
+    "Resize conversation and result": "Redimensionar conversa e resultado",
+    "Loading result editor…": "Carregando editor…",
+    "Resize conversation and attachment preview": "Redimensionar conversa e prévia",
+    "Review and edit the durable context KovaGPT can reuse in future conversations.":
+      "Revise e edite o contexto que o KovaGPT pode reutilizar.",
+    "Your saved memories are temporarily unavailable. Try again in a moment.":
+      "Suas memórias estão indisponíveis no momento.",
+    "Pricing administration": "Administração de preços",
+    "Saved browser data was cleared. Reload this page to reopen administration.":
+      "Dados do navegador apagados. Recarregue para abrir a administração.",
+    "New proposal": "Nova proposta",
+    "Proposal type": "Tipo de proposta",
+    "Developer pricing": "Preços para desenvolvedores",
+    "Prepaid credit offer": "Oferta de crédito pré-pago",
+    "Proposal JSON": "JSON da proposta",
+    "Validate and save draft": "Validar e salvar rascunho",
+    "Status:": "Status:",
+    "Review SHA-256:": "SHA-256 da revisão:",
+    "Approve this exact revision": "Aprovar esta revisão exata",
+    "Retirement reason": "Motivo da retirada",
+    "Retire these terms": "Retirar estes termos",
+    "KovaGPT Graph": "Grafo do KovaGPT",
+    "Knowledge Graph": "Grafo de conhecimento",
+    "Explore explicit relationships among your authorized Projects, chats, files, artifacts, memories, and Context Packs.":
+      "Explore relações entre projetos, chats, arquivos, artefatos, memórias e pacotes de contexto.",
+    "Search knowledge graph": "Pesquisar no grafo",
+    "Search graph": "Pesquisar grafo",
+    "Knowledge types": "Tipos de conhecimento",
+    Graph: "Grafo",
+    Timeline: "Linha do tempo",
+    "Sign in to build your authorized Knowledge Graph.":
+      "Entre para criar seu grafo de conhecimento.",
+    "Loading knowledge graph": "Carregando grafo",
+    "No connected knowledge found": "Nenhum conhecimento conectado",
+    "Adjust filters or add Projects, files, memories, and Context Packs.":
+      "Ajuste filtros ou adicione projetos, arquivos, memórias e pacotes.",
+    "Reset filters": "Redefinir filtros",
+    "Open Projects": "Abrir projetos",
+    "Knowledge timeline": "Linha do tempo",
+    Strength: "Força",
+    "Relationship clusters": "Grupos de relações",
+    "Clusters use explicit Project membership and Context Pack inclusion only.":
+      "Grupos usam só a participação em projetos e pacotes.",
+    "Selected knowledge": "Conhecimento selecionado",
+    "Open resource": "Abrir recurso",
+    Relationships: "Relações",
+    "Select a node to inspect its explicit relationships.":
+      "Selecione um nó para ver suas relações.",
+    "Sign in to moderation": "Entrar na moderação",
+    "Device data was cleared. Reload to reopen moderation.":
+      "Dados apagados. Recarregue para abrir a moderação.",
+    "Kova moderation": "Moderação de Kovas",
+    "Refresh reports": "Atualizar denúncias",
+    "Kova ID": "ID do Kova",
+    "Inspect moderation state": "Ver status da moderação",
+    "Decision reason": "Motivo da decisão",
+    "Loading moderation state…": "Carregando status…",
+    "No open reports.": "Nenhuma denúncia aberta.",
+    "Published snapshot": "Versão publicada",
+    "Use the Kova ID lookup to inspect its current published snapshot. Private drafts are excluded.":
+      "Use a busca por ID para ver a versão publicada. Rascunhos privados ficam de fora.",
+    "Block Kova": "Bloquear Kova",
+    "Restore access": "Restaurar acesso",
   },
   ja: {
     Neutral: "ニュートラル",
@@ -8499,7 +8982,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Memory": "KovaGPTメモリ",
     "Memory summary": "メモリの概要",
     "Your latest saved notes. Edit any memory below to keep it accurate.":
-      "最新の保存メモです。正確さを保つため下のメモリを編集できます。",
+      "最新の保存メモです。正確に保つため、下のメモリを編集できます。",
     "Search memories": "メモリを検索",
     "Filter memories by source": "ソースでメモリを絞り込む",
     "Merge duplicates": "重複を統合",
@@ -8790,16 +9273,16 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Connect tools and sources to Kova": "ツールとソースをKovaに接続",
     "Browse all connections": "すべての接続を見る",
     "Review saved account memories and project context. Temporary chats are never stored here.":
-      "保存したアカウントのメモリとプロジェクトのコンテキストを確認します。一時チャットはここに保存されません。",
+      "保存されたメモリとプロジェクトのコンテキストを確認できます。一時チャットは保存されません。",
     "No matching memories": "一致するメモリはありません",
     "No memories yet": "メモリはまだありません",
     "Try a different search or show all memory sources.":
       "別の検索を試すか、すべてのソースを表示してください。",
     "Saved account memory": "保存したアカウントのメモリ",
     "This saved memory will no longer be available as context. This cannot be undone.":
-      "この保存済みメモリはコンテキストとして使えなくなります。元に戻せません。",
+      "この保存メモリはコンテキストとして使われなくなります。元に戻せません。",
     "Updates from scheduled tasks, shared workspaces, and account activity.":
-      "スケジュールタスク、共有ワークスペース、アカウントのアクティビティの更新。",
+      "スケジュール済みタスク、共有ワークスペース、アカウントのアクティビティからの更新。",
     "Notifications are private to your account.": "通知はあなたのアカウントだけに表示されます。",
     "No matching notifications": "一致する通知はありません",
     "No notifications": "通知はありません",
@@ -10137,6 +10620,126 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Retention, Export, and Deletion": "保存、エクスポート、削除",
     "Sale and Advertising": "販売と広告",
     "Children and Teens": "子どもとティーン",
+    "Privacy questions or requests:": "プライバシーに関するお問い合わせ：",
+    "Generate an Image": "画像を生成",
+    "Invalid authorization request. Restart from your client.":
+      "無効な認可リクエストです。クライアントからやり直してください。",
+    "KovaGPT Service Status": "KovaGPTのサービス状況",
+    "This page is not connected to automated incident monitoring and does not claim that all systems are operational.":
+      "このページは自動監視に接続されておらず、すべてが正常稼働しているとは示しません。",
+    "Check application health": "アプリの状態を確認",
+    "The health endpoint confirms whether the application server can respond. It does not guarantee that every external provider or account-specific feature is available.":
+      "ヘルスエンドポイントはサーバーが応答できるかを確認します。すべての外部プロバイダーや機能の利用を保証するものではありません。",
+    "Open health endpoint": "ヘルスエンドポイントを開く",
+    "If KovaGPT is not loading, retry once and then":
+      "KovaGPTが読み込まれない場合は、一度再試行してから",
+    "Review Pricing": "料金を見る",
+    "Choosing an AI assistant": "AIアシスタントの選び方",
+    "How to Choose an AI Assistant in 2026": "2026年のAIアシスタントの選び方",
+    "Use a task-based comparison": "タスクベースで比較する",
+    "Answer quality:": "回答の質：",
+    "Sources:": "情報源：",
+    "Workflow:": "ワークフロー：",
+    "Privacy and control:": "プライバシーと管理：",
+    "Total cost:": "総コスト：",
+    "Current KovaGPT mode access": "現在のKovaGPTモード利用範囲",
+    Plan: "プラン",
+    Modes: "モード",
+    "Daily images": "1日の画像数",
+    "Run a short evaluation before subscribing": "契約前に短く試してみる",
+    "Choose five real tasks, including one where a wrong answer would be obvious.":
+      "誤答がすぐわかるものを含め、実際のタスクを5つ選びましょう。",
+    "Use the same input and source files in each product where permitted.":
+      "可能な範囲で、各製品に同じ入力とファイルを使います。",
+    "Record whether the answer is correct, useful, editable, and easy to verify.":
+      "回答が正確か、役立つか、編集しやすいか、検証しやすいかを記録します。",
+    "Test the usage limit and recovery behavior that matters to your workflow.":
+      "作業に関わる利用上限と復帰の挙動を試します。",
+    "Review the live price and terms immediately before purchase.":
+      "購入直前に最新の価格と規約を確認します。",
+    "KovaGPT availability notes": "KovaGPTの利用可能性について",
+    "Frequently asked questions": "よくある質問",
+    "Finances · KovaGPT": "財務 · KovaGPT",
+    "Back to Connections": "接続に戻る",
+    "Sign in to connect a bank": "銀行を接続するにはサインイン",
+    "Review shared text · KovaGPT": "共有テキストの確認 · KovaGPT",
+    "Review shared text": "共有テキストを確認",
+    "Sign in to review this share. It expires after five minutes.":
+      "サインインして確認してください。5分で期限切れになります。",
+    "Loading the shared text…": "共有テキストを読み込み中…",
+    "Review this text before adding it to a chat. Nothing is sent to a model until you send the message.":
+      "チャットに追加する前に確認してください。送信するまでモデルには何も送られません。",
+    Discard: "破棄",
+    "Storage is unavailable or full. Free space and retry.":
+      "ストレージが利用できないか満杯です。空きを作って再試行してください。",
+    "Regular chat continues. Earlier temporary turns stay out of memory.":
+      "通常のチャットに戻ります。それまでの一時的なやり取りはメモリに残りません。",
+    "Message kept after usage limit": "利用上限後に保持したメッセージ",
+    "Discard kept version": "保持したバージョンを破棄",
+    "Temporary chat. Start a new chat to change this setting.":
+      "一時チャットです。この設定を変えるには新しいチャットを始めてください。",
+    "Resize conversation and result": "会話と結果のサイズを変更",
+    "Loading result editor…": "結果エディターを読み込み中…",
+    "Resize conversation and attachment preview": "会話と添付プレビューのサイズを変更",
+    "Review and edit the durable context KovaGPT can reuse in future conversations.":
+      "KovaGPTが今後の会話で再利用できる情報を確認・編集します。",
+    "Your saved memories are temporarily unavailable. Try again in a moment.":
+      "保存されたメモリは一時的に利用できません。",
+    "Pricing administration": "料金管理",
+    "Saved browser data was cleared. Reload this page to reopen administration.":
+      "ブラウザデータが消去されました。再読み込みして管理画面を開いてください。",
+    "New proposal": "新しい提案",
+    "Proposal type": "提案の種類",
+    "Developer pricing": "開発者向け料金",
+    "Prepaid credit offer": "プリペイドクレジットのオファー",
+    "Proposal JSON": "提案のJSON",
+    "Validate and save draft": "検証して下書きを保存",
+    "Status:": "ステータス：",
+    "Review SHA-256:": "確認用SHA-256：",
+    "Approve this exact revision": "この版を承認",
+    "Retirement reason": "廃止の理由",
+    "Retire these terms": "この条件を廃止",
+    "KovaGPT Graph": "KovaGPTグラフ",
+    "Knowledge Graph": "ナレッジグラフ",
+    "Explore explicit relationships among your authorized Projects, chats, files, artifacts, memories, and Context Packs.":
+      "許可したプロジェクト、チャット、ファイル、成果物、メモリ、コンテキストパックの関係を探索。",
+    "Search knowledge graph": "ナレッジグラフを検索",
+    "Search graph": "グラフを検索",
+    "Knowledge types": "ナレッジの種類",
+    Graph: "グラフ",
+    Timeline: "タイムライン",
+    "Sign in to build your authorized Knowledge Graph.":
+      "ナレッジグラフを作るにはサインインしてください。",
+    "Loading knowledge graph": "ナレッジグラフを読み込み中",
+    "No connected knowledge found": "つながったナレッジはありません",
+    "Adjust filters or add Projects, files, memories, and Context Packs.":
+      "フィルターを調整するか、プロジェクト、ファイル、メモリ、パックを追加してください。",
+    "Reset filters": "フィルターをリセット",
+    "Open Projects": "プロジェクトを開く",
+    "Knowledge timeline": "ナレッジのタイムライン",
+    Strength: "強さ",
+    "Relationship clusters": "関係のクラスター",
+    "Clusters use explicit Project membership and Context Pack inclusion only.":
+      "クラスターはプロジェクトとコンテキストパックへの明示的な所属のみで作られます。",
+    "Selected knowledge": "選択したナレッジ",
+    "Open resource": "リソースを開く",
+    Relationships: "関係",
+    "Select a node to inspect its explicit relationships.": "ノードを選ぶと関係を確認できます。",
+    "Sign in to moderation": "モデレーションにサインイン",
+    "Device data was cleared. Reload to reopen moderation.":
+      "デバイスのデータが消去されました。再読み込みしてください。",
+    "Kova moderation": "Kovaのモデレーション",
+    "Refresh reports": "報告を更新",
+    "Kova ID": "Kova ID",
+    "Inspect moderation state": "モデレーション状態を確認",
+    "Decision reason": "判断の理由",
+    "Loading moderation state…": "状態を読み込み中…",
+    "No open reports.": "未対応の報告はありません。",
+    "Published snapshot": "公開中のスナップショット",
+    "Use the Kova ID lookup to inspect its current published snapshot. Private drafts are excluded.":
+      "Kova IDで検索すると公開中のスナップショットを確認できます。非公開の下書きは含まれません。",
+    "Block Kova": "Kovaをブロック",
+    "Restore access": "アクセスを復元",
   },
   ko: {
     Neutral: "중립",
@@ -10797,16 +11400,16 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Connect tools and sources to Kova": "도구와 소스를 Kova에 연결",
     "Browse all connections": "모든 연결 보기",
     "Review saved account memories and project context. Temporary chats are never stored here.":
-      "저장된 계정 메모리와 프로젝트 컨텍스트를 검토하세요. 임시 채팅은 여기에 저장되지 않습니다.",
+      "저장된 메모리와 프로젝트 컨텍스트를 검토하세요. 임시 채팅은 저장되지 않습니다.",
     "No matching memories": "일치하는 메모리 없음",
     "No memories yet": "아직 메모리가 없습니다",
     "Try a different search or show all memory sources.":
       "다른 검색어를 쓰거나 모든 출처를 표시하세요.",
     "Saved account memory": "저장된 계정 메모리",
     "This saved memory will no longer be available as context. This cannot be undone.":
-      "이 메모리는 더 이상 컨텍스트로 사용할 수 없습니다. 되돌릴 수 없습니다.",
+      "이 메모리는 더 이상 컨텍스트로 쓰이지 않습니다. 되돌릴 수 없습니다.",
     "Updates from scheduled tasks, shared workspaces, and account activity.":
-      "예약 작업, 공유 작업 공간, 계정 활동 업데이트.",
+      "예약 작업, 공유 작업 공간, 계정 활동의 업데이트.",
     "Notifications are private to your account.": "알림은 내 계정에만 표시됩니다.",
     "No matching notifications": "일치하는 알림 없음",
     "No notifications": "알림 없음",
@@ -12136,6 +12739,125 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Retention, Export, and Deletion": "보존, 내보내기, 삭제",
     "Sale and Advertising": "판매 및 광고",
     "Children and Teens": "어린이 및 청소년",
+    "Privacy questions or requests:": "개인정보 문의 또는 요청:",
+    "Generate an Image": "이미지 생성",
+    "Invalid authorization request. Restart from your client.":
+      "잘못된 인증 요청입니다. 클라이언트에서 다시 시작하세요.",
+    "KovaGPT Service Status": "KovaGPT 서비스 상태",
+    "This page is not connected to automated incident monitoring and does not claim that all systems are operational.":
+      "이 페이지는 자동 모니터링과 연결되지 않으며 모든 시스템이 정상이라고 주장하지 않습니다.",
+    "Check application health": "앱 상태 확인",
+    "The health endpoint confirms whether the application server can respond. It does not guarantee that every external provider or account-specific feature is available.":
+      "상태 엔드포인트는 서버 응답 여부만 확인하며 모든 외부 공급자나 기능을 보장하지 않습니다.",
+    "Open health endpoint": "상태 엔드포인트 열기",
+    "If KovaGPT is not loading, retry once and then":
+      "KovaGPT가 로드되지 않으면 한 번 다시 시도한 뒤",
+    "Review Pricing": "요금 보기",
+    "Choosing an AI assistant": "AI 어시스턴트 고르기",
+    "How to Choose an AI Assistant in 2026": "2026년 AI 어시스턴트 고르는 법",
+    "Use a task-based comparison": "작업 기준으로 비교하세요",
+    "Answer quality:": "답변 품질:",
+    "Sources:": "출처:",
+    "Workflow:": "워크플로:",
+    "Privacy and control:": "개인정보 및 제어:",
+    "Total cost:": "총비용:",
+    "Current KovaGPT mode access": "현재 KovaGPT 모드 이용 범위",
+    Plan: "요금제",
+    Modes: "모드",
+    "Daily images": "일일 이미지",
+    "Run a short evaluation before subscribing": "구독 전에 짧게 평가해 보세요",
+    "Choose five real tasks, including one where a wrong answer would be obvious.":
+      "틀린 답이 분명히 드러나는 것을 포함해 실제 작업 5개를 고르세요.",
+    "Use the same input and source files in each product where permitted.":
+      "허용되는 경우 각 제품에 같은 입력과 파일을 쓰세요.",
+    "Record whether the answer is correct, useful, editable, and easy to verify.":
+      "답변이 정확한지, 유용한지, 편집 가능한지, 검증이 쉬운지 기록하세요.",
+    "Test the usage limit and recovery behavior that matters to your workflow.":
+      "작업에 중요한 사용 한도와 복구 동작을 테스트하세요.",
+    "Review the live price and terms immediately before purchase.":
+      "구매 직전에 현재 가격과 약관을 확인하세요.",
+    "KovaGPT availability notes": "KovaGPT 이용 가능 여부 안내",
+    "Frequently asked questions": "자주 묻는 질문",
+    "Finances · KovaGPT": "재무 · KovaGPT",
+    "Back to Connections": "연결로 돌아가기",
+    "Sign in to connect a bank": "은행을 연결하려면 로그인",
+    "Review shared text · KovaGPT": "공유 텍스트 검토 · KovaGPT",
+    "Review shared text": "공유 텍스트 검토",
+    "Sign in to review this share. It expires after five minutes.":
+      "로그인해 검토하세요. 5분 후 만료됩니다.",
+    "Loading the shared text…": "공유 텍스트 불러오는 중…",
+    "Review this text before adding it to a chat. Nothing is sent to a model until you send the message.":
+      "채팅에 추가하기 전에 검토하세요. 메시지를 보내기 전에는 모델로 전송되지 않습니다.",
+    Discard: "버리기",
+    "Storage is unavailable or full. Free space and retry.":
+      "저장 공간이 없거나 가득 찼습니다. 공간을 비우고 다시 시도하세요.",
+    "Regular chat continues. Earlier temporary turns stay out of memory.":
+      "일반 채팅이 계속됩니다. 이전 임시 대화는 메모리에 남지 않습니다.",
+    "Message kept after usage limit": "사용 한도 후 보관된 메시지",
+    "Discard kept version": "보관된 버전 버리기",
+    "Temporary chat. Start a new chat to change this setting.":
+      "임시 채팅입니다. 이 설정을 바꾸려면 새 채팅을 시작하세요.",
+    "Resize conversation and result": "대화와 결과 크기 조정",
+    "Loading result editor…": "결과 편집기 불러오는 중…",
+    "Resize conversation and attachment preview": "대화와 첨부 미리보기 크기 조정",
+    "Review and edit the durable context KovaGPT can reuse in future conversations.":
+      "KovaGPT가 향후 대화에서 재사용할 컨텍스트를 검토하고 편집하세요.",
+    "Your saved memories are temporarily unavailable. Try again in a moment.":
+      "저장된 메모리를 잠시 사용할 수 없습니다.",
+    "Pricing administration": "가격 관리",
+    "Saved browser data was cleared. Reload this page to reopen administration.":
+      "브라우저 데이터가 삭제되었습니다. 새로고침해 관리 화면을 여세요.",
+    "New proposal": "새 제안",
+    "Proposal type": "제안 유형",
+    "Developer pricing": "개발자 가격",
+    "Prepaid credit offer": "선불 크레딧 제안",
+    "Proposal JSON": "제안 JSON",
+    "Validate and save draft": "검증 후 초안 저장",
+    "Status:": "상태:",
+    "Review SHA-256:": "검토 SHA-256:",
+    "Approve this exact revision": "이 수정본 승인",
+    "Retirement reason": "폐기 사유",
+    "Retire these terms": "이 조건 폐기",
+    "KovaGPT Graph": "KovaGPT 그래프",
+    "Knowledge Graph": "지식 그래프",
+    "Explore explicit relationships among your authorized Projects, chats, files, artifacts, memories, and Context Packs.":
+      "허용된 프로젝트, 채팅, 파일, 아티팩트, 메모리, 컨텍스트 팩의 관계를 살펴보세요.",
+    "Search knowledge graph": "지식 그래프 검색",
+    "Search graph": "그래프 검색",
+    "Knowledge types": "지식 유형",
+    Graph: "그래프",
+    Timeline: "타임라인",
+    "Sign in to build your authorized Knowledge Graph.": "지식 그래프를 만들려면 로그인하세요.",
+    "Loading knowledge graph": "지식 그래프 불러오는 중",
+    "No connected knowledge found": "연결된 지식이 없습니다",
+    "Adjust filters or add Projects, files, memories, and Context Packs.":
+      "필터를 조정하거나 프로젝트, 파일, 메모리, 팩을 추가하세요.",
+    "Reset filters": "필터 초기화",
+    "Open Projects": "프로젝트 열기",
+    "Knowledge timeline": "지식 타임라인",
+    Strength: "강도",
+    "Relationship clusters": "관계 클러스터",
+    "Clusters use explicit Project membership and Context Pack inclusion only.":
+      "클러스터는 프로젝트 소속과 컨텍스트 팩 포함만 사용합니다.",
+    "Selected knowledge": "선택한 지식",
+    "Open resource": "리소스 열기",
+    Relationships: "관계",
+    "Select a node to inspect its explicit relationships.": "노드를 선택해 관계를 확인하세요.",
+    "Sign in to moderation": "운영 도구에 로그인",
+    "Device data was cleared. Reload to reopen moderation.":
+      "기기 데이터가 삭제되었습니다. 새로고침하세요.",
+    "Kova moderation": "Kova 운영",
+    "Refresh reports": "신고 새로고침",
+    "Kova ID": "Kova ID",
+    "Inspect moderation state": "운영 상태 확인",
+    "Decision reason": "결정 사유",
+    "Loading moderation state…": "상태 불러오는 중…",
+    "No open reports.": "열린 신고가 없습니다.",
+    "Published snapshot": "게시된 스냅샷",
+    "Use the Kova ID lookup to inspect its current published snapshot. Private drafts are excluded.":
+      "Kova ID로 조회해 게시된 스냅샷을 확인하세요. 비공개 초안은 제외됩니다.",
+    "Block Kova": "Kova 차단",
+    "Restore access": "접근 복원",
   },
   ar: {
     Neutral: "محايد",
@@ -12508,7 +13230,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "KovaGPT Memory": "ذاكرة KovaGPT",
     "Memory summary": "ملخص الذاكرة",
     "Your latest saved notes. Edit any memory below to keep it accurate.":
-      "أحدث ملاحظاتك المحفوظة. عدّل أي ذكرى أدناه لتبقى دقيقة.",
+      "أحدث ملاحظاتك المحفوظة. عدّل أي ذكرى لإبقائها دقيقة.",
     "Search memories": "البحث في الذكريات",
     "Filter memories by source": "تصفية الذكريات حسب المصدر",
     "Merge duplicates": "دمج المكرر",
@@ -12798,16 +13520,16 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Connect tools and sources to Kova": "اربط الأدوات والمصادر بـ Kova",
     "Browse all connections": "تصفّح كل الاتصالات",
     "Review saved account memories and project context. Temporary chats are never stored here.":
-      "راجع ذكريات الحساب المحفوظة وسياق المشاريع. لا تُحفظ المحادثات المؤقتة هنا أبدًا.",
+      "راجع الذكريات المحفوظة وسياق المشاريع. لا تُخزن المحادثات المؤقتة هنا.",
     "No matching memories": "لا توجد ذكريات مطابقة",
     "No memories yet": "لا توجد ذكريات بعد",
     "Try a different search or show all memory sources.":
       "جرّب بحثًا آخر أو اعرض كل مصادر الذاكرة.",
     "Saved account memory": "ذاكرة الحساب المحفوظة",
     "This saved memory will no longer be available as context. This cannot be undone.":
-      "لن تعود هذه الذكرى متاحة كسياق. لا يمكن التراجع عن ذلك.",
+      "لن تعود هذه الذكرى متاحة كسياق، ولا يمكن التراجع.",
     "Updates from scheduled tasks, shared workspaces, and account activity.":
-      "تحديثات من المهام المجدولة ومساحات العمل المشتركة ونشاط الحساب.",
+      "تحديثات المهام المجدولة والمساحات المشتركة ونشاط الحساب.",
     "Notifications are private to your account.": "الإشعارات خاصة بحسابك.",
     "No matching notifications": "لا توجد إشعارات مطابقة",
     "No notifications": "لا توجد إشعارات",
@@ -14130,5 +14852,123 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Retention, Export, and Deletion": "الاحتفاظ والتصدير والحذف",
     "Sale and Advertising": "البيع والإعلان",
     "Children and Teens": "الأطفال والمراهقون",
+    "Privacy questions or requests:": "أسئلة أو طلبات الخصوصية:",
+    "Generate an Image": "إنشاء صورة",
+    "Invalid authorization request. Restart from your client.":
+      "طلب تفويض غير صالح. أعد البدء من تطبيقك.",
+    "KovaGPT Service Status": "حالة خدمة KovaGPT",
+    "This page is not connected to automated incident monitoring and does not claim that all systems are operational.":
+      "هذه الصفحة غير متصلة بمراقبة تلقائية ولا تدّعي أن كل الأنظمة تعمل.",
+    "Check application health": "التحقق من سلامة التطبيق",
+    "The health endpoint confirms whether the application server can respond. It does not guarantee that every external provider or account-specific feature is available.":
+      "تؤكد نقطة السلامة استجابة الخادم فقط ولا تضمن توفر كل مزوّد أو ميزة.",
+    "Open health endpoint": "فتح نقطة السلامة",
+    "If KovaGPT is not loading, retry once and then": "إذا لم يُحمّل KovaGPT، أعد المحاولة مرة ثم",
+    "Review Pricing": "مراجعة الأسعار",
+    "Choosing an AI assistant": "اختيار مساعد ذكاء اصطناعي",
+    "How to Choose an AI Assistant in 2026": "كيف تختار مساعد ذكاء اصطناعي في 2026",
+    "Use a task-based comparison": "قارن بحسب المهام",
+    "Answer quality:": "جودة الإجابات:",
+    "Sources:": "المصادر:",
+    "Workflow:": "سير العمل:",
+    "Privacy and control:": "الخصوصية والتحكم:",
+    "Total cost:": "التكلفة الإجمالية:",
+    "Current KovaGPT mode access": "الوصول الحالي لأوضاع KovaGPT",
+    Plan: "الخطة",
+    Modes: "الأوضاع",
+    "Daily images": "الصور اليومية",
+    "Run a short evaluation before subscribing": "أجرِ تقييمًا قصيرًا قبل الاشتراك",
+    "Choose five real tasks, including one where a wrong answer would be obvious.":
+      "اختر خمس مهام حقيقية، منها واحدة يكون الخطأ فيها واضحًا.",
+    "Use the same input and source files in each product where permitted.":
+      "استخدم المدخلات والملفات نفسها في كل منتج حيث يُسمح.",
+    "Record whether the answer is correct, useful, editable, and easy to verify.":
+      "سجّل ما إذا كانت الإجابة صحيحة ومفيدة وقابلة للتعديل وسهلة التحقق.",
+    "Test the usage limit and recovery behavior that matters to your workflow.":
+      "اختبر حد الاستخدام وسلوك الاستعادة المهمين لعملك.",
+    "Review the live price and terms immediately before purchase.":
+      "راجع السعر والشروط الحالية قبل الشراء مباشرة.",
+    "KovaGPT availability notes": "ملاحظات توفر KovaGPT",
+    "Frequently asked questions": "الأسئلة الشائعة",
+    "Finances · KovaGPT": "المالية · KovaGPT",
+    "Back to Connections": "العودة إلى الاتصالات",
+    "Sign in to connect a bank": "سجّل الدخول لربط بنك",
+    "Review shared text · KovaGPT": "مراجعة النص المشترك · KovaGPT",
+    "Review shared text": "مراجعة النص المشترك",
+    "Sign in to review this share. It expires after five minutes.":
+      "سجّل الدخول لمراجعته. تنتهي صلاحيته بعد خمس دقائق.",
+    "Loading the shared text…": "جارٍ تحميل النص المشترك…",
+    "Review this text before adding it to a chat. Nothing is sent to a model until you send the message.":
+      "راجع النص قبل إضافته. لا يُرسل شيء إلى النموذج حتى ترسل الرسالة.",
+    Discard: "تجاهل",
+    "Storage is unavailable or full. Free space and retry.":
+      "التخزين غير متاح أو ممتلئ. أفرغ مساحة وأعد المحاولة.",
+    "Regular chat continues. Earlier temporary turns stay out of memory.":
+      "تستمر المحادثة العادية، وتبقى الأدوار المؤقتة السابقة خارج الذاكرة.",
+    "Message kept after usage limit": "رسالة محفوظة بعد حد الاستخدام",
+    "Discard kept version": "تجاهل النسخة المحفوظة",
+    "Temporary chat. Start a new chat to change this setting.":
+      "محادثة مؤقتة. ابدأ محادثة جديدة لتغيير هذا الإعداد.",
+    "Resize conversation and result": "تغيير حجم المحادثة والنتيجة",
+    "Loading result editor…": "جارٍ تحميل محرر النتيجة…",
+    "Resize conversation and attachment preview": "تغيير حجم المحادثة ومعاينة المرفق",
+    "Review and edit the durable context KovaGPT can reuse in future conversations.":
+      "راجع السياق الدائم الذي يمكن لـ KovaGPT إعادة استخدامه وعدّله.",
+    "Your saved memories are temporarily unavailable. Try again in a moment.":
+      "ذكرياتك المحفوظة غير متاحة مؤقتًا.",
+    "Pricing administration": "إدارة التسعير",
+    "Saved browser data was cleared. Reload this page to reopen administration.":
+      "مُسحت بيانات المتصفح. أعد التحميل لفتح الإدارة.",
+    "New proposal": "اقتراح جديد",
+    "Proposal type": "نوع الاقتراح",
+    "Developer pricing": "تسعير المطوّرين",
+    "Prepaid credit offer": "عرض رصيد مسبق الدفع",
+    "Proposal JSON": "JSON الاقتراح",
+    "Validate and save draft": "التحقق وحفظ المسودة",
+    "Status:": "الحالة:",
+    "Review SHA-256:": "SHA-256 للمراجعة:",
+    "Approve this exact revision": "اعتماد هذه المراجعة بالتحديد",
+    "Retirement reason": "سبب الإيقاف",
+    "Retire these terms": "إيقاف هذه الشروط",
+    "KovaGPT Graph": "رسم KovaGPT البياني",
+    "Knowledge Graph": "رسم المعرفة البياني",
+    "Explore explicit relationships among your authorized Projects, chats, files, artifacts, memories, and Context Packs.":
+      "استكشف العلاقات بين مشاريعك ومحادثاتك وملفاتك وعناصرك وذكرياتك وحزم السياق.",
+    "Search knowledge graph": "البحث في رسم المعرفة",
+    "Search graph": "البحث في الرسم",
+    "Knowledge types": "أنواع المعرفة",
+    Graph: "الرسم البياني",
+    Timeline: "الخط الزمني",
+    "Sign in to build your authorized Knowledge Graph.": "سجّل الدخول لإنشاء رسم المعرفة.",
+    "Loading knowledge graph": "جارٍ تحميل رسم المعرفة",
+    "No connected knowledge found": "لم يُعثر على معرفة مترابطة",
+    "Adjust filters or add Projects, files, memories, and Context Packs.":
+      "عدّل المرشحات أو أضف مشاريع وملفات وذكريات وحزمًا.",
+    "Reset filters": "إعادة تعيين المرشحات",
+    "Open Projects": "فتح المشاريع",
+    "Knowledge timeline": "الخط الزمني للمعرفة",
+    Strength: "القوة",
+    "Relationship clusters": "مجموعات العلاقات",
+    "Clusters use explicit Project membership and Context Pack inclusion only.":
+      "تعتمد المجموعات على عضوية المشاريع وحزم السياق فقط.",
+    "Selected knowledge": "المعرفة المحددة",
+    "Open resource": "فتح المورد",
+    Relationships: "العلاقات",
+    "Select a node to inspect its explicit relationships.": "اختر عقدة لفحص علاقاتها.",
+    "Sign in to moderation": "سجّل الدخول إلى الإشراف",
+    "Device data was cleared. Reload to reopen moderation.":
+      "مُسحت البيانات. أعد التحميل لفتح الإشراف.",
+    "Kova moderation": "الإشراف على Kova",
+    "Refresh reports": "تحديث البلاغات",
+    "Kova ID": "معرّف Kova",
+    "Inspect moderation state": "فحص حالة الإشراف",
+    "Decision reason": "سبب القرار",
+    "Loading moderation state…": "جارٍ تحميل الحالة…",
+    "No open reports.": "لا توجد بلاغات مفتوحة.",
+    "Published snapshot": "اللقطة المنشورة",
+    "Use the Kova ID lookup to inspect its current published snapshot. Private drafts are excluded.":
+      "استخدم البحث بالمعرّف لفحص اللقطة المنشورة، وتُستثنى المسودات الخاصة.",
+    "Block Kova": "حظر Kova",
+    "Restore access": "استعادة الوصول",
   },
 };
