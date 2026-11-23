@@ -157,6 +157,50 @@ test("a rejected Outlook subject filter falls back to a bounded, reauthorized ca
   assert.equal(result.limited, true);
 });
 
+test("OneDrive falls back to a bounded, reauthorized root name search if Graph rejects full search", async () => {
+  const calls = [];
+  let checked = false;
+  const result = await readConnection(
+    "onedrive",
+    "ReadMe",
+    "fixture-token",
+    async (url) => {
+      const request = new URL(url);
+      calls.push(request);
+      if (calls.length === 1) return new Response(null, { status: 501 });
+      assert.equal(checked, true);
+      assert.equal(request.pathname, "/v1.0/me/drive/root/children");
+      assert.equal(request.searchParams.get("$top"), "50");
+      return Response.json({
+        value: [
+          { id: "1", name: "Private unrelated file" },
+          { id: "2", name: "README.md" },
+        ],
+      });
+    },
+    {
+      beforeRequest: async () => {
+        checked = true;
+      },
+    },
+  );
+  assert.equal(calls.length, 2);
+  assert.equal(result.limited, true);
+  assert.deepEqual(
+    result.results.map(({ title }) => title),
+    ["README.md"],
+  );
+  await assert.rejects(
+    readConnection(
+      "onedrive",
+      "test",
+      "fixture-token",
+      async () => new Response(null, { status: 404 }),
+    ),
+    /onedrive_default_drive_unavailable/u,
+  );
+});
+
 test("authorization redirects reject other origins, paths, schemes, and URL credentials", () => {
   const valid = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state=test";
   assert.equal(connectionAuthorizationUrl("microsoft", valid), valid);

@@ -23,6 +23,20 @@ const providerReadErrors = new Map([
     "outlook_default_calendar_unavailable",
     "Microsoft could not find a default calendar for this account.",
   ],
+  ["onedrive_default_drive_unavailable", "Microsoft could not find a OneDrive for this account."],
+  [
+    "invalid_connection_response",
+    "The provider returned an unexpected response. Try again shortly.",
+  ],
+  ["connection_account_not_allowed", "The selected account no longer grants this read."],
+  [
+    "connection_status_unavailable",
+    "Account status is temporarily unavailable. Try again shortly.",
+  ],
+  [
+    "connection_protection_unavailable",
+    "Connection reads are temporarily unavailable. Try again shortly.",
+  ],
   ["connection_read_failed", "The provider could not complete this search. Try again shortly."],
 ]);
 

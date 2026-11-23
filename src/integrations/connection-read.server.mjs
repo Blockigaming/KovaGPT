@@ -218,19 +218,23 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   }
   const request = connectionReadRequest(id, query, token, options);
   let response = await fetchImpl(request.url, request.init);
-  const filterLocally = id === "outlook-calendar" && [400, 501].includes(response.status);
+  const filterLocally =
+    (id === "outlook-calendar" || id === "onedrive") && [400, 501].includes(response.status);
   if (filterLocally) {
     await response.body?.cancel();
     await options.beforeRequest?.();
     const url = new URL(request.url);
     url.searchParams.delete("$filter");
     url.searchParams.set("$top", "50");
+    if (id === "onedrive") url.pathname = "/v1.0/me/drive/root/children";
     response = await fetchImpl(url.toString(), request.init);
   }
   if (!response.ok) {
     await response.body?.cancel();
     if (id === "outlook-calendar" && response.status === 404)
       throw new Error("outlook_default_calendar_unavailable", { cause: response.status });
+    if (id === "onedrive" && response.status === 404)
+      throw new Error("onedrive_default_drive_unavailable", { cause: response.status });
     throw new Error(
       response.status === 401
         ? "connection_reauthorization_required"
@@ -289,11 +293,13 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   }
   let rows = data.value;
   if (filterLocally && Array.isArray(rows)) {
-    const prefix = query.trim().toLowerCase();
+    const search = query.trim().toLowerCase();
     rows = rows
       .slice(0, 50)
-      .filter(
-        (row) => typeof row?.subject === "string" && row.subject.toLowerCase().startsWith(prefix),
+      .filter((row) =>
+        id === "outlook-calendar"
+          ? typeof row?.subject === "string" && row.subject.toLowerCase().startsWith(search)
+          : typeof row?.name === "string" && row.name.toLowerCase().includes(search),
       );
   }
   if (id === "meltwater") {

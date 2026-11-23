@@ -147,6 +147,12 @@ function fixture() {
           clientIdEnv: "TEST_ID",
           clientSecretEnv: "TEST_SECRET",
         },
+        linear: {
+          id: "linear",
+          tokenEndpoint: "https://api.linear.app/oauth/token",
+          clientIdEnv: "TEST_ID",
+          clientSecretEnv: "TEST_SECRET",
+        },
       },
     },
     "./credential-vault.server": {
@@ -224,6 +230,38 @@ test("calendar tools bind to the selected Microsoft account and discard results 
     /connection_changed_or_expired/,
   );
   assert.equal(f.state.reads, 2);
+});
+
+test("Microsoft and Linear retry one rejected read through the same account and scoped grant", async () => {
+  for (const [provider, scope, tool] of [
+    ["microsoft", "Files.Read", "onedrive_search"],
+    ["linear", "read", "linear_search"],
+  ]) {
+    const f = fixture();
+    Object.assign(f.state.row, {
+      provider_id: provider,
+      granted_scopes: [scope],
+      refresh_token_ciphertext: "encrypted:existing-refresh",
+      token_expires_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    f.state.fetchResponse = Response.json({
+      access_token: "renewed-token",
+      refresh_token: "rotated-refresh",
+      expires_in: 3600,
+      scope,
+    });
+    f.state.onRead = () => {
+      if (f.state.reads === 1)
+        throw new Error("connection_reauthorization_required", { cause: 401 });
+    };
+    const context = await f.getConnectedToolContext("owner-a");
+    const args = { account_id: f.state.row.id, query: "fixture" };
+    await f.runConnectionAccountSearch("owner-a", tool, args, context);
+    assert.equal(f.state.refreshCalls, 1);
+    assert.equal(f.state.reads, 2);
+    assert.equal(f.calls.filter(([call]) => call === "read")[1][3], "renewed-token");
+    assert.deepEqual(f.state.row.granted_scopes, [scope]);
+  }
 });
 
 test("Calendly chat relies on the stored provider identity and discards output after the binding changes", async () => {

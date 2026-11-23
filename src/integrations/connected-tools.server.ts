@@ -115,6 +115,7 @@ const renewableProviders = new Set([
   "google-bigquery",
   "hubspot",
 ]);
+const retryUnauthorizedProviders = new Set(["microsoft", "linear", "salesforce", "notion", "tana"]);
 
 function renewalDue(account: BoundAccount) {
   return Boolean(
@@ -198,8 +199,7 @@ export async function refreshExpiringConnection(
   if (
     error ||
     !row ||
-    (!(forceRejectedRead && ["salesforce", "notion", "tana"].includes(row.provider_id)) &&
-      !renewalDue(row)) ||
+    (!(forceRejectedRead && retryUnauthorizedProviders.has(row.provider_id)) && !renewalDue(row)) ||
     !row.refresh_token_ciphertext ||
     !renewableProviders.has(row.provider_id)
   )
@@ -336,7 +336,7 @@ export async function refreshExpiringConnection(
       .maybeSingle();
     return updateError || !renewed
       ? null
-      : forceRejectedRead && ["salesforce", "notion", "tana"].includes(provider.id)
+      : forceRejectedRead && retryUnauthorizedProviders.has(provider.id)
         ? { ...renewed, renewalCiphertext: newCiphertext }
         : renewed;
   } catch {
@@ -490,7 +490,7 @@ export async function runConnectionAccountSearch(
     result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
   } catch (error) {
     if (
-      !["salesforce", "notion", "tana"].includes(id) ||
+      !retryUnauthorizedProviders.has(flow.provider) ||
       !(error instanceof Error) ||
       error.message !== "connection_reauthorization_required"
     )

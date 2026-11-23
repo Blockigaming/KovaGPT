@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { decryptSecret } from "@/lib/github-oauth.server";
+import {
+  decryptSecret,
+  gitHubTokenCurrent,
+  renewGitHubOAuthAccount,
+} from "@/lib/github-oauth.server";
 import { discoverGitHubUserRepositories } from "@/lib/github-user-access.server.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { githubChatTools } from "@/lib/github-chat-tools.server";
@@ -100,13 +104,12 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
       deadline = AbortSignal.timeout(20_000);
     // Finish all bounded discovery before writing. A user token sees only the
     // intersection of the App's installation access and that user's access.
-    for (const account of accounts.data) {
-      if (
-        account.token_expires_at &&
-        (!Number.isFinite(Date.parse(account.token_expires_at)) ||
-          Date.parse(account.token_expires_at) <= Date.now() + 30_000)
-      )
-        throw new Error("GitHub reconnect required");
+    for (const listed of accounts.data) {
+      const account = gitHubTokenCurrent(listed.token_expires_at)
+        ? listed
+        : await renewGitHubOAuthAccount(context.userId, listed.id, deadline);
+      if (!account?.token_ciphertext) throw new Error("GitHub reconnect required");
+      await assertLockdownAllows(supabaseAdmin, context.userId, "connector_read");
       const discovered = await discoverGitHubUserRepositories(
         await decryptSecret(account.token_ciphertext),
         Number(account.github_user_id),
