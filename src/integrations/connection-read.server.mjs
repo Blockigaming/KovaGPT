@@ -220,6 +220,8 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   const response = await fetchImpl(request.url, request.init);
   if (!response.ok) {
     await response.body?.cancel();
+    if (id === "outlook-calendar" && response.status === 404)
+      throw new Error("outlook_default_calendar_unavailable", { cause: response.status });
     throw new Error(
       response.status === 401
         ? "connection_reauthorization_required"
@@ -228,6 +230,7 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
           : response.status === 429
             ? "connection_rate_limited"
             : "connection_read_failed",
+      { cause: response.status },
     );
   }
   const data =

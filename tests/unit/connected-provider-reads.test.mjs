@@ -113,6 +113,15 @@ test("calendar results show bounded event times and discard provider bodies, att
   assert.doesNotMatch(JSON.stringify(result), /must-not-leak|fake-token|evil\.example/);
 });
 
+test("calendar reads distinguish a missing default calendar without exposing the provider error body", async () => {
+  await assert.rejects(
+    readConnection("outlook-calendar", "Meeting", "fake-token", async () =>
+      Response.json({ error: { message: "private provider data" } }, { status: 404 }),
+    ),
+    (error) => error.message === "outlook_default_calendar_unavailable" && error.cause === 404,
+  );
+});
+
 test("authorization redirects reject other origins, paths, schemes, and URL credentials", () => {
   const valid = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state=test";
   assert.equal(connectionAuthorizationUrl("microsoft", valid), valid);
