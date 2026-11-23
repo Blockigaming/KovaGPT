@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
-import { OURA_SCOPES } from "../../src/health/oura-metrics.mjs";
 import * as approvedMcp from "../../src/integrations/approved-mcp-servers.server.mjs";
 import * as mcpReads from "../../src/integrations/mcp-provider-read.server.mjs";
 import * as credentials from "../../src/integrations/salesforce-credential.server.mjs";
 import * as connectionFlows from "../../src/integrations/connection-flows.mjs";
 import * as tokenRequests from "../../src/integrations/oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "../../src/lib/provider-response.server.mjs";
+import * as ouraMetrics from "../../src/health/oura-metrics.mjs";
 
 function compile(file, modules, globals = {}) {
   const code = ts.transpileModule(readFileSync(file, "utf8"), {
@@ -142,7 +142,7 @@ function fixture() {
     {
       "./connection-flows.mjs": connectionFlows,
       "./approved-mcp-servers.server.mjs": approvedMcp,
-      "@/health/oura-metrics.mjs": { OURA_SCOPES },
+      "@/health/oura-metrics.mjs": ouraMetrics,
     },
     { process: { env } },
   );

@@ -111,6 +111,7 @@ function fixture(
       ];
     },
     useEffect() {},
+    useCallback: (callback) => callback,
     useSyncExternalStore: () => true,
     lazy: (loader) => String(loader).match(/Composer[A-Za-z]+/)?.[0] ?? "Lazy",
     Suspense: "Suspense",
@@ -267,7 +268,12 @@ function fixture(
     },
     input: () => nodes(tree).find((node) => node.type === "textarea").props,
     async click(label) {
-      await button(label).onClick();
+      await button(label).onClick({
+        detail: 0,
+        currentTarget: { isConnected: true, focus() {} },
+        preventDefault() {},
+        stopPropagation() {},
+      });
       await flush();
     },
     async account(next) {

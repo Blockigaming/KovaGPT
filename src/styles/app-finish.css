@@ -1489,21 +1489,46 @@
    model name and three touch targets, including before the account loads. */
 @container chat-composer (width < 22.5rem) {
   .spec400-composer
-    .spec400-composer-toolbar:has(
-      :is(.kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder)
-    ) {
+    .spec400-composer-toolbar:has(:is(.kova-consumer-model-trigger, .kova-home-model-placeholder)),
+  :where(:root[data-kova-surface="app"])
+    .spec400-composer
+    .spec400-composer-toolbar:has(.kova-thinking-toggle) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--composer-action-gap);
   }
-  .spec400-composer-toolbar:has(
-      :is(.kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder)
-    )
+  .spec400-composer-toolbar:has(:is(.kova-consumer-model-trigger, .kova-home-model-placeholder))
+    .spec400-composer-trailing,
+  :where(:root[data-kova-surface="app"])
+    .spec400-composer-toolbar:has(.kova-thinking-toggle)
     .spec400-composer-trailing {
     display: contents;
   }
-  .spec400-composer-toolbar
-    :is(.kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder) {
+  .spec400-composer-toolbar :is(.kova-consumer-model-trigger, .kova-home-model-placeholder),
+  :where(:root[data-kova-surface="app"]) .spec400-composer-toolbar .kova-thinking-toggle {
+    grid-area: 1 / 1 / 2 / -1;
+    justify-self: end;
+  }
+  .spec400-composer-toolbar .spec400-composer-tools {
+    grid-area: 2 / 1;
+  }
+  .spec400-composer-toolbar .spec400-composer-speech-actions {
+    grid-area: 2 / 2;
+  }
+}
+
+/* On the website the shorter Thinking toggle shares the action row until the
+   composer is narrower than a 320px phone; the app shell keeps the mode row. */
+@container chat-composer (width < 20rem) {
+  .spec400-composer .spec400-composer-toolbar:has(.kova-thinking-toggle) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--composer-action-gap);
+  }
+  .spec400-composer-toolbar:has(.kova-thinking-toggle) .spec400-composer-trailing {
+    display: contents;
+  }
+  .spec400-composer-toolbar .kova-thinking-toggle {
     grid-area: 1 / 1 / 2 / -1;
     justify-self: end;
   }

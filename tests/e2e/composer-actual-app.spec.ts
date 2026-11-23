@@ -33,8 +33,11 @@ async function geometry(page: Page) {
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
+  // Compact phone corners belong to the native app shell; the website keeps
+  // the desktop composer on every screen.
   const phone = await page.evaluate(
     () =>
+      document.documentElement.dataset.kovaSurface === "app" &&
       matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
         .matches,
   );
@@ -43,8 +46,7 @@ async function geometry(page: Page) {
     phone ? (conversation ? "26px" : "21px") : "34px",
   );
   const singleRow =
-    conversation &&
-    (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
+    conversation && (await page.evaluate(() => matchMedia("(min-width: 1024px)").matches));
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   const modeOnOwnRow = await expectsSeparateModeRow(composer);

@@ -93,12 +93,14 @@ export const BUNDLE_BASELINE = Object.freeze({
     "PR #691 CI run 43623726051 at 8ee794ef9702f9e170cf69bcd497d45f64739876 measured the home route at 62,667 raw / 20,623 gzip bytes after the existing settings and response-follow-up release. The 62,750 raw / 20,650 gzip ceiling leaves 83 raw / 27 gzip bytes of headroom. All other budgets and bundle identification checks are unchanged.",
   richResponseAdjustment:
     "The rich response catalog measured 62,698 raw and 20,651 gzip bytes in GitHub CI. The home-route gzip ceiling of 20,675 allows 24 bytes of headroom over that build.",
+  deviceWidthWebAdjustment:
+    "PR #747 CI measured the home route at 61,001 raw / 20,692 gzip bytes after the device-width website, the Settings modal deep-link fix and the native app surface switch; raw size is unchanged from the prior build while gzip varies with chunk hashes. The gzip ceiling moves to 20,725, leaving 33 bytes of headroom. All other budgets are unchanged.",
   openAiModelOfferAdjustment:
     "The 2026-11-08 OpenAI model-catalog and Free-offer candidate measured 62,567 raw / 20,567 gzip for the initial route and 648,770 raw / 200,927 gzip for the Vite entry in CI. The initial ceilings move to 62,600 raw / 20,600 gzip, providing 33 gzip bytes of headroom; the main gzip ceiling remains 201,500 from the device-specific Settings CI evidence. Omega and chart ceilings remain unchanged.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_750, gzip: 20_675 }),
+  initial: Object.freeze({ raw: 62_750, gzip: 20_725 }),
   main: Object.freeze({ raw: 670_000, gzip: 201_500 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),

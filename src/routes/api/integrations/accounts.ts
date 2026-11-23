@@ -5,7 +5,10 @@ import {
   configuredOAuthProviders,
 } from "@/integrations/oauth-providers.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ConnectorDatabase } from "@/integrations/connected-tools.server";
+import {
+  renewListedOAuthAccounts,
+  type ConnectorDatabase,
+} from "@/integrations/connected-tools.server";
 import { readBoundedJsonObject, BoundedJsonError } from "@/lib/bounded-json.server.mjs";
 import { assertLockdownAllows, lockdownErrorResponse } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
@@ -35,20 +38,25 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             { error: "accounts_unavailable" },
             { status: 503, headers: { "Cache-Control": "no-store" } },
           );
+        const oauthProviders = configuredOAuthProviders(new URL(request.url).origin);
+        const accounts = await renewListedOAuthAccounts(
+          auth.userId,
+          data ?? [],
+          new Set(oauthProviders.map(({ id }) => id)),
+          auth.revalidateSession,
+        );
         return Response.json(
           {
             configuredProviders: [
-              ...configuredOAuthProviders(new URL(request.url).origin).map(
-                ({ id, name, requiredScopes, optionalScopes }) => ({
-                  id,
-                  name,
-                  requiredScopes,
-                  optionalScopes,
-                }),
-              ),
+              ...oauthProviders.map(({ id, name, requiredScopes, optionalScopes }) => ({
+                id,
+                name,
+                requiredScopes,
+                optionalScopes,
+              })),
               ...configuredKeyProviders(),
             ],
-            accounts: data ?? [],
+            accounts,
           },
           { headers: { "Cache-Control": "no-store" } },
         );

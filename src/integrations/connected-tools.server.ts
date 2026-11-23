@@ -97,6 +97,82 @@ export type ConnectorDatabase = {
 };
 const db = supabaseAdmin as unknown as SupabaseClient<ConnectorDatabase>;
 
+const renewableProviders = new Set([
+  "microsoft",
+  "linear",
+  "slack",
+  "oura",
+  "whoop",
+  "salesforce",
+  "stripe",
+  "notion",
+  "box",
+  "canva",
+  "figma",
+  "calendly",
+  "gamma",
+  "tana",
+  "google-bigquery",
+  "hubspot",
+]);
+
+function renewalDue(account: BoundAccount) {
+  return Boolean(
+    account.status === "connected" &&
+    renewableProviders.has(account.provider_id) &&
+    account.token_expires_at &&
+    Date.parse(account.token_expires_at) <= Date.now() + 60_000,
+  );
+}
+
+export async function renewListedOAuthAccounts<T extends BoundAccount>(
+  ownerId: string,
+  accounts: T[],
+  configuredProviders: ReadonlySet<string>,
+  sessionIsCurrent?: () => Promise<boolean>,
+): Promise<T[]> {
+  const due = accounts
+    .filter((account) => configuredProviders.has(account.provider_id) && renewalDue(account))
+    .slice(0, 3);
+  if (!due.length) return accounts;
+  const limit = await consumeApplicationRateLimit({
+    identity: `user:${ownerId}`,
+    action: "connection_status_renewal",
+    limit: 6,
+    windowSeconds: 60,
+  }).catch(() => null);
+  if (!limit?.allowed) return accounts;
+  const renewed = new Map(
+    await Promise.all(
+      due.map(
+        async (account) =>
+          [
+            account.id,
+            await refreshExpiringConnection(
+              ownerId,
+              account.id,
+              account.updated_at,
+              false,
+              sessionIsCurrent,
+            ).catch(() => null),
+          ] as const,
+      ),
+    ),
+  );
+  return accounts.map((account) => {
+    const fresh = renewed.get(account.id);
+    return fresh
+      ? {
+          ...account,
+          status: fresh.status,
+          granted_scopes: fresh.granted_scopes,
+          token_expires_at: fresh.token_expires_at,
+          updated_at: fresh.updated_at,
+        }
+      : account;
+  });
+}
+
 // Claim each expiring credential before rotating it. An uncertain/crashed
 // refresh remains expired and requires fresh OAuth consent, so another replica
 // cannot replay a potentially consumed refresh token.
@@ -105,8 +181,10 @@ export async function refreshExpiringConnection(
   id: string,
   version: string,
   forceRejectedRead = false,
+  sessionIsCurrent?: () => Promise<boolean>,
 ) {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+  if (sessionIsCurrent && !(await sessionIsCurrent())) return null;
   const { data: row, error } = await db
     .from("integration_linked_accounts")
     .select("*")
@@ -121,26 +199,9 @@ export async function refreshExpiringConnection(
     error ||
     !row ||
     (!(forceRejectedRead && ["salesforce", "notion", "tana"].includes(row.provider_id)) &&
-      (!row.token_expires_at || Date.parse(row.token_expires_at) > Date.now() + 60_000)) ||
+      !renewalDue(row)) ||
     !row.refresh_token_ciphertext ||
-    ![
-      "microsoft",
-      "linear",
-      "slack",
-      "oura",
-      "whoop",
-      "salesforce",
-      "stripe",
-      "notion",
-      "box",
-      "canva",
-      "figma",
-      "calendly",
-      "gamma",
-      "tana",
-      "google-bigquery",
-      "hubspot",
-    ].includes(row.provider_id)
+    !renewableProviders.has(row.provider_id)
   )
     return null;
   const provider = OAUTH_PROVIDERS[row.provider_id as OAuthProviderId];
@@ -162,6 +223,8 @@ export async function refreshExpiringConnection(
   if (claimError || !claim) return null;
   const ensureRefreshLease = async () => {
     await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+    if (sessionIsCurrent && !(await sessionIsCurrent()))
+      throw new Error("connection_session_changed");
     const current = await db
       .from("integration_linked_accounts")
       .select("id")
@@ -299,12 +362,7 @@ export async function getConnectedToolContext(ownerId: string): Promise<Connecte
   let refreshes = 0;
   for (let index = 0; index < accounts.length; index += 1) {
     const account = accounts[index];
-    if (
-      refreshes < 3 &&
-      configured.has(account.provider_id) &&
-      account.token_expires_at &&
-      Date.parse(account.token_expires_at) <= Date.now() + 60_000
-    ) {
+    if (refreshes < 3 && configured.has(account.provider_id) && renewalDue(account)) {
       refreshes += 1;
       const renewed = await refreshExpiringConnection(ownerId, account.id, account.updated_at);
       accounts[index] = renewed ? (renewed as BoundAccount) : { ...account, status: "expired" };

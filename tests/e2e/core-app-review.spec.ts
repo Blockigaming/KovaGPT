@@ -205,8 +205,10 @@ test("sidebar search and all main destinations keep honest service states", asyn
     await expect(accountMenu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
   }
   const help = accountMenu.getByRole("menuitem", { name: "Help", exact: true });
+  // Read the item's role before activating it: a direct Help link closes the menu.
+  const helpOpensSubmenu = (await help.getAttribute("aria-haspopup")) === "menu";
   await help.click();
-  if ((await help.getAttribute("aria-haspopup")) === "menu") {
+  if (helpOpensSubmenu) {
     await page.getByRole("menuitem", { name: "Help center", exact: true }).click();
   }
   await expect(page).toHaveURL(/\/help$/);

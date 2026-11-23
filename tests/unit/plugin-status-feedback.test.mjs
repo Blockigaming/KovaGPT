@@ -62,6 +62,12 @@ function compile(text, deps) {
     }).outputText,
   )(...Object.values(deps));
 }
+const googleServiceAccess = compile(
+  `${nodes
+    .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "googleServiceAccess")
+    .getText(file)}; return googleServiceAccess;`,
+  {},
+);
 const all = (tree) =>
   !tree || typeof tree !== "object" ? [] : [tree, ...(tree.children ?? []).flatMap(all)];
 const textOf = (tree) =>
@@ -174,6 +180,9 @@ function focusFixture() {
           ...deps,
           visibleGoogleLoading: state.googleLoading,
           visibleGoogleStatus: state.googleStatus,
+          isGoogleConnected: (id) =>
+            !!state.googleStatus?.connected &&
+            (id === "google" || googleServiceAccess(id, state.googleStatus).read === true),
           googleBusy: false,
           Button: "button",
           handleConnect() {},
@@ -311,6 +320,7 @@ function countFixture(overrides = {}) {
     connectionAccounts,
     hasConnectionScopes,
     configuredOf: () => false,
+    googleServiceAccess,
     otherConnections: {
       data: { accounts: [], configuredProviders: [] },
       loading: false,
@@ -339,20 +349,16 @@ function countFixture(overrides = {}) {
     deps[name] = compile(`return (${variable(name).getText(file)});`, deps);
   deps.catalog = [...ids, "slack"].map((id) => ({ id }));
   for (const name of [
-    "connectedCount",
     "connectionCountState",
     "connectedStatusMessage",
     "connectedStatusUnverified",
   ]) {
     deps[name] = compile(`return (${variable(name).getText(file)});`, deps);
   }
+  // The directory no longer prints a running total; count the providers it treats as connected.
+  deps.connectedCount = deps.catalog.filter((item) => deps.hasConnection(item.id)).length;
   return {
     ...deps,
-    summary: () =>
-      compile(
-        `return (${elementWith("className", "spec400-plugin-result-count").getText(file)});`,
-        deps,
-      ),
     empty: () =>
       compile(`return (${elementWith("className", "spec400-plugin-empty").getText(file)});`, {
         ...deps,
@@ -369,7 +375,6 @@ test("verified disconnected providers alone produce a zero count and disconnecte
   const f = countFixture();
   assert.equal(f.connectionCountState, "ready");
   assert.equal(f.connectedCount, 0);
-  assert.match(textOf(f.summary()), /0 connections/);
   assert.match(textOf(f.empty()), /No connections yet/);
 });
 
@@ -399,7 +404,6 @@ for (const [name, overrides, expected] of [
       { Unknown: "unknown", "Checking…": "checking", Unavailable: "unavailable" }[expected],
     );
     assert.equal(f.connectedStatusUnverified, true);
-    assert.doesNotMatch(textOf(f.summary()), /0 connections/);
     assert.doesNotMatch(textOf(f.empty()), /No connections yet|connect an account/);
   });
 }
@@ -430,7 +434,7 @@ test("All retains its catalog result count while Connected is unverified", () =>
     filtered: [{}, {}],
   });
   assert.equal(f.connectedStatusUnverified, false);
-  assert.match(textOf(f.summary()), /2 connections/);
+  assert.equal(f.filtered.length, 2);
 });
 
 test("the separate bank adapter cannot mark verified directory status unavailable", () => {

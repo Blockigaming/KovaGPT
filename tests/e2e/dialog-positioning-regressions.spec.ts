@@ -90,12 +90,14 @@ for (const theme of ["light", "dark"] as const) {
     await coreFixture(page, theme, "free", { preserveStorageOnReload: true });
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const fullpage = page.locator(".kova-settings-page");
+    // A Settings deep link opens the Settings modal over the workspace.
+    const linked = page.locator(".kova-settings-dialog");
+    await expect(page).toHaveURL(/\/settings\/responses$/);
     const pageColor = await page
       .locator("body")
       .evaluate((element) => getComputedStyle(element).backgroundColor);
-    await expect(fullpage).toHaveCSS("background-color", pageColor);
-    await expect(fullpage.locator(".kova-settings-content")).toHaveCSS(
+    await expect(linked).toHaveCSS("background-color", pageColor);
+    await expect(linked.locator(".kova-settings-content")).toHaveCSS(
       "background-color",
       "rgba(0, 0, 0, 0)",
     );
@@ -136,7 +138,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
       await expect(page.locator(".kova-sidebar")).not.toBeInViewport();
     } else {
-      await expect(page.locator(".kova-sidebar")).toHaveCount(0);
+      // Desktop keeps only the closed rail while Settings is open.
+      await expect(page.locator(".kova-sidebar")).toBeHidden();
     }
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),

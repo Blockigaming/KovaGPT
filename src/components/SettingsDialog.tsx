@@ -318,6 +318,30 @@ function SettingsPageContent({ children, className }: ComponentProps<typeof Dial
   );
 }
 
+// The modal mirrors its section into /settings/<section> so the address can be
+// shared, reloaded and reopened (the /settings route opens this modal again).
+// The router is not told: the page underneath stays mounted. This records the
+// page's own address so close restores it and "same page" guards compare
+// against it rather than against the mirrored one.
+const settingsUrlMirror: { base: string | null } = { base: null };
+function stableHref() {
+  if (typeof window === "undefined") return "";
+  return settingsUrlMirror.base ?? window.location.href;
+}
+function writeAddressQuietly(url: string) {
+  // The router patches history.replaceState to observe navigations; the native
+  // method changes only the address bar.
+  History.prototype.replaceState.call(window.history, window.history.state, "", url);
+}
+function restoreSettingsUrl() {
+  const base = settingsUrlMirror.base;
+  settingsUrlMirror.base = null;
+  if (base === null || typeof window === "undefined") return;
+  // A navigation started from inside Settings owns the address; leave it.
+  if (!window.location.pathname.startsWith("/settings/")) return;
+  writeAddressQuietly(base);
+}
+
 export function SettingsDialog({
   open,
   onOpenChange,
@@ -360,6 +384,16 @@ export function SettingsDialog({
   const { tier } = useTier();
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
   const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
+  useEffect(() => {
+    if (page || !open || typeof window === "undefined") return;
+    settingsUrlMirror.base ??= window.location.href;
+    const target = `/settings/${settingsSectionForTab(tab)}`;
+    if (window.location.pathname !== target) writeAddressQuietly(target);
+  }, [open, page, tab]);
+  useEffect(() => {
+    if (!page && !open) restoreSettingsUrl();
+  }, [open, page]);
+  useEffect(() => () => (page ? undefined : restoreSettingsUrl()), [page]);
   const [settingsQuery, setSettingsQuery] = useState("");
   const [mobileHome, setMobileHome] = useState(!initialTab);
   const [usage, setUsage] = useState<PlanUsageDto | null>(null);
@@ -402,7 +436,7 @@ export function SettingsDialog({
     [],
   );
   const usageRetryEpoch = billingScopeRef.current.epoch;
-  const usageRetryUrl = typeof window === "undefined" ? "" : window.location.href;
+  const usageRetryUrl = stableHref();
   const retryUsage = (event: React.MouseEvent<HTMLButtonElement>) => {
     const scope = billingScopeRef.current;
     const trigger = event.currentTarget;
@@ -411,7 +445,7 @@ export function SettingsDialog({
       scope.tab !== "usage" ||
       !scope.loggedIn ||
       currentAuthUserKeyRef.current !== userKey ||
-      usageRetryUrl !== window.location.href ||
+      usageRetryUrl !== stableHref() ||
       !trigger.isConnected ||
       trigger.closest('[inert], [aria-hidden="true"], [hidden]')
     )
@@ -1270,7 +1304,7 @@ export function SettingsDialog({
             returnFocusTarget ??
             (document.activeElement instanceof HTMLElement ? document.activeElement : null);
           returnFocusContextRef.current = {
-            url: window.location.href,
+            url: stableHref(),
             ownerId: currentAuthUserKeyRef.current,
           };
         }}
@@ -1282,7 +1316,7 @@ export function SettingsDialog({
           returnFocusContextRef.current = null;
           if (
             !context ||
-            context.url !== window.location.href ||
+            context.url !== stableHref() ||
             context.ownerId !== currentAuthUserKeyRef.current
           )
             return;

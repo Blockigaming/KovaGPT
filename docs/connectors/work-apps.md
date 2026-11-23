@@ -1,5 +1,7 @@
 # Work app connections
 
+Opening Connections attempts to renew up to three expiring grants already linked to the signed-in account. It uses the existing provider consent. If the provider rejects renewal, use that service’s reconnect action. A grant still needs the permissions required by the specific operation.
+
 The Connections page exposes work apps when their server configuration is available. Implemented operations are enabled only when the server configuration and the current user's provider consent are valid. Provider registration, credentials, owner consent and a successful real read must all be verified before describing a connection as live.
 
 Google and GitHub use their dedicated connection flows. Microsoft covers Outlook, OneDrive, SharePoint and Teams. Box, Canva, Figma, Calendly, BigQuery, HubSpot, Notion, Linear, Slack and Salesforce use the shared OAuth account lifecycle. Credentials belong in the deployment's server secret manager.

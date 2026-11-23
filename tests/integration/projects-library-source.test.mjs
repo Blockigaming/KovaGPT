@@ -109,7 +109,7 @@ test("project detail has instructions autosave states and mobile-safe tabs", () 
   );
   assert.match(
     projectDetailStyles,
-    /@media \(pointer: coarse\)\s*\{[\s\S]*?\.kova-project-workspace :is\(\.kova-project-tools-trigger, \.kova-project-resource-link\)\s*\{\s*min-height: 44px;/,
+    /@media \(width < 1024px\) and \(pointer: coarse\)\s*\{[\s\S]*?\.kova-project-workspace :is\(\.kova-project-tools-trigger, \.kova-project-resource-link\)\s*\{\s*min-height: 44px;/,
   );
   assert.match(managementStyles, /\.spec400-project-navigation\s*\{[^}]*flex-wrap: wrap;/);
   assert.match(

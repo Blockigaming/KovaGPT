@@ -85,6 +85,7 @@ function fixture(provider = "granola", binding = {}) {
           { id: "mixpanel", name: "Mixpanel", requiredScopes: ["mixpanel:cohorts:list"] },
         ],
       },
+      "@/integrations/connected-tools.server": {},
       "@/lib/bounded-json.server.mjs": boundedJson,
       "@/lib/lockdown-policy.mjs": lockdown,
       "@/lib/distributed-rate-limit.server": {

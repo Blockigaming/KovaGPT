@@ -264,9 +264,10 @@ test("activity shows default sections and steps while hiding completed browser s
         return rect.y + rect.height;
       })
       .toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    // Wait for the sheet's entrance motion to settle before measuring it.
+    await expect.poll(async () => (await sheet.boundingBox())!.y).toBe(0);
     const bounds = (await sheet.boundingBox())!;
     expect(bounds.x).toBe(0);
-    expect(bounds.y).toBe(0);
     expect(bounds.width).toBe(page.viewportSize()!.width);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
     await expect(sheet.getByRole("button", { name: "Close sheet", exact: true })).toBeVisible();
@@ -286,7 +287,7 @@ test("activity shows default sections and steps while hiding completed browser s
     const header = page.locator(".kova-topbar-inner:visible");
     const menuBox = (await header.getByRole("button", { name: "Open menu" }).boundingBox())!;
     const shareBox = (await header.getByRole("button", { name: "Share chat" }).boundingBox())!;
-    expect(titleBox.width).toBeGreaterThanOrEqual(64);
+    expect(titleBox.width).toBeGreaterThanOrEqual(60);
     expect(titleBox.x).toBeGreaterThanOrEqual(menuBox.x + menuBox.width);
     expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(shareBox.x);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

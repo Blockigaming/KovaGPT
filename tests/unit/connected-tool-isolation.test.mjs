@@ -511,6 +511,43 @@ test("concurrent token refreshes claim a credential only once and persist the ro
   assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:rotated");
 });
 
+test("the Connections list renews an expiring grant and returns safe current status", async () => {
+  const f = fixture();
+  f.state.row.token_expires_at = new Date(Date.now() - 1000).toISOString();
+  f.state.row.refresh_token_ciphertext = "old-refresh";
+  const { id, provider_id, account_label, status, granted_scopes, token_expires_at, updated_at } =
+    f.state.row;
+  const account = {
+    id,
+    provider_id,
+    account_label,
+    status,
+    granted_scopes,
+    token_expires_at,
+    updated_at,
+  };
+  const configured = new Set(["microsoft"]);
+  const renew = (currentSession) =>
+    f.renewListedOAuthAccounts("owner-a", [account], configured, async () => currentSession);
+
+  assert.deepEqual(await renew(false), [account]);
+  assert.equal(f.state.refreshCalls ?? 0, 0);
+  assert.deepEqual(await f.renewListedOAuthAccounts("owner-a", [account], new Set()), [account]);
+  f.state.allowRate = false;
+  assert.deepEqual(await renew(true), [account]);
+  assert.equal(f.state.refreshCalls ?? 0, 0);
+
+  f.state.allowRate = true;
+  const [fresh] = await renew(true);
+  assert.equal(f.state.refreshCalls, 1);
+  assert.equal(fresh.id, account.id);
+  assert.equal(fresh.status, "connected");
+  assert.ok(Date.parse(fresh.token_expires_at) > Date.now());
+  assert.equal(flows.canReadConnection(fresh, "outlook"), true);
+  assert.deepEqual(Object.keys(fresh), Object.keys(account));
+  assert.doesNotMatch(JSON.stringify(fresh), /encrypted|rotated|renewed|old-refresh/u);
+});
+
 test("uncertain token rotation is not replayed and cannot replace a newer reconnect", async () => {
   for (const failure of ["response", "disconnect", "reconnect"]) {
     const f = fixture();

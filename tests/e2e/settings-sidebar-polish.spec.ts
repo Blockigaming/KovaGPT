@@ -110,7 +110,7 @@ test("desktop Settings width is editable and Back restores the originating page"
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/appearance$/);
-  const settings = page.locator(".kova-settings-page");
+  const settings = page.locator(".kova-settings-dialog");
   const navigation = settings.getByRole("complementary", { name: "Settings navigation" });
   const width = settings.getByRole("slider", { name: "Settings sidebar width" });
   await expect(width).toHaveAttribute("aria-valuenow", "280");
@@ -138,7 +138,7 @@ test("desktop Settings width is editable and Back restores the originating page"
   await navigation.getByRole("tab", { name: "Profile", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
-  await settings.getByRole("button", { name: "Back to app", exact: true }).click();
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(page).toHaveURL(previousUrl);
 });
 
