@@ -533,7 +533,7 @@ test("every new directory action builds a bounded request and validates a provid
     ],
   };
   assert.deepEqual(
-    [...actions.EXTRA_WRITE_CONNECTORS].filter((id) => id !== "custom-mcp").sort(),
+    [...actions.EXTRA_WRITE_CONNECTORS].filter((id) => !["custom-mcp", "tana"].includes(id)).sort(),
     Object.keys(receipts).sort(),
   );
   for (const [connector, [fields, host, path, status, receipt]] of Object.entries(receipts)) {

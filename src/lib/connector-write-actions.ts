@@ -23,6 +23,7 @@ export const EXTRA_WRITE_CONNECTORS = [
   "sharepoint",
   "slack",
   "stripe",
+  "tana",
   "vercel",
   "webull",
   "wix",
@@ -221,6 +222,16 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
     summary:
       "Create an empty, unfinalized draft for a customer on the linked account. The installed Stripe App needs invoice write permission.",
     fields: [{ name: "destination", label: "Stripe customer ID", maxLength: 128 }],
+  },
+  tana: {
+    scope: null,
+    readConnection: "tana",
+    action: "Propose Tana documents",
+    summary:
+      "Request document creation in the linked Tana workspace. Review and apply the proposal inside Tana.",
+    fields: [
+      { name: "argumentsJson", label: "Document request (JSON)", maxLength: 2000, multiline: true },
+    ],
   },
   vercel: {
     scope: null,

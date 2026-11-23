@@ -39,6 +39,7 @@ const mocks: Record<string, string> = {
     export const createOutlookEvent=async({data})=>{window.operations.push(["create-event",data]);return {created:true}};
     export const createGoogleDriveFolder=async({data})=>{window.operations.push(["drive-folder",data]);return {created:true}};
     export const runConnectorWriteAction=async({data,headers})=>{if(headers?.["X-Kova-Owner"]!==window.testOwner)throw new Error("Owner binding is required");window.operations.push(["reviewed-provider-write",data]);return {ok:true}};
+    export const loadTanaProposalSchema=async()=>({schema:"{}"});
   `,
   "@/lib/connector-submissions.functions": `
     export const listPublishedConnectorSubmissions=async()=>[];

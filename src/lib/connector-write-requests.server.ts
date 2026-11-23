@@ -111,6 +111,7 @@ export function connectorWriteRequest(
         body: { title, design_type: { type: "custom", width: 1080, height: 1080 } },
       };
     case "custom-mcp":
+    case "tana":
       return null;
     case "etoro": {
       const params = new URLSearchParams({ name: title, type: "Static" });

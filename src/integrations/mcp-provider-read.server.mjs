@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import {
   createBoundedProviderStream,
   readProviderJsonObject,
@@ -230,6 +231,77 @@ async function readMcpTool(config, token, query, fetchImpl, beforeRequest) {
 
 export async function verifyTanaRead(token, fetchImpl = fetch, beforeRequest) {
   await readMcpTool(TANA_CONFIG, token, "Kova connection check", fetchImpl, beforeRequest);
+}
+
+function assertTanaArguments(value, depth = 0) {
+  if (depth > 8) throw new Error("invalid_tana_proposal");
+  if (value === null || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    if (["__proto__", "constructor", "prototype", "autoapprove"].includes(key.toLowerCase()))
+      throw new Error("invalid_tana_proposal");
+    assertTanaArguments(child, depth + 1);
+  }
+}
+
+async function withTanaProposalTool(token, fetchImpl, beforeRequest, useTool) {
+  const client = createMcpClient({ url: TANA_MCP_RESOURCE, token, fetchImpl, beforeRequest });
+  try {
+    await client.start();
+    const tool = await findTool(client, "createItems");
+    const schema = tool.inputSchema;
+    if (
+      tool.annotations?.readOnlyHint === true ||
+      tool.annotations?.destructiveHint === true ||
+      schema?.type !== "object" ||
+      !schema.properties ||
+      Array.isArray(schema.properties) ||
+      JSON.stringify(schema).length > 16_000
+    )
+      throw new Error("mcp_tool_changed");
+    return await useTool(client, schema);
+  } finally {
+    await client.close();
+  }
+}
+
+export function tanaProposalSchema(token, fetchImpl = fetch, beforeRequest) {
+  return withTanaProposalTool(token, fetchImpl, beforeRequest, (_client, schema) =>
+    JSON.stringify(schema, (key, value) => (key === "description" ? undefined : value), 2),
+  );
+}
+
+export async function runTanaProposal(token, argumentsJson, fetchImpl = fetch, beforeRequest) {
+  const input = JSON.parse(argumentsJson);
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("invalid_tana_proposal");
+  assertTanaArguments(input);
+  return withTanaProposalTool(token, fetchImpl, beforeRequest, async (client, schema) => {
+    if (Object.keys(input).some((key) => !Object.hasOwn(schema.properties, key)))
+      throw new Error("invalid_tana_proposal");
+    const args = Object.hasOwn(schema.properties, "autoApprove")
+      ? { ...input, autoApprove: false }
+      : input;
+    if (!z.fromJSONSchema(schema).safeParse(args).success) throw new Error("invalid_tana_proposal");
+    const result = await client.send("tools/call", { name: "createItems", arguments: args });
+    if (result.isError === true) return null;
+    let session = result.structuredContent?.sessionUri;
+    if (!session && Array.isArray(result.content)) {
+      for (const entry of result.content.slice(0, 6)) {
+        if (entry?.type !== "text" || typeof entry.text !== "string" || entry.text.length > 16_000)
+          continue;
+        try {
+          session = JSON.parse(entry.text)?.sessionUri;
+        } catch {
+          continue;
+        }
+        if (session) break;
+      }
+    }
+    return typeof session === "string" &&
+      /^(?:tana:|https:\/\/(?:home\.)?tana\.inc\/)[!-~]{1,220}$/u.test(session)
+      ? session
+      : null;
+  });
 }
 
 export async function runReviewedMcpWrite(

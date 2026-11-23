@@ -26,7 +26,11 @@ import {
   getWixAccessToken,
   webullSignedHeaders,
 } from "@/integrations/account-provider-read.server.mjs";
-import { runReviewedMcpWrite } from "@/integrations/mcp-provider-read.server.mjs";
+import {
+  runReviewedMcpWrite,
+  runTanaProposal,
+  tanaProposalSchema,
+} from "@/integrations/mcp-provider-read.server.mjs";
 import { unpackSalesforceCredential } from "@/integrations/salesforce-credential.server.mjs";
 import type { ConnectionDomainDatabase } from "@/integrations/connection-domain.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -217,6 +221,27 @@ async function linkedWriteToken(userId: string, target: string, connector: Linke
   return { token, stillAuthorized };
 }
 
+async function assertLinkedWriteAccess(stillAuthorized: () => Promise<boolean>) {
+  if (!(await stillAuthorized())) throw new Error("connection_permission_required");
+}
+
+export const loadTanaProposalSchema = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ target: z.string().uuid() }))
+  .handler(async ({ context, data }) => {
+    const access = await linkedWriteToken(context.userId, data.target, "tana");
+    if (!access.token) return { error: access.error };
+    try {
+      return {
+        schema: await tanaProposalSchema(access.token, fetch, () =>
+          assertLinkedWriteAccess(access.stillAuthorized),
+        ),
+      };
+    } catch {
+      return { error: "Could not load the document request fields from Tana." };
+    }
+  });
+
 export const runConnectorWriteAction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -242,15 +267,19 @@ export const runConnectorWriteAction = createServerFn({ method: "POST" })
           access.token,
           fields.operation,
           fields.text,
-          async () => {
-            if (!(await access.stillAuthorized()))
-              throw new Error("connection_permission_required");
-          },
+          () => assertLinkedWriteAccess(access.stillAuthorized),
         );
         if (accepted) return { ok: true as const };
         return {
           error: "The MCP server did not confirm the change. Check the server before retrying.",
         };
+      }
+      if (connector === "tana") {
+        const reference = await runTanaProposal(access.token, fields.argumentsJson, fetch, () =>
+          assertLinkedWriteAccess(access.stillAuthorized),
+        );
+        if (reference) return { ok: true as const, reference };
+        return { error: "Tana did not confirm the proposal session. Check Tana before retrying." };
       }
       const notion =
         connector === "notion-private" ? unpackKeyCredential(connector, access.token) : null;
@@ -329,7 +358,13 @@ export const runConnectorWriteAction = createServerFn({ method: "POST" })
         if (response.status === 401 || response.status === 403)
           return { error: `${label} denied this action. Check the provider's write permission.` };
       }
-    } catch {
+    } catch (error) {
+      if (
+        connector === "tana" &&
+        (error instanceof SyntaxError ||
+          (error instanceof Error && error.message === "invalid_tana_proposal"))
+      )
+        return { error: "Enter a JSON object that matches Tana's document request fields." };
       // The provider may have applied the operation before the connection was interrupted.
     }
     return { error: `${label} did not confirm the change. Check the provider before retrying.` };

@@ -20,6 +20,7 @@ import {
   createOutlookEvent,
   createOutlookDraft,
   getConnectorWriteAccess,
+  loadTanaProposalSchema,
   runConnectorWriteAction,
   sendOutlookMessage,
   setConnectorWriteAccess,
@@ -404,6 +405,7 @@ function ExtraWriteForm({
 }) {
   const definition = EXTRA_WRITE_ACTIONS[connector];
   const perform = useServerFn(runConnectorWriteAction);
+  const loadTanaSchema = useServerFn(loadTanaProposalSchema);
   const [review, setReview] = useState<WriteFields | null>(null);
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<{
@@ -414,6 +416,24 @@ function ExtraWriteForm({
   const [requestId, setRequestId] = useState(() =>
     connector === "hyperframes-heygen" ? crypto.randomUUID() : "",
   );
+  const [tanaSchema, setTanaSchema] = useState<string | null>(null);
+
+  async function showTanaFields() {
+    setBusy(true);
+    setOutcome(null);
+    try {
+      const result = await loadTanaSchema({
+        data: { target },
+        headers: { "X-Kova-Owner": owner },
+      });
+      if (result.schema) setTanaSchema(result.schema);
+      else setOutcome({ message: result.error ?? "Could not load Tana's request fields." });
+    } catch {
+      setOutcome({ message: "Could not load Tana's request fields." });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function confirm() {
     if (!review || busy) return;
@@ -432,7 +452,9 @@ function ExtraWriteForm({
                   ? "HeyGen queued the render."
                   : connector === "gamma"
                     ? "Gamma queued the presentation."
-                    : "The provider confirmed the change.",
+                    : connector === "tana"
+                      ? "Tana created a proposal for review."
+                      : "The provider confirmed the change.",
               link: "link" in response ? response.link : undefined,
               reference: "reference" in response ? response.reference : undefined,
             }
@@ -454,6 +476,26 @@ function ExtraWriteForm({
     <div className="kova-directory-panel">
       <h3>{review ? `Review: ${definition.action}` : definition.action}</h3>
       <p>{definition.summary}</p>
+      {connector === "tana" && !review && (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void showTanaFields()}
+          >
+            Load request fields from Tana
+          </Button>
+          {tanaSchema && (
+            <pre
+              className="max-h-48 overflow-auto whitespace-pre-wrap break-words"
+              aria-label="Tana request schema"
+            >
+              {tanaSchema}
+            </pre>
+          )}
+        </>
+      )}
       {review ? (
         <>
           <dl>
@@ -514,7 +556,12 @@ function ExtraWriteForm({
           {outcome.reference && (
             <>
               {" "}
-              {connector === "gamma" ? "Generation ID" : "Render ID"} {outcome.reference}
+              {connector === "gamma"
+                ? "Generation ID"
+                : connector === "tana"
+                  ? "Proposal session"
+                  : "Render ID"}{" "}
+              {outcome.reference}
             </>
           )}
           {outcome.link && (

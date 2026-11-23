@@ -15,6 +15,8 @@ import { prepareKeyCredential } from "../../src/integrations/key-connection-cred
 import {
   readMcpConnection,
   runReviewedMcpWrite,
+  runTanaProposal,
+  tanaProposalSchema,
 } from "../../src/integrations/mcp-provider-read.server.mjs";
 import {
   oauthRefreshRequest,
@@ -517,4 +519,58 @@ test("Custom MCP writes require a linked tool binding, non-destructive schema, a
     if (env === undefined) delete process.env.KOVA_MCP_READ_SERVERS;
     else process.env.KOVA_MCP_READ_SERVERS = env;
   }
+});
+
+test("Tana validates the current createItems schema and only sends unapproved proposals", async () => {
+  const calls = [];
+  const token = "fixture-tana-token";
+  const descriptor = {
+    name: "createItems",
+    annotations: { readOnlyHint: false, destructiveHint: false },
+    inputSchema: {
+      type: "object",
+      required: ["items"],
+      properties: {
+        items: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            required: ["title"],
+            properties: { title: { type: "string", minLength: 1 } },
+          },
+        },
+        autoApprove: { type: "boolean" },
+      },
+    },
+  };
+  async function transport(url, init) {
+    assert.equal(url, TANA_MCP_RESOURCE);
+    assert.equal(init.headers.Authorization, `Bearer ${token}`);
+    const { id, method, params } = JSON.parse(init.body);
+    if (method === "notifications/initialized") return new Response(null, { status: 202 });
+    if (method === "tools/call") calls.push(params);
+    const result = {
+      initialize: { protocolVersion: "2025-06-18", capabilities: { tools: {} } },
+      "tools/list": { tools: [descriptor, { name: "approveProposals" }] },
+      "tools/call": { structuredContent: { sessionUri: "tana:fixture-proposal" } },
+    }[method];
+    return Response.json({ jsonrpc: "2.0", id, result });
+  }
+  assert.deepEqual(JSON.parse(await tanaProposalSchema(token, transport)), descriptor.inputSchema);
+  await assert.rejects(
+    runTanaProposal(token, '{"items":[],"autoApprove":true}', transport),
+    /invalid_tana_proposal/u,
+  );
+  await assert.rejects(
+    runTanaProposal(token, '{"items":[{"title":7}]}', transport),
+    /invalid_tana_proposal/u,
+  );
+  assert.deepEqual(calls, []);
+  const items = [{ title: "Fixture document" }];
+  assert.equal(
+    await runTanaProposal(token, JSON.stringify({ items }), transport),
+    "tana:fixture-proposal",
+  );
+  assert.deepEqual(calls, [{ name: "createItems", arguments: { items, autoApprove: false } }]);
 });
