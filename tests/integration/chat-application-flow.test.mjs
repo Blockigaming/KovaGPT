@@ -697,6 +697,7 @@ function composer(f) {
     // Hosted aliases have separate request/routing qualification; never label
     // an OpenAI fixture request as one of those foundations.
     hostedModel: undefined,
+    recommendedModelSelection: true,
     tempChat: false,
     tempChatContext: "clean",
     settings: { rememberAcross: false },

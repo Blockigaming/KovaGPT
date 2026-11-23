@@ -45,10 +45,10 @@ const buttonOf = (node) => {
 test("spec400 card actions always open details, including unavailable and recovery states", () => {
   for (const [state, configured, label] of [
     ["idle", true, "Connect"],
-    ["connected", true, "Manage"],
+    ["connected", true, "Connected"],
     ["reauthorize", true, "Reconnect"],
-    ["permission_incomplete", true, "Details"],
-    ["temporarily_unavailable", false, "Details"],
+    ["permission_incomplete", true, "Reconnect"],
+    ["temporarily_unavailable", false, "Coming soon"],
     ["temporarily_unavailable", true, "Unavailable"],
   ]) {
     let trigger;

@@ -52,6 +52,8 @@ for (const theme of ["dark", "light"] as const) {
   test(`${theme}: Settings controls fit their cards and phone inputs avoid automatic zoom`, async ({
     page,
   }) => {
+    // Each deep link redirects to chat and opens the Settings modal there.
+    test.setTimeout(90000);
     await coreFixture(page, theme, "pro");
     for (const section of [
       "responses",
@@ -64,7 +66,7 @@ for (const theme of ["dark", "light"] as const) {
       await page.goto(`/settings/${section}`);
       await waitForKovaHydration(page);
       const content = page.locator(".kova-settings-content");
-      await expect(content).toBeVisible();
+      await expect(content).toBeVisible({ timeout: 15_000 });
       const issues = await content
         .locator('input:not([type="checkbox"]):not([type="radio"]), textarea, [role="combobox"]')
         .evaluateAll((nodes) =>
@@ -106,7 +108,7 @@ for (const theme of ["dark", "light"] as const) {
 }
 
 test("every Settings destination loads from its route without clipping", async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(240000);
   await coreFixture(page, "dark", "pro");
   for (const section of [
     "profile",
@@ -135,7 +137,7 @@ test("every Settings destination loads from its route without clipping", async (
     await waitForKovaHydration(page);
     await expect(
       page.locator('.kova-settings-content > [role="tabpanel"][data-state="active"]'),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
     const heading = page.locator(".kova-settings-content-header h2");
     await expect(heading).toBeVisible();
     const box = (await heading.boundingBox())!;

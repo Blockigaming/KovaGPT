@@ -27,8 +27,10 @@ for (const theme of ["light", "dark"] as const) {
       ));
     await expect(composer).toHaveCSS("display", "flex");
     const compactHeight = (await composer.boundingBox())!.height;
+    // The compact phone frame belongs to the native app shell only.
     const phone = await page.evaluate(
       () =>
+        document.documentElement.dataset.kovaSurface === "app" &&
         matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
           .matches,
     );

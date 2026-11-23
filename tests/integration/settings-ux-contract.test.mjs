@@ -294,12 +294,9 @@ test("settings navigation is centralized and routes every rendered category", ()
     assert.equal(sections[sectionForTab(tab.value)], tab.value);
     assert.equal(panels.filter((value) => value === tab.value).length, 1, tab.label);
   }
-  assert.match(routeSource, /initialTab=\{tab\}/);
+  // /settings/<section> reopens the Settings modal over chat at that section.
   assert.match(routeSource, /SETTINGS_SECTIONS\[section as keyof typeof SETTINGS_SECTIONS\]/);
-  assert.match(
-    routeSource,
-    /navigate\(\{\s*to: "\/settings\/\$section",\s*params: \{ section: next \},\s*replace: true,\s*resetScroll: false,\s*\}\)/,
-  );
+  assert.match(routeSource, /new CustomEvent\("kova-open-settings", \{ detail: \{ tab \} \}\)/);
   assert.match(settingsSource, /if \(page\) onSectionChange\?\.\(settingsSectionForTab\(value\)\)/);
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
   assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);

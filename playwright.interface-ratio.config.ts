@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import { KOVA_APP_USER_AGENT } from "./tests/e2e/app-surface";
 
 const engine = process.env.KOVA_MOBILE_STATE_ENGINE;
 if (engine && !["chromium", "firefox", "webkit"].includes(engine))
@@ -48,7 +49,13 @@ export default defineConfig({
       { width: 430, height: 932 },
     ].map((viewport) => ({
       name: `phone-${viewport.width}`,
-      use: { viewport, isMobile: engine !== "firefox", hasTouch: true },
+      // Phone ratios describe the native app presentation.
+      use: {
+        viewport,
+        isMobile: engine !== "firefox",
+        hasTouch: true,
+        userAgent: KOVA_APP_USER_AGENT,
+      },
     })),
     {
       name: "landscape-844",
@@ -56,6 +63,7 @@ export default defineConfig({
         viewport: { width: 844, height: 390 },
         isMobile: engine !== "firefox",
         hasTouch: true,
+        userAgent: KOVA_APP_USER_AGENT,
       },
     },
     { name: "tablet-768", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
