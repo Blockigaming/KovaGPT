@@ -337,7 +337,9 @@ export function parseChartSpec(raw: string): ChartSpec | null {
     const spec = object as ChartSpec;
     if (spec.type === "candlestick" && !candlestickRows(spec)) return null;
     if (spec.type === "sankey" && !sankeyData(spec)) return null;
-    if (isExtraChartType(spec.type) && !extraChartFits(spec)) return null;
+    // Data that doesn't match its requested family still draws: it falls back to the
+    // closest general chart (bar when there are numbers, otherwise the data table).
+    if (isExtraChartType(spec.type) && !extraChartFits(spec)) return { ...spec, type: "bar" };
     if (["waterfall", "range"].includes(spec.type) && !rangeChartRows(spec, spec.keys?.[0]))
       return null;
     return spec;

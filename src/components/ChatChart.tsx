@@ -419,11 +419,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           </div>
         ) : candles ? (
           <CandlePlot rows={candles} />
-        ) : noCompatibleSeries ? (
-          <div role="alert" className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
-            This chart has no compatible numeric series. The source data is preserved below.
-          </div>
-        ) : type === "heatmap" ? (
+        ) : noCompatibleSeries ? null : type === "heatmap" ? (
           <ChartHeatmap spec={spec} xKey={xKey} keys={keys} />
         ) : (
           <div

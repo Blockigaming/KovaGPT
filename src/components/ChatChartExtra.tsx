@@ -1577,9 +1577,23 @@ export function ChatChartExtra(props: Props) {
   }, [props]);
   return (
     content ?? (
-      <div role="alert" className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
-        This chart’s data doesn’t fit its type. The source data is in the table below.
-      </div>
+      // A family that can't draw this data falls back to a plain line chart of its numbers.
+      <Frame label="Line chart">
+        <LineChart data={props.spec.data}>
+          {GRID}
+          <XAxis dataKey={props.xKey} tick={AXIS} />
+          <YAxis tick={AXIS} />
+          {TIP}
+          {props.keys.map((key, index) => (
+            <Line
+              key={key}
+              dataKey={key}
+              stroke={props.colors[index % props.colors.length]}
+              strokeWidth={2}
+            />
+          ))}
+        </LineChart>
+      </Frame>
     )
   );
 }
