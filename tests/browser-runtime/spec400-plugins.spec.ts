@@ -786,9 +786,7 @@ test("unavailable providers have readable details and no connection action", asy
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
-test("connector fields leave space for labels and header motion respects reduced motion", async ({
-  page,
-}) => {
+test("connector fields have spacing and the header tint fades evenly", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await boot(page, emptyGoogle, "https://kova-plugins.test/apps?plugin=custom-mcp", {
     configuredProviders: [{ id: "custom-mcp" }],
@@ -802,32 +800,40 @@ test("connector fields leave space for labels and header motion respects reduced
   const hero = page.locator(".kova-connection-hero");
   await expect
     .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))
-    .toBe("kova-connection-hero-drift, kova-connection-hero-fade");
+    .toBe("kova-connection-hero-fade");
   const [start, bright, fading, end] = await hero.evaluate(async (node) => {
-    const animations = document
+    const fade = document
       .getAnimations()
-      .filter(
+      .find(
         (animation) =>
           animation instanceof CSSAnimation &&
-          animation.animationName.startsWith("kova-connection-hero-"),
+          animation.animationName === "kova-connection-hero-fade",
       );
-    for (const animation of animations) animation.pause();
-    await Promise.all(animations.map((animation) => animation.ready));
+    if (!fade) throw new Error("The header tint animation is missing");
+    fade.pause();
+    await fade.ready;
 
     return [0, 4500, 12500, 17999].map((time) => {
-      for (const animation of animations) animation.currentTime = time;
+      fade.currentTime = time;
       const style = getComputedStyle(node, "::before");
-      const position = new DOMMatrixReadOnly(style.transform);
-      return { x: position.m41, y: position.m42, opacity: Number(style.opacity) };
+      return {
+        opacity: Number(style.opacity),
+        backgroundImage: style.backgroundImage,
+        backgroundColor: style.backgroundColor,
+        transform: style.transform,
+      };
     });
   });
   expect(start.opacity).toBe(0);
   expect(bright.opacity).toBe(1);
   expect(fading.opacity).toBeGreaterThan(0);
   expect(fading.opacity).toBeLessThan(bright.opacity);
-  expect(fading.x).toBeGreaterThan(bright.x);
-  expect(fading.y).toBeGreaterThan(bright.y);
   expect(end.opacity).toBeLessThan(0.01);
+  for (const frame of [start, bright, fading, end]) {
+    expect(frame.backgroundImage).toBe("none");
+    expect(frame.backgroundColor).toBe(bright.backgroundColor);
+    expect(frame.transform).toBe("none");
+  }
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect
