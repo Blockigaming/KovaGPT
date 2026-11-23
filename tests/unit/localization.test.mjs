@@ -21,6 +21,16 @@ const labelsUrl = `data:text/javascript;base64,${Buffer.from(
 const localesUrl = `data:text/javascript;base64,${Buffer.from(
   stripTypeScriptTypes(await readFile("src/lib/locales.ts", "utf8")),
 ).toString("base64")}`;
+const appLabelsUrl = `data:text/javascript;base64,${Buffer.from(
+  stripTypeScriptTypes(await readFile("src/lib/localization-app-labels.ts", "utf8")).replace(
+    /import type[^;]+;/,
+    "",
+  ),
+).toString("base64")}`;
+globalThis.translated = [];
+const translatorUrl = `data:text/javascript;base64,${Buffer.from(
+  "export function applyInterfaceTranslation(labels) { globalThis.translated.push(Object.keys(labels).length); }",
+).toString("base64")}`;
 const store = new Map();
 globalThis.localStorage = {
   getItem: (key) => store.get(key) ?? null,
@@ -35,7 +45,9 @@ Object.defineProperty(globalThis, "navigator", {
 const coreSource = stripTypeScriptTypes(await readFile("src/lib/localization.ts", "utf8"))
   .replaceAll('"react"', JSON.stringify(pathToFileURL(resolve("node_modules/react/index.js")).href))
   .replaceAll('"@/lib/locales"', JSON.stringify(localesUrl))
-  .replaceAll('"@/lib/localization-labels"', JSON.stringify(labelsUrl));
+  .replaceAll('"@/lib/localization-labels"', JSON.stringify(labelsUrl))
+  .replaceAll('"@/lib/localization-app-labels"', JSON.stringify(appLabelsUrl))
+  .replaceAll('"@/lib/dom-translator"', JSON.stringify(translatorUrl));
 const coreUrl = `data:text/javascript;base64,${Buffer.from(coreSource).toString("base64")}`;
 const core = await import(coreUrl);
 const format = await dataModule("src/lib/localization-format.ts", {
@@ -74,6 +86,8 @@ test("chosen language, direction and units reach the page and storage", async ()
   await new Promise((done) => setTimeout(done, 20));
   assert.equal(L.t("New chat"), "Neuer Chat");
   assert.equal(L.t("Unknown label"), "Unknown label");
+  assert.equal(L.t("Library"), "Bibliothek");
+  assert.ok(globalThis.translated.at(-1) > 500, "page text is translated in place");
   L.setLocalization({ language: "ar" });
   assert.equal(document.documentElement.dir, "rtl");
   L.setLocalization({ language: "en" });
@@ -127,4 +141,19 @@ test("code, math and logos stay left to right inside right-to-left pages", async
   const css = await readFile("src/styles/localization.css", "utf8");
   assert.match(css, /\[dir="rtl"\] :is\(pre, code, kbd, samp, \.katex, \.kova-logo/);
   assert.match(css, /:lang\(ar\) body/);
+});
+
+test("the rest of the interface has the same labels in every language", async () => {
+  const source = stripTypeScriptTypes(
+    await readFile("src/lib/localization-app-labels.ts", "utf8"),
+  ).replace(/import type[^;]+;/, "");
+  const { APP_LABELS } = await import(
+    `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
+  );
+  const english = Object.keys(APP_LABELS.es).sort();
+  assert.ok(english.length > 500);
+  for (const locale of ["fr", "de", "pt-BR", "ja", "ko", "ar"]) {
+    assert.deepEqual(Object.keys(APP_LABELS[locale]).sort(), english, locale);
+    for (const value of Object.values(APP_LABELS[locale])) assert.ok(value.trim(), locale);
+  }
 });

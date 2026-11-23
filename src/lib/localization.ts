@@ -90,16 +90,27 @@ function applyDocument() {
 async function loadLabels() {
   const language = effectiveLanguage();
   if (language === "en") {
+    const hadLabels = labels !== null;
     labels = null;
     labelsFor = "en";
     emit();
+    if (hadLabels) {
+      const { applyInterfaceTranslation } = await import("@/lib/dom-translator");
+      applyInterfaceTranslation({});
+    }
     return;
   }
-  const { LOCALIZED_LABELS } = await import("@/lib/localization-labels");
+  const [{ LOCALIZED_LABELS }, { APP_LABELS }, { applyInterfaceTranslation }] = await Promise.all([
+    import("@/lib/localization-labels"),
+    import("@/lib/localization-app-labels"),
+    import("@/lib/dom-translator"),
+  ]);
   if (effectiveLanguage() !== language) return;
-  labels = LOCALIZED_LABELS[language] ?? null;
+  labels = { ...(APP_LABELS[language] ?? {}), ...(LOCALIZED_LABELS[language] ?? {}) };
   labelsFor = language;
   emit();
+  // Everything rendered without t() is translated in place from the same labels.
+  applyInterfaceTranslation(labels);
 }
 
 let started = false;
