@@ -18,3 +18,13 @@ jobs:
         run: |
           xcodebuild -project ios/KovaHealth.xcodeproj -scheme KovaHealth \
             -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Verify the isolated staging companion build
+        run: |
+          xcodebuild -project ios/KovaHealth.xcodeproj -scheme KovaHealth -configuration Debug \
+            -derivedDataPath "$RUNNER_TEMP/kova-health-staging" \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO \
+            PRODUCT_BUNDLE_IDENTIFIER=com.kovagpt.health.staging \
+            KOVA_HEALTH_STAGING_HOST=staging.kovagpt.com build
+          plist="$RUNNER_TEMP/kova-health-staging/Build/Products/Debug-iphonesimulator/KovaHealth.app/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = com.kovagpt.health.staging
+          test "$(/usr/libexec/PlistBuddy -c 'Print :KovaHealthStagingHost' "$plist")" = staging.kovagpt.com

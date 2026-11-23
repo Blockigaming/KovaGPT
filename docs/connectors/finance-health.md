@@ -63,6 +63,13 @@ Oura uses web authorization in Connections. Apple HealthKit and Android Health C
 
 ## Acceptance
 
+Use the exact approved staging host from the Azure staging deployment when running physical-device checks before release. The native debug build accepts the company staging domain `staging.kovagpt.com` or a fully qualified host for `ca-kovagpt-staging` on Azure Container Apps. Both bridges trust only the selected HTTPS origin and the Health page. Use a disposable staging account and synthetic device readings.
+
+- On iPhone, set the Debug bundle identifier to `com.kovagpt.health.staging`, set `KOVA_HEALTH_STAGING_HOST` to the approved host without `https://`, and select a signing team with access to HealthKit for that bundle. Run the Debug scheme on the device.
+- On Android, run `gradle -p android -PkovaHealthStagingHost=<approved-host> :app:assembleDebug` and install its debug APK. The staging APK uses the package `com.kovagpt.health.staging` and has independent Android Health Connect permissions.
+
+The default and release binaries use `https://kovagpt.com`. The staging builds do not use the production app's saved health consent. CI checks compilation and packaging of both configurations. Sign-off still requires a reading with actual OS permission, denied access for an excluded category, and removal after disconnect or permission revocation on each platform.
+
 For each enabled provider, verify real owner consent, a successful read through Kova, denial or revocation, credential expiry, account switching and disconnection. A mocked protocol/browser test is a source check, not live provider acceptance. Keep unconfigured providers disabled until their prerequisites are actually met.
 
 ## Primary references

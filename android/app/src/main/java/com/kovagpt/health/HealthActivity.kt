@@ -253,7 +253,7 @@ class HealthActivity : ComponentActivity() {
     }
 
     private fun trusted(uri: Uri?): Boolean =
-        uri != null && uri.scheme == "https" && uri.host == "kovagpt.com" && uri.userInfo == null &&
+        uri != null && uri.scheme == "https" && uri.host == BuildConfig.HEALTH_WEB_HOST && uri.userInfo == null &&
             (uri.port == -1 || uri.port == 443)
 
     private fun uuid(value: String): String? {
@@ -263,7 +263,7 @@ class HealthActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val ORIGIN = "https://kovagpt.com"
+        private const val ORIGIN = "https://" + BuildConfig.HEALTH_WEB_HOST
         private const val BRIDGE = "kovaAndroidHealth"
         private const val APPROVED_OWNER = "approved_owner"
     }

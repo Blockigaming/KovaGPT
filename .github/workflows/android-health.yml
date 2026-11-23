@@ -30,6 +30,10 @@ jobs:
           printf '%s  %s\n' f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6 "$archive" | sha256sum --check --strict
           unzip -q "$archive" -d "$RUNNER_TEMP"
           "$RUNNER_TEMP/gradle-8.11.1/bin/gradle" -p android --no-daemon :app:lintDebug :app:assembleDebug
+          "$RUNNER_TEMP/gradle-8.11.1/bin/gradle" -p android --no-daemon \
+            -PkovaHealthStagingHost=staging.kovagpt.com :app:assembleDebug
+          grep -F '"staging.kovagpt.com"' android/app/build/generated/source/buildConfig/debug/com/kovagpt/health/BuildConfig.java
+          grep -F '"com.kovagpt.health.staging"' android/app/build/generated/source/buildConfig/debug/com/kovagpt/health/BuildConfig.java
   bridge:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
