@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { authFetch } from "@/lib/auth-fetch";
 import {
+  createLinearIssue,
   createOneDriveFolder,
   createGoogleDriveFolder,
   createOutlookEvent,
@@ -64,6 +65,7 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
     name: string;
     body: string;
     recipient: string;
+    teamId: string;
     start: string;
     end: string;
     actionId: string;
@@ -74,6 +76,7 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
   const googleFolder = useServerFn(createGoogleDriveFolder);
   const outlookEvent = useServerFn(createOutlookEvent);
   const outlookDraft = useServerFn(createOutlookDraft);
+  const linearIssue = useServerFn(createLinearIssue);
   const canWrite = providerCanWrite && enabled === true;
   const kind =
     connector === "onedrive" || connector === "google-drive"
@@ -166,6 +169,22 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
           return;
         }
         setNotice("Draft saved to Outlook.");
+      } else if (connector === "linear") {
+        const result = await linearIssue({
+          data: {
+            target,
+            teamId: draft.teamId,
+            title: draft.name,
+            description: draft.body,
+            confirmed: true,
+          },
+          headers: { "X-Kova-Owner": owner },
+        });
+        if ("error" in result && result.error) {
+          setNotice(result.error);
+          return;
+        }
+        setNotice("Issue created in Linear.");
       } else {
         const result = await authFetch("/api/github/tool", {
           method: "POST",
@@ -207,6 +226,7 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
         name,
         body: String(form.get("body") ?? ""),
         recipient: String(form.get("recipient") ?? "").trim(),
+        teamId: String(form.get("teamId") ?? "").trim(),
         start,
         end,
         actionId: crypto.randomUUID(),
@@ -253,6 +273,7 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
           <div className="kova-directory-panel">
             <h3>Review {kind}</h3>
             {draft.recipient && <p className="break-words">To {draft.recipient}</p>}
+            {draft.teamId && <p className="break-words">Linear team {draft.teamId}</p>}
             <p className="break-words">{draft.name}</p>
             {kind === "event" && (
               <p>
@@ -277,6 +298,18 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
           </div>
         ) : (
           <form onSubmit={review} className="kova-directory-panel">
+            {connector === "linear" && (
+              <label className="grid gap-2">
+                Linear team UUID
+                <Input
+                  name="teamId"
+                  pattern="[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+                  maxLength={36}
+                  required
+                />
+                <span>In Linear, use Copy model UUID on the team you want to use.</span>
+              </label>
+            )}
             {kind === "draft" && (
               <label className="grid gap-2">
                 Recipient

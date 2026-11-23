@@ -6,19 +6,20 @@ import { z } from "zod";
 import { PGlite } from "@electric-sql/pglite";
 import * as flows from "../../src/integrations/connection-flows.mjs";
 import * as google from "../../src/lib/google-account-policy.mjs";
+import * as providerResponse from "../../src/lib/provider-response.server.mjs";
 
 const owner = "00000000-0000-4000-8000-000000000001";
 const target = "00000000-0000-4000-8000-000000000002";
 
-function fixture(scope, enabled = false, ownsAccount = true) {
+function fixture(scope, enabled = false, ownsAccount = true, provider = "microsoft") {
   const requests = [];
   const access = [];
   const row = {
     id: target,
-    provider_id: "microsoft",
+    provider_id: provider,
     status: "connected",
     account_label: "Fixture",
-    granted_scopes: [scope],
+    granted_scopes: provider === "linear" ? ["read", scope] : [scope],
     deleted_at: null,
     token_expires_at: null,
     updated_at: "first",
@@ -39,7 +40,7 @@ function fixture(scope, enabled = false, ownsAccount = true) {
         maybeSingle: () => {
           assert.equal(predicates.owner_id, owner);
           assert.equal(predicates.id, target);
-          assert.equal(predicates.provider_id, "microsoft");
+          assert.equal(predicates.provider_id, provider);
           return { data: ownsAccount ? row : null, error: null };
         },
       };
@@ -94,8 +95,9 @@ function fixture(scope, enabled = false, ownsAccount = true) {
     "@/integrations/credential-vault.server": { decryptCredential: async () => "fixture-token" },
     "@/integrations/connection-flows.mjs": flows,
     "@/integrations/oauth-providers.server": {
-      configuredOAuthProviders: () => [{ id: "microsoft" }],
+      configuredOAuthProviders: () => [{ id: provider }],
     },
+    "@/lib/provider-response.server.mjs": providerResponse,
     "@/lib/connector-write-policy.server": {
       connectorWriteAllowed: async (...args) => {
         access.push(args);
@@ -119,6 +121,8 @@ function fixture(scope, enabled = false, ownsAccount = true) {
     async (url, options) => {
       assert.equal(authenticatedOwner, owner);
       requests.push([url, options]);
+      if (provider === "linear")
+        return Response.json({ data: { issueCreate: { success: true, issue: { id: target } } } });
       return new Response(null, { status: 201 });
     },
   );
@@ -164,9 +168,12 @@ test("database keeps connector preference and private submission records server-
         "utf8",
       ),
     );
+    await db.exec(
+      readFileSync("supabase/migrations/20261123150000_kova_connector_linear_write.sql", "utf8"),
+    );
     await db.exec("set role service_role");
     await db.query(
-      "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'google-drive',$2), ($1,'outlook-calendar',$2)",
+      "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'google-drive',$2), ($1,'outlook-calendar',$2), ($1,'linear',$2)",
       [owner, target],
     );
     await db.query(
@@ -194,6 +201,43 @@ test("database keeps connector preference and private submission records server-
   } finally {
     await db.close();
   }
+});
+
+test("Linear writes require the provider scope, owned account, and a reviewed issue", async () => {
+  const data = {
+    target,
+    teamId: "00000000-0000-4000-8000-000000000003",
+    title: "Fixture issue",
+    description: "Fixture description",
+    confirmed: true,
+  };
+  const settings = { subject: { target, connector: "linear" }, enabled: true };
+  for (const [scope, owned] of [
+    ["read", true],
+    ["issues:create", false],
+  ]) {
+    const { handlers, requests } = fixture(scope, true, owned, "linear");
+    assert.match((await handlers.setConnectorWriteAccess(settings)).error, /Authorize/u);
+    assert.match((await handlers.createLinearIssue(data)).error, /write permission/u);
+    assert.equal(requests.length, 0);
+  }
+  const { handlers, requests } = fixture("issues:create", false, true, "linear");
+  assert.match((await handlers.createLinearIssue(data)).error, /Write access changed/u);
+  assert.deepEqual(await handlers.setConnectorWriteAccess(settings), { enabled: true });
+  assert.throws(() => handlers.createLinearIssue({ ...data, confirmed: false }));
+  assert.equal(requests.length, 0);
+  assert.deepEqual(await handlers.createLinearIssue(data), { created: true });
+  assert.equal(requests[0][0], "https://api.linear.app/graphql");
+  assert.equal(requests[0][1].redirect, "error");
+  assert.deepEqual(JSON.parse(requests[0][1].body).variables.input, {
+    teamId: data.teamId,
+    title: data.title,
+    description: data.description,
+  });
+  await handlers.setConnectorWriteAccess({ ...settings, enabled: false });
+  assert.match((await handlers.createLinearIssue(data)).error, /Write access changed/u);
+  assert.equal(requests.length, 1);
+  assert.equal(flows.hasConnectionScopes(["read", "write"], ["issues:create"]), true);
 });
 
 test("Google Drive requests per-file write consent only when explicitly enabled", async () => {

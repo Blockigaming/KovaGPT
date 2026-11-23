@@ -90,6 +90,7 @@ export function ConnectedAccountManager({
     "accounts",
   );
   const [result, setResult] = useState<ConnectionReadResult | null>(null);
+  const [readError, setReadError] = useState<string | null>(null);
   const [disconnect, setDisconnect] = useState<ConnectedAccount | null>(null);
   const active = useRef(true);
   const keyInput = useRef<HTMLInputElement>(null);
@@ -110,7 +111,9 @@ export function ConnectedAccountManager({
         ? "Mail.ReadWrite"
         : id === "outlook-calendar"
           ? "Calendars.ReadWrite"
-          : null;
+          : id === "linear"
+            ? "issues:create"
+            : null;
   const usesApiKey = flow.authentication === "api-key";
   const configured =
     data?.configuredProviders.some((provider) => provider.id === flow.provider) === true;
@@ -186,9 +189,10 @@ export function ConnectedAccountManager({
     }
   };
   const search = async (accountId: string) => {
-    if (busy || !query.trim()) return;
+    if (busy || !owner || !query.trim()) return;
     setBusy(true);
     setResult(null);
+    setReadError(null);
     try {
       const next = await readAccount({
         data: {
@@ -197,13 +201,14 @@ export function ConnectedAccountManager({
           query,
           ...(id === "salesforce" ? { recordType } : {}),
         },
+        headers: { "X-Kova-Owner": owner },
       });
       if (active.current) {
-        if ("error" in next) toast.error(next.error);
+        if ("error" in next) setReadError(next.error);
         else setResult(next);
       }
     } catch {
-      if (active.current) toast.error("The connected service could not be read. Try again later.");
+      if (active.current) setReadError("The connected service could not be read. Try again later.");
     } finally {
       if (active.current) setBusy(false);
     }
@@ -480,7 +485,10 @@ export function ConnectedAccountManager({
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {(id === "onedrive" || id === "outlook" || id === "outlook-calendar") &&
+                  {(id === "onedrive" ||
+                    id === "outlook" ||
+                    id === "outlook-calendar" ||
+                    id === "linear") &&
                     writeScope &&
                     configured &&
                     canReadConnection(account, operationId) && (
@@ -534,6 +542,11 @@ export function ConnectedAccountManager({
             ))}
           </ul>
         </>
+      )}
+      {readError && (
+        <p className="mt-4 text-sm" role="alert">
+          {readError}
+        </p>
       )}
       {result && (
         <div className="mt-4" role="status">

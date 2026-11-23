@@ -267,6 +267,7 @@ export function hasConnectionScopes(scopes, required) {
   return required.every(
     (scope) =>
       granted.has(scope) ||
+      (scope === "issues:create" && granted.has("write")) ||
       (scope === "root_readonly" && granted.has("root_readwrite")) ||
       (scope === "Chat.Read" && granted.has("Chat.ReadWrite")) ||
       (scope === "Files.Read" &&

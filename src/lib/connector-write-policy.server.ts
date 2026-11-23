@@ -5,6 +5,7 @@ export type WritableConnector =
   | "gmail"
   | "google-calendar"
   | "github"
+  | "linear"
   | "onedrive"
   | "outlook"
   | "google-drive"

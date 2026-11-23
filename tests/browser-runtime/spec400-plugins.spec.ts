@@ -5,7 +5,7 @@ import { statSync, readFileSync } from "node:fs";
 import type { GoogleStatus } from "../../src/lib/google-client";
 import type { AccountStatus } from "../../src/hooks/use-connected-accounts";
 import { MASTER_CONNECTORS } from "../../src/lib/connector-master-list.mjs";
-type FixtureWindow = Window & { operations: unknown[][]; toasts: string[][] };
+type FixtureWindow = Window & { operations: unknown[][]; toasts: string[][]; readError?: string };
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE) {
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
 }
@@ -28,12 +28,13 @@ const mocks: Record<string, string> = {
   "@/utils/plan.functions": `export const getMyPlanTier=async({data})=>({ownerId:data.ownerId,tier:window.testTier??'free'});`,
 
   "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};if(url==="/api/finances/manage"&&init?.method!=="POST")return {ok:true,json:async()=>({configured:false,planEligible:false,connections:[]})};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
-  "@/lib/connected-accounts.functions": `export const searchConnectedAccount=async({data})=>{window.operations.push(["provider-read",data]);return {service:"Outlook",results:[{id:"result-1",title:"Actual fixture result",url:"https://outlook.live.com/mail/result-1",snippet:"Read result from the isolated fixture"}],limited:true}};export const refreshConnectedAccess=async()=>({ok:true});`,
+  "@/lib/connected-accounts.functions": `export const searchConnectedAccount=async({data,headers})=>{if(headers?.["X-Kova-Owner"]!==window.testOwner)throw new Error("Owner binding is required");window.operations.push(["provider-read",data]);if(window.readError)return {error:window.readError};return {service:"Outlook",results:[{id:"result-1",title:"Actual fixture result",url:"https://outlook.live.com/mail/result-1",snippet:"Read result from the isolated fixture"}],limited:true}};export const refreshConnectedAccess=async()=>({ok:true});`,
   "@/lib/connector-write.functions": `
     export const getConnectorWriteAccess=async()=>({enabled:!!window.writeAccess});
     export const setConnectorWriteAccess=async({data})=>{window.operations.push(["write-access",data]);window.writeAccess=data.enabled;return {enabled:data.enabled}};
     export const createOneDriveFolder=async({data})=>{window.operations.push(["create-folder",data]);return {created:true}};
     export const createOutlookDraft=async({data})=>{window.operations.push(["create-draft",data]);return {created:true}};
+    export const createLinearIssue=async({data})=>{window.operations.push(["create-linear-issue",data]);return {created:true}};
     export const createOutlookEvent=async({data})=>{window.operations.push(["create-event",data]);return {created:true}};
     export const createGoogleDriveFolder=async({data})=>{window.operations.push(["drive-folder",data]);return {created:true}};
   `,
@@ -315,6 +316,59 @@ test("OneDrive confirms the folder name before writing", async ({ page }) => {
       (window as FixtureWindow).operations.filter(([kind]) => kind === "create-folder"),
     ),
   ).toEqual([["create-folder", { target: "fixture-onedrive", name: "Example folder" }]]);
+});
+
+test("Linear reviews the team and issue before writing", async ({ page }) => {
+  const accountId = "00000000-0000-4000-8000-000000000002";
+  const teamId = "00000000-0000-4000-8000-000000000003";
+  await boot(page, emptyGoogle, undefined, {
+    configuredProviders: [
+      { id: "linear", name: "Linear", requiredScopes: ["read"], optionalScopes: ["issues:create"] },
+    ],
+    accounts: [
+      {
+        id: accountId,
+        provider_id: "linear",
+        account_label: "Linear test workspace",
+        status: "connected",
+        granted_scopes: ["read", "issues:create"],
+        token_expires_at: null,
+        deleted_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Connected Linear", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for Linear test workspace" }).click();
+  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await expect(permissions.getByRole("button", { name: "Read only" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await permissions.getByRole("button", { name: "Read and write" }).click();
+  await permissions.getByLabel(/Linear team UUID/u).fill(teamId);
+  await permissions.getByLabel("Issue title").fill("Review integration");
+  await permissions.getByLabel("Issue description").fill("Fixture issue details");
+  await permissions.getByRole("button", { name: "Review issue" }).click();
+  await expect(permissions.getByText(`Linear team ${teamId}`)).toBeVisible();
+  const writes = () =>
+    page.evaluate(() =>
+      (window as FixtureWindow).operations.filter(([kind]) => kind === "create-linear-issue"),
+    );
+  expect(await writes()).toEqual([]);
+  await permissions.getByRole("button", { name: "Create issue" }).click();
+  await expect(permissions.getByText("Issue created in Linear.")).toBeVisible();
+  expect(await writes()).toEqual([
+    [
+      "create-linear-issue",
+      {
+        target: accountId,
+        teamId,
+        title: "Review integration",
+        description: "Fixture issue details",
+        confirmed: true,
+      },
+    ],
+  ]);
 });
 
 test("Google Drive grants folder creation per account only after review", async ({ page }) => {
@@ -618,11 +672,21 @@ test("Outlook Calendar reuses only a calendar-authorized account and requests ba
     "provider-read",
     { connectionId: "outlook-calendar", accountId: calendarId, query: "Meeting" },
   ]);
+  await expect(dialog.getByText("Read access verified for this request.")).toBeVisible();
+  await page.evaluate(() => {
+    (window as FixtureWindow).readError =
+      "Microsoft could not find a default calendar for this account.";
+  });
+  await calendar.getByRole("button", { name: "Search this account", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Microsoft could not find a default calendar for this account.",
+  );
+  await expect(dialog.getByText("Read access verified for this request.")).toHaveCount(0);
   await mail.getByRole("button", { name: "Reconnect or add read access", exact: true }).click();
   const operations = await page.evaluate(() => (window as FixtureWindow).operations);
-  expect(operations).toHaveLength(2);
-  expect(operations[1][0]).toBe("provider-request");
-  const init = operations[1][2] as { body: string };
+  expect(operations).toHaveLength(3);
+  expect(operations[2][0]).toBe("provider-request");
+  const init = operations[2][2] as { body: string };
   expect(JSON.parse(init.body)).toEqual({
     provider: "microsoft",
     optionalScopes: ["Calendars.ReadBasic"],

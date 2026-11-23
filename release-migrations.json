@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 226,
-  "latest": "20261123143000_kova_connector_drive_calendar_write.sql",
+  "count": 227,
+  "latest": "20261123150000_kova_connector_linear_write.sql",
   "migrations": [
     {
       "order": 1,
@@ -4736,6 +4736,20 @@
       "filename": "20261123143000_kova_connector_drive_calendar_write.sql",
       "timestamp": "20261123143000",
       "sha256": "8843709607651bab7da5ab48aa1f098c0394ce7ec5136eeb51c8630c1a228324",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 227,
+      "filename": "20261123150000_kova_connector_linear_write.sql",
+      "timestamp": "20261123150000",
+      "sha256": "a9f49aac16c59ea87ddd186e6f2c99b3d94b503d5b60a8881a41bb01e3ae61b0",
       "tables": [],
       "functions": [],
       "destructive": false,

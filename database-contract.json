@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 226,
+  "migrationCount": 227,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -3947,5 +3947,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "073ee1ea86f26e4217a40ab2295e46875835cac65569f76c4febfe83bbded785"
+  "sha256": "ba3c6cc8b8eb77836f2e8454245f0e011d4d0ebc6e12a2a43e11c0f61b3914c0"
 }

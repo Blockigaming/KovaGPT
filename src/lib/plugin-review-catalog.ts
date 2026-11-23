@@ -192,8 +192,12 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
     ),
   ]),
   entry("linear", [
-    proposed("read", "Proposed: read selected Linear issues and projects; scope unconfirmed"),
-    proposed("write", "Proposed: create or update Linear issues after review; scope unconfirmed"),
+    supported("read", "Search Linear issue titles", "src/integrations/connected-tools.server.ts"),
+    supported(
+      "write",
+      "Create a Linear issue after review",
+      "src/lib/connector-write.functions.ts",
+    ),
   ]),
   entry("slack", [
     proposed("read", "Proposed: search selected Slack conversations; scope unconfirmed"),

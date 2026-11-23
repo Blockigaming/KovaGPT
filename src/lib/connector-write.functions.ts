@@ -10,6 +10,7 @@ import {
 import { hasGoogleCapability } from "@/lib/google-account-policy.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { decryptCredential } from "@/integrations/credential-vault.server";
 import { canReadConnection, hasConnectionScopes } from "@/integrations/connection-flows.mjs";
 import { configuredOAuthProviders } from "@/integrations/oauth-providers.server";
@@ -22,6 +23,7 @@ import {
 
 const targetSchema = z.discriminatedUnion("connector", [
   z.object({ connector: z.literal("github"), target: z.string().regex(/^[1-9][0-9]{0,18}$/u) }),
+  z.object({ connector: z.literal("linear"), target: z.string().uuid() }),
   z.object({ connector: z.literal("gmail"), target: z.string().uuid() }),
   z.object({ connector: z.literal("google-calendar"), target: z.string().uuid() }),
   z.object({ connector: z.literal("onedrive"), target: z.string().uuid() }),
@@ -36,12 +38,21 @@ const microsoftOperations = {
   "outlook-calendar": { scope: "Calendars.ReadWrite", path: "/me/calendar/events" },
 } as const;
 type MicrosoftWriteConnector = keyof typeof microsoftOperations;
+type LinkedWriteConnector = MicrosoftWriteConnector | "linear";
+const linearIssueResult = z.object({
+  errors: z.array(z.unknown()).max(0).optional(),
+  data: z.object({
+    issueCreate: z.object({ success: z.literal(true), issue: z.object({ id: z.string().uuid() }) }),
+  }),
+});
 const googleWriteCapability = {
   gmail: "gmail.write",
   "google-calendar": "calendar.write",
   "google-drive": "drive.write",
 } as const;
-const microsoftAccount = async (owner: string, id: string, connector: MicrosoftWriteConnector) => {
+const linkedWriteAccount = async (owner: string, id: string, connector: LinkedWriteConnector) => {
+  const provider = connector === "linear" ? "linear" : "microsoft";
+  const scope = connector === "linear" ? "issues:create" : microsoftOperations[connector].scope;
   const { data, error } = await connectorDb()
     .from("integration_linked_accounts")
     .select(
@@ -49,14 +60,14 @@ const microsoftAccount = async (owner: string, id: string, connector: MicrosoftW
     )
     .eq("id", id)
     .eq("owner_id", owner)
-    .eq("provider_id", "microsoft")
+    .eq("provider_id", provider)
     .is("workspace_id", null)
     .is("deleted_at", null)
     .maybeSingle();
   return !error &&
     data &&
     canReadConnection({ ...data, account_label: null }, connector) &&
-    hasConnectionScopes(data.granted_scopes, [microsoftOperations[connector].scope])
+    hasConnectionScopes(data.granted_scopes, [scope])
     ? data
     : null;
 };
@@ -109,10 +120,13 @@ export const setConnectorWriteAccess = createServerFn({ method: "POST" })
       } else if (
         connector === "onedrive" ||
         connector === "outlook" ||
-        connector === "outlook-calendar"
+        connector === "outlook-calendar" ||
+        connector === "linear"
       ) {
-        if (!(await microsoftAccount(userId, target, connector)))
-          return { error: "Authorize write access with Microsoft first." };
+        if (!(await linkedWriteAccount(userId, target, connector)))
+          return {
+            error: `Authorize write access with ${connector === "linear" ? "Linear" : "Microsoft"} first.`,
+          };
       } else {
         const account = await getGoogleConnection(userId, target);
         if (!account || !hasGoogleCapability(account.scopes, googleWriteCapability[connector]))
@@ -123,19 +137,17 @@ export const setConnectorWriteAccess = createServerFn({ method: "POST" })
     return { enabled };
   });
 
-async function microsoftWrite(
-  userId: string,
-  target: string,
-  connector: MicrosoftWriteConnector,
-  body: Record<string, unknown>,
-) {
+async function linkedWriteToken(userId: string, target: string, connector: LinkedWriteConnector) {
   await limitWrites(userId);
-  if (!configuredOAuthProviders().some((provider) => provider.id === "microsoft"))
-    return { error: "Microsoft connection setup is unavailable." };
-  const account = await microsoftAccount(userId, target, connector);
-  if (!account) return { error: "Microsoft write permission is missing or expired." };
+  const provider = connector === "linear" ? "linear" : "microsoft";
+  const label = connector === "linear" ? "Linear" : "Microsoft";
+  if (!configuredOAuthProviders().some(({ id }) => id === provider))
+    return { error: `${label} connection setup is unavailable.` };
+  await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
+  const account = await linkedWriteAccount(userId, target, connector);
+  if (!account) return { error: `${label} write permission is missing or expired.` };
   const token = await decryptCredential(account.access_token_ciphertext);
-  const current = await microsoftAccount(userId, target, connector);
+  const current = await linkedWriteAccount(userId, target, connector);
   await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
   if (
     !current ||
@@ -144,6 +156,17 @@ async function microsoftWrite(
     !(await connectorWriteAllowed(userId, connector, target))
   )
     return { error: "Write access changed. Review the account permissions." };
+  return { token };
+}
+
+async function microsoftWrite(
+  userId: string,
+  target: string,
+  connector: MicrosoftWriteConnector,
+  body: Record<string, unknown>,
+) {
+  const access = await linkedWriteToken(userId, target, connector);
+  if (!access.token) return { error: access.error };
   try {
     const response = await fetch(
       `https://graph.microsoft.com/v1.0${microsoftOperations[connector].path}`,
@@ -151,7 +174,7 @@ async function microsoftWrite(
         method: "POST",
         redirect: "error",
         signal: AbortSignal.timeout(10000),
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${access.token}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
       },
     );
@@ -164,6 +187,46 @@ async function microsoftWrite(
     return { error: "The write could not be confirmed. Check the provider before retrying." };
   }
 }
+
+export const createLinearIssue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      target: z.string().uuid(),
+      teamId: z.string().trim().uuid(),
+      title: z.string().trim().min(1).max(120),
+      description: z.string().max(4000),
+      confirmed: z.literal(true),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const access = await linkedWriteToken(context.userId, data.target, "linear");
+    if (!access.token) return { error: access.error };
+    try {
+      const response = await fetch("https://api.linear.app/graphql", {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
+        headers: { Authorization: `Bearer ${access.token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query:
+            "mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id } } }",
+          variables: {
+            input: { teamId: data.teamId, title: data.title, description: data.description },
+          },
+        }),
+      });
+      if (response.ok) {
+        const result = await readProviderJsonObject(response, 64 * 1024);
+        if (linearIssueResult.safeParse(result).success) return { created: true };
+      } else {
+        await response.body?.cancel().catch(() => {});
+      }
+    } catch {
+      // A transport failure can occur after the provider commits the issue.
+    }
+    return { error: "Linear did not confirm issue creation. Check Linear before retrying." };
+  });
 
 export const createOneDriveFolder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

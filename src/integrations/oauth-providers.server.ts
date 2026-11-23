@@ -318,7 +318,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "LINEAR_OAUTH_CLIENT_ID",
     clientSecretEnv: "LINEAR_OAUTH_CLIENT_SECRET",
     requiredScopes: ["read"],
-    optionalScopes: ["write", "issues:create"],
+    optionalScopes: ["issues:create"],
     usesPkce: true,
     profileEndpoint: "https://api.linear.app/graphql",
     profileId: (v) =>
