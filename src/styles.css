@@ -1972,10 +1972,6 @@ body {
   background: color-mix(in oklab, var(--kova-blue) 9%, transparent);
 }
 
-.kova-chat-input[data-composer-surface="conversation"] {
-  background: linear-gradient(to top, var(--background) 70%, transparent);
-}
-
 .kova-message[data-message-role="user"] {
   padding-top: 1.15rem;
   padding-bottom: 0.7rem;

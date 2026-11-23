@@ -1,7 +1,7 @@
 import { devices, expect, test } from "@playwright/test";
-import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openCurrentSettings } from "./current-ui";
+import { openCurrentSettings, revealSidebar } from "./current-ui";
 
 for (const device of ["iPhone 13", "Pixel 7", "iPad Mini landscape"] as const) {
   test(`${device} opens the desktop website on a touch screen`, async ({
@@ -12,7 +12,7 @@ for (const device of ["iPhone 13", "Pixel 7", "iPad Mini landscape"] as const) {
     const context = await browser.newContext({ ...devices[device], baseURL });
     try {
       const page = await context.newPage();
-      await installAuthenticatedFixture(page);
+      await fixture(page, "dark", true, true);
 
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
@@ -27,6 +27,12 @@ for (const device of ["iPhone 13", "Pixel 7", "iPad Mini landscape"] as const) {
       await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeHidden();
       await expect(page.locator("[data-kova-core-sidebar]")).not.toHaveCSS("position", "fixed");
       await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
+      await expect(page.locator("[data-chat-transcript]")).toBeVisible();
+      const sidebar = await revealSidebar(page);
+      await sidebar.getByRole("button", { name: "New chat", exact: true }).click();
+      const recent = page.locator(".kova-desktop-recent-work");
+      await expect(recent).toBeAttached();
+      await expect(recent).toBeHidden();
 
       const settings = await openCurrentSettings(page);
       await expect(settings.locator(".kova-settings-sidebar")).toBeVisible();

@@ -326,8 +326,7 @@ test("Settings deep links open the modal; narrow headings keep their safe-area l
   const route = readFileSync("src/routes/settings.$section.tsx", "utf8");
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
-  assert.match(route, /navigate\(\{ to: "\/", replace: true \}\)/);
-  assert.match(route, /new CustomEvent\("kova-open-settings", \{ detail: \{ tab \} \}\)/);
+  assert.match(route, /redirect\(\{ to: "\/", search: \{ settings: section \}, replace: true \}\)/);
   assert.doesNotMatch(route, /<SettingsDialog/);
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(

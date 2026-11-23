@@ -101,7 +101,7 @@ export function AppShell({
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
   const deleteReady = principalReady && canSendChatHistory(userKey);
   const conversations = principalReady ? conversationState.items : [];
-  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
+  const [sidebarOpen, setSidebarOpen, , sidebarIsDrawer] = useSidebarPreference();
   const sidebarKeyboardFocusRef = useRef(false);
   useEffect(() => {
     if (!sidebarOpen || !sidebarKeyboardFocusRef.current) return;
@@ -306,7 +306,7 @@ export function AppShell({
             .catch(() => toast.error("Your chat wasn't changed. Try again."));
         }}
         onShare={setShareChatId}
-        open={sidebarOpen && !settingsOpen}
+        open={sidebarOpen && !(sidebarIsDrawer && settingsOpen)}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
@@ -315,7 +315,7 @@ export function AppShell({
 
       <div
         className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-        data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
+        data-sidebar={sidebarOpen && !(sidebarIsDrawer && settingsOpen) ? "open" : "closed"}
       >
         <OfflineBanner />
         {!hideMobileTopBar && (

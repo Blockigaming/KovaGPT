@@ -104,16 +104,6 @@
   color: var(--foreground);
   background: color-mix(in oklab, var(--destructive) 9%, transparent);
 }
-.kova-conversation-outputs {
-  width: 352px;
-  padding: 18px;
-}
-.kova-conversation-outputs h2 {
-  color: var(--muted-foreground);
-  font-size: 14px;
-  margin: 2px 4px 8px;
-  font-weight: 500;
-}
 .kova-output-list {
   display: grid;
   gap: 2px;
@@ -121,11 +111,11 @@
 .kova-output-row {
   display: flex;
   width: 100%;
-  min-height: 44px;
+  min-height: var(--kova-activity-row-height, 44px);
   align-items: center;
-  gap: 12px;
-  padding: 8px 6px;
-  border-radius: var(--kova-radius-compact);
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 12px;
   text-align: left;
   font-size: 14px;
 }
@@ -524,11 +514,16 @@
 }
 
 .kova-conversation-outputs {
+  --kova-activity-row-height: 32px;
   width: min(360px, calc(100vw - 24px));
-  padding: 18px;
+  padding: 10px 14px;
+  border: 0;
   border-radius: 20px;
-  max-height: min(650px, calc(100dvh - 90px));
-  overflow-y: auto;
+  max-height: min(
+    650px,
+    calc(100dvh - 90px),
+    var(--radix-popover-content-available-height, 100dvh)
+  );
 }
 .kova-conversation-outputs h2 {
   margin: 18px 0 10px;
@@ -544,9 +539,6 @@
   overflow: hidden;
 }
 
-.kova-conversation-outputs {
-  border: 0;
-}
 .kova-conversation-actions .kova-conversation-icon {
   border: 0;
   box-shadow: none;
@@ -591,9 +583,6 @@
   cursor: pointer;
   text-align: left;
 }
-.kova-activity-section-toggle h2 {
-  margin: 0;
-}
 .kova-activity-chevron {
   width: 16px;
   height: 16px;
@@ -606,8 +595,7 @@
 }
 .kova-activity-section-toggle:focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  border-radius: 6px;
+  outline-offset: -2px;
 }
 .kova-conversation-actions .kova-conversation-share {
   border: 0;
@@ -617,10 +605,6 @@
 .kova-conversation-actions .kova-conversation-icon {
   border-radius: 12px;
 }
-.kova-conversation-outputs {
-  border-radius: 20px;
-  padding: 12px 20px;
-}
 .dark .kova-conversation-outputs:not(.kova-conversation-outputs-touch) {
   background: #2f2f2f;
 }
@@ -628,8 +612,8 @@
 .kova-activity-inventory + .kova-conversation-sources,
 .kova-conversation-sources + .kova-activity-inventory {
   border-top: 1px solid var(--border);
-  margin-top: 7px;
-  padding-top: 7px;
+  margin-top: 5px;
+  padding-top: 5px;
 }
 .kova-activity-inventory-heading {
   display: flex;
@@ -637,9 +621,11 @@
   justify-content: space-between;
 }
 .kova-activity-inventory .kova-activity-section-toggle {
-  min-height: 36px;
+  min-height: var(--kova-activity-row-height);
   justify-content: flex-start;
   width: auto;
+  padding-inline: 8px;
+  border-radius: 12px;
   color: var(--foreground);
   font-size: 15px;
   gap: 6px;
@@ -660,14 +646,16 @@
 .kova-activity-add {
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  width: 36px;
-  height: 36px;
+  border-radius: 12px;
+  width: var(--kova-activity-row-height);
+  height: var(--kova-activity-row-height);
   color: var(--muted-foreground);
 }
+.kova-activity-section-toggle:hover,
 .kova-activity-add:hover,
 .kova-activity-add[aria-expanded="true"],
-.kova-activity-submenu > button:hover {
+.kova-activity-submenu > button:hover,
+.kova-activity-placeholder:hover:not(:disabled) {
   background: var(--accent);
   color: var(--foreground);
 }
@@ -681,15 +669,16 @@
   height: 18px;
 }
 .kova-activity-placeholder {
-  min-height: 40px;
+  width: 100%;
+  min-height: var(--kova-activity-row-height);
+  padding: 4px 8px;
+  border-radius: 12px;
   text-align: left;
   color: var(--muted-foreground);
   font-size: 14px;
 }
-.kova-activity-placeholder:hover:not(:disabled) {
-  color: var(--foreground);
-}
 .kova-activity-submenu {
+  --kova-activity-row-height: 32px;
   margin-block: 4px;
   margin-inline-start: 16px;
   border: 1px solid var(--border);
@@ -702,8 +691,8 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 40px;
-  border-radius: 10px;
+  min-height: var(--kova-activity-row-height);
+  border-radius: 12px;
   padding-inline: 10px;
   text-align: left;
   font-size: 14px;
@@ -713,14 +702,68 @@
   margin-top: 0;
   padding-top: 0;
 }
+.kova-conversation-outputs
+  :is(.kova-source-group > summary, .kova-source-group a, .kova-source-memory) {
+  min-height: var(--kova-activity-row-height);
+  padding-block: 4px;
+  border-radius: 12px;
+}
+.kova-conversation-outputs .kova-header-note {
+  margin-block: 3px 5px;
+}
+.kova-conversation-outputs .kova-source-provider {
+  padding-block: 4px;
+}
+.kova-activity-progress {
+  position: relative;
+  margin: 2px 0 4px 8px;
+  padding-inline-start: 18px;
+  list-style: none;
+}
+.kova-activity-progress::before {
+  position: absolute;
+  inset-block: 5px;
+  inset-inline-start: 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border-subtle);
+  content: "";
+}
+.kova-activity-progress li {
+  position: relative;
+  padding-block: 3px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.kova-activity-progress li[data-status="running"] {
+  color: var(--foreground);
+}
+.kova-activity-progress li[data-status="running"]::before {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-start: -18px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kova-default-reading-accent, var(--kova-chat-activity-accent));
+  content: "";
+}
+.kova-activity-step-status {
+  margin-inline-start: 4px;
+  font-size: 12px;
+}
+.kova-activity-progress-empty {
+  margin: 2px 8px 6px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
 
-@media (width < 1024px) and (any-pointer: coarse) {
-  .kova-activity-add,
-  .kova-activity-inventory .kova-activity-section-toggle {
-    min-height: 44px;
-  }
-  .kova-activity-add {
-    min-width: 44px;
+@media (pointer: coarse) {
+  .kova-conversation-outputs,
+  .kova-activity-submenu {
+    --kova-activity-row-height: 44px;
   }
 }
 
