@@ -1898,21 +1898,6 @@ export function ChatInput({
               : "Upload from your computer"}
           </small>
         </button>
-        {goalContext && (
-          <button
-            type="button"
-            aria-label="Set a goal for this chat"
-            className="kova-composer-action"
-            onClick={() => {
-              closeActions();
-              setGoalEditing(true);
-            }}
-          >
-            <Target aria-hidden="true" />
-            <span>Set a goal</span>
-            <small>Keep this chat working toward one outcome</small>
-          </button>
-        )}
         <button
           type="button"
           aria-label="Add from Library"
@@ -2035,6 +2020,23 @@ export function ChatInput({
             ))}
           </div>
         ) : null}
+        {goalContext && (
+          <div className="kova-composer-menu-section">
+            <button
+              type="button"
+              aria-label="Set a goal for this chat"
+              className="kova-composer-action"
+              onClick={() => {
+                closeActions();
+                setGoalEditing(true);
+              }}
+            >
+              <Target aria-hidden="true" />
+              <span>Set a goal</span>
+              <small>Keep this chat working toward one outcome</small>
+            </button>
+          </div>
+        )}
         {user ? (
           <ComposerPluginList
             connections={pluginConnections}
