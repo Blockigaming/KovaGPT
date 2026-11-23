@@ -1066,17 +1066,44 @@
   overflow: clip;
   background: var(--card);
 }
-.kova-connection-hero::before {
+.kova-connection-hero::before,
+.kova-connection-hero::after {
   position: absolute;
-  inset: 0;
   z-index: -1;
-  background: color-mix(in srgb, var(--connection-accent) 16%, transparent);
   pointer-events: none;
   content: "";
 }
+.kova-connection-hero::before {
+  inset: -80% -65%;
+  background: radial-gradient(
+    ellipse 38% 58% at 31% 34%,
+    color-mix(in srgb, var(--connection-accent) 18%, transparent),
+    color-mix(in srgb, var(--connection-accent) 15%, transparent) 30%,
+    color-mix(in srgb, var(--connection-accent) 9%, transparent) 53%,
+    color-mix(in srgb, var(--connection-accent) 3%, transparent) 76%,
+    transparent
+  );
+}
+.kova-connection-hero::after {
+  inset: 0;
+  /* Subtle dithering breaks up visible color steps in the gradient. */
+  background-image: url("/images/connector-tint-dither.png");
+  mix-blend-mode: overlay;
+  opacity: 0.055;
+}
 @media (prefers-reduced-motion: no-preference) {
   .kova-connection-hero::before {
-    animation: kova-connection-hero-fade 18s ease-in-out infinite;
+    animation:
+      kova-connection-hero-drift 18s linear infinite,
+      kova-connection-hero-fade 18s ease-in-out infinite;
+  }
+}
+@keyframes kova-connection-hero-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(24%, 30%);
   }
 }
 @keyframes kova-connection-hero-fade {

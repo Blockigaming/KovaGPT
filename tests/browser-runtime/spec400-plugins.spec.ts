@@ -86,6 +86,7 @@ const result = await build({
   format: "iife",
   jsx: "automatic",
   loader: { ".svg": "dataurl", ".png": "dataurl" },
+  external: ["/images/connector-tint-dither.png"],
   plugins: [
     {
       name: "spec400-plugins-offline-fixtures",
@@ -786,7 +787,9 @@ test("unavailable providers have readable details and no connection action", asy
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
-test("connector fields have spacing and the header tint fades evenly", async ({ page }) => {
+test("connector headers use a dithered diagonal fade and respect reduced motion", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await boot(page, emptyGoogle, "https://kova-plugins.test/apps?plugin=custom-mcp", {
     configuredProviders: [{ id: "custom-mcp" }],
@@ -798,42 +801,40 @@ test("connector fields have spacing and the header tint fades evenly", async ({ 
   await expect(page.locator(".kova-connection-example")).toHaveCSS("border-top-width", "0px");
 
   const hero = page.locator(".kova-connection-hero");
+  const layers = await hero.evaluate((node) => ({
+    glow: getComputedStyle(node, "::before").backgroundImage,
+    dither: getComputedStyle(node, "::after").backgroundImage,
+  }));
+  expect(layers.glow).toMatch(/^radial-gradient\(/u);
+  expect(layers.dither).toContain("/images/connector-tint-dither.png");
   await expect
     .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))
-    .toBe("kova-connection-hero-fade");
+    .toBe("kova-connection-hero-drift, kova-connection-hero-fade");
   const [start, bright, fading, end] = await hero.evaluate(async (node) => {
-    const fade = document
+    const animations = document
       .getAnimations()
-      .find(
+      .filter(
         (animation) =>
           animation instanceof CSSAnimation &&
-          animation.animationName === "kova-connection-hero-fade",
+          animation.animationName.startsWith("kova-connection-hero-"),
       );
-    if (!fade) throw new Error("The header tint animation is missing");
-    fade.pause();
-    await fade.ready;
+    for (const animation of animations) animation.pause();
+    await Promise.all(animations.map((animation) => animation.ready));
 
     return [0, 4500, 12500, 17999].map((time) => {
-      fade.currentTime = time;
+      for (const animation of animations) animation.currentTime = time;
       const style = getComputedStyle(node, "::before");
-      return {
-        opacity: Number(style.opacity),
-        backgroundImage: style.backgroundImage,
-        backgroundColor: style.backgroundColor,
-        transform: style.transform,
-      };
+      const position = new DOMMatrixReadOnly(style.transform);
+      return { x: position.m41, y: position.m42, opacity: Number(style.opacity) };
     });
   });
   expect(start.opacity).toBe(0);
   expect(bright.opacity).toBe(1);
   expect(fading.opacity).toBeGreaterThan(0);
   expect(fading.opacity).toBeLessThan(bright.opacity);
+  expect(fading.x).toBeGreaterThan(bright.x);
+  expect(fading.y).toBeGreaterThan(bright.y);
   expect(end.opacity).toBeLessThan(0.01);
-  for (const frame of [start, bright, fading, end]) {
-    expect(frame.backgroundImage).toBe("none");
-    expect(frame.backgroundColor).toBe(bright.backgroundColor);
-    expect(frame.transform).toBe("none");
-  }
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect
