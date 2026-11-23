@@ -135,9 +135,10 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
       "src/lib/google-account-policy.mjs",
       "src/lib/google-tools.server.ts",
     ),
-    proposed(
+    supported(
       "write",
-      "Proposed: create or update selected Drive files; scope and implementation unconfirmed",
+      "Create a folder in My Drive after review",
+      "src/lib/connector-write.functions.ts",
     ),
   ]),
   entry("outlook", [
@@ -214,6 +215,16 @@ const dedicatedConnections: Record<
   string,
   { note: string; permissions: PluginReviewPermission[] }
 > = {
+  "outlook-calendar": {
+    note: "Outlook Calendar requires a Microsoft grant and an accessible default calendar.",
+    permissions: [
+      supported(
+        "write",
+        "Create an event on your default calendar after review",
+        "src/lib/connector-write.functions.ts",
+      ),
+    ],
+  },
   plaid: {
     note: "Manage bank access in Finances. Connection requires an eligible account and production setup.",
     permissions: [

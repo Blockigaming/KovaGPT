@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { authFetch } from "@/lib/auth-fetch";
 import {
   createOneDriveFolder,
+  createGoogleDriveFolder,
+  createOutlookEvent,
   createOutlookDraft,
   getConnectorWriteAccess,
   setConnectorWriteAccess,
@@ -58,15 +60,29 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [draft, setDraft] = useState<{ name: string; body: string; recipient: string } | null>(
-    null,
-  );
+  const [draft, setDraft] = useState<{
+    name: string;
+    body: string;
+    recipient: string;
+    start: string;
+    end: string;
+    actionId: string;
+  } | null>(null);
   const load = useServerFn(getConnectorWriteAccess);
   const save = useServerFn(setConnectorWriteAccess);
   const folder = useServerFn(createOneDriveFolder);
+  const googleFolder = useServerFn(createGoogleDriveFolder);
+  const outlookEvent = useServerFn(createOutlookEvent);
   const outlookDraft = useServerFn(createOutlookDraft);
   const canWrite = providerCanWrite && enabled === true;
-  const kind = connector === "onedrive" ? "folder" : connector === "outlook" ? "draft" : "issue";
+  const kind =
+    connector === "onedrive" || connector === "google-drive"
+      ? "folder"
+      : connector === "outlook"
+        ? "draft"
+        : connector === "outlook-calendar"
+          ? "event"
+          : "issue";
   const labelForWrite = kind === "draft" ? "Save Outlook draft" : `Create ${kind}`;
   useEffect(() => {
     if (!owner) return;
@@ -109,8 +125,9 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
     setBusy(true);
     setNotice("");
     try {
-      if (connector === "onedrive") {
-        const result = await folder({
+      if (kind === "folder") {
+        const createFolder = connector === "onedrive" ? folder : googleFolder;
+        const result = await createFolder({
           data: { target, name: draft.name },
           headers: { "X-Kova-Owner": owner },
         });
@@ -118,7 +135,27 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
           setNotice(result.error);
           return;
         }
-        setNotice("Folder created in OneDrive.");
+        setNotice(
+          connector === "onedrive"
+            ? "Folder created in OneDrive."
+            : "Folder created in Google Drive.",
+        );
+      } else if (connector === "outlook-calendar") {
+        const result = await outlookEvent({
+          data: {
+            target,
+            title: draft.name,
+            start: draft.start,
+            end: draft.end,
+            actionId: draft.actionId,
+          },
+          headers: { "X-Kova-Owner": owner },
+        });
+        if ("error" in result && result.error) {
+          setNotice(result.error);
+          return;
+        }
+        setNotice("Event created in Outlook Calendar.");
       } else if (connector === "outlook") {
         const result = await outlookDraft({
           data: { target, recipient: draft.recipient, subject: draft.name, body: draft.body },
@@ -159,11 +196,20 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") ?? "").trim();
+    const start = kind === "event" ? `${form.get("start")}:00Z` : "";
+    const end = kind === "event" ? `${form.get("end")}:00Z` : "";
+    if (kind === "event" && !(Date.parse(end) > Date.parse(start))) {
+      setNotice("End time must follow start time.");
+      return;
+    }
     if (name)
       setDraft({
         name,
         body: String(form.get("body") ?? ""),
         recipient: String(form.get("recipient") ?? "").trim(),
+        start,
+        end,
+        actionId: crypto.randomUUID(),
       });
   };
 
@@ -201,12 +247,19 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
         </p>
       )}
       {canWrite &&
-        (connector === "onedrive" || connector === "github" || connector === "outlook") &&
+        connector !== "gmail" &&
+        connector !== "google-calendar" &&
         (draft ? (
           <div className="kova-directory-panel">
             <h3>Review {kind}</h3>
             {draft.recipient && <p className="break-words">To {draft.recipient}</p>}
             <p className="break-words">{draft.name}</p>
+            {kind === "event" && (
+              <p>
+                {draft.start.slice(0, 16).replace("T", " ")} to{" "}
+                {draft.end.slice(0, 16).replace("T", " ")} UTC
+              </p>
+            )}
             {draft.body && <p className="whitespace-pre-wrap break-words">{draft.body}</p>}
             <div className="spec400-plugin-actions">
               <Button
@@ -232,13 +285,29 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
             )}
             <label className="grid gap-2">
               {kind === "folder"
-                ? "Folder name in My files"
+                ? connector === "onedrive"
+                  ? "Folder name in My files"
+                  : "Folder name in My Drive"
                 : kind === "draft"
                   ? "Subject"
-                  : "Issue title"}
+                  : kind === "event"
+                    ? "Event title"
+                    : "Issue title"}
               <Input name="name" maxLength={120} required />
             </label>
-            {kind !== "folder" && (
+            {kind === "event" && (
+              <>
+                <label className="grid gap-2">
+                  Start (UTC)
+                  <Input name="start" type="datetime-local" required />
+                </label>
+                <label className="grid gap-2">
+                  End (UTC)
+                  <Input name="end" type="datetime-local" required />
+                </label>
+              </>
+            )}
+            {(kind === "draft" || kind === "issue") && (
               <label className="grid gap-2">
                 {kind === "draft" ? "Message" : "Issue description"}
                 <Textarea name="body" maxLength={4000} />

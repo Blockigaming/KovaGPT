@@ -34,6 +34,8 @@ const mocks: Record<string, string> = {
     export const setConnectorWriteAccess=async({data})=>{window.operations.push(["write-access",data]);window.writeAccess=data.enabled;return {enabled:data.enabled}};
     export const createOneDriveFolder=async({data})=>{window.operations.push(["create-folder",data]);return {created:true}};
     export const createOutlookDraft=async({data})=>{window.operations.push(["create-draft",data]);return {created:true}};
+    export const createOutlookEvent=async({data})=>{window.operations.push(["create-event",data]);return {created:true}};
+    export const createGoogleDriveFolder=async({data})=>{window.operations.push(["drive-folder",data]);return {created:true}};
   `,
   "@/lib/connector-submissions.functions": `
     export const listPublishedConnectorSubmissions=async()=>[];
@@ -313,6 +315,85 @@ test("OneDrive confirms the folder name before writing", async ({ page }) => {
       (window as FixtureWindow).operations.filter(([kind]) => kind === "create-folder"),
     ),
   ).toEqual([["create-folder", { target: "fixture-onedrive", name: "Example folder" }]]);
+});
+
+test("Google Drive grants folder creation per account only after review", async ({ page }) => {
+  const writableGoogle = {
+    ...healthyGoogle,
+    accounts: healthyGoogle.accounts?.map((account) => ({
+      ...account,
+      has: { ...healthyGoogle.has!, driveWrite: true },
+    })),
+  };
+  await boot(page, writableGoogle);
+  await page.getByRole("button", { name: "Connected Google Drive", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for connected@example.test" }).click();
+  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await permissions.getByRole("button", { name: "Read and write" }).click();
+  await permissions.getByLabel("Folder name in My Drive").fill("Drive fixture folder");
+  await permissions.getByRole("button", { name: "Review folder" }).click();
+  expect(
+    await page.evaluate(() =>
+      (window as FixtureWindow).operations.some(([kind]) => kind === "drive-folder"),
+    ),
+  ).toBe(false);
+  await permissions.getByRole("button", { name: "Create folder" }).click();
+  await expect(permissions.getByText("Folder created in Google Drive.")).toBeVisible();
+  expect(await page.evaluate(() => (window as FixtureWindow).operations.at(-1))).toEqual([
+    "drive-folder",
+    { target: "account-1", name: "Drive fixture folder" },
+  ]);
+});
+
+test("Outlook Calendar shows the event times before it writes", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await boot(page, emptyGoogle, undefined, {
+    configuredProviders: [
+      {
+        id: "microsoft",
+        name: "Microsoft",
+        requiredScopes: [],
+        optionalScopes: ["Calendars.ReadWrite"],
+      },
+    ],
+    accounts: [
+      {
+        id: "fixture-calendar",
+        provider_id: "microsoft",
+        account_label: "Calendar test account",
+        status: "connected",
+        granted_scopes: ["Calendars.ReadWrite"],
+        token_expires_at: null,
+        deleted_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Connected Outlook Calendar", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for Calendar test account" }).click();
+  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await permissions.getByRole("button", { name: "Read and write" }).click();
+  await permissions.getByLabel("Event title").fill("Calendar fixture event");
+  await permissions.getByLabel("Start (UTC)").fill("2026-11-24T14:00");
+  await permissions.getByLabel("End (UTC)").fill("2026-11-24T14:30");
+  await permissions.getByRole("button", { name: "Review event" }).click();
+  await expect(permissions.getByText("2026-11-24 14:00 to 2026-11-24 14:30 UTC")).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      (window as FixtureWindow).operations.some(([kind]) => kind === "create-event"),
+    ),
+  ).toBe(false);
+  await permissions.getByRole("button", { name: "Create event" }).click();
+  await expect(permissions.getByText("Event created in Outlook Calendar.")).toBeVisible();
+  expect(await page.evaluate(() => (window as FixtureWindow).operations.at(-1))).toEqual([
+    "create-event",
+    expect.objectContaining({
+      target: "fixture-calendar",
+      title: "Calendar fixture event",
+      start: "2026-11-24T14:00:00Z",
+      end: "2026-11-24T14:30:00Z",
+      actionId: expect.any(String),
+    }),
+  ]);
 });
 
 test("new master entries show the correct native and OAuth setup requirements", async ({

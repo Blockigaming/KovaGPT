@@ -104,7 +104,13 @@ export function ConnectedAccountManager({
   if (!flow) return null;
   const accounts = connectionAccounts(data?.accounts ?? [], operationId);
   const writeScope =
-    id === "onedrive" ? "Files.ReadWrite" : id === "outlook" ? "Mail.ReadWrite" : null;
+    id === "onedrive"
+      ? "Files.ReadWrite"
+      : id === "outlook"
+        ? "Mail.ReadWrite"
+        : id === "outlook-calendar"
+          ? "Calendars.ReadWrite"
+          : null;
   const usesApiKey = flow.authentication === "api-key";
   const configured =
     data?.configuredProviders.some((provider) => provider.id === flow.provider) === true;
@@ -474,7 +480,7 @@ export function ConnectedAccountManager({
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {(id === "onedrive" || id === "outlook") &&
+                  {(id === "onedrive" || id === "outlook" || id === "outlook-calendar") &&
                     writeScope &&
                     configured &&
                     canReadConnection(account, operationId) && (

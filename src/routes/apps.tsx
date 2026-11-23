@@ -168,7 +168,7 @@ function googleServiceAccess(id: string, account: GoogleAccountStatus | null) {
     case "google-calendar":
       return { read: Boolean(scopes?.calendar), write: Boolean(scopes?.calendarWrite) };
     case "google-drive":
-      return { read: Boolean(scopes?.drive) };
+      return { read: Boolean(scopes?.drive), write: Boolean(scopes?.driveWrite) };
     default:
       return {};
   }
@@ -1811,7 +1811,8 @@ function AppsPage() {
                                 {account.connected &&
                                   read &&
                                   (visibleSelectedApp.id === "gmail" ||
-                                    visibleSelectedApp.id === "google-calendar") && (
+                                    visibleSelectedApp.id === "google-calendar" ||
+                                    visibleSelectedApp.id === "google-drive") && (
                                     <ConnectorWriteControls
                                       connector={visibleSelectedApp.id}
                                       target={account.id}

@@ -65,7 +65,23 @@ function fixture(scope, enabled = false, ownsAccount = true) {
     zod: { z },
     "@/integrations/supabase/auth-middleware": {},
     "@/integrations/supabase/client.server": { supabaseAdmin },
-    "@/lib/google-oauth.server": {},
+    "@/lib/google-oauth.server": {
+      getGoogleConnection: async () => ({ scopes: scope }),
+      getGoogleExecutionBinding: async (id, account) => {
+        assert.equal(id, owner);
+        assert.equal(account, target);
+        return {
+          connectionId: target,
+          grantId: row.updated_at,
+          expectedGoogleSub: "google-fixture",
+        };
+      },
+      getValidGoogleAccessToken: async (_id, binding) => {
+        if (!google.hasGoogleCapability(scope, binding.capability))
+          throw new Error("write scope required");
+        return "fixture-token";
+      },
+    },
     "@/lib/google-account-policy.mjs": google,
     "@/lib/lockdown-policy.mjs": {
       assertLockdownAllows: async (_db, id) => {
@@ -141,8 +157,16 @@ test("database keeps connector preference and private submission records server-
       ),
     );
     await db.exec("set role service_role");
+    await db.exec("reset role");
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261123143000_kova_connector_drive_calendar_write.sql",
+        "utf8",
+      ),
+    );
+    await db.exec("set role service_role");
     await db.query(
-      "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'outlook',$2)",
+      "insert into public.connector_write_preferences(owner_id, connector, target_id) values ($1,'google-drive',$2), ($1,'outlook-calendar',$2)",
       [owner, target],
     );
     await db.query(
@@ -170,6 +194,48 @@ test("database keeps connector preference and private submission records server-
   } finally {
     await db.close();
   }
+});
+
+test("Google Drive requests per-file write consent only when explicitly enabled", async () => {
+  const readScopes = google.googleConnectorScopes("google-drive");
+  assert.equal(google.hasGoogleCapability(readScopes, "drive.read"), true);
+  assert.equal(google.hasGoogleCapability(readScopes, "drive.write"), false);
+  const fixtureAccount = fixture(google.googleConnectorScopes("google-drive", "read-write"));
+  const { handlers, requests } = fixtureAccount;
+  const folder = { target, name: "Fixture folder" };
+  assert.match((await handlers.createGoogleDriveFolder(folder)).error, /Enable Google Drive/u);
+  assert.equal(requests.length, 0);
+  await handlers.setConnectorWriteAccess({
+    subject: { connector: "google-drive", target },
+    enabled: true,
+  });
+  assert.deepEqual(await handlers.createGoogleDriveFolder(folder), { created: true });
+  assert.equal(requests[0][0], "https://www.googleapis.com/drive/v3/files?fields=id");
+  assert.deepEqual(JSON.parse(requests[0][1].body), {
+    name: folder.name,
+    mimeType: "application/vnd.google-apps.folder",
+  });
+});
+
+test("Outlook Calendar creates only a reviewed personal event using a transaction ID", async () => {
+  const payload = {
+    target,
+    actionId: "00000000-0000-4000-8000-000000000003",
+    title: "Fixture event",
+    start: "2026-11-24T14:00:00Z",
+    end: "2026-11-24T14:30:00Z",
+  };
+  const readOnly = fixture("Calendars.ReadBasic", true);
+  assert.match((await readOnly.handlers.createOutlookEvent(payload)).error, /permission/u);
+  assert.equal(readOnly.requests.length, 0);
+  const { handlers, requests } = fixture("Calendars.ReadWrite", true);
+  assert.throws(() => handlers.createOutlookEvent({ ...payload, end: payload.start }), /End time/u);
+  assert.deepEqual(await handlers.createOutlookEvent(payload), { created: true });
+  assert.equal(requests[0][0], "https://graph.microsoft.com/v1.0/me/calendar/events");
+  const data = JSON.parse(requests[0][1].body);
+  assert.equal(data.transactionId, payload.actionId);
+  assert.deepEqual(data.start, { dateTime: "2026-11-24T14:00:00.000", timeZone: "UTC" });
+  assert.equal(data.attendees, undefined);
 });
 
 test("OneDrive cannot write until the owner enables it even with provider write scope", async () => {

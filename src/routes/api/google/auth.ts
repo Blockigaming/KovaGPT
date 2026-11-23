@@ -12,7 +12,7 @@ export const Route = createFileRoute("/api/google/auth")({
       GET: async ({ request }) => {
         const params = new URL(request.url).searchParams;
         const connector = params.get("connector") ?? "gmail";
-        const access = params.get("access") ?? "read-write";
+        const access = params.get("access") ?? "read";
         try {
           googleConnectorScopes(connector, access);
         } catch {

@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { getGoogleConnection } from "@/lib/google-oauth.server";
+import {
+  getGoogleConnection,
+  getGoogleExecutionBinding,
+  getValidGoogleAccessToken,
+} from "@/lib/google-oauth.server";
 import { hasGoogleCapability } from "@/lib/google-account-policy.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
@@ -22,10 +26,21 @@ const targetSchema = z.discriminatedUnion("connector", [
   z.object({ connector: z.literal("google-calendar"), target: z.string().uuid() }),
   z.object({ connector: z.literal("onedrive"), target: z.string().uuid() }),
   z.object({ connector: z.literal("outlook"), target: z.string().uuid() }),
+  z.object({ connector: z.literal("google-drive"), target: z.string().uuid() }),
+  z.object({ connector: z.literal("outlook-calendar"), target: z.string().uuid() }),
 ]);
 const connectorDb = () => supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
-const microsoftWriteScope = { onedrive: "Files.ReadWrite", outlook: "Mail.ReadWrite" } as const;
-type MicrosoftWriteConnector = keyof typeof microsoftWriteScope;
+const microsoftOperations = {
+  onedrive: { scope: "Files.ReadWrite", path: "/me/drive/root/children" },
+  outlook: { scope: "Mail.ReadWrite", path: "/me/messages" },
+  "outlook-calendar": { scope: "Calendars.ReadWrite", path: "/me/calendar/events" },
+} as const;
+type MicrosoftWriteConnector = keyof typeof microsoftOperations;
+const googleWriteCapability = {
+  gmail: "gmail.write",
+  "google-calendar": "calendar.write",
+  "google-drive": "drive.write",
+} as const;
 const microsoftAccount = async (owner: string, id: string, connector: MicrosoftWriteConnector) => {
   const { data, error } = await connectorDb()
     .from("integration_linked_accounts")
@@ -41,7 +56,7 @@ const microsoftAccount = async (owner: string, id: string, connector: MicrosoftW
   return !error &&
     data &&
     canReadConnection({ ...data, account_label: null }, connector) &&
-    hasConnectionScopes(data.granted_scopes, [microsoftWriteScope[connector]])
+    hasConnectionScopes(data.granted_scopes, [microsoftOperations[connector].scope])
     ? data
     : null;
 };
@@ -91,18 +106,16 @@ export const setConnectorWriteAccess = createServerFn({ method: "POST" })
         } | null;
         if (error || !row || row.archived || (!row.permissions?.push && !row.permissions?.admin))
           return { error: "GitHub must grant write access to this repository first." };
-      } else if (connector === "onedrive" || connector === "outlook") {
+      } else if (
+        connector === "onedrive" ||
+        connector === "outlook" ||
+        connector === "outlook-calendar"
+      ) {
         if (!(await microsoftAccount(userId, target, connector)))
           return { error: "Authorize write access with Microsoft first." };
       } else {
         const account = await getGoogleConnection(userId, target);
-        if (
-          !account ||
-          !hasGoogleCapability(
-            account.scopes,
-            connector === "gmail" ? "gmail.write" : "calendar.write",
-          )
-        )
+        if (!account || !hasGoogleCapability(account.scopes, googleWriteCapability[connector]))
           return { error: "Authorize write access with Google first." };
       }
     }
@@ -131,18 +144,17 @@ async function microsoftWrite(
     !(await connectorWriteAllowed(userId, connector, target))
   )
     return { error: "Write access changed. Review the account permissions." };
-  const endpoint =
-    connector === "onedrive"
-      ? "https://graph.microsoft.com/v1.0/me/drive/root/children"
-      : "https://graph.microsoft.com/v1.0/me/messages";
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      redirect: "error",
-      signal: AbortSignal.timeout(10000),
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0${microsoftOperations[connector].path}`,
+      {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(10000),
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
     await response.body?.cancel().catch(() => {});
     if (response.status === 201) return { created: true };
     if (connector === "onedrive" && response.status === 409)
@@ -180,6 +192,74 @@ export const createOneDriveFolder = createServerFn({ method: "POST" })
       "@microsoft.graph.conflictBehavior": "fail",
     }),
   );
+
+export const createOutlookEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z
+      .object({
+        target: z.string().uuid(),
+        actionId: z.string().uuid(),
+        title: z.string().trim().min(1).max(120),
+        start: z.string().datetime(),
+        end: z.string().datetime(),
+      })
+      .refine(
+        ({ start, end }) => Date.parse(end) > Date.parse(start),
+        "End time must follow start time.",
+      ),
+  )
+  .handler(({ context, data }) =>
+    microsoftWrite(context.userId, data.target, "outlook-calendar", {
+      subject: data.title,
+      start: { dateTime: new Date(data.start).toISOString().slice(0, -1), timeZone: "UTC" },
+      end: { dateTime: new Date(data.end).toISOString().slice(0, -1), timeZone: "UTC" },
+      transactionId: data.actionId,
+    }),
+  );
+
+export const createGoogleDriveFolder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ target: z.string().uuid(), name: z.string().trim().min(1).max(120) }))
+  .handler(async ({ context, data }) => {
+    const { userId } = context;
+    await limitWrites(userId);
+    await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
+    if (!(await connectorWriteAllowed(userId, "google-drive", data.target)))
+      return { error: "Enable Google Drive write access in Connections." };
+    const binding = await getGoogleExecutionBinding(userId, data.target);
+    const token = await getValidGoogleAccessToken(userId, {
+      ...binding,
+      capability: "drive.write",
+    });
+    const current = await getGoogleExecutionBinding(userId, data.target);
+    await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
+    if (
+      binding.connectionId !== data.target ||
+      !binding.grantId ||
+      current.connectionId !== binding.connectionId ||
+      current.grantId !== binding.grantId ||
+      current.expectedGoogleSub !== binding.expectedGoogleSub ||
+      !(await connectorWriteAllowed(userId, "google-drive", data.target))
+    )
+      return { error: "Google Drive access changed. Review the account permissions." };
+    try {
+      const response = await fetch("https://www.googleapis.com/drive/v3/files?fields=id", {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: data.name, mimeType: "application/vnd.google-apps.folder" }),
+      });
+      await response.body?.cancel().catch(() => {});
+      if (response.ok) return { created: true };
+      return {
+        error: "Google Drive did not confirm folder creation. Check Drive before retrying.",
+      };
+    } catch {
+      return { error: "Folder creation could not be confirmed. Check Drive before retrying." };
+    }
+  });
 
 export const createOutlookDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

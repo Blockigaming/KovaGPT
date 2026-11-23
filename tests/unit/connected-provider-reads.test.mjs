@@ -122,6 +122,41 @@ test("calendar reads distinguish a missing default calendar without exposing the
   );
 });
 
+test("a rejected Outlook subject filter falls back to a bounded, reauthorized calendar read", async () => {
+  const calls = [];
+  let checks = 0;
+  const result = await readConnection(
+    "outlook-calendar",
+    "Meeting",
+    "fake-token",
+    async (url) => {
+      calls.push(new URL(url));
+      if (calls.length === 1) return new Response(null, { status: 400 });
+      assert.equal(checks, 1);
+      return Response.json({
+        value: [
+          { id: "1", subject: "Private unrelated event" },
+          { id: "2", subject: "Meeting marker" },
+        ],
+      });
+    },
+    {
+      beforeRequest: async () => {
+        checks++;
+      },
+    },
+  );
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].pathname, calls[0].pathname);
+  assert.equal(calls[1].searchParams.has("$filter"), false);
+  assert.equal(calls[1].searchParams.get("$top"), "50");
+  assert.deepEqual(
+    result.results.map(({ title }) => title),
+    ["Meeting marker"],
+  );
+  assert.equal(result.limited, true);
+});
+
 test("authorization redirects reject other origins, paths, schemes, and URL credentials", () => {
   const valid = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state=test";
   assert.equal(connectionAuthorizationUrl("microsoft", valid), valid);

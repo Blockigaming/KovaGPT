@@ -217,7 +217,16 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     });
   }
   const request = connectionReadRequest(id, query, token, options);
-  const response = await fetchImpl(request.url, request.init);
+  let response = await fetchImpl(request.url, request.init);
+  const filterLocally = id === "outlook-calendar" && [400, 501].includes(response.status);
+  if (filterLocally) {
+    await response.body?.cancel();
+    await options.beforeRequest?.();
+    const url = new URL(request.url);
+    url.searchParams.delete("$filter");
+    url.searchParams.set("$top", "50");
+    response = await fetchImpl(url.toString(), request.init);
+  }
   if (!response.ok) {
     await response.body?.cancel();
     if (id === "outlook-calendar" && response.status === 404)
@@ -279,6 +288,14 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     };
   }
   let rows = data.value;
+  if (filterLocally && Array.isArray(rows)) {
+    const prefix = query.trim().toLowerCase();
+    rows = rows
+      .slice(0, 50)
+      .filter(
+        (row) => typeof row?.subject === "string" && row.subject.toLowerCase().startsWith(prefix),
+      );
+  }
   if (id === "meltwater") {
     if (!Array.isArray(data.searches) || data.error) throw new Error("invalid_connection_response");
     const filter = query.trim().toLowerCase();
