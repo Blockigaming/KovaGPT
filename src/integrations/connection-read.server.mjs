@@ -109,13 +109,14 @@ export function connectionReadRequest(id, query, token, options = {}) {
     if (query.startsWith("generation:")) {
       if (!generation) throw new Error("invalid_connection_query");
       url = new URL(`https://public-api.gamma.app/v1.0/generations/${generation}`);
-    } else {
+    } else if (query.toLowerCase() === "recent") {
       url = new URL("https://public-api.gamma.app/v1.0/gammas");
       url.searchParams.set("limit", "10");
-      if (query.toLowerCase() !== "recent") {
-        if (query.length < 3) throw new Error("invalid_connection_query");
-        url.searchParams.set("query", query);
-      }
+    } else {
+      if (query.length < 3) throw new Error("invalid_connection_query");
+      url = new URL("https://public-api.gamma.app/v1.0/gammas/search");
+      url.searchParams.set("q", query);
+      url.searchParams.set("limit", "10");
     }
   } else if (id === "granola") {
     if (!/^grn_[A-Za-z0-9_-]{8,508}$/u.test(token)) throw new Error("invalid_granola_key");
@@ -468,8 +469,9 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
         },
       ];
     } else {
-      if (!Array.isArray(data.data)) throw new Error("invalid_connection_response");
-      rows = data.data.flatMap((item) => {
+      const items = query.trim().toLowerCase() === "recent" ? data.data : data.hits;
+      if (!Array.isArray(items)) throw new Error("invalid_connection_response");
+      rows = items.flatMap((item) => {
         if (typeof item?.id !== "string" || !item.id) return [];
         const link = safeConnectionLink(item.url);
         const url = link && new URL(link).origin === "https://gamma.app" ? link : null;

@@ -1067,28 +1067,31 @@ test("Gamma document lookup uses its workspace read grant and returns only metad
     connectionReadRequest("gamma", "recent", "token").url,
     "https://public-api.gamma.app/v1.0/gammas?limit=10",
   );
+  const recent = await readConnection("gamma", "recent", "token", async () =>
+    Response.json({ data: [{ id: "latest", title: "Latest" }] }),
+  );
+  assert.deepEqual(recent.results, [{ id: "latest", title: "Latest", url: null, snippet: "" }]);
   const result = await readConnection(
     "gamma",
     "Demo & report",
     "token",
     async (target, request) => {
       const url = new URL(target);
-      assert.equal(url.origin + url.pathname, "https://public-api.gamma.app/v1.0/gammas");
-      assert.equal(url.searchParams.get("query"), "Demo & report");
+      assert.equal(url.origin + url.pathname, "https://public-api.gamma.app/v1.0/gammas/search");
+      assert.equal(url.searchParams.get("q"), "Demo & report");
       assert.equal(url.searchParams.get("limit"), "10");
       assert.equal(request.method, "GET");
       return Response.json({
-        data: [
+        hits: [
           {
             id: "demo",
             title: "Demo",
             url: "https://gamma.app/docs/demo",
             updatedTime: "2026-11-22T10:00:00Z",
-            thumbnailUrl: "private",
+            highlight: "private document text",
           },
           { id: "other", title: "Other", url: "https://example.invalid/private" },
         ],
-        nextCursor: "private",
       });
     },
   );
@@ -1101,6 +1104,10 @@ test("Gamma document lookup uses its workspace read grant and returns only metad
     },
     { id: "other", title: "Other", url: null, snippet: "" },
   ]);
+  await assert.rejects(
+    readConnection("gamma", "Demo", "token", async () => Response.json({ data: [] })),
+    /invalid_connection_response/,
+  );
   assert.throws(
     () => selectRefreshTokens("gamma", { access_token: "example", expires_in: 3600 }),
     /refresh_token_missing/,
