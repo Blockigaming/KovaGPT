@@ -204,7 +204,12 @@ test.describe("mobile shell UI truth", () => {
     const coarsePointer = await page.evaluate(
       () => matchMedia("(width < 1024px) and (pointer: coarse)").matches,
     );
-    expect(closeBox?.height).toBe(coarsePointer ? 44 : 36);
+    // A touch screen keeps the 44px target even with the docked desktop layout.
+    expect(closeBox?.height).toBe(
+      coarsePointer || (await page.evaluate(() => matchMedia("(pointer: coarse)").matches))
+        ? 44
+        : 36,
+    );
 
     const panel = palette.locator(":scope > div").first();
     const animationDuration = await panel.evaluate(
@@ -345,6 +350,8 @@ test("touch hold opens the chat menu without opening the conversation", async ({
   browserName,
 }) => {
   test.skip(!hasTouch || browserName !== "chromium", "Chromium touch input");
+  // Touch screens 1024px and wider use the docked desktop sidebar.
+  test.skip(page.viewportSize()!.width >= 1024, "drawer navigation");
   await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
   await page.addInitScript((userId) => {
     const now = Date.now();

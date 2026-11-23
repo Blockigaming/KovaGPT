@@ -12,7 +12,7 @@ const mobileProjects = new Set([
   "phone-430x932",
   "phone-landscape-844x390",
   "tablet-768x1024",
-  "tablet-1024x768",
+  // tablet-1024x768 uses the docked desktop sidebar.
 ]);
 
 async function expectNoPageOverflow(page: Page) {

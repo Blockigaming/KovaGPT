@@ -264,9 +264,10 @@ test("activity shows default sections and steps while hiding completed browser s
         return rect.y + rect.height;
       })
       .toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    // Wait for the sheet's entrance motion to settle before measuring it.
+    await expect.poll(async () => (await sheet.boundingBox())!.y).toBe(0);
     const bounds = (await sheet.boundingBox())!;
     expect(bounds.x).toBe(0);
-    expect(bounds.y).toBe(0);
     expect(bounds.width).toBe(page.viewportSize()!.width);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
     await expect(sheet.getByRole("button", { name: "Close sheet", exact: true })).toBeVisible();

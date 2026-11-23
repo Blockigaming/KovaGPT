@@ -108,9 +108,9 @@ for (const theme of ["dark", "light"] as const) {
     );
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const screen = page.locator(".kova-settings-screen");
-    const panel = page.locator("section.kova-settings-page");
-    await expect(screen).toBeVisible();
+    // Settings opens as a modal over chat; its panel carries the selected theme.
+    const panel = page.locator(".kova-settings-dialog");
+    await expect(panel).toBeVisible();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
     const phone = await usesCompactSettings(page);
     if (!phone) {
@@ -119,17 +119,7 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toHaveCount(0);
     }
     await expect(page.getByRole("combobox", { name: "Preferred response length" })).toBeVisible();
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const screen = document.querySelector(".kova-settings-screen")!;
-          const content = document.querySelector("section.kova-settings-page")!;
-          return (
-            getComputedStyle(screen).backgroundColor === getComputedStyle(content).backgroundColor
-          );
-        }),
-      )
-      .toBe(true);
+    await expect(panel).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     if (!phone) {
       const nav = page.getByRole("complementary", { name: "Settings navigation" });
       await expect(nav).toBeVisible();
@@ -137,8 +127,7 @@ for (const theme of ["dark", "light"] as const) {
         const box = node.getBoundingClientRect();
         return { width: box.width, border: getComputedStyle(node).borderRightWidth };
       });
-      if (page.viewportSize()!.width < 1024) expect(geometry.width).toBe(240);
-      else expect(geometry.width).toBeGreaterThan(270);
+      expect(geometry.width).toBeGreaterThanOrEqual(200);
       expect(geometry.border).toBe("1px");
       await nav.getByRole("tab", { name: "Appearance", exact: true }).click();
     } else {

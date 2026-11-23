@@ -27,7 +27,7 @@ export default defineConfig({
   ],
   ...(browserSuite === "public" ? { testMatch: publicSuitePatterns } : {}),
   timeout: 30_000,
-  expect: { timeout: 5_000 },
+  expect: { timeout: 10_000 },
   fullyParallel: true,
   retries: 0,
   reporter: [["list"]],

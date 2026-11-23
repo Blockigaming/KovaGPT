@@ -41,8 +41,8 @@ test("keyboard users can dismiss menus and dialogs with focus restoration", asyn
   const settings = await openCurrentSettings(page);
   await expect(settings).toBeVisible();
   if (width < 1024) {
-    // Mobile Settings is a modal above the current chat, preserving its draft.
-    await expect(page).toHaveURL(/\/$/);
+    // Settings is a modal above the current chat; the address names its section.
+    await expect(page).toHaveURL(/\/settings\//);
     await page.keyboard.press("Escape");
     await expect(settings).toBeHidden();
     const navigation = page.getByRole("dialog", { name: "Primary navigation" });
@@ -53,9 +53,8 @@ test("keyboard users can dismiss menus and dialogs with focus restoration", asyn
   } else {
     await expect(page).toHaveURL(/\/settings(?:\/[^?#]+)?(?:[?#]|$)/);
     await page.keyboard.press("Escape");
-    await expect(settings).toBeVisible();
-    await page.goBack();
-    await waitForKovaHydration(page);
+    await expect(settings).toBeHidden();
+    await expect(page).toHaveURL(/\/$/);
   }
   const expand = page.getByRole("button", { name: "Expand input", exact: true });
   await expand.focus();

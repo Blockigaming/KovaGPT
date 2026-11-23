@@ -73,9 +73,7 @@ test("a short split window keeps Send visible with a full attachment tray", asyn
 });
 
 async function expectRestingComposer(page: Page, composer = page.locator(".spec400-composer")) {
-  const compactDesktop = await page.evaluate(
-    () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
-  );
+  const compactDesktop = await page.evaluate(() => matchMedia("(min-width: 1024px)").matches);
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
@@ -571,9 +569,7 @@ for (const surface of ["empty", "conversation"] as const) {
       Array.from({ length: 12 }, (_, index) => `https://example.org/page-${index}`).join(" "),
     );
     await expect(websites).toHaveCount(15);
-    const desktop = await page.evaluate(
-      () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
-    );
+    const desktop = await page.evaluate(() => matchMedia("(min-width: 1024px)").matches);
     const readLayout = () =>
       composer.evaluate((frame) => {
         const shell = frame.getBoundingClientRect();
