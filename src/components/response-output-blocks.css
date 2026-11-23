@@ -467,3 +467,43 @@ body .prose-chat .kova-table-scroll:focus-visible {
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 80px);
   }
 }
+
+/* GFM checklists: real checkboxes, aligned with the first line of each item. */
+.prose-chat .contains-task-list {
+  padding-inline-start: 0.25em;
+  list-style: none;
+}
+.prose-chat .task-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.prose-chat .task-list-item > input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 0.3em;
+  accent-color: var(--foreground);
+}
+.prose-chat .task-list-item:has(> input:checked) {
+  color: var(--muted-foreground);
+}
+/* Footnotes: small superscript references and a quiet note list. */
+.prose-chat sup > a[data-footnote-ref] {
+  padding: 0 2px;
+  font-size: 0.75em;
+  text-decoration: none;
+}
+.prose-chat section[data-footnotes] {
+  margin-top: 1.5em;
+  padding-top: 0.75em;
+  border-top: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.875em;
+}
+.prose-chat section[data-footnotes] h2 {
+  font-size: 0.875rem;
+}
+.prose-chat del {
+  opacity: 0.75;
+}

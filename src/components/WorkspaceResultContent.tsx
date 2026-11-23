@@ -10,6 +10,8 @@ export type WorkspaceResultDescriptor = ResultDescriptor & {
   canvasSourceKey?: string;
   /** A named file from a reply: shown in the Preview/Code file pane. */
   file?: ResponseFile;
+  /** Markdown renderer handed over by the chat that opened the file. */
+  renderMarkdown?: (text: string) => import("react").ReactNode;
 };
 
 const GenerativeCanvas = lazy(() =>
@@ -58,7 +60,14 @@ export function WorkspaceResultContent({
   setInput,
   setResultTab,
 }: WorkspaceResultContentProps) {
-  if (result.file) return <FilePreviewPane file={result.file} onClose={closeResult} />;
+  if (result.file)
+    return (
+      <FilePreviewPane
+        file={result.file}
+        onClose={closeResult}
+        renderMarkdown={result.renderMarkdown}
+      />
+    );
   return (
     <>
       {wideResult && (

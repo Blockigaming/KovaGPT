@@ -31,8 +31,7 @@ import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
-import { extractResponseFiles } from "@/lib/response-files.mjs";
-import { fileResultDescriptor } from "@/lib/response-file-result";
+import { latestFileResult, notifyResponseReady } from "@/lib/response-completion";
 import { restoreDialogFocus, scheduleDialogFocusReturn } from "@/lib/dialog-return-focus";
 import {
   beginChatEdit,
@@ -1281,6 +1280,8 @@ function KovaGPT() {
     }
     const pending = pendingCanvasRef.current;
     pendingCanvasRef.current = null;
+    if (pending && typeof document !== "undefined" && document.hidden)
+      notifyResponseReady(pending.messageId);
     if (
       !principalReady ||
       !pending ||
@@ -1292,12 +1293,10 @@ function KovaGPT() {
       return;
     // A file the reply just made opens in the side preview, replacing an earlier file
     // preview but never another kind of result. Narrow layouts keep the tap-to-open card.
-    const file = extractResponseFiles(latest.content)
-      .filter((candidate) => candidate.complete)
-      .at(-1);
-    if (file) {
+    const fileResult = latestFileResult(latest);
+    if (fileResult) {
       if (wideResultRef.current && (!resultRef.current || resultRef.current.file))
-        openResultRef.current(fileResultDescriptor(latest.id, file));
+        openResultRef.current(fileResult);
       return;
     }
     if (resultRef.current || resultDraftsRef.current.has(scope)) return;

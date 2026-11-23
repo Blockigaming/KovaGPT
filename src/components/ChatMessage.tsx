@@ -171,7 +171,11 @@ function ChatMessageInner({
   /** Applies an accepted selection edit / restored version to this message. */
   onReplaceContent?: (messageId: string, nextContent: string) => void;
   onOpenResult?: (
-    result: ResultDescriptor & { canvasSourceKey?: string; file?: ResponseFile },
+    result: ResultDescriptor & {
+      canvasSourceKey?: string;
+      file?: ResponseFile;
+      renderMarkdown?: (text: string) => React.ReactNode;
+    },
     trigger?: HTMLElement,
   ) => void;
   onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
@@ -515,7 +519,15 @@ function ChatMessageInner({
   );
   const openFile = useCallback(
     (file: ResponseFile, trigger?: HTMLElement) => {
-      onOpenResult?.(fileResultDescriptor(message.id, file), trigger);
+      onOpenResult?.(
+        {
+          ...fileResultDescriptor(message.id, file),
+          renderMarkdown: (text: string) => (
+            <ResponseMarkdown boxLongProse={false}>{text}</ResponseMarkdown>
+          ),
+        },
+        trigger,
+      );
     },
     [message.id, onOpenResult],
   );

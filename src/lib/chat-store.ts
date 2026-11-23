@@ -145,9 +145,28 @@ export type Activity = {
   error?: string;
   tool: string;
   label: string;
-  status: "done" | "running" | "failed" | "canceled";
+  status: "done" | "running" | "failed" | "canceled" | "queued" | "paused" | "skipped" | "partial";
+  /** Secondary label: the target, file, query or short result of the operation. */
+  detail?: string;
+  /** Items processed so far, with an optional total for measurable progress. */
+  count?: number;
+  total?: number;
+  /** Parent operation, so sub-steps nest beneath it. */
+  parentId?: string;
+  /** Client-observed start and measured duration of a live operation. */
+  startedAt?: number;
+  durationMs?: number;
 };
-const ACTIVITY_STATUSES = new Set<Activity["status"]>(["done", "running", "failed", "canceled"]);
+const ACTIVITY_STATUSES = new Set<Activity["status"]>([
+  "done",
+  "running",
+  "failed",
+  "canceled",
+  "queued",
+  "paused",
+  "skipped",
+  "partial",
+]);
 function isActivity(value: unknown): value is Activity {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Partial<Activity>;

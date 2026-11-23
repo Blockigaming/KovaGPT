@@ -1,5 +1,7 @@
 import {
   createContext,
+  lazy,
+  Suspense,
   memo,
   useContext,
   useEffect,
@@ -24,6 +26,11 @@ import "./response-output-blocks.css";
 import { observeTableOverflow } from "@/lib/table-overflow";
 import { describeFile, type ResponseFile } from "@/lib/response-files.mjs";
 import { ResponseFileCard } from "./ResponseFileCard";
+import { tableModelFromHast } from "@/lib/response-table.mjs";
+
+// Code colours, table sorting, diagrams and media load together, after the reply renders.
+const ResponseEnhanced = lazy(() => import("./response-enhanced/ResponseEnhanced"));
+const MEDIA_LINK = /\.(mp3|wav|ogg|oga|m4a|aac|flac|mp4|webm|mov|m4v|ogv)(?:[?#]|$)/iu;
 
 declare module "hast" {
   interface ElementData {
@@ -267,6 +274,18 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
   }[language];
   const writing = Boolean(officeLabel) || writingLanguages.has(language.toLowerCase());
   const filename = node?.data?.kovaCodeFilename;
+  if (language.toLowerCase() === "mermaid" && !filename)
+    return (
+      <Suspense
+        fallback={
+          <pre tabIndex={0} aria-label="Diagram source">
+            <code>{text}</code>
+          </pre>
+        }
+      >
+        <ResponseEnhanced kind="diagram" source={text} />
+      </Suspense>
+    );
   if (filename && !officeLabel && onOpenFile) {
     const file = describeFile(filename, language.toLowerCase(), text, node?.data?.kovaCodeComplete);
     return (
@@ -285,9 +304,15 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
       {writing ? (
         <ResponseMarkdown boxLongProse={false}>{text}</ResponseMarkdown>
       ) : (
-        <pre tabIndex={0} aria-label={`${language} code block`}>
-          <code className={className}>{text}</code>
-        </pre>
+        <Suspense
+          fallback={
+            <pre tabIndex={0} aria-label={`${language} code block`}>
+              <code className={className}>{text}</code>
+            </pre>
+          }
+        >
+          <ResponseEnhanced kind="code" language={language} text={text} />
+        </Suspense>
       )}
     </ResponseContentBox>
   );
@@ -409,6 +434,28 @@ const MarkdownActionsContext = createContext<MarkdownActions>({});
 function MarkdownLink({ node: _node, children, href, ...props }: ComponentProps<"a"> & ExtraProps) {
   const { sources, onSourceClick } = useContext(MarkdownActionsContext);
   const source = sources?.find((item) => item.url === href || item.id === href?.replace(/^#/, ""));
+  if (!source && href && /^https:\/\//iu.test(href) && MEDIA_LINK.test(href)) {
+    const media = /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/iu.test(href) ? "video" : "audio";
+    const label = typeof children === "string" ? children : `${media} file`;
+    return (
+      <Suspense
+        fallback={
+          <a {...props} href={href} target="_blank" rel="noreferrer noopener">
+            {children}
+          </a>
+        }
+      >
+        <ResponseEnhanced kind="media" src={href} media={media} label={label} />
+      </Suspense>
+    );
+  }
+  // Footnote references and back-links stay on this page.
+  if (!source && href?.startsWith("#"))
+    return (
+      <a {...props} href={href}>
+        {children}
+      </a>
+    );
   return source && onSourceClick ? (
     <button
       type="button"
@@ -486,7 +533,13 @@ const markdownComponents: Components = {
     ) : (
       <blockquote {...props}>{children}</blockquote>
     ),
-  table: ({ children }) => <ResponseTable>{children}</ResponseTable>,
+  table: ({ node, children }) => (
+    <Suspense fallback={<ResponseTable>{children}</ResponseTable>}>
+      <ResponseEnhanced kind="table" model={tableModelFromHast(node)}>
+        {children}
+      </ResponseEnhanced>
+    </Suspense>
+  ),
   strong: ({ children }) => (
     <strong className="kova-response-emphasis font-semibold">{children}</strong>
   ),

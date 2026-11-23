@@ -2233,6 +2233,8 @@ export const Route = createFileRoute("/api/chat")({
               tool: string;
               label: string;
               status?: "done" | "failed";
+              count?: number;
+              durationMs?: number;
             }> = [];
             if (webSources.length) {
               const activity = createToolActivityEvent(
@@ -2240,7 +2242,11 @@ export const Route = createFileRoute("/api/chat")({
                 `Searched ${webSources.length} ${webSources.length === 1 ? "source" : "sources"}`,
                 "complete",
               );
-              activityEvents.push({ tool: activity.type, label: activity.label });
+              activityEvents.push({
+                tool: activity.type,
+                label: activity.label,
+                count: webSources.length,
+              });
             }
 
             const settleDisconnectedConnector = async () => {
@@ -2444,6 +2450,10 @@ export const Route = createFileRoute("/api/chat")({
                                 tool: a.tool,
                                 label: a.label,
                                 status: a.status ?? "done",
+                                ...(a.count !== undefined ? { count: a.count } : {}),
+                                ...(a.durationMs !== undefined
+                                  ? { duration_ms: a.durationMs }
+                                  : {}),
                               }),
                             ),
                           );
@@ -2590,6 +2600,7 @@ export const Route = createFileRoute("/api/chat")({
                         };
                       }
                     }
+                    const toolStartedAt = Date.now();
                     try {
                       const out = connectedContext?.tools.some(
                         (tool) => tool.function.name === tc.function.name,
@@ -2611,6 +2622,7 @@ export const Route = createFileRoute("/api/chat")({
                         label: activityLabel,
                         status:
                           out && typeof out === "object" && "error" in out ? "failed" : "done",
+                        durationMs: Date.now() - toolStartedAt,
                       });
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
@@ -2620,6 +2632,7 @@ export const Route = createFileRoute("/api/chat")({
                         tool: tc.function.name,
                         label: activityLabel,
                         status: "failed",
+                        durationMs: Date.now() - toolStartedAt,
                       });
                       return {
                         role: "tool",
@@ -2847,6 +2860,8 @@ export const Route = createFileRoute("/api/chat")({
                             tool: a.tool,
                             label: a.label,
                             status: a.status ?? "done",
+                            ...(a.count !== undefined ? { count: a.count } : {}),
+                            ...(a.durationMs !== undefined ? { duration_ms: a.durationMs } : {}),
                           }),
                         ),
                       );
@@ -3069,6 +3084,8 @@ export const Route = createFileRoute("/api/chat")({
                         tool: a.tool,
                         label: a.label,
                         status: a.status ?? "done",
+                        ...(a.count !== undefined ? { count: a.count } : {}),
+                        ...(a.durationMs !== undefined ? { duration_ms: a.durationMs } : {}),
                       }),
                     ),
                   );

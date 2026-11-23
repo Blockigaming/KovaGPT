@@ -102,12 +102,15 @@ function fixture() {
   const context = {
     sameNextPromptScope,
     splitGenerativeContent,
-    extractResponseFiles,
-    fileResultDescriptor: (messageId, file) => ({
-      title: file.name,
-      canvasSourceKey: `${messageId}:file:${file.name}`,
-      file,
-    }),
+    latestFileResult: (message) => {
+      const file = extractResponseFiles(message.content)
+        .filter((candidate) => candidate.complete)
+        .at(-1);
+      return file
+        ? { title: file.name, canvasSourceKey: `${message.id}:file:${file.name}`, file }
+        : null;
+    },
+    notifyResponseReady: () => {},
     wideResultRef: { current: true },
     storagePrincipal: "owner-a",
     activeId: "chat-a",

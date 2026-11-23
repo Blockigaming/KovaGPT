@@ -1,22 +1,43 @@
-import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Code2, Download, Eye, Maximize2, RefreshCw, X } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  Check,
+  ChevronDown,
+  Code2,
+  Download,
+  Eye,
+  FileText,
+  Globe,
+  Image as ImageIcon,
+  Maximize2,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { buildFilePreviewDocument, type ResponseFile } from "@/lib/response-files.mjs";
-import { downloadResponseFile, fileIcon } from "@/lib/response-file-actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import "./response-files.css";
-
-// Loaded only for Markdown files so the preview pane does not split the main renderer.
-const ResponseMarkdown = lazy(() =>
-  import("./ResponseMarkdown").then((module) => ({ default: module.ResponseMarkdown })),
-);
+import "./response-file-pane.css";
 
 type View = "preview" | "code";
+
+// Kept local (not shared with the chat bundle) so opening the pane adds no shared chunk.
+function paneIcon(file: ResponseFile) {
+  if (file.language === "html") return Globe;
+  if (file.language === "svg") return ImageIcon;
+  return file.category === "Document" ? FileText : Code2;
+}
+function download(file: ResponseFile) {
+  const url = URL.createObjectURL(new Blob([file.content], { type: file.mime }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
 type CopyState = "idle" | "copied" | "error";
 
 /**
@@ -24,19 +45,29 @@ type CopyState = "idle" | "copied" | "error";
  * restart, full screen and close. HTML runs in an opaque-origin sandbox with no
  * network; SVG and Markdown never run scripts.
  */
-export function FilePreviewPane({ file, onClose }: { file: ResponseFile; onClose: () => void }) {
-  const [view, setView] = useState<View>(file.preview ? "preview" : "code");
+export function FilePreviewPane({
+  file,
+  onClose,
+  renderMarkdown,
+}: {
+  file: ResponseFile;
+  onClose: () => void;
+  /** Supplied by the chat when available; Markdown otherwise opens as source. */
+  renderMarkdown?: (text: string) => ReactNode;
+}) {
+  const previewable = file.preview && (file.language !== "markdown" || Boolean(renderMarkdown));
+  const [view, setView] = useState<View>(previewable ? "preview" : "code");
   const [fullscreen, setFullscreen] = useState(false);
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const [run, setRun] = useState(0);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const headingId = useId();
-  const Icon = fileIcon(file);
+  const Icon = paneIcon(file);
 
   useEffect(() => {
-    setView(file.preview ? "preview" : "code");
+    setView(previewable ? "preview" : "code");
     setCopyState("idle");
-  }, [file.name, file.content, file.preview]);
+  }, [file.name, file.content, previewable]);
   useEffect(
     () => () => {
       if (copyTimer.current) clearTimeout(copyTimer.current);
@@ -84,7 +115,7 @@ export function FilePreviewPane({ file, onClose }: { file: ResponseFile; onClose
           {file.name}
         </h2>
         <div className="kova-file-pane-tools">
-          {file.preview && (
+          {previewable && (
             <div className="kova-file-pane-toggle" role="group" aria-label="View">
               <button
                 type="button"
@@ -139,7 +170,7 @@ export function FilePreviewPane({ file, onClose }: { file: ResponseFile; onClose
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-44">
                 <DropdownMenuItem onSelect={() => void copy()}>Copy</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => downloadResponseFile(file)}>
+                <DropdownMenuItem onSelect={() => download(file)}>
                   <Download aria-hidden="true" /> Download {file.name}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -188,11 +219,9 @@ export function FilePreviewPane({ file, onClose }: { file: ResponseFile; onClose
             referrerPolicy="no-referrer"
             srcDoc={previewDoc}
           />
-        ) : view === "preview" && file.language === "markdown" ? (
+        ) : view === "preview" && file.language === "markdown" && renderMarkdown ? (
           <div className="kova-file-pane-document prose-chat" tabIndex={0}>
-            <Suspense fallback={<p role="status">Loading preview…</p>}>
-              <ResponseMarkdown boxLongProse={false}>{file.content}</ResponseMarkdown>
-            </Suspense>
+            {renderMarkdown?.(file.content)}
           </div>
         ) : (
           <pre
