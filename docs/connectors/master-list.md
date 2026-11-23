@@ -61,6 +61,8 @@ A catalog entry alone never enables OAuth, provider calls, account access, tradi
 
 For the current work-app operations and acceptance checks, see [Work app connections](work-apps.md). Each operation needs its own permission verification. A read test verifies the tested read only. Availability of a provider write scope does not by itself implement or verify a Kova write operation.
 
+On a deployment of this PR, the existing authenticated administrator endpoint `GET /api/admin/diagnostics` reports the 38 connector IDs and their deployment setup state. For blocked web connectors it lists server setting names to check. It does not return setting values, linked account data, provider responses, or proof of consent. Check the report on the intended public host so callback-origin and Tana public-client checks use that host. For web connectors marked ready for account verification, use a dedicated test account to confirm the supported operations, denial and revocation. Verify the file exchange and both native companions separately.
+
 Custom MCP connects deployment-approved HTTPS servers using user-supplied bearer credentials. Each server registration identifies a reviewed read tool. Changing the endpoint or tool requires a new connection. See [Custom MCP acceptance](work-apps.md#custom-mcp-acceptance).
 
 The existing launch review preview still covers its original 12 providers. The production Apps directory uses the complete master catalog. Bank and health entries point out their dedicated setup requirements; adding them does not create a web OAuth flow.

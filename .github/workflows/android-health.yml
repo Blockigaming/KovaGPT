@@ -7,6 +7,7 @@ on:
       - "src/components/AppleHealthReport.tsx"
       - "src/components/HealthConnectionsPanel.tsx"
       - "tests/browser-runtime/finance-health-connections.spec.ts"
+      - "tests/browser-runtime/spec400-plugins.spec.ts"
       - ".github/workflows/android-health.yml"
   workflow_dispatch:
 permissions:
@@ -40,8 +41,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: bash scripts/ci/install-playwright-browsers.sh chromium
-      - name: Verify Apple and Android health permission handling in the dashboard
+      - name: Verify the Connections directory and finance and health permissions
         run: >-
-          npx --no-install playwright test tests/browser-runtime/finance-health-connections.spec.ts
+          npx --no-install playwright test tests/browser-runtime/finance-health-connections.spec.ts tests/browser-runtime/spec400-plugins.spec.ts
           --config=playwright.browser.config.ts --project=chromium
-          --grep 'native Apple Health|Android Health Connect'

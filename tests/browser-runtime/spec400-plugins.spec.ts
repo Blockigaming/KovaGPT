@@ -162,7 +162,8 @@ test("approved directory keeps all providers and offers Health examples and sear
   await page.getByRole("button", { name: "Connect Health", exact: true }).click();
   const chooser = page.getByRole("dialog", { name: "Connect Health", exact: true });
   await expect(chooser.getByText("Apple Health", { exact: true })).toBeVisible();
-  await expect(chooser.getByText("Coming soon", { exact: true })).toBeVisible();
+  await expect(chooser.getByText("Requires iPhone app", { exact: true })).toBeVisible();
+  await expect(chooser.getByText("Requires Android app", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await picker.getByRole("tab", { name: "All" }).click();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
@@ -187,7 +188,7 @@ test("approved directory keeps all providers and offers Health examples and sear
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
-test("new master entries support aliases and cannot start unimplemented connections", async ({
+test("new master entries show the correct native and OAuth setup requirements", async ({
   page,
 }) => {
   await boot(page);
@@ -202,8 +203,9 @@ test("new master entries support aliases and cannot start unimplemented connecti
     await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
     await expect(page.locator(`[data-plugin-id="${id}"]`)).toBeVisible();
   }
-  await page.getByRole("button", { name: "Coming soon Apple Health", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("native mobile implementation");
+  await page.getByRole("button", { name: "Details Apple Health", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("Native app required");
+  await expect(page.getByRole("dialog")).toContainText("signed app install");
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
   ).toHaveCount(0);
@@ -211,8 +213,11 @@ test("new master entries support aliases and cannot start unimplemented connecti
   await search.fill("HubSpot");
   await page.getByRole("button", { name: "Coming soon HubSpot", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
-    "No connection flow or provider operations are enabled",
+    "Connection setup is incomplete in this deployment",
   );
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+  ).toBeDisabled();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 

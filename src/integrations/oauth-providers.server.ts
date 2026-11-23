@@ -359,7 +359,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
   },
 };
 
-function credentialVaultConfigured() {
+export function credentialVaultConfigured() {
   const key = process.env.CONNECTOR_TOKEN_ENCRYPTION_KEY;
   return Boolean(key && Buffer.from(key, "base64").length === 32);
 }
@@ -381,7 +381,7 @@ export function configuredKeyProviders() {
 }
 
 export function oauthClientId(provider: OAuthProviderAdapter, redirectOrigin?: string) {
-  const configured = process.env[provider.clientIdEnv];
+  const configured = process.env[provider.clientIdEnv]?.trim() || undefined;
   if (provider.id !== "tana") return configured;
   if (configured && configured !== TANA_MCP_HOSTED_CLIENT_ID) return configured;
   return !redirectOrigin || redirectOrigin === new URL(TANA_MCP_HOSTED_CLIENT_ID).origin
@@ -394,7 +394,7 @@ export function configuredOAuthProviders(redirectOrigin?: string) {
   return Object.values(OAUTH_PROVIDERS).filter((provider) => {
     const id = oauthClientId(provider, redirectOrigin);
     const secret = process.env[provider.clientSecretEnv];
-    if (!id || (!secret && provider.tokenClientAuth !== "none")) return false;
+    if (!id || (!secret?.trim() && provider.tokenClientAuth !== "none")) return false;
     if (provider.id === "tana") return Boolean(provider.tokenClientAuth);
     return provider.id !== "stripe" || /^sk_(test|live)_[A-Za-z0-9]+$/u.test(secret ?? "");
   });
