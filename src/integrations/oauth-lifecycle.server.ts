@@ -83,13 +83,18 @@ export async function beginOAuth(input: {
     if (provider.id === "microsoft" && typeof existing.account_label === "string")
       loginHint = existing.account_label;
   }
-  const scopes = [
-    ...new Set([
-      ...provider.requiredScopes,
-      ...previousScopes,
-      ...(input.optionalScopes ?? []).filter((scope) => provider.optionalScopes.includes(scope)),
-    ]),
-  ];
+  const scopes =
+    provider.id === "gamma"
+      ? [input.optionalScopes?.includes("generate") ? "generate" : "gamma:read"]
+      : [
+          ...new Set([
+            ...provider.requiredScopes,
+            ...previousScopes,
+            ...(input.optionalScopes ?? []).filter((scope) =>
+              provider.optionalScopes.includes(scope),
+            ),
+          ]),
+        ];
   const redirectUri = `${origin}/api/integrations/oauth/callback/${provider.id}`;
   const { error } = await admin()
     .from("integration_oauth_states")
@@ -223,7 +228,12 @@ export async function completeOAuth(input: {
     !tokens.refresh_token
   )
     throw new Error("oauth_refresh_token_missing");
-  if (provider.id === "gamma" && tokens.scope?.trim() !== "gamma:read")
+  if (
+    provider.id === "gamma" &&
+    (record.requested_scopes.length !== 1 ||
+      !["gamma:read", "generate"].includes(record.requested_scopes[0]) ||
+      tokens.scope?.trim() !== record.requested_scopes[0])
+  )
     throw new Error("oauth_scope_verification_failed");
   if (provider.id === "salesforce" && (!tokens.refresh_token || !tokens.scope))
     throw new Error("oauth_scope_verification_failed");

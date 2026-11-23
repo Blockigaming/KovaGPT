@@ -145,7 +145,7 @@ function createMcpClient({ url, token, fetchImpl, beforeRequest }) {
   };
 }
 
-async function findReadTool(client, { tool: name, queryField, isTana }) {
+async function findTool(client, name) {
   let cursor;
   for (let page = 0; page < MAX_TOOL_PAGES; page++) {
     const list = await client.send("tools/list", cursor ? { cursor } : {});
@@ -153,26 +153,7 @@ async function findReadTool(client, { tool: name, queryField, isTana }) {
     const matches = list.tools.filter((tool) => tool?.name === name);
     if (matches.length > 1) throw new Error("mcp_tool_changed");
     const tool = matches[0];
-    if (tool) {
-      const schema = tool.inputSchema;
-      const parameter = schema?.properties?.[queryField];
-      const required = schema?.required ?? [];
-      if (
-        tool.annotations?.destructiveHint === true ||
-        (isTana
-          ? tool.annotations?.readOnlyHint === false
-          : tool.annotations?.readOnlyHint !== true) ||
-        schema?.type !== "object" ||
-        !Object.hasOwn(schema.properties ?? {}, queryField) ||
-        !Array.isArray(required) ||
-        required.some((name) => name !== queryField) ||
-        (isTana
-          ? parameter?.type !== "array" || parameter.items?.type !== "string"
-          : parameter?.type !== "string")
-      )
-        throw new Error("mcp_tool_changed");
-      return;
-    }
+    if (tool) return tool;
     if (
       typeof list.nextCursor !== "string" ||
       !list.nextCursor ||
@@ -183,6 +164,25 @@ async function findReadTool(client, { tool: name, queryField, isTana }) {
     cursor = list.nextCursor;
   }
   throw new Error("connection_permission_required");
+}
+
+async function findReadTool(client, { tool: name, queryField, isTana }) {
+  const tool = await findTool(client, name);
+  const schema = tool.inputSchema;
+  const parameter = schema?.properties?.[queryField];
+  const required = schema?.required ?? [];
+  if (
+    tool.annotations?.destructiveHint === true ||
+    (isTana ? tool.annotations?.readOnlyHint === false : tool.annotations?.readOnlyHint !== true) ||
+    schema?.type !== "object" ||
+    !Object.hasOwn(schema.properties ?? {}, queryField) ||
+    !Array.isArray(required) ||
+    required.some((name) => name !== queryField) ||
+    (isTana
+      ? parameter?.type !== "array" || parameter.items?.type !== "string"
+      : parameter?.type !== "string")
+  )
+    throw new Error("mcp_tool_changed");
 }
 
 const TANA_CONFIG = {
@@ -230,6 +230,52 @@ async function readMcpTool(config, token, query, fetchImpl, beforeRequest) {
 
 export async function verifyTanaRead(token, fetchImpl = fetch, beforeRequest) {
   await readMcpTool(TANA_CONFIG, token, "Kova connection check", fetchImpl, beforeRequest);
+}
+
+export async function runReviewedMcpWrite(
+  credential,
+  operation,
+  text,
+  beforeRequest,
+  transport = fetchApprovedMcp,
+) {
+  if (typeof text !== "string" || !text.trim() || text.length > 2000)
+    throw new Error("invalid_connection_query");
+  const { apiKey, serverId, writeFingerprint } = unpackKeyCredential("custom-mcp", credential);
+  const server = approvedMcpServers().get(serverId);
+  const write = server?.write;
+  if (!write || write.fingerprint !== writeFingerprint || operation !== write.tool)
+    throw new Error("connection_permission_required");
+  const client = createMcpClient({
+    url: server.url,
+    token: apiKey,
+    fetchImpl: transport,
+    beforeRequest,
+  });
+  try {
+    await client.start();
+    const tool = await findTool(client, write.tool);
+    const schema = tool.inputSchema;
+    if (
+      tool.annotations?.readOnlyHint !== false ||
+      tool.annotations?.destructiveHint !== false ||
+      schema?.type !== "object" ||
+      Object.keys(schema.properties ?? {}).length !== 1 ||
+      !Object.hasOwn(schema.properties, write.field) ||
+      schema.properties[write.field]?.type !== "string" ||
+      !Array.isArray(schema.required) ||
+      schema.required.length !== 1 ||
+      schema.required[0] !== write.field
+    )
+      throw new Error("mcp_tool_changed");
+    const result = await client.send("tools/call", {
+      name: write.tool,
+      arguments: { [write.field]: text },
+    });
+    return result.isError !== true && result.structuredContent?.ok === true;
+  } finally {
+    await client.close();
+  }
 }
 
 export function readMcpConnection(

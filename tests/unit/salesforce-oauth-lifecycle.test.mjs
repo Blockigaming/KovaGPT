@@ -210,6 +210,14 @@ test("new work-app callbacks store only a confirmed grant for the bound provider
       scopes: ["gamma:read"],
     },
     {
+      providerId: "gamma",
+      tokens: { scope: "generate" },
+      profile: { userId: "user_1", workspaceId: "workspace_2", workspaceName: "Fixture workspace" },
+      profileEndpoint: "https://public-api.gamma.app/v1.0/me",
+      accountId: "workspace_2:user_1",
+      scopes: ["generate"],
+    },
+    {
       providerId: "calendly",
       tokens: { owner: calendlyUser, scope: "users:read scheduled_events:read" },
       profile: { resource: { uri: calendlyUser, name: "Linked user" } },
@@ -356,7 +364,7 @@ test("Gamma starts authorization with the API audience, read-only scope and PKCE
     ...callback,
     ownerId: "owner-one",
     providerId: "gamma",
-    optionalScopes: ["generate"],
+    optionalScopes: [],
   });
   const url = new URL(result.url);
   assert.equal(url.origin, "https://auth.gamma.app");
@@ -365,6 +373,17 @@ test("Gamma starts authorization with the API audience, read-only scope and PKCE
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
   assert.match(url.searchParams.get("code_challenge"), /^[a-zA-Z0-9_-]{43}$/u);
   assert.equal(url.searchParams.has("client_secret"), false);
+  const upgrade = new URL(
+    (
+      await f.beginOAuth({
+        ...callback,
+        ownerId: "owner-one",
+        providerId: "gamma",
+        optionalScopes: ["gamma:read", "generate"],
+      })
+    ).url,
+  );
+  assert.equal(upgrade.searchParams.get("scope"), "generate");
 });
 
 test("Tana's public client uses the production callback and rejects mismatched issuers", async () => {

@@ -21,6 +21,7 @@ import {
   createOutlookDraft,
   getConnectorWriteAccess,
   runConnectorWriteAction,
+  sendOutlookMessage,
   setConnectorWriteAccess,
 } from "@/lib/connector-write.functions";
 import type { WritableConnector } from "@/lib/connector-write-policy.server";
@@ -37,6 +38,8 @@ type Props = {
   label: string;
   providerCanWrite: boolean;
   authorizeWrite?: () => void;
+  canSendOutlook?: boolean;
+  authorizeOutlookSend?: () => void;
 };
 
 export function ConnectorWriteControls(props: Props) {
@@ -63,7 +66,15 @@ export function ConnectorWriteControls(props: Props) {
   );
 }
 
-function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite, label }: Props) {
+function PermissionEditor({
+  connector,
+  target,
+  providerCanWrite,
+  authorizeWrite,
+  canSendOutlook,
+  authorizeOutlookSend,
+  label,
+}: Props) {
   const owner = useUser().user?.id;
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -83,6 +94,7 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
   const googleFolder = useServerFn(createGoogleDriveFolder);
   const outlookEvent = useServerFn(createOutlookEvent);
   const outlookDraft = useServerFn(createOutlookDraft);
+  const outlookSend = useServerFn(sendOutlookMessage);
   const linearIssue = useServerFn(createLinearIssue);
   const canWrite = providerCanWrite && enabled === true;
   const extraWrite = isExtraWriteConnector(connector) ? connector : null;
@@ -131,8 +143,8 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
     }
   };
 
-  const performWrite = async () => {
-    if (!draft || !canWrite || busy || !owner) return;
+  const performWrite = async (send = false) => {
+    if (!draft || !canWrite || busy || !owner || (send && !canSendOutlook)) return;
     setBusy(true);
     setNotice("");
     try {
@@ -168,15 +180,16 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
         }
         setNotice("Event created in Outlook Calendar.");
       } else if (connector === "outlook") {
-        const result = await outlookDraft({
-          data: { target, recipient: draft.recipient, subject: draft.name, body: draft.body },
-          headers: { "X-Kova-Owner": owner },
-        });
+        const data = { target, recipient: draft.recipient, subject: draft.name, body: draft.body };
+        const headers = { "X-Kova-Owner": owner };
+        const result = send
+          ? await outlookSend({ data: { ...data, confirmed: true }, headers })
+          : await outlookDraft({ data, headers });
         if ("error" in result && result.error) {
           setNotice(result.error);
           return;
         }
-        setNotice("Draft saved to Outlook.");
+        setNotice(send ? "Outlook accepted the message for sending." : "Draft saved to Outlook.");
       } else if (connector === "linear") {
         const result = await linearIssue({
           data: {
@@ -277,6 +290,11 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
       {canWrite && owner && extraWrite && (
         <ExtraWriteForm connector={extraWrite} target={target} owner={owner} />
       )}
+      {canWrite && authorizeOutlookSend && !canSendOutlook && (
+        <Button type="button" variant="outline" disabled={busy} onClick={authorizeOutlookSend}>
+          Authorize sending with Outlook
+        </Button>
+      )}
       {canWrite &&
         !extraWrite &&
         connector !== "gmail" &&
@@ -306,6 +324,11 @@ function PermissionEditor({ connector, target, providerCanWrite, authorizeWrite,
               <Button type="button" disabled={busy} onClick={() => void performWrite()}>
                 {labelForWrite}
               </Button>
+              {connector === "outlook" && canSendOutlook && (
+                <Button type="button" disabled={busy} onClick={() => void performWrite(true)}>
+                  Send Outlook message
+                </Button>
+              )}
             </div>
           </div>
         ) : (
@@ -383,7 +406,14 @@ function ExtraWriteForm({
   const perform = useServerFn(runConnectorWriteAction);
   const [review, setReview] = useState<WriteFields | null>(null);
   const [busy, setBusy] = useState(false);
-  const [outcome, setOutcome] = useState<{ message: string; link?: string } | null>(null);
+  const [outcome, setOutcome] = useState<{
+    message: string;
+    link?: string;
+    reference?: string;
+  } | null>(null);
+  const [requestId, setRequestId] = useState(() =>
+    connector === "hyperframes-heygen" ? crypto.randomUUID() : "",
+  );
 
   async function confirm() {
     if (!review || busy) return;
@@ -397,11 +427,19 @@ function ExtraWriteForm({
       setOutcome(
         "ok" in response && response.ok
           ? {
-              message: "The provider confirmed the change.",
+              message:
+                connector === "hyperframes-heygen"
+                  ? "HeyGen queued the render."
+                  : connector === "gamma"
+                    ? "Gamma queued the presentation."
+                    : "The provider confirmed the change.",
               link: "link" in response ? response.link : undefined,
+              reference: "reference" in response ? response.reference : undefined,
             }
           : { message: response.error ?? "The provider did not confirm the change." },
       );
+      if ("ok" in response && response.ok && connector === "hyperframes-heygen")
+        setRequestId(crypto.randomUUID());
     } catch {
       setOutcome({
         message: "The change could not be confirmed. Check the provider before retrying.",
@@ -453,7 +491,17 @@ function ExtraWriteForm({
             return (
               <label key={name} className="grid gap-2">
                 {label}
-                <Field name={name} maxLength={maxLength} required />
+                <Field
+                  name={name}
+                  maxLength={maxLength}
+                  required
+                  defaultValue={name === "requestId" ? requestId : undefined}
+                  onChange={
+                    name === "requestId"
+                      ? (event) => setRequestId(event.currentTarget.value)
+                      : undefined
+                  }
+                />
               </label>
             );
           })}
@@ -463,6 +511,12 @@ function ExtraWriteForm({
       {outcome && (
         <p role="status">
           {outcome.message}
+          {outcome.reference && (
+            <>
+              {" "}
+              {connector === "gamma" ? "Generation ID" : "Render ID"} {outcome.reference}
+            </>
+          )}
           {outcome.link && (
             <>
               {" "}

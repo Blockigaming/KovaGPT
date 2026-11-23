@@ -81,7 +81,10 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             (candidate) => candidate.id === body.provider,
           );
           if (!provider) return fail("provider_not_configured", 503);
-          const { token, accountId, labelSuffix } = prepareKeyCredential(provider.id, body);
+          const { token, accountId, labelSuffix, addedScopes } = prepareKeyCredential(
+            provider.id,
+            body,
+          );
           await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "connector_write");
           const limit = await consumeApplicationRateLimit({
             identity: `user:${auth.userId}`,
@@ -134,7 +137,7 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             provider_account_id: accountId,
             account_label: accountLabel,
             status: "connected",
-            granted_scopes: provider.requiredScopes,
+            granted_scopes: [...provider.requiredScopes, ...(addedScopes ?? [])],
             access_token_ciphertext: ciphertext,
             refresh_token_ciphertext: null,
             token_expires_at: null,

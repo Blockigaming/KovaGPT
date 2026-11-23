@@ -9,6 +9,8 @@ import * as google from "../../src/lib/google-account-policy.mjs";
 import * as providerResponse from "../../src/lib/provider-response.server.mjs";
 import * as keyCredential from "../../src/integrations/key-connection-credential.server.mjs";
 import * as salesforceCredential from "../../src/integrations/salesforce-credential.server.mjs";
+import * as accountProvider from "../../src/integrations/account-provider-read.server.mjs";
+import * as mcpProvider from "../../src/integrations/mcp-provider-read.server.mjs";
 import { loadUiModule } from "../helpers/ui-state-harness.mjs";
 
 const owner = "00000000-0000-4000-8000-000000000001";
@@ -22,7 +24,7 @@ const writeRequests = loadUiModule(
     "./connector-write-actions": actions,
     "@/integrations/salesforce-credential.server.mjs": salesforceCredential,
   },
-  { URL },
+  { URL, URLSearchParams },
 );
 
 function fixture(
@@ -61,7 +63,7 @@ function fixture(
           assert.equal(predicates.owner_id, owner);
           assert.equal(predicates.id, target);
           assert.equal(predicates.provider_id, provider);
-          return { data: ownsAccount ? row : null, error: null };
+          return { data: ownsAccount ? { ...row } : null, error: null };
         },
       };
       return query;
@@ -119,6 +121,8 @@ function fixture(
       configuredKeyProviders: () => [{ id: provider }],
     },
     "@/integrations/key-connection-credential.server.mjs": keyCredential,
+    "@/integrations/account-provider-read.server.mjs": accountProvider,
+    "@/integrations/mcp-provider-read.server.mjs": mcpProvider,
     "@/integrations/salesforce-credential.server.mjs": salesforceCredential,
     "@/lib/connector-write-actions": actions,
     "@/lib/connector-write-requests.server": writeRequests,
@@ -146,7 +150,7 @@ function fixture(
     async (url, options) => {
       assert.equal(authenticatedOwner, owner);
       requests.push([url, options]);
-      if (response) return response();
+      if (response) return response(url, options);
       if (provider === "linear")
         return Response.json({ data: { issueCreate: { success: true, issue: { id: target } } } });
       return new Response(null, { status: 201 });
@@ -200,6 +204,12 @@ test("database keeps connector preference and private submission records server-
     await db.exec(
       readFileSync(
         "supabase/migrations/20261123194500_kova_expand_reviewed_connector_writes.sql",
+        "utf8",
+      ),
+    );
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261123201500_kova_extend_reviewed_connector_writes.sql",
         "utf8",
       ),
     );
@@ -388,6 +398,13 @@ test("every new directory action builds a bounded request and validates a provid
       200,
       { id: "123" },
     ],
+    gamma: [
+      { text: "Fixture outline" },
+      "public-api.gamma.app",
+      "/v1.0/generations",
+      200,
+      { generationId: "generation_123" },
+    ],
     "google-bigquery": [
       { destination: "project-fixture", title: "dataset_1", location: "US" },
       "bigquery.googleapis.com",
@@ -402,12 +419,31 @@ test("every new directory action builds a bounded request and validates a provid
       201,
       { id: "111" },
     ],
+    "hyperframes-heygen": [
+      { destination: "asst_abc123", title: "Fixture render", requestId: target },
+      "api.heygen.com",
+      "/v3/hyperframes/renders",
+      202,
+      { data: { render_id: "hfr_fixture" } },
+    ],
     meltwater: [
       { title: "Fixture search", text: '"Fixture brand"' },
       "api.meltwater.com",
       "/v3/searches",
       201,
       { search: { id: 123, name: "Fixture search" } },
+    ],
+    mixpanel: [
+      {
+        title: "Fixture Event",
+        destination: "unknown_1",
+        time: "2026-11-23T19:00:00Z",
+        eventId: target,
+      },
+      "api-eu.mixpanel.com",
+      "/import?strict=1&project_id=123",
+      200,
+      { code: 200, num_records_imported: 1 },
     ],
     "ms-teams": [
       { destination: "19:team@thread.v2", text: "Message" },
@@ -451,6 +487,20 @@ test("every new directory action builds a bounded request and validates a provid
       200,
       { ok: true, channel: "C0123456789", ts: "1234567890.123456" },
     ],
+    stripe: [
+      { destination: "cus_Fixture" },
+      "api.stripe.com",
+      "/v1/invoices",
+      200,
+      {
+        object: "invoice",
+        id: "in_Fixture",
+        customer: "cus_Fixture",
+        auto_advance: false,
+        amount_due: 0,
+        status: "draft",
+      },
+    ],
     vercel: [
       { title: "fixture-project" },
       "api.vercel.com",
@@ -458,18 +508,29 @@ test("every new directory action builds a bounded request and validates a provid
       200,
       { accountId: "team_fixture", id: "prj_fixture", name: "fixture-project" },
     ],
+    wix: [
+      { title: "Fixture Company" },
+      "www.wixapis.com",
+      "/site-properties/v4/properties/business-profile",
+      200,
+      {},
+    ],
   };
-  assert.deepEqual([...actions.EXTRA_WRITE_CONNECTORS].sort(), Object.keys(receipts).sort());
+  assert.deepEqual(
+    [...actions.EXTRA_WRITE_CONNECTORS].filter((id) => id !== "custom-mcp").sort(),
+    Object.keys(receipts).sort(),
+  );
   for (const [connector, [fields, host, path, status, receipt]] of Object.entries(receipts)) {
     const request = writeRequests.connectorWriteRequest(connector, fields, {
       notionPageId: owner,
       salesforceQuery: "https://fixtures.my.salesforce.com/services/data/v67.0/query",
       vercelTeamId: "team_fixture",
+      mixpanel: { projectId: "123", region: "eu" },
     });
     assert.equal(request.url, `https://${host}${path}`, connector);
     assert.equal(request.status, status, connector);
     assert.equal(request.confirmed(receipt), true, connector);
-    assert.equal(request.confirmed({}), false, connector);
+    assert.equal(request.confirmed({ error: "unexpected response" }), false, connector);
     assert.equal(writeRequests.connectorWriteRequest(connector, { ...fields, extra: "x" }), null);
   }
   assert.equal(
@@ -594,7 +655,7 @@ test("OneDrive cannot write until the owner enables it even with provider write 
   assert.equal(requests.length, 1);
 });
 
-test("Outlook writes only plain-text drafts for an owned account with both access grants", async () => {
+test("Outlook writes plain-text drafts for an owned account with write access", async () => {
   const data = {
     target,
     recipient: "test@example.com",
@@ -617,4 +678,149 @@ test("Outlook writes only plain-text drafts for an owned account with both acces
     body: { contentType: "Text", content: data.body },
     toRecipients: [{ emailAddress: { address: data.recipient } }],
   });
+});
+
+test("Outlook sends only after confirmation, Mail.Send, and the shared Outlook write opt-in", async () => {
+  const data = {
+    target,
+    recipient: "test@example.com",
+    subject: "Fixture subject",
+    body: "Fixture body",
+    confirmed: true,
+  };
+  const noGrant = fixture("Mail.ReadWrite", true);
+  assert.match((await noGrant.handlers.sendOutlookMessage(data)).error, /write permission/u);
+  assert.deepEqual(noGrant.requests, []);
+
+  const f = fixture("Mail.ReadWrite", false, true, "microsoft", {
+    scopes: ["Mail.ReadWrite", "Mail.Send"],
+    response: () => new Response(null, { status: 202 }),
+  });
+  assert.throws(() => f.handlers.sendOutlookMessage({ ...data, confirmed: false }), /confirmed/u);
+  assert.match((await f.handlers.sendOutlookMessage(data)).error, /access changed/u);
+  assert.deepEqual(f.requests, []);
+  await f.handlers.setConnectorWriteAccess({
+    subject: { connector: "outlook", target },
+    enabled: true,
+  });
+  assert.deepEqual(await f.handlers.sendOutlookMessage(data), { created: true });
+  const [url, options] = f.requests[0];
+  assert.equal(url, "https://graph.microsoft.com/v1.0/me/sendMail");
+  assert.deepEqual(JSON.parse(options.body), {
+    message: {
+      subject: data.subject,
+      body: { contentType: "Text", content: data.body },
+      toRecipients: [{ emailAddress: { address: data.recipient } }],
+    },
+  });
+  assert.deepEqual(f.access.at(-1), [owner, "outlook", target]);
+});
+
+test("Wix checks the linked account again after exchanging the client secret", async () => {
+  const credential = keyCredential.prepareKeyCredential("wix", {
+    clientId: "fixture-client",
+    apiKey: "fixture-secret",
+  }).token;
+  const params = { connector: "wix", target, confirmed: true, fields: { title: "Changed name" } };
+  for (const revokeDuringExchange of [false, true]) {
+    const f = fixture("wix:site:properties:read", true, true, "wix", {
+      credential,
+      response: (url) => {
+        if (url.endsWith("/oauth2/token")) {
+          if (revokeDuringExchange) f.row.updated_at = "revoked";
+          return Response.json({ access_token: "fixture-access", token_type: "Bearer" });
+        }
+        return Response.json({});
+      },
+    });
+    const outcome = await f.handlers.runConnectorWriteAction(params);
+    assert.deepEqual(JSON.parse(f.requests[0][1].body), {
+      grant_type: "client_credentials",
+      client_id: "fixture-client",
+      client_secret: "fixture-secret",
+    });
+    if (revokeDuringExchange) {
+      assert.match(outcome.error, /access changed/u);
+      assert.equal(f.requests.length, 1);
+    } else {
+      assert.deepEqual(outcome, { ok: true });
+      assert.equal(f.requests[1][1].headers.Authorization, "fixture-access");
+      assert.deepEqual(JSON.parse(f.requests[1][1].body), {
+        businessProfile: { businessName: "Changed name" },
+        fields: { paths: ["businessName"] },
+      });
+    }
+  }
+});
+
+test("Stripe creates a zero-amount invoice draft and Mixpanel binds ingestion to the linked region", async () => {
+  const stripe = fixture("stripe_apps", true, true, "stripe", {
+    response: () =>
+      Response.json({
+        object: "invoice",
+        id: "in_fixture",
+        customer: "cus_Fixture",
+        status: "draft",
+        amount_due: 0,
+        auto_advance: false,
+      }),
+  });
+  assert.deepEqual(
+    await stripe.handlers.runConnectorWriteAction({
+      connector: "stripe",
+      target,
+      confirmed: true,
+      fields: { destination: "cus_Fixture" },
+    }),
+    { ok: true },
+  );
+  assert.equal(stripe.requests[0][0], "https://api.stripe.com/v1/invoices");
+  assert.equal(stripe.requests[0][1].headers["Content-Type"], "application/x-www-form-urlencoded");
+  assert.deepEqual(Object.fromEntries(new URLSearchParams(stripe.requests[0][1].body)), {
+    customer: "cus_Fixture",
+    auto_advance: "false",
+    pending_invoice_items_behavior: "exclude",
+  });
+
+  const mixpanel = fixture("mixpanel:cohorts:list", true, true, "mixpanel", {
+    credential: keyCredential.prepareKeyCredential("mixpanel", {
+      apiKey: "fixture-secret",
+      projectId: "12345",
+      username: "fixture",
+      region: "in",
+    }).token,
+    response: () => Response.json({ code: 200, num_records_imported: 1 }),
+  });
+  const fields = {
+    title: "Fixture event",
+    destination: "actor_1",
+    time: "2026-11-23T19:00:00Z",
+    eventId: target,
+  };
+  assert.deepEqual(
+    await mixpanel.handlers.runConnectorWriteAction({
+      connector: "mixpanel",
+      target,
+      confirmed: true,
+      fields,
+    }),
+    { ok: true },
+  );
+  const [url, init] = mixpanel.requests[0];
+  assert.equal(url, "https://api-in.mixpanel.com/import?strict=1&project_id=12345");
+  assert.equal(
+    init.headers.Authorization,
+    `Basic ${Buffer.from("fixture:fixture-secret").toString("base64")}`,
+  );
+  assert.deepEqual(JSON.parse(init.body), [
+    {
+      event: fields.title,
+      properties: {
+        time: Date.parse(fields.time),
+        distinct_id: fields.destination,
+        $insert_id: target,
+        ip: 0,
+      },
+    },
+  ]);
 });

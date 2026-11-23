@@ -978,13 +978,19 @@ test("forced Notion renewal cannot access another owner, workspace or deleted ac
   }
 });
 
-test("Gamma persists a rotated credential only for the same user and workspace", async () => {
-  for (const workspaceId of ["workspace_2", "unexpected_workspace"]) {
+test("Gamma rotates a credential only for the same scope, user, and workspace", async () => {
+  for (const [oldScope, scope, workspaceId] of [
+    ["gamma:read", "gamma:read", "workspace_2"],
+    ["generate", "generate", "workspace_2"],
+    ["gamma:read", "generate", "workspace_2"],
+    ["generate", "gamma:read", "workspace_2"],
+    ["gamma:read", "gamma:read", "unexpected_workspace"],
+  ]) {
     const f = fixture();
     Object.assign(f.state.row, {
       provider_id: "gamma",
       provider_account_id: "workspace_2:user_1",
-      granted_scopes: ["gamma:read"],
+      granted_scopes: [oldScope],
       refresh_token_ciphertext: "encrypted:old-refresh",
       token_expires_at: new Date(Date.now() + 1000).toISOString(),
     });
@@ -994,7 +1000,7 @@ test("Gamma persists a rotated credential only for the same user and workspace",
         return Response.json({
           access_token: "renewed",
           refresh_token: "rotated",
-          scope: "gamma:read",
+          scope,
           expires_in: 3600,
         });
       }
@@ -1004,7 +1010,7 @@ test("Gamma persists a rotated credential only for the same user and workspace",
     };
     const { id, updated_at } = f.state.row;
     const refreshed = await f.refreshExpiringConnection("owner-a", id, updated_at);
-    if (workspaceId === "workspace_2") {
+    if (workspaceId === "workspace_2" && oldScope === scope) {
       assert.ok(refreshed);
       assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:rotated");
       assert.equal(f.state.row.access_token_ciphertext, "encrypted:renewed");

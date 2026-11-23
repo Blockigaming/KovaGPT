@@ -99,7 +99,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "GAMMA_OAUTH_CLIENT_ID",
     clientSecretEnv: "GAMMA_OAUTH_CLIENT_SECRET",
     requiredScopes: ["gamma:read"],
-    optionalScopes: [],
+    optionalScopes: ["generate"],
     usesPkce: true,
     profileEndpoint: "https://public-api.gamma.app/v1.0/me",
     profileId: (v) => {
@@ -249,6 +249,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
       "Sites.ReadWrite.All",
       "Mail.Read",
       "Mail.ReadWrite",
+      "Mail.Send",
       "Calendars.ReadBasic",
       "Calendars.ReadWrite",
       "Team.ReadBasic.All",

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 228,
-  "latest": "20261123194500_kova_expand_reviewed_connector_writes.sql",
+  "count": 229,
+  "latest": "20261123201500_kova_extend_reviewed_connector_writes.sql",
   "migrations": [
     {
       "order": 1,
@@ -4764,6 +4764,20 @@
       "filename": "20261123194500_kova_expand_reviewed_connector_writes.sql",
       "timestamp": "20261123194500",
       "sha256": "6f6a97671c8a965f05d074c3a662d407b94876108963c6094ab98c2afce26d74",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 229,
+      "filename": "20261123201500_kova_extend_reviewed_connector_writes.sql",
+      "timestamp": "20261123201500",
+      "sha256": "f5b289f58a198385cc4eb7dccde7865b0aa90edc3fd25b24031ace5456a78eee",
       "tables": [],
       "functions": [],
       "destructive": false,

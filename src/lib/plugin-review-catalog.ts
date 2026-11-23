@@ -170,6 +170,11 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
       "Save a draft to Outlook after review",
       "src/lib/connector-write.functions.ts",
     ),
+    supported(
+      "write",
+      "Send a reviewed Outlook message with a separate Mail.Send grant",
+      "src/lib/connector-write.functions.ts",
+    ),
   ]),
   entry("onedrive", [
     proposed("read", "Proposed: search and read selected OneDrive files; scope unconfirmed"),

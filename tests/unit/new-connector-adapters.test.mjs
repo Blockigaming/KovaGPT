@@ -7,11 +7,15 @@ import {
 } from "../../src/integrations/approved-mcp-servers.server.mjs";
 import {
   connectionAuthorizationUrl,
+  REVIEWED_MCP_WRITE_SCOPE,
   TANA_MCP_RESOURCE,
 } from "../../src/integrations/connection-flows.mjs";
 import { readConnection } from "../../src/integrations/connection-read.server.mjs";
 import { prepareKeyCredential } from "../../src/integrations/key-connection-credential.server.mjs";
-import { readMcpConnection } from "../../src/integrations/mcp-provider-read.server.mjs";
+import {
+  readMcpConnection,
+  runReviewedMcpWrite,
+} from "../../src/integrations/mcp-provider-read.server.mjs";
 import {
   oauthRefreshRequest,
   oauthTokenRequest,
@@ -230,7 +234,7 @@ test("Wix binds access to the saved project and exposes only business name and l
   ]);
 });
 
-function mockMcp(expectedEndpoint, tool, queryField, value, annotation = true) {
+function mockMcp(expectedEndpoint, tool, queryField, value, annotation = true, writeReceipt) {
   const calls = [];
   const transport = async (url, init) => {
     assert.equal(url, expectedEndpoint);
@@ -266,7 +270,8 @@ function mockMcp(expectedEndpoint, tool, queryField, value, annotation = true) {
           tools: [
             {
               name: tool,
-              annotations: { readOnlyHint: annotation },
+              annotations:
+                typeof annotation === "boolean" ? { readOnlyHint: annotation } : annotation,
               inputSchema: {
                 type: "object",
                 properties: {
@@ -289,6 +294,7 @@ function mockMcp(expectedEndpoint, tool, queryField, value, annotation = true) {
           jsonrpc: "2.0",
           id: rpc.id,
           result: {
+            ...(writeReceipt ? { structuredContent: writeReceipt } : {}),
             content: [
               { type: "image", data: "private" },
               { type: "text", text: "Fixture result" },
@@ -417,5 +423,98 @@ test("Custom MCP checks the approved URL, unchanged binding and a declared read 
   } finally {
     if (previous === undefined) delete process.env.KOVA_MCP_READ_SERVERS;
     else process.env.KOVA_MCP_READ_SERVERS = previous;
+  }
+});
+
+test("Custom MCP writes require a linked tool binding, non-destructive schema, and server receipt", async () => {
+  const entry = {
+    id: "fixture",
+    url: "https://docs.example.com/mcp",
+    tool: "readDocs",
+    queryField: "query",
+    writeTool: "createNote",
+    writeField: "text",
+  };
+  const env = process.env.KOVA_MCP_READ_SERVERS;
+  const fields = { apiKey: "mcp-fixture-token", serverId: entry.id };
+  try {
+    process.env.KOVA_MCP_READ_SERVERS = JSON.stringify([entry]);
+    const linked = prepareKeyCredential("custom-mcp", fields);
+    assert.deepEqual(linked.addedScopes, [REVIEWED_MCP_WRITE_SCOPE]);
+    const annotations = { readOnlyHint: false, destructiveHint: false };
+    const mock = mockMcp(
+      entry.url,
+      entry.writeTool,
+      entry.writeField,
+      "Fixture note",
+      annotations,
+      { ok: true },
+    );
+    const assertAuthorized = async () => {};
+    await assert.rejects(
+      runReviewedMcpWrite(
+        linked.token,
+        "deleteAll",
+        "Fixture note",
+        assertAuthorized,
+        mock.transport,
+      ),
+      /permission_required/u,
+    );
+    assert.deepEqual(mock.calls, []);
+    assert.equal(
+      await runReviewedMcpWrite(
+        linked.token,
+        entry.writeTool,
+        "Fixture note",
+        assertAuthorized,
+        mock.transport,
+      ),
+      true,
+    );
+    assert.equal(mock.calls.filter((call) => call === "tools/call").length, 1);
+    const destructive = mockMcp(entry.url, entry.writeTool, entry.writeField, "Fixture note", {
+      ...annotations,
+      destructiveHint: true,
+    });
+    await assert.rejects(
+      runReviewedMcpWrite(
+        linked.token,
+        entry.writeTool,
+        "Fixture note",
+        assertAuthorized,
+        destructive.transport,
+      ),
+      /tool_changed/u,
+    );
+    assert.equal(destructive.calls.includes("tools/call"), false);
+    process.env.KOVA_MCP_READ_SERVERS = JSON.stringify([{ ...entry, writeField: "replacement" }]);
+    await assert.rejects(
+      runReviewedMcpWrite(
+        linked.token,
+        entry.writeTool,
+        "Fixture note",
+        assertAuthorized,
+        mock.transport,
+      ),
+      /permission_required/u,
+    );
+    const read = mockMcp(entry.url, entry.tool, entry.queryField, "example");
+    assert.equal(
+      (
+        await readMcpConnection(
+          "custom-mcp",
+          "example",
+          linked.token,
+          fetch,
+          undefined,
+          read.transport,
+        )
+      ).results[0].snippet,
+      "Fixture result",
+    );
+  } finally {
+    if (env === undefined) delete process.env.KOVA_MCP_READ_SERVERS;
+    else process.env.KOVA_MCP_READ_SERVERS = env;
   }
 });

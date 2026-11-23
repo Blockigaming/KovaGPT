@@ -276,7 +276,13 @@ export async function refreshExpiringConnection(
     if (provider.id === "gamma") {
       const scopes =
         tokens.scope === undefined ? row.granted_scopes : tokens.scope.trim().split(/\s+/u);
-      if (scopes.length !== 1 || scopes[0] !== "gamma:read" || !provider.profileEndpoint)
+      if (
+        scopes.length !== 1 ||
+        row.granted_scopes.length !== 1 ||
+        scopes[0] !== row.granted_scopes[0] ||
+        !["gamma:read", "generate"].includes(scopes[0]) ||
+        !provider.profileEndpoint
+      )
         throw new Error("refresh_scope_changed");
       const profile = await fetch(provider.profileEndpoint, {
         redirect: "error",

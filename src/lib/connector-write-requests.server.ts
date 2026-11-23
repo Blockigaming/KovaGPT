@@ -8,12 +8,13 @@ import { salesforceQueryUrl } from "@/integrations/salesforce-credential.server.
 type WriteRequest = {
   url: string;
   method?: "PATCH";
-  credentialHeader?: "apikey";
-  body: Record<string, unknown>;
+  credentialHeader?: "apikey" | "X-Api-Key";
+  body: Record<string, unknown> | Record<string, unknown>[] | URLSearchParams;
   header?: Record<string, string>;
   status: number;
   confirmed: (data: Record<string, unknown>) => boolean;
   outputLink?: (data: Record<string, unknown>) => string | undefined;
+  outputReference?: (data: Record<string, unknown>) => string | undefined;
 };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -22,6 +23,19 @@ const object = (value: unknown) =>
 const hasId = (data: Record<string, unknown>) =>
   typeof data.id === "string" && data.id.length > 0 && data.id.length < 300;
 const graph = "https://graph.microsoft.com/v1.0";
+const renderId = (data: Record<string, unknown>) => {
+  const id = object(data.data)?.render_id;
+  return typeof id === "string" && /^hfr_[A-Za-z0-9_-]{1,124}$/u.test(id) ? id : undefined;
+};
+const gammaGenerationId = (data: Record<string, unknown>) =>
+  typeof data.generationId === "string" && /^[A-Za-z0-9_-]{1,128}$/u.test(data.generationId)
+    ? data.generationId
+    : undefined;
+const mixpanelIngestion = {
+  us: "https://api.mixpanel.com",
+  eu: "https://api-eu.mixpanel.com",
+  in: "https://api-in.mixpanel.com",
+} as const;
 
 function calendlyLink(data: Record<string, unknown>) {
   const booking = object(data.resource)?.booking_url;
@@ -32,20 +46,28 @@ function calendlyLink(data: Record<string, unknown>) {
     : undefined;
 }
 
+export function connectorWriteFieldsValid(connector: ExtraWriteConnector, input: WriteFields) {
+  const fields = EXTRA_WRITE_ACTIONS[connector].fields;
+  return (
+    Object.keys(input).length === fields.length &&
+    fields.every(
+      ({ name, maxLength }) =>
+        Object.hasOwn(input, name) && input[name].trim() && input[name].length <= maxLength,
+    )
+  );
+}
+
 export function connectorWriteRequest(
   connector: ExtraWriteConnector,
   input: WriteFields,
-  binding?: { notionPageId?: string; salesforceQuery?: string; vercelTeamId?: string },
+  binding?: {
+    notionPageId?: string;
+    salesforceQuery?: string;
+    vercelTeamId?: string;
+    mixpanel?: { region: keyof typeof mixpanelIngestion; projectId: string };
+  },
 ): WriteRequest | null {
-  const fields = EXTRA_WRITE_ACTIONS[connector].fields;
-  if (
-    Object.keys(input).length !== fields.length ||
-    fields.some(
-      ({ name, maxLength }) =>
-        !Object.hasOwn(input, name) || !input[name].trim() || input[name].length > maxLength,
-    )
-  )
-    return null;
+  if (!connectorWriteFieldsValid(connector, input)) return null;
   const { destination, listId, text, title, location } = input;
   switch (connector) {
     case "box":
@@ -86,6 +108,8 @@ export function connectorWriteRequest(
         confirmed: (data) => hasId(object(data.design) ?? {}),
         body: { title, design_type: { type: "custom", width: 1080, height: 1080 } },
       };
+    case "custom-mcp":
+      return null;
     case "figma":
       if (!/^[A-Za-z0-9]{1,64}$/u.test(destination)) return null;
       return {
@@ -93,6 +117,21 @@ export function connectorWriteRequest(
         status: 200,
         confirmed: hasId,
         body: { message: text },
+      };
+    case "gamma":
+      return {
+        url: "https://public-api.gamma.app/v1.0/generations",
+        status: 200,
+        confirmed: (data) => Boolean(gammaGenerationId(data)),
+        outputReference: gammaGenerationId,
+        body: {
+          inputText: text,
+          format: "presentation",
+          textMode: "generate",
+          numCards: 3,
+          imageOptions: { source: "noImages" },
+          sharingOptions: { workspaceAccess: "noAccess", externalAccess: "noAccess" },
+        },
       };
     case "google-bigquery":
       if (
@@ -117,6 +156,23 @@ export function connectorWriteRequest(
         confirmed: hasId,
         body: { properties: { name: title } },
       };
+    case "hyperframes-heygen":
+      if (!/^asst_[A-Za-z0-9_-]{1,123}$/u.test(destination) || !uuid.test(input.requestId))
+        return null;
+      return {
+        url: "https://api.heygen.com/v3/hyperframes/renders",
+        credentialHeader: "X-Api-Key",
+        header: { "Idempotency-Key": input.requestId },
+        status: 202,
+        confirmed: (data) => !data.error && Boolean(renderId(data)),
+        outputReference: renderId,
+        body: {
+          project: { type: "asset_id", asset_id: destination },
+          title,
+          format: "mp4",
+          quality: "standard",
+        },
+      };
     case "meltwater":
       return {
         url: "https://api.meltwater.com/v3/searches",
@@ -133,6 +189,32 @@ export function connectorWriteRequest(
           },
         },
       };
+    case "mixpanel": {
+      const project = binding?.mixpanel;
+      const time = Date.parse(input.time);
+      if (
+        !project ||
+        !Object.hasOwn(mixpanelIngestion, project.region) ||
+        !/^[1-9][0-9]{0,14}$/u.test(project.projectId) ||
+        !/^[A-Za-z0-9_.:-]{1,128}$/u.test(destination) ||
+        !/^[A-Za-z0-9_.:-]{1,64}$/u.test(input.eventId) ||
+        !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/u.test(input.time) ||
+        !Number.isFinite(time) ||
+        new Date(time).toISOString() !== input.time.replace("Z", ".000Z")
+      )
+        return null;
+      return {
+        url: `${mixpanelIngestion[project.region]}/import?strict=1&project_id=${project.projectId}`,
+        status: 200,
+        confirmed: (data) => data.code === 200 && data.num_records_imported === 1,
+        body: [
+          {
+            event: title,
+            properties: { time, distinct_id: destination, $insert_id: input.eventId, ip: 0 },
+          },
+        ],
+      };
+    }
     case "ms-teams":
       if (!/^19:[A-Za-z0-9_.@-]+@thread\.(?:v2|skype)$/u.test(destination)) return null;
       return {
@@ -216,6 +298,25 @@ export function connectorWriteRequest(
           unfurl_media: false,
         },
       };
+    case "stripe":
+      if (!/^cus_[A-Za-z0-9]{1,124}$/u.test(destination)) return null;
+      return {
+        url: "https://api.stripe.com/v1/invoices",
+        status: 200,
+        header: { "Stripe-Version": "2026-11-18.endive" },
+        confirmed: (data) =>
+          data.object === "invoice" &&
+          data.customer === destination &&
+          data.status === "draft" &&
+          data.amount_due === 0 &&
+          data.auto_advance === false &&
+          hasId(data),
+        body: new URLSearchParams({
+          customer: destination,
+          auto_advance: "false",
+          pending_invoice_items_behavior: "exclude",
+        }),
+      };
     case "vercel": {
       const teamId = binding?.vercelTeamId;
       if (
@@ -232,5 +333,12 @@ export function connectorWriteRequest(
         body: { name: title },
       };
     }
+    case "wix":
+      return {
+        url: "https://www.wixapis.com/site-properties/v4/properties/business-profile",
+        status: 200,
+        confirmed: (data) => Object.keys(data).length === 0,
+        body: { businessProfile: { businessName: title }, fields: { paths: ["businessName"] } },
+      };
   }
 }

@@ -125,8 +125,9 @@ export function ConnectedAccountManager({
   const readQuery = linkedPage ? "open" : query.trim();
   const configured =
     data?.configuredProviders.some((provider) => provider.id === flow.provider) === true;
-  const start = async (existingAccountId?: string, write = false) => {
+  const start = async (existingAccountId?: string, write: boolean | "Mail.Send" = false) => {
     if (busy || loading || error || !configured || !owner) return;
+    const permission = write === "Mail.Send" ? write : write ? writeScope : null;
     setBusy(true);
     try {
       const response = await fetchWithTimeoutAuthenticated("/api/integrations/oauth/start", {
@@ -134,10 +135,9 @@ export function ConnectedAccountManager({
         headers: { "Content-Type": "application/json", "X-Kova-Owner": owner },
         body: JSON.stringify({
           provider: flow.provider,
-          optionalScopes:
-            write && writeScope
-              ? [...CONNECTION_FLOWS[extraWrite?.readConnection ?? operationId].scopes, writeScope]
-              : flow.scopes,
+          optionalScopes: permission
+            ? [...CONNECTION_FLOWS[extraWrite?.readConnection ?? operationId].scopes, permission]
+            : flow.scopes,
           returnPath: `/apps?connection_view=${id === "hubspot" ? id : operationId}`,
           existingAccountId,
         }),
@@ -515,11 +515,21 @@ export function ConnectedAccountManager({
                         label={account.account_label ?? flow.label}
                         providerCanWrite={hasConnectionScopes(account.granted_scopes, [writeScope])}
                         authorizeWrite={() => void start(account.id, true)}
+                        canSendOutlook={
+                          id === "outlook" &&
+                          hasConnectionScopes(account.granted_scopes, ["Mail.Send"])
+                        }
+                        authorizeOutlookSend={
+                          id === "outlook" ? () => void start(account.id, "Mail.Send") : undefined
+                        }
                       />
                     )}
                   {writeConnector &&
                     extraWrite &&
                     configured &&
+                    (!usesApiKey ||
+                      !writeScope ||
+                      hasConnectionScopes(account.granted_scopes, [writeScope])) &&
                     (canReadConnection(account, operationId) ||
                       canReadConnection(account, extraWrite.readConnection)) && (
                       <ConnectorWriteControls
@@ -530,7 +540,9 @@ export function ConnectedAccountManager({
                           canReadConnection(account, extraWrite.readConnection) &&
                           (!writeScope || hasConnectionScopes(account.granted_scopes, [writeScope]))
                         }
-                        authorizeWrite={writeScope ? () => void start(account.id, true) : undefined}
+                        authorizeWrite={
+                          writeScope && !usesApiKey ? () => void start(account.id, true) : undefined
+                        }
                       />
                     )}
                   {!usesApiKey && (

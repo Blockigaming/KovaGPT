@@ -22,6 +22,8 @@ import {
   configuredOAuthProviders,
 } from "@/integrations/oauth-providers.server";
 import { unpackKeyCredential } from "@/integrations/key-connection-credential.server.mjs";
+import { getWixAccessToken } from "@/integrations/account-provider-read.server.mjs";
+import { runReviewedMcpWrite } from "@/integrations/mcp-provider-read.server.mjs";
 import { unpackSalesforceCredential } from "@/integrations/salesforce-credential.server.mjs";
 import type { ConnectionDomainDatabase } from "@/integrations/connection-domain.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -35,24 +37,39 @@ import {
   isExtraWriteConnector,
   type ExtraWriteConnector,
 } from "@/lib/connector-write-actions";
-import { connectorWriteRequest } from "@/lib/connector-write-requests.server";
+import {
+  connectorWriteFieldsValid,
+  connectorWriteRequest,
+} from "@/lib/connector-write-requests.server";
 
-const targetSchema = z.union([
-  z.object({ connector: z.literal("github"), target: z.string().regex(/^[1-9][0-9]{0,18}$/u) }),
-  z.object({ connector: z.literal("linear"), target: z.string().uuid() }),
-  z.object({ connector: z.literal("gmail"), target: z.string().uuid() }),
-  z.object({ connector: z.literal("google-calendar"), target: z.string().uuid() }),
-  z.object({ connector: z.literal("onedrive"), target: z.string().uuid() }),
-  z.object({ connector: z.literal("outlook"), target: z.string().uuid() }),
-  z.object({ connector: z.literal("google-drive"), target: z.string().uuid() }),
-  z.object({ connector: z.literal("outlook-calendar"), target: z.string().uuid() }),
-  z.object({ connector: z.enum(EXTRA_WRITE_CONNECTORS), target: z.string().uuid() }),
-]);
+const targetSchema = z
+  .object({
+    connector: z.enum([
+      "github",
+      "linear",
+      "gmail",
+      "google-calendar",
+      "onedrive",
+      "outlook",
+      "google-drive",
+      "outlook-calendar",
+      ...EXTRA_WRITE_CONNECTORS,
+    ]),
+    target: z.string(),
+  })
+  .refine(
+    ({ connector, target }) =>
+      connector === "github"
+        ? /^[1-9][0-9]{0,18}$/u.test(target)
+        : z.string().uuid().safeParse(target).success,
+    { path: ["target"], message: "Invalid connection target." },
+  );
 const connectorDb = () => supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
 const microsoftOperations = {
-  onedrive: { scope: "Files.ReadWrite", path: "/me/drive/root/children" },
-  outlook: { scope: "Mail.ReadWrite", path: "/me/messages" },
-  "outlook-calendar": { scope: "Calendars.ReadWrite", path: "/me/calendar/events" },
+  onedrive: { scope: "Files.ReadWrite", path: "/me/drive/root/children", status: 201 },
+  outlook: { scope: "Mail.ReadWrite", path: "/me/messages", status: 201 },
+  "outlook-send": { scope: "Mail.Send", path: "/me/sendMail", status: 202 },
+  "outlook-calendar": { scope: "Calendars.ReadWrite", path: "/me/calendar/events", status: 201 },
 } as const;
 type MicrosoftWriteConnector = keyof typeof microsoftOperations;
 type LinkedWriteConnector = MicrosoftWriteConnector | "linear" | ExtraWriteConnector;
@@ -70,7 +87,8 @@ const googleWriteCapability = {
 
 function linkedGrant(connector: LinkedWriteConnector) {
   const extra = isExtraWriteConnector(connector) ? EXTRA_WRITE_ACTIONS[connector] : undefined;
-  const readConnection = extra?.readConnection ?? connector;
+  const preference = connector === "outlook-send" ? "outlook" : connector;
+  const readConnection = extra?.readConnection ?? preference;
   const provider = CONNECTION_FLOWS[readConnection].provider;
   const scope = extra
     ? extra.scope
@@ -78,7 +96,7 @@ function linkedGrant(connector: LinkedWriteConnector) {
       ? "issues:create"
       : microsoftOperations[connector as MicrosoftWriteConnector].scope;
   const label = provider === "microsoft" ? "Microsoft" : CONNECTION_FLOWS[readConnection].label;
-  return { provider, scope, label, readConnection };
+  return { provider, scope, label, readConnection, preference };
 }
 
 const linkedWriteAccount = async (owner: string, id: string, connector: LinkedWriteConnector) => {
@@ -170,7 +188,7 @@ export const setConnectorWriteAccess = createServerFn({ method: "POST" })
 
 async function linkedWriteToken(userId: string, target: string, connector: LinkedWriteConnector) {
   await limitWrites(userId);
-  const { provider, label, readConnection } = linkedGrant(connector);
+  const { provider, label, readConnection, preference } = linkedGrant(connector);
   const providers =
     CONNECTION_FLOWS[readConnection].authentication === "api-key"
       ? configuredKeyProviders()
@@ -181,16 +199,19 @@ async function linkedWriteToken(userId: string, target: string, connector: Linke
   const account = await linkedWriteAccount(userId, target, connector);
   if (!account) return { error: `${label} write permission is missing or expired.` };
   const token = await decryptCredential(account.access_token_ciphertext);
-  const current = await linkedWriteAccount(userId, target, connector);
-  await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
-  if (
-    !current ||
-    current.updated_at !== account.updated_at ||
-    current.access_token_ciphertext !== account.access_token_ciphertext ||
-    !(await connectorWriteAllowed(userId, connector, target))
-  )
+  const stillAuthorized = async () => {
+    const current = await linkedWriteAccount(userId, target, connector);
+    await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
+    return Boolean(
+      current &&
+      current.updated_at === account.updated_at &&
+      current.access_token_ciphertext === account.access_token_ciphertext &&
+      (await connectorWriteAllowed(userId, preference, target)),
+    );
+  };
+  if (!(await stillAuthorized()))
     return { error: "Write access changed. Review the account permissions." };
-  return { token };
+  return { token, stillAuthorized };
 }
 
 export const runConnectorWriteAction = createServerFn({ method: "POST" })
@@ -207,22 +228,55 @@ export const runConnectorWriteAction = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { connector, target, fields } = data;
+    if (!connectorWriteFieldsValid(connector, fields))
+      return { error: "Review the action fields and try again." };
     const access = await linkedWriteToken(context.userId, target, connector);
     if (!access.token) return { error: access.error };
     const { label } = linkedGrant(connector);
     try {
+      if (connector === "custom-mcp") {
+        const accepted = await runReviewedMcpWrite(
+          access.token,
+          fields.operation,
+          fields.text,
+          async () => {
+            if (!(await access.stillAuthorized()))
+              throw new Error("connection_permission_required");
+          },
+        );
+        if (accepted) return { ok: true as const };
+        return {
+          error: "The MCP server did not confirm the change. Check the server before retrying.",
+        };
+      }
       const notion =
         connector === "notion-private" ? unpackKeyCredential(connector, access.token) : null;
       const salesforce =
         connector === "salesforce" ? unpackSalesforceCredential(access.token) : null;
       const vercel = connector === "vercel" ? unpackKeyCredential(connector, access.token) : null;
+      const mixpanel =
+        connector === "mixpanel" ? unpackKeyCredential(connector, access.token) : null;
       const request = connectorWriteRequest(connector, fields, {
         notionPageId: notion?.pageId,
         salesforceQuery: salesforce?.query_url,
         vercelTeamId: vercel?.teamId,
+        mixpanel: mixpanel ?? undefined,
       });
       if (!request) return { error: "Review the action fields and try again." };
       const apiKey = notion?.apiKey ?? salesforce?.access_token ?? vercel?.apiKey ?? access.token;
+      let authorization = `Bearer ${apiKey}`;
+      if (mixpanel) {
+        authorization = `Basic ${Buffer.from(`${mixpanel.username}:${mixpanel.apiKey}`).toString("base64")}`;
+      } else if (connector === "wix") {
+        authorization = await getWixAccessToken(
+          unpackKeyCredential(connector, access.token),
+          fetch,
+          AbortSignal.timeout(10_000),
+        );
+        if (!(await access.stillAuthorized()))
+          return { error: "Write access changed. Review the account permissions." };
+      }
+      const formEncoded = request.body instanceof URLSearchParams;
       const response = await fetch(request.url, {
         method: request.method ?? "POST",
         redirect: "error",
@@ -230,16 +284,18 @@ export const runConnectorWriteAction = createServerFn({ method: "POST" })
         headers: {
           ...(request.credentialHeader
             ? { [request.credentialHeader]: apiKey }
-            : { Authorization: `Bearer ${apiKey}` }),
-          "Content-Type": "application/json",
+            : { Authorization: authorization }),
+          "Content-Type": formEncoded ? "application/x-www-form-urlencoded" : "application/json",
           ...request.header,
         },
-        body: JSON.stringify(request.body),
+        body: formEncoded ? request.body.toString() : JSON.stringify(request.body),
       });
       if (response.status === request.status) {
         const result = await readProviderJsonObject(response, 64 * 1024);
         if (request.confirmed(result)) {
           const link = request.outputLink?.(result);
+          const reference = request.outputReference?.(result);
+          if (reference) return { ok: true as const, reference };
           return link ? { ok: true as const, link } : { ok: true as const };
         }
       } else {
@@ -273,7 +329,7 @@ async function microsoftWrite(
       },
     );
     await response.body?.cancel().catch(() => {});
-    if (response.status === 201) return { created: true };
+    if (response.status === microsoftOperations[connector].status) return { created: true };
     if (connector === "onedrive" && response.status === 409)
       return { error: "An item with that name already exists in OneDrive." };
     return { error: "Microsoft did not confirm the write. Check the provider before retrying." };
@@ -418,20 +474,31 @@ export const createGoogleDriveFolder = createServerFn({ method: "POST" })
     }
   });
 
+const outlookMessage = z.object({
+  target: z.string().uuid(),
+  recipient: z.string().trim().max(254).email(),
+  subject: z.string().trim().min(1).max(120),
+  body: z.string().max(4000),
+});
+
+function graphMessage(data: z.infer<typeof outlookMessage>) {
+  return {
+    subject: data.subject,
+    body: { contentType: "Text", content: data.body },
+    toRecipients: [{ emailAddress: { address: data.recipient } }],
+  };
+}
+
 export const createOutlookDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    z.object({
-      target: z.string().uuid(),
-      recipient: z.string().trim().max(254).email(),
-      subject: z.string().trim().min(1).max(120),
-      body: z.string().max(4000),
-    }),
-  )
+  .inputValidator(outlookMessage)
   .handler(({ context, data }) =>
-    microsoftWrite(context.userId, data.target, "outlook", {
-      subject: data.subject,
-      body: { contentType: "Text", content: data.body },
-      toRecipients: [{ emailAddress: { address: data.recipient } }],
-    }),
+    microsoftWrite(context.userId, data.target, "outlook", graphMessage(data)),
+  );
+
+export const sendOutlookMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(outlookMessage.extend({ confirmed: z.literal(true) }).strict())
+  .handler(({ context, data }) =>
+    microsoftWrite(context.userId, data.target, "outlook-send", { message: graphMessage(data) }),
   );

@@ -1,20 +1,29 @@
-import { BIGQUERY_WRITE_SCOPE } from "@/integrations/connection-flows.mjs";
+import {
+  BIGQUERY_WRITE_SCOPE,
+  REVIEWED_MCP_WRITE_SCOPE,
+} from "@/integrations/connection-flows.mjs";
 
 export const EXTRA_WRITE_CONNECTORS = [
   "box",
   "calendly",
   "canva",
+  "custom-mcp",
   "figma",
+  "gamma",
   "google-bigquery",
   "hubspot",
+  "hyperframes-heygen",
   "meltwater",
+  "mixpanel",
   "ms-teams",
   "notion",
   "notion-private",
   "salesforce",
   "sharepoint",
   "slack",
+  "stripe",
   "vercel",
+  "wix",
 ] as const;
 
 export type ExtraWriteConnector = (typeof EXTRA_WRITE_CONNECTORS)[number];
@@ -51,6 +60,21 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
     summary: "Create a blank 1080 × 1080 pixel design",
     fields: [{ name: "title", label: "Design title", maxLength: 120 }],
   },
+  "custom-mcp": {
+    scope: REVIEWED_MCP_WRITE_SCOPE,
+    readConnection: "custom-mcp",
+    action: "Run approved MCP write",
+    summary: "Run the reviewed text action on your linked MCP server.",
+    fields: [
+      { name: "operation", label: "Approved tool name", maxLength: 128 },
+      {
+        name: "text",
+        label: "Text to send to the approved tool",
+        maxLength: 2000,
+        multiline: true,
+      },
+    ],
+  },
   figma: {
     scope: "file_comments:write",
     readConnection: "figma",
@@ -60,6 +84,14 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
       { name: "destination", label: "Figma file key", maxLength: 64 },
       { name: "text", label: "Comment", maxLength: 2000, multiline: true },
     ],
+  },
+  gamma: {
+    scope: "generate",
+    readConnection: "gamma",
+    action: "Generate Gamma presentation",
+    summary:
+      "Queue a three-card presentation with no external sharing or generated images. This can use credits in the linked Gamma workspace.",
+    fields: [{ name: "text", label: "Presentation brief", maxLength: 2000, multiline: true }],
   },
   "google-bigquery": {
     scope: BIGQUERY_WRITE_SCOPE,
@@ -79,6 +111,18 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
     summary: "Create a company record in the connected HubSpot portal",
     fields: [{ name: "title", label: "Company name", maxLength: 120 }],
   },
+  "hyperframes-heygen": {
+    scope: null,
+    readConnection: "hyperframes-heygen",
+    action: "Queue HyperFrames render",
+    summary:
+      "Render an existing HyperFrames project asset on the linked HeyGen account. Submitting a render can use HeyGen credits.",
+    fields: [
+      { name: "destination", label: "HeyGen project ZIP asset ID", maxLength: 128 },
+      { name: "title", label: "Render title", maxLength: 120 },
+      { name: "requestId", label: "Request UUID (reuse for the same render)", maxLength: 36 },
+    ],
+  },
   meltwater: {
     scope: null,
     readConnection: "meltwater",
@@ -88,6 +132,19 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
     fields: [
       { name: "title", label: "Search name", maxLength: 120 },
       { name: "text", label: "Boolean query", maxLength: 2000, multiline: true },
+    ],
+  },
+  mixpanel: {
+    scope: null,
+    readConnection: "mixpanel",
+    action: "Import Mixpanel event",
+    summary:
+      "Import one event into the linked project and data region using a service account with ingestion access.",
+    fields: [
+      { name: "title", label: "Event name", maxLength: 120 },
+      { name: "destination", label: "Distinct ID", maxLength: 128 },
+      { name: "time", label: "Event timestamp (UTC, YYYY-MM-DDTHH:mm:ssZ)", maxLength: 20 },
+      { name: "eventId", label: "Unique event ID for deduplication", maxLength: 64 },
     ],
   },
   "ms-teams": {
@@ -147,6 +204,14 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
       { name: "text", label: "Message", maxLength: 2000, multiline: true },
     ],
   },
+  stripe: {
+    scope: null,
+    readConnection: "stripe",
+    action: "Create Stripe draft invoice",
+    summary:
+      "Create an empty, unfinalized draft for a customer on the linked account. The installed Stripe App needs invoice write permission.",
+    fields: [{ name: "destination", label: "Stripe customer ID", maxLength: 128 }],
+  },
   vercel: {
     scope: null,
     readConnection: "vercel",
@@ -154,6 +219,14 @@ export const EXTRA_WRITE_ACTIONS: Record<ExtraWriteConnector, WriteAction> = {
     summary:
       "Create an empty project in the linked Vercel team. Your token needs permission to create projects.",
     fields: [{ name: "title", label: "Project name", maxLength: 100 }],
+  },
+  wix: {
+    scope: null,
+    readConnection: "wix",
+    action: "Update Wix business name",
+    summary:
+      "Replace the public business name on the linked Wix site. The app needs Manage Business Profile permission.",
+    fields: [{ name: "title", label: "New business name", maxLength: 120 }],
   },
 };
 

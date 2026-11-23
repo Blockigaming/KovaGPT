@@ -47,15 +47,15 @@ Register the exact callbacks above in the providers' developer portals. Canva ne
 
 ## Stripe acceptance
 
-Create a public Stripe App with OAuth and only the `charge_read` permission. Set its callback to `https://kovagpt.com/api/integrations/oauth/callback/stripe`. Use the Stripe App Marketplace client ID and the matching developer API key in `STRIPE_APPS_OAUTH_CLIENT_ID` and `STRIPE_APPS_OAUTH_API_KEY`. Use a matched external-test client ID and test key in staging. The app must be accepted and published by Stripe for public installation.
+Create a public Stripe App with OAuth and `charge_read`. For optional draft invoice support, publish an app version with `invoice_write` and have users accept the updated installation. Set its callback to `https://kovagpt.com/api/integrations/oauth/callback/stripe`. Use the Stripe App Marketplace client ID and the matching developer API key in `STRIPE_APPS_OAUTH_CLIENT_ID` and `STRIPE_APPS_OAUTH_API_KEY`. Use a matched external-test client ID and test key in staging. The app must be accepted and published by Stripe for public installation.
 
-Authorize a dedicated Stripe test account. In Kova, check `recent` and a known test charge ID. Confirm that a grant without charge access fails the connection and that a test credential cannot replace a live credential. Disconnect removes the grant from Kova. Remove the app in Stripe to revoke the provider's access. Kova returns payment amounts in Stripe minor units and status. This integration has no payment or refund write operation.
+Authorize a dedicated Stripe test account. In Kova, check `recent` and a known test charge ID. Confirm that a grant without charge access fails the connection and that a test credential cannot replace a live credential. Enable **Read and write** and review a test customer ID to create an empty draft invoice. Confirm it is unfinalized, has a zero amount due, excludes pending invoice items, and has automatic advance disabled. Disconnect removes the grant from Kova. Remove the app in Stripe to revoke the provider's access.
 
 [Stripe Apps OAuth](https://docs.stripe.com/stripe-apps/api-authentication/oauth) · [Stripe App permissions](https://docs.stripe.com/stripe-apps/reference/permissions)
 
 ## HyperFrames acceptance
 
-Create a dedicated restricted HeyGen API key with `hyperframes:read` and enter it under **Connections → HyperFrames by HeyGen**. Kova tests the key against the render list before storing it encrypted. The Connections and chat read returns up to ten recent render names and statuses. Creation, deletion and signed media download links are outside this adapter.
+Create a dedicated restricted HeyGen API key with `hyperframes:read` and enter it under **Connections → HyperFrames by HeyGen**. Kova tests the key against the render list before storing it encrypted. Search by title, list recent renders, or check an exact render ID. For optional rendering, grant `hyperframes:write` to the key, enable **Read and write**, and review a previously uploaded project ZIP asset ID. A render can use HeyGen credits. Reuse the same request UUID to retry the same submission without creating another render within HeyGen’s idempotency window.
 
 Verify a known render appears with a read grant and that revoking the key in HeyGen blocks a subsequent read. Use Disconnect in Kova to remove the local key.
 
@@ -63,9 +63,9 @@ Verify a known render appears with a read grant and that revoking the key in Hey
 
 ## Gamma acceptance
 
-Register one confidential Gamma OAuth client with `client_secret_post` and callback `https://kovagpt.com/api/integrations/oauth/callback/gamma`. Store the returned credentials under `GAMMA_OAUTH_CLIENT_ID` and `GAMMA_OAUTH_CLIENT_SECRET`. Kova requests `gamma:read` for the public API and verifies the selected user and workspace with Gamma before storing the grant. Authorization and refresh never request the `generate` scope.
+Register one confidential Gamma OAuth client with `client_secret_post` and callback `https://kovagpt.com/api/integrations/oauth/callback/gamma`. Store the returned credentials under `GAMMA_OAUTH_CLIENT_ID` and `GAMMA_OAUTH_CLIENT_SECRET`. Kova requests `gamma:read` by default and verifies the authorized user and workspace. Choosing provider write authorization requests the separate `generate` scope. Token renewal preserves the existing scope, user, and workspace.
 
-Search for a known document title or enter `recent`. Kova returns up to ten document titles, Gamma links and last-modified dates. Verify that documents from a workspace you did not authorize are excluded. Verify token renewal keeps the same workspace and that Kova disconnect removes the local grant. Gamma document creation and edits are still pending.
+Search for a known document title or enter `recent`. Kova returns up to ten document titles, Gamma links and last-modified dates. To test the optional write, enable it in Kova and approve the brief for a private three-card presentation. Gamma can consume workspace credits. Use `generation:ID` to check the returned generation ID and open the completed Gamma. Verify that another workspace's documents are excluded and that a metadata-only account cannot start generation.
 
 [Gamma OAuth](https://developers.gamma.app/get-started/authenticate-with-oauth) · [Gamma API index](https://developers.gamma.app/llms.txt)
 
@@ -86,7 +86,7 @@ Verify that a known note appears and an excluded note does not. Revoke the key i
 | Mixpanel  | Use a minimum-privilege service account and specify its project, data region, and workspace ID if the project uses Data Views. Verify a known cohort and deny a different project. | Up to ten saved cohort names and aggregate counts.                  |
 | eToro     | Use public and user keys from a real account with the Read permission. Confirm the values in eToro and try a demo-only key to verify rejection.                                    | Provider-reported portfolio value, cash balance and unrealized P&L. |
 
-These adapters verify their read against the provider before saving credentials. Meltwater and Vercel also support reviewed creation of saved searches and projects, respectively, after write access is enabled. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
+These adapters verify their read against the provider before saving credentials. The optional Mixpanel write imports one event into the linked project and region, using an account with ingestion access. Verify the event timestamp, distinct ID and unique event ID in a test project. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
 
 [Meltwater saved searches](https://developer.meltwater.com/docs/meltwater-api/listening/manage-searches/) · [Vercel deployment API](https://vercel.com/docs/rest-api/deployments/list-deployments) · [Mixpanel cohorts API](https://docs.mixpanel.com/reference/cohorts-list) · [eToro API](https://builders.etoro.com/reference)
 
@@ -99,7 +99,7 @@ These adapters verify their read against the provider before saving credentials.
 | Webull              | Use credentials issued to an eligible OpenAPI app. Choose Sandbox or Production explicitly. For accounts that require a verified access token, obtain it through Webull's own verification flow and enter it with the app key and secret. | Compare authorized account types. Test expired access and a credential for the other environment.                                                                              |
 | Wix                 | Generate a client secret for an eligible self-managed Wix Headless project. Enter its client ID and secret.                                                                                                                               | Compare the authorized site's business name and locale. Try a revoked secret and confirm that switching the project requires a new credential.                                 |
 
-Connect performs a provider read before saving the credential. Chat and Connections use the saved account binding. These operations provide read access. Revoke the provider credential in its issuing portal if it should stop working outside Kova.
+Connect performs a provider read before saving the credential. Chat and Connections use the saved account binding. For the optional Wix write, use an app with Manage Business Profile permission, enable writing in Kova and review the new business name on a test site. Verify that locale and the other profile fields are unchanged. Revoke a provider credential in its issuing portal if it should stop working outside Kova.
 
 [IBKR Flex Web Service](https://www.interactivebrokers.com/docs/web-api/flex-web-service/) · [S&P Capital IQ developer guide](https://www.support.marketplace.spglobal.com/content/dam/spglobal/mi/en/documents/marketplace/api/guides/spglobalapidevelopersguide.pdf) · [Webull signed requests](https://developer.webull.com/apis/docs/authentication/signature/) · [Wix Headless client credentials](https://dev.wix.com/docs/go-headless/authentication/admin/make-admin-api-calls-with-client-credentials)
 
@@ -129,6 +129,8 @@ Review the server's ownership, its return data, and a read-only tool that accept
 Set that JSON as `KOVA_MCP_READ_SERVERS`. The server must support Streamable HTTP with an MCP handshake version from 2025, an HTTPS endpoint with a public IPv4 DNS record, a per-user bearer token, and the MCP `readOnlyHint` annotation on the reviewed tool. Verify that the approved tool accepts the probe query `recent` before adding the server. In Connections enter the approved server ID and a restricted bearer token issued by that server. Kova verifies the listed schema and calls only the configured tool. Returned tool text is treated as source data.
 
 Verify connection and successful reads with the intended role, missing permission and revocation, reconnect after an endpoint or tool change, and isolation between two Kova accounts. Confirm that an unapproved ID and tools that no longer declare read access fail before invocation.
+
+For an optional write, add `writeTool` and `writeField` to the registration. Review a non-destructive tool that accepts one required string argument, declares `readOnlyHint: false` and `destructiveHint: false`, and returns `structuredContent.ok: true` on success. Link a bearer token with permission for that exact tool. Enable **Read and write** after linking and review each proposed call. Changing the approved write tool or field requires linking again before that new action can run.
 
 [MCP Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) · [MCP tool definitions](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 

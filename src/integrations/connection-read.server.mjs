@@ -8,6 +8,8 @@ import { readMcpConnection } from "./mcp-provider-read.server.mjs";
 
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
 const notionPageId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+const heygenRenderId = /^hfr_[A-Za-z0-9_-]{1,124}$/u;
+const gammaGeneration = /^generation:([A-Za-z0-9_-]{1,128})$/u;
 function linkedNotionPage(query, token) {
   if (typeof query !== "string" || query.length > 300 || query.trim().toLowerCase() !== "open")
     throw new Error("invalid_connection_query");
@@ -91,7 +93,8 @@ export function connectionReadRequest(id, query, token, options = {}) {
     delete headers.Authorization;
     headers["X-Api-Key"] = token;
     url = new URL("https://api.heygen.com/v3/hyperframes/renders");
-    url.searchParams.set("limit", "10");
+    if (heygenRenderId.test(query)) url.pathname += `/${query}`;
+    else url.searchParams.set("limit", "10");
   } else if (id === "stripe") {
     headers["Stripe-Version"] = "2026-11-18.endive";
     if (query.toLowerCase() === "recent") {
@@ -102,11 +105,17 @@ export function connectionReadRequest(id, query, token, options = {}) {
       url = new URL(`https://api.stripe.com/v1/charges/${query}`);
     }
   } else if (id === "gamma") {
-    url = new URL("https://public-api.gamma.app/v1.0/gammas");
-    url.searchParams.set("limit", "10");
-    if (query.toLowerCase() !== "recent") {
-      if (query.length < 3) throw new Error("invalid_connection_query");
-      url.searchParams.set("query", query);
+    const generation = gammaGeneration.exec(query)?.[1];
+    if (query.startsWith("generation:")) {
+      if (!generation) throw new Error("invalid_connection_query");
+      url = new URL(`https://public-api.gamma.app/v1.0/generations/${generation}`);
+    } else {
+      url = new URL("https://public-api.gamma.app/v1.0/gammas");
+      url.searchParams.set("limit", "10");
+      if (query.toLowerCase() !== "recent") {
+        if (query.length < 3) throw new Error("invalid_connection_query");
+        url.searchParams.set("query", query);
+      }
     }
   } else if (id === "granola") {
     if (!/^grn_[A-Za-z0-9_-]{8,508}$/u.test(token)) throw new Error("invalid_granola_key");
@@ -393,12 +402,15 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     }));
   }
   if (id === "hyperframes-heygen") {
-    if (!Array.isArray(data.data) || data.error) throw new Error("invalid_connection_response");
     const filter = query.trim().toLowerCase();
-    rows = data.data.slice(0, 10).flatMap((render) => {
+    const byId = heygenRenderId.test(query.trim());
+    const renders = byId ? [data.data] : data.data;
+    if (!Array.isArray(renders) || data.error || (byId && renders[0]?.render_id !== query.trim()))
+      throw new Error("invalid_connection_response");
+    rows = renders.slice(0, 10).flatMap((render) => {
       if (typeof render?.render_id !== "string" || !render.render_id) return [];
       const title = str(render.title, 300);
-      if (filter !== "recent" && !title.toLowerCase().includes(filter)) return [];
+      if (!byId && filter !== "recent" && !title.toLowerCase().includes(filter)) return [];
       return [
         {
           id: str(render.render_id, 128),
@@ -439,20 +451,38 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     });
   }
   if (id === "gamma") {
-    if (!Array.isArray(data.data)) throw new Error("invalid_connection_response");
-    rows = data.data.flatMap((item) => {
-      if (typeof item?.id !== "string" || !item.id) return [];
-      const link = safeConnectionLink(item.url);
-      const url = link && new URL(link).origin === "https://gamma.app" ? link : null;
-      return [
+    const generation = gammaGeneration.exec(query.trim())?.[1];
+    if (generation) {
+      if (
+        data.generationId !== generation ||
+        !["pending", "completed", "failed"].includes(data.status)
+      )
+        throw new Error("invalid_connection_response");
+      const link = data.status === "completed" ? safeConnectionLink(data.gammaUrl) : null;
+      rows = [
         {
-          id: str(item.id, 80),
-          name: str(item.title, 300) || "Untitled Gamma",
-          url,
-          description: str(item.updatedTime, 64),
+          id: generation,
+          name: "Gamma presentation",
+          description: data.status,
+          url: link && new URL(link).origin === "https://gamma.app" ? link : null,
         },
       ];
-    });
+    } else {
+      if (!Array.isArray(data.data)) throw new Error("invalid_connection_response");
+      rows = data.data.flatMap((item) => {
+        if (typeof item?.id !== "string" || !item.id) return [];
+        const link = safeConnectionLink(item.url);
+        const url = link && new URL(link).origin === "https://gamma.app" ? link : null;
+        return [
+          {
+            id: str(item.id, 80),
+            name: str(item.title, 300) || "Untitled Gamma",
+            url,
+            description: str(item.updatedTime, 64),
+          },
+        ];
+      });
+    }
   }
   if (id === "granola") {
     if (!Array.isArray(data.notes)) throw new Error("invalid_connection_response");

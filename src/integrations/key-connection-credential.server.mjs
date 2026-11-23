@@ -1,4 +1,5 @@
 import { approvedMcpServers } from "./approved-mcp-servers.server.mjs";
+import { REVIEWED_MCP_WRITE_SCOPE } from "./connection-flows.mjs";
 
 // Credential bindings stay encrypted alongside their secrets. Chat inputs
 // cannot switch a linked credential to a different team, project, or region.
@@ -22,6 +23,7 @@ export function prepareKeyCredential(provider, input) {
   if (!secretPattern.test(apiKey)) throw new Error("invalid_connection_credential");
 
   let binding;
+  let addedScopes;
   let accountId = "personal-api-key";
   let labelSuffix = "";
   if (provider === "vercel") {
@@ -97,6 +99,10 @@ export function prepareKeyCredential(provider, input) {
     if (!server || !/^[A-Za-z0-9._~+\/=-]{8,512}$/u.test(apiKey))
       throw new Error("invalid_connection_credential");
     binding = { serverId, bindingHash: server.fingerprint };
+    if (server.write) {
+      binding.writeFingerprint = server.write.fingerprint;
+      addedScopes = [REVIEWED_MCP_WRITE_SCOPE];
+    }
     accountId = serverId;
     labelSuffix = serverId;
   }
@@ -104,6 +110,7 @@ export function prepareKeyCredential(provider, input) {
     token: binding ? JSON.stringify({ apiKey, ...binding }) : apiKey,
     accountId,
     labelSuffix,
+    ...(addedScopes ? { addedScopes } : {}),
   };
 }
 
@@ -115,7 +122,10 @@ export function unpackKeyCredential(provider, token) {
     throw new Error("invalid_connection_credential");
   }
   const validated = JSON.parse(prepareKeyCredential(provider, value).token);
-  if (provider === "custom-mcp" && validated.bindingHash !== value.bindingHash)
-    throw new Error("connection_changed_or_expired");
+  if (provider === "custom-mcp") {
+    if (validated.bindingHash !== value.bindingHash)
+      throw new Error("connection_changed_or_expired");
+    if (validated.writeFingerprint !== value.writeFingerprint) delete validated.writeFingerprint;
+  }
   return validated;
 }

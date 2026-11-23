@@ -2,6 +2,7 @@
 // and the user's granted scopes are checked separately on the server.
 export const BIGQUERY_READ_SCOPE = "https://www.googleapis.com/auth/bigquery.readonly";
 export const BIGQUERY_WRITE_SCOPE = "https://www.googleapis.com/auth/bigquery";
+export const REVIEWED_MCP_WRITE_SCOPE = "mcp:reviewed-tool:write";
 export const TANA_MCP_RESOURCE = "https://home.tana.inc/mcp";
 export const TANA_MCP_ISSUER = "https://login.tana.inc";
 export const TANA_MCP_AUTHORIZE_ENDPOINT = `${TANA_MCP_ISSUER}/oauth2/authorize`;
@@ -115,7 +116,7 @@ export const CONNECTION_FLOWS = {
     tool: "gamma_search_documents",
     label: "Gamma",
     description:
-      "Find Gamma document titles and links in the selected workspace. Enter at least three characters or 'recent' to list recent documents.",
+      "Find Gamma documents by title or enter 'recent'. After authorizing generation, use 'generation:ID' to check a queued presentation.",
   },
   "hyperframes-heygen": {
     provider: "hyperframes-heygen",
@@ -124,7 +125,7 @@ export const CONNECTION_FLOWS = {
     tool: "hyperframes_list_renders",
     label: "HyperFrames by HeyGen",
     description:
-      "Find recent HyperFrames render titles and statuses. Enter a title fragment or 'recent'.",
+      "Find HyperFrames renders by title, enter 'recent', or check the status of an exact render ID.",
   },
   granola: {
     provider: "granola",
@@ -278,6 +279,7 @@ export function hasConnectionScopes(scopes, required) {
       granted.has(scope) ||
       (scope === "issues:create" && granted.has("write")) ||
       (scope === "root_readonly" && granted.has("root_readwrite")) ||
+      (scope === "gamma:read" && granted.has("generate")) ||
       (scope === BIGQUERY_READ_SCOPE && granted.has(BIGQUERY_WRITE_SCOPE)) ||
       (scope === "Chat.Read" && granted.has("Chat.ReadWrite")) ||
       (scope === "ChatMessage.Send" && granted.has("Chat.ReadWrite")) ||

@@ -14,7 +14,7 @@ export function approvedMcpServers(source = process.env.KOVA_MCP_READ_SERVERS) {
     const entries = JSON.parse(source);
     if (!Array.isArray(entries) || entries.length > 30) return new Map();
     const servers = new Map();
-    for (const { id, url, tool, queryField } of entries) {
+    for (const { id, url, tool, queryField, writeTool, writeField } of entries) {
       const endpoint = new URL(url);
       if (
         typeof id !== "string" ||
@@ -24,6 +24,12 @@ export function approvedMcpServers(source = process.env.KOVA_MCP_READ_SERVERS) {
         !toolNamePattern.test(tool) ||
         typeof queryField !== "string" ||
         !argumentPattern.test(queryField) ||
+        ((writeTool !== undefined || writeField !== undefined) &&
+          (typeof writeTool !== "string" ||
+            !toolNamePattern.test(writeTool) ||
+            writeTool === tool ||
+            typeof writeField !== "string" ||
+            !argumentPattern.test(writeField))) ||
         endpoint.protocol !== "https:" ||
         !/^(?:[a-z0-9-]+\.)+[a-z][a-z0-9-]+$/u.test(endpoint.hostname) ||
         endpoint.hostname.endsWith(".local") ||
@@ -39,7 +45,16 @@ export function approvedMcpServers(source = process.env.KOVA_MCP_READ_SERVERS) {
         return new Map();
       const binding = { url: endpoint.href, tool, queryField };
       const fingerprint = createHash("sha256").update(JSON.stringify(binding)).digest("base64url");
-      servers.set(id, { ...binding, fingerprint });
+      const write = writeTool
+        ? {
+            tool: writeTool,
+            field: writeField,
+            fingerprint: createHash("sha256")
+              .update(JSON.stringify({ fingerprint, writeTool, writeField }))
+              .digest("base64url"),
+          }
+        : null;
+      servers.set(id, { ...binding, fingerprint, write });
     }
     return servers;
   } catch {

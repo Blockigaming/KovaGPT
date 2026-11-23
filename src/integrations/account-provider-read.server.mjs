@@ -246,10 +246,8 @@ async function listWebullAccounts(
   return readResult("webull", rows, accounts.length > MAX_ROWS);
 }
 
-async function readWixSite(query, { apiKey, clientId }, fetchImpl, signal) {
-  if (!["recent", "site"].includes(query.toLowerCase()))
-    throw new Error("invalid_connection_query");
-  const token = bearerToken(
+export async function getWixAccessToken({ apiKey, clientId }, fetchImpl, signal) {
+  return bearerToken(
     await readProviderJsonObject(
       await request(fetchImpl, new URL("/oauth2/token", WIX_ORIGIN), signal, {
         method: "POST",
@@ -263,6 +261,12 @@ async function readWixSite(query, { apiKey, clientId }, fetchImpl, signal) {
       24_000,
     ),
   );
+}
+
+async function readWixSite(query, credential, fetchImpl, signal) {
+  if (!["recent", "site"].includes(query.toLowerCase()))
+    throw new Error("invalid_connection_query");
+  const token = await getWixAccessToken(credential, fetchImpl, signal);
   const url = new URL("/site-properties/v4/properties", WIX_ORIGIN);
   url.searchParams.append("fields.paths", "businessName");
   url.searchParams.append("fields.paths", "locale");

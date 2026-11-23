@@ -34,6 +34,7 @@ const mocks: Record<string, string> = {
     export const setConnectorWriteAccess=async({data})=>{window.operations.push(["write-access",data]);window.writeAccess=data.enabled;return {enabled:data.enabled}};
     export const createOneDriveFolder=async({data})=>{window.operations.push(["create-folder",data]);return {created:true}};
     export const createOutlookDraft=async({data})=>{window.operations.push(["create-draft",data]);return {created:true}};
+    export const sendOutlookMessage=async({data})=>{window.operations.push(["send-outlook",data]);return {created:true}};
     export const createLinearIssue=async({data})=>{window.operations.push(["create-linear-issue",data]);return {created:true}};
     export const createOutlookEvent=async({data})=>{window.operations.push(["create-event",data]);return {created:true}};
     export const createGoogleDriveFolder=async({data})=>{window.operations.push(["drive-folder",data]);return {created:true}};
@@ -504,6 +505,61 @@ test("Google Drive grants folder creation per account only after review", async 
     "drive-folder",
     { target: "account-1", name: "Drive fixture folder" },
   ]);
+});
+
+test("Outlook asks for a separate send grant and reviews message contents", async ({ page }) => {
+  const account = {
+    id: "11111111-1111-4111-8111-111111111111",
+    provider_id: "microsoft",
+    account_label: "Mail fixture",
+    status: "connected",
+    token_expires_at: null,
+  };
+  for (const hasSendGrant of [false, true]) {
+    await boot(page, emptyGoogle, undefined, {
+      configuredProviders: [{ id: "microsoft" }],
+      accounts: [
+        {
+          ...account,
+          granted_scopes: hasSendGrant ? ["Mail.ReadWrite", "Mail.Send"] : ["Mail.ReadWrite"],
+        },
+      ],
+    });
+    await page.getByRole("button", { name: "Connected Outlook", exact: true }).click();
+    await page.getByRole("button", { name: "Permissions for Mail fixture" }).click();
+    const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
+    await permissions.getByRole("button", { name: "Read and write" }).click();
+    await permissions.getByLabel("Recipient").fill("fixture@example.test");
+    await permissions.getByLabel("Subject").fill("Fixture subject");
+    await permissions.getByLabel("Message", { exact: true }).fill("Fixture body");
+    await permissions.getByRole("button", { name: "Review draft" }).click();
+    await expect(permissions.getByText("To fixture@example.test")).toBeVisible();
+    const send = permissions.getByRole("button", { name: "Send Outlook message" });
+    const operations = () => page.evaluate(() => (window as FixtureWindow).operations);
+    expect((await operations()).some(([kind]) => kind === "send-outlook")).toBe(false);
+    if (!hasSendGrant) {
+      await expect(send).toHaveCount(0);
+      await permissions.getByRole("button", { name: "Authorize sending with Outlook" }).click();
+      const start = (await operations()).find(([kind]) => kind === "provider-request");
+      expect(JSON.parse((start?.[2] as RequestInit).body as string).optionalScopes).toEqual([
+        "Mail.Read",
+        "Mail.Send",
+      ]);
+      continue;
+    }
+    await send.click();
+    await expect(permissions.getByText("Outlook accepted the message for sending.")).toBeVisible();
+    expect((await operations()).at(-1)).toEqual([
+      "send-outlook",
+      {
+        target: account.id,
+        recipient: "fixture@example.test",
+        subject: "Fixture subject",
+        body: "Fixture body",
+        confirmed: true,
+      },
+    ]);
+  }
 });
 
 test("Outlook Calendar shows the event times before it writes", async ({ page }) => {

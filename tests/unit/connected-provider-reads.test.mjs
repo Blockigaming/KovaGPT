@@ -1062,6 +1062,7 @@ test("Gamma document lookup uses its workspace read grant and returns only metad
   const account = { provider_id: "gamma", status: "connected", token_expires_at: null };
   assert.equal(canReadConnection({ ...account, granted_scopes: [] }, "gamma"), false);
   assert.equal(canReadConnection({ ...account, granted_scopes: ["gamma:read"] }, "gamma"), true);
+  assert.equal(canReadConnection({ ...account, granted_scopes: ["generate"] }, "gamma"), true);
   assert.equal(
     connectionReadRequest("gamma", "recent", "token").url,
     "https://public-api.gamma.app/v1.0/gammas?limit=10",

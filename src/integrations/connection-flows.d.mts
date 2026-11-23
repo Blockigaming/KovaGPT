@@ -19,6 +19,7 @@ export type ConnectedAccount = {
 export const GRANOLA_NOTE_READ: string;
 export const BIGQUERY_READ_SCOPE: string;
 export const BIGQUERY_WRITE_SCOPE: string;
+export const REVIEWED_MCP_WRITE_SCOPE: string;
 export function calendlyUserUri(value: unknown): string;
 export const CONNECTION_FLOWS: Record<string, ConnectionFlow>;
 export function hasConnectionScopes(scopes: string[], required: string[]): boolean;
