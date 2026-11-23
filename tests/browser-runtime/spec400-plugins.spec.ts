@@ -404,6 +404,62 @@ test("Slack separates write consent, Kova access, and review of the exact messag
   await expect(permissions.getByRole("button", { name: "Review action" })).toHaveCount(0);
 });
 
+test("Granola keeps webhook maintenance off until the owner opts in and confirms", async ({
+  page,
+}) => {
+  const accountId = "00000000-0000-4000-8000-000000000002";
+  await boot(page, emptyGoogle, undefined, {
+    configuredProviders: [
+      {
+        id: "granola",
+        name: "Granola",
+        authentication: "api-key",
+        requiredScopes: ["granola:notes:list"],
+      },
+    ],
+    accounts: [
+      {
+        id: accountId,
+        provider_id: "granola",
+        account_label: "Granola meeting notes",
+        status: "connected",
+        granted_scopes: ["granola:notes:list"],
+        token_expires_at: null,
+        deleted_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Connected Granola", exact: true }).click();
+  await page.getByRole("button", { name: "Permissions for Granola meeting notes" }).click();
+  const panel = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await expect(panel.getByRole("button", { name: "Read only" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(panel.getByRole("button", { name: "Review action" })).toHaveCount(0);
+  await panel.getByRole("button", { name: "Read and write" }).click();
+  await panel.getByLabel("Webhook endpoint ID").fill("whe_TestEndpoint");
+  await panel.getByLabel("Delivery (pause or resume)").fill("pause");
+  await panel.getByRole("button", { name: "Review action" }).click();
+  const writes = () =>
+    page.evaluate(() =>
+      (window as FixtureWindow).operations.filter(([kind]) => kind === "reviewed-provider-write"),
+    );
+  expect(await writes()).toEqual([]);
+  await panel.getByRole("button", { name: "Pause or resume a Granola webhook" }).click();
+  await expect.poll(writes).toEqual([
+    [
+      "reviewed-provider-write",
+      {
+        connector: "granola",
+        target: accountId,
+        fields: { destination: "whe_TestEndpoint", delivery: "pause" },
+        confirmed: true,
+      },
+    ],
+  ]);
+});
+
 test("Slack requests its additional provider scope only when write access is selected", async ({
   page,
 }) => {
@@ -652,7 +708,8 @@ test("new master entries show the correct native and OAuth setup requirements", 
   }
   await page.getByRole("button", { name: "Details Apple Health", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("Native app required");
-  await expect(page.getByRole("dialog")).toContainText("signed app install");
+  await expect(page.getByRole("dialog")).toContainText("signed iPhone app");
+  await expect(page.getByRole("dialog")).toContainText("separate device permissions");
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
   ).toHaveCount(0);
