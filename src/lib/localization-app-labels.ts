@@ -33,7 +33,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Chat behavior": "Comportamiento del chat",
     "Send shortcut": "Atajo para enviar",
     "Choose whether Enter sends a message or starts a new line.":
-      "Elige si Intro envía el mensaje o inicia una línea nueva.",
+      "Elige si Intro envía el mensaje o crea una línea nueva.",
     Enter: "Intro",
     "Response length": "Longitud de respuesta",
     "Choose the default length for new responses.":
@@ -88,15 +88,15 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Terms of service": "Términos del servicio",
     "Refund policy": "Política de reembolso",
     "Payments are securely handled by Stripe. We never see or store your card number.":
-      "Stripe gestiona los pagos de forma segura. Nunca vemos ni guardamos tu número de tarjeta.",
+      "Stripe gestiona los pagos de forma segura. Nunca vemos ni guardamos tu tarjeta.",
     "Customize shortcuts for common actions. Click a combo to record a new one.":
-      "Personaliza atajos para acciones comunes. Haz clic en una combinación para grabar otra.",
+      "Personaliza los atajos. Haz clic en una combinación para grabar otra.",
     "Location-based personalization is not connected to chat or Maps yet.":
       "La personalización por ubicación aún no está conectada al chat ni a Mapas.",
     "Manage voluntary trusted contacts": "Gestionar contactos de confianza",
     "Signed in as": "Sesión iniciada como",
     "Sign in to manage two-factor authentication and active sessions.":
-      "Inicia sesión para gestionar la verificación en dos pasos y las sesiones activas.",
+      "Inicia sesión para gestionar la verificación en dos pasos y las sesiones.",
     "Privacy and data": "Privacidad y datos",
     "Saved memory": "Memoria guardada",
     Security: "Seguridad",
@@ -108,7 +108,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Local device data": "Datos locales del dispositivo",
     "Family Sharing": "En familia",
     "Found a bug or something off? Send it to our team and we'll take a look.":
-      "¿Encontraste un error? Envíalo a nuestro equipo y lo revisaremos.",
+      "¿Algo falla? Envíalo a nuestro equipo y lo revisaremos.",
     "Open bug report form": "Abrir formulario de errores",
     "Get help, contact support, or browse common questions.":
       "Obtén ayuda, contacta con soporte o consulta preguntas frecuentes.",
@@ -123,7 +123,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Type DELETE to confirm": "Escribe DELETE para confirmar",
     "Workspace preferences": "Preferencias del espacio de trabajo",
     "Defaults are saved on this device and never imply an action ran.":
-      "Los valores se guardan en este dispositivo y nunca implican que se ejecutó una acción.",
+      "Los valores predeterminados se guardan en este dispositivo y no implican que algo se haya ejecutado.",
     "Settings sections": "Secciones de configuración",
     System: "Sistema",
     Light: "Claro",
@@ -132,7 +132,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "How signed-out data is stored": "Cómo se guardan los datos sin sesión",
     "Help & legal": "Ayuda y avisos legales",
     "Get answers, review plans, or read how KovaGPT works.":
-      "Obtén respuestas, revisa planes o lee cómo funciona KovaGPT.",
+      "Obtén respuestas, revisa los planes o descubre cómo funciona KovaGPT.",
     "Plans and subscriptions": "Planes y suscripciones",
     "Terms of Service": "Términos del servicio",
     "Family controls are not available yet": "Los controles familiares aún no están disponibles",
@@ -151,7 +151,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The maximum width of answers.": "El ancho máximo de las respuestas.",
     Motion: "Movimiento",
     "Your device’s reduced-motion preference takes priority.":
-      "La preferencia de movimiento reducido de tu dispositivo tiene prioridad.",
+      "Tiene prioridad la preferencia de movimiento reducido del dispositivo.",
     Contrast: "Contraste",
     "Increase the contrast of controls and borders.": "Aumenta el contraste de controles y bordes.",
     "Layout size": "Tamaño del diseño",
@@ -728,7 +728,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Las preferencias se guardan solas, salvo los formularios con «Guardar cambios».",
     "Appearance and preferences for this browser.": "Apariencia y preferencias de este navegador.",
     "These preferences save for this account on this device. Explicit instructions in the current chat take precedence over default length, tone, and format.":
-      "Estas preferencias se guardan para esta cuenta en este dispositivo. Las instrucciones del chat actual tienen prioridad sobre la longitud, el tono y el formato.",
+      "Estas preferencias se guardan para esta cuenta en este dispositivo. Las instrucciones del chat prevalecen sobre la longitud, el tono y el formato predeterminados.",
     "Custom instructions for this account on this device":
       "Instrucciones personalizadas para esta cuenta en este dispositivo",
     Extended: "Ampliado",
@@ -743,11 +743,11 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Resetting…": "Restableciendo…",
     "Reset this profile's local data": "Restablecer los datos locales de este perfil",
     "KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.":
-      "KovaGPT lo crea Zachary Block. Nuestra misión es poner al alcance de todos una IA útil, amable y confiable.",
+      "KovaGPT lo crea Zachary Block. Nuestra misión es ofrecer a todos una IA útil, amable y confiable.",
     "Recover your account?": "¿Recuperar tu cuenta?",
     "Working…": "Procesando…",
     "Sign in to use account-backed chats, memory, and paid features. Browser preferences stay on this device.":
-      "Inicia sesión para usar chats con cuenta, memoria y funciones de pago. Las preferencias del navegador se quedan en este dispositivo.",
+      "Inicia sesión para usar chats, memoria y funciones de pago en tu cuenta. Las preferencias del navegador se quedan aquí.",
     "Saving keyboard shortcuts…": "Guardando atajos…",
     "Keyboard shortcut preferences": "Preferencias de atajos",
     "Retry reset": "Reintentar restablecimiento",
@@ -919,23 +919,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Danger zone": "Zona de peligro",
     "You can retry or cancel.": "Puedes reintentar o cancelar.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
-      "Estos contadores del navegador no son tu cupo. Abre Uso para ver los datos verificados.",
+      "Estos contadores no son tu cuota real. Abre Uso para ver los datos del servidor.",
     "Connection status, provider permissions, reconnection, and revocation are verified from the server-backed Apps page.":
       "El estado, los permisos, la reconexión y la revocación se verifican en la página de Apps.",
     "Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat limit. Each meter shows its next reset or refresh.":
-      "Free y Plus tienen un límite de 5 horas y uno semanal. Pro tiene un límite semanal. Cada medidor muestra su próxima renovación.",
+      "Free y Plus tienen un límite de 5 horas y otro semanal. Pro tiene un límite semanal. Cada medidor muestra su próxima renovación.",
     "Billing setup is incomplete. Plan changes are unavailable until the billing records and Stripe configuration are verified.":
       "La facturación no está completa. Los cambios de plan no están disponibles hasta verificar los registros y Stripe.",
     "For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.":
-      "Para controles parentales completos (tiempo de pantalla, apps), usa los ajustes de tu dispositivo.",
+      "Para controles parentales completos (tiempo de uso, apps), usa los ajustes del dispositivo.",
     "Signed-out chats stay in this tab until you refresh or close it. Your appearance preference remains in this browser, but nothing here is synced to an account. Read the":
       "Los chats sin sesión se quedan en esta pestaña hasta recargar o cerrarla. La apariencia se guarda en el navegador, pero nada se sincroniza con una cuenta. Lee la",
     "KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use your device and network parental controls in the meantime.":
-      "KovaGPT aún no aplica una política familiar ni bloqueo con PIN. Mientras tanto, usa los controles de tu dispositivo y red.",
+      "KovaGPT aún no aplica una política familiar ni un PIN por cuenta. Mientras tanto, usa los controles parentales del dispositivo y la red.",
     'Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl elsewhere.':
-      "Los atajos se guardan en este navegador si hay almacenamiento. «Mod» es ⌘ en macOS y Ctrl en el resto.",
+      'Los atajos se guardan en este navegador si hay almacenamiento. "Mod" es ⌘ en macOS y Ctrl en otros sistemas.',
     "KovaGPT will not request, save, or send your device coordinates from Settings. You can still type a city or place into chat when location context is useful.":
-      "KovaGPT no pedirá, guardará ni enviará tus coordenadas desde Configuración. Puedes escribir una ciudad en el chat si te sirve.",
+      "KovaGPT no pedirá, guardará ni enviará tus coordenadas desde Configuración. Puedes escribir una ciudad o lugar en el chat si te sirve.",
     "Search workspace": "Buscar en el espacio",
     "Focus message box": "Ir al cuadro de mensaje",
     "Generate image": "Generar imagen",
@@ -1057,7 +1057,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Aún no hay plantillas. Crea una o pide a un propietario que te comparta una.",
     "Receive a shared template": "Recibir una plantilla compartida",
     "Give the owner your account ID. They choose whether you can view the template or also copy it.":
-      "Da tu ID de cuenta al propietario. Él decide si solo puedes verla o también copiarla.",
+      "Da tu ID de cuenta al propietario. Él decide si puedes ver o copiar la plantilla.",
     "Your account ID": "Tu ID de cuenta",
     "Template details": "Detalles de la plantilla",
     "Your draft starts from version": "Tu borrador parte de la versión",
@@ -1070,10 +1070,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Published version": "Versión publicada",
     "Loading version": "Cargando versión",
     "The template changed. Refresh to use its latest permissions and revision.":
-      "La plantilla cambió. Actualiza para usar sus permisos y revisión más recientes.",
+      "La plantilla cambió. Actualiza para usar los permisos y la versión más recientes.",
     "Color:": "Color:",
     "Archived. Published versions remain available to you; sharing and copying are disabled.":
-      "Archivada. Las versiones publicadas siguen disponibles para ti; compartir y copiar están desactivados.",
+      "Archivada. Las versiones publicadas siguen disponibles; compartir y copiar están desactivados.",
     "Edit as new version": "Editar como nueva versión",
     "The owner shared this template for viewing only.":
       "El propietario compartió esta plantilla solo para ver.",
@@ -1159,7 +1159,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Reset: "Restablecer",
     "Auto-adapt to me": "Adaptarse a mí",
     'Kova learns your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.':
-      "Kova aprende tu estilo (longitud, formalidad, humor) y lo imita. Di «más corto», «más informal» o «más detalle» y se ajusta.",
+      'Kova aprende tu estilo (longitud, formalidad, humor) y lo imita. Di "más corto", "más informal" o "más detalle" y se ajusta.',
     "Two-factor authentication": "Verificación en dos pasos",
     "Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.":
       "Añade una app de autenticación (Google Authenticator, 1Password, Authy) para más seguridad.",
@@ -2219,6 +2219,186 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The export failed. You can request another export when requests become available.":
       "La exportación falló. Puedes pedir otra cuando esté disponible.",
     "Another request is available after": "Podrás hacer otra solicitud después de",
+    "Request availability could not be determined from this export. Refresh its status before requesting another.":
+      "No se pudo saber si hay solicitudes disponibles. Actualiza el estado antes de pedir otra.",
+    "Remove this account export?": "¿Quitar esta exportación?",
+    "Cancel this queued export or remove its downloadable file. This does not delete your account records. A processing export cannot be canceled until its status changes.":
+      "Cancela la exportación en cola o borra el archivo. No elimina tus registros. Una exportación en proceso no se puede cancelar hasta que cambie su estado.",
+    "You're on the": "Tienes el plan",
+    "Your own": "Tu propio",
+    "Usage data isn't available right now. If you need help understanding your limits, contact":
+      "Los datos de uso no están disponibles. Si necesitas ayuda con tus límites, contacta con",
+    "Model-training preferences are not available in Settings. Review the":
+      "Las preferencias de entrenamiento no están en Configuración. Consulta la",
+    "Version 1.0": "Versión 1.0",
+    "Sign in to use": "Inicia sesión para usar",
+    "Narrow conversation": "Estrechar conversación",
+    "Widen conversation": "Ampliar conversación",
+    "Close Canvas": "Cerrar lienzo",
+    "Pasted text options": "Opciones del texto pegado",
+    "Attach full text": "Adjuntar texto completo",
+    "What you can do": "Qué puedes hacer",
+    "How it works": "Cómo funciona",
+    "Example prompts": "Ejemplos de mensajes",
+    "Related pages": "Páginas relacionadas",
+    "Getting Started": "Primeros pasos",
+    "Signing in does not resend a message. It may change the current account.":
+      "Iniciar sesión no reenvía el mensaje y puede cambiar la cuenta actual.",
+    "Save or copy your current message and attachments, then clear them before signing in. Cancel or save any next message too. Drafts are not transferred between accounts.":
+      "Guarda o copia tu mensaje y adjuntos y bórralos antes de iniciar sesión. Haz lo mismo con el siguiente mensaje. Los borradores no pasan entre cuentas.",
+    "Select image": "Seleccionar imagen",
+    "Note for image": "Nota para la imagen",
+    "What should change?": "¿Qué debe cambiar?",
+    "This browser’s saved data was cleared. Close and reload Library.":
+      "Se borraron los datos del navegador. Cierra y recarga la Biblioteca.",
+    "Up to 50 versions per item. Deleting this item revokes every version and schedules removal of its original files.":
+      "Hasta 50 versiones por elemento. Eliminarlo revoca todas las versiones y programa el borrado de los archivos.",
+    "Read version": "Leer versión",
+    "Replace original document": "Reemplazar documento original",
+    "PDF, DOCX, XLSX or PPTX, up to 10 MB. The new original and extracted text replace the current version together.":
+      "PDF, DOCX, XLSX o PPTX, hasta 10 MB. El nuevo original y su texto reemplazan la versión actual.",
+    "Text from version": "Texto de la versión",
+    "Saving preserves the current text as an earlier version. Text is limited to 300 KB.":
+      "Guardar conserva el texto actual como versión anterior. Límite de 300 KB.",
+    "Discard unsaved version changes?": "¿Descartar cambios de la versión?",
+    "Are you sure you want to log out?": "¿Seguro que quieres cerrar sesión?",
+    "Download selected files": "Descargar archivos seleccionados",
+    "Selected file downloads": "Descargas seleccionadas",
+    "Unsupported:": "No compatible:",
+    "Auto-adapt to me.": "Adaptarse a mí automáticamente.",
+    "Metric categories": "Categorías de métricas",
+    "No readings for this source in the selected range.":
+      "No hay lecturas de esta fuente en el periodo.",
+    "Apple Health": "Salud de Apple",
+    "Connection options": "Opciones de conexión",
+    "Apple Health report file": "Archivo de informe de Salud",
+    "Import Apple Health data": "Importar datos de Salud",
+    "Clear imported data": "Borrar datos importados",
+    "Disconnect Apple Health": "Desconectar Salud",
+    "Connect Apple Health": "Conectar Salud",
+    "Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates. You can also open an export from Connection options.":
+      "Abre esta pestaña en la app de iPhone para conectar Salud y recibir actualizaciones. También puedes abrir una exportación desde Opciones de conexión.",
+    "Create project from v": "Crear proyecto desde v",
+    "Timer controls": "Controles del temporizador",
+    "Close timers": "Cerrar temporizadores",
+    "Loading timers…": "Cargando temporizadores…",
+    "No timers yet.": "Aún no hay temporizadores.",
+    Start: "Iniciar",
+    "Select model": "Seleccionar modelo",
+    "Reset to recommended model and Lite effort": "Restablecer modelo recomendado y esfuerzo Lite",
+    Default: "Predeterminado",
+    "Recommended ·": "Recomendado ·",
+    "Map previews are not available yet. No saved device location is used.":
+      "Las vistas de mapa aún no están disponibles. No se usa ninguna ubicación guardada.",
+    "Finish or clear your current message and attachments before signing in. Close this prompt to return to your unchanged draft.":
+      "Termina o borra tu mensaje y adjuntos antes de iniciar sesión. Cierra este aviso para volver al borrador.",
+    "KovaGPT developer console": "Consola para desarrolladores de KovaGPT",
+    "Platform Inspector": "Inspector de la plataforma",
+    "Development only": "Solo desarrollo",
+    "Close developer console": "Cerrar consola",
+    "Feature flags": "Indicadores de funciones",
+    Extensions: "Extensiones",
+    "Recent timings": "Tiempos recientes",
+    "No metrics recorded yet.": "Aún no hay métricas.",
+    "Event timeline": "Cronología de eventos",
+    "Checking image-edit availability…": "Comprobando edición de imágenes…",
+    "Image editing is not enabled. You can generate a new image.":
+      "La edición no está activada. Puedes generar una imagen nueva.",
+    "Select an original image and describe the change above. The result is a new image; your Library original stays available.":
+      "Elige una imagen y describe el cambio arriba. El resultado es una imagen nueva; el original sigue en la Biblioteca.",
+    "Original image": "Imagen original",
+    "Choose a Library image": "Elegir imagen de la Biblioteca",
+    "Optional PNG mask": "Máscara PNG opcional",
+    "No mask": "Sin máscara",
+    "First page": "Primera página",
+    "Next images": "Imágenes siguientes",
+    "No matching Library images on this page.": "No hay imágenes coincidentes en esta página.",
+    "Last run:": "Última ejecución:",
+    "Saved task history": "Historial de tareas",
+    "Sprite sheet exports": "Exportaciones de sprites",
+    "Use an evenly spaced grid. Frames are read left to right, then top to bottom.":
+      "Usa una cuadrícula uniforme. Los fotogramas se leen de izquierda a derecha y de arriba abajo.",
+    "Use up to 32 frames and a delay from 40 to 2,000 ms in 10 ms steps.":
+      "Usa hasta 32 fotogramas y un retardo de 40 a 2000 ms en pasos de 10 ms.",
+    "Loading versions…": "Cargando versiones…",
+    "No saved edits for this response yet. Select text in the answer and choose “Edit selection” to create one.":
+      "Aún no hay ediciones. Selecciona texto en la respuesta y elige «Editar selección».",
+    "Instruction:": "Instrucción:",
+    "Full previous version": "Versión anterior completa",
+    "KovaGPT home": "Inicio de KovaGPT",
+    "Footer navigation": "Navegación del pie",
+    "Explore all pages": "Explorar todas las páginas",
+    "Search the page directory": "Buscar en el directorio",
+    "Find a page...": "Buscar una página...",
+    "All public pages": "Todas las páginas públicas",
+    "No matching pages.": "No hay páginas coincidentes.",
+    "Passkeys and security keys": "Llaves de acceso y de seguridad",
+    "Sign in with your device biometrics, PIN, password manager, or a compatible hardware security key.":
+      "Inicia sesión con biometría, PIN, gestor de contraseñas o una llave de seguridad compatible.",
+    "This browser cannot add a passkey, but you can still review, rename, or remove registered passkeys.":
+      "Este navegador no puede añadir llaves de acceso, pero puedes revisar, renombrar o quitar las registradas.",
+    "Loading passkeys": "Cargando llaves de acceso",
+    "Passkeys could not be loaded. Please try again.":
+      "No se pudieron cargar las llaves. Inténtalo de nuevo.",
+    "Registered passkeys": "Llaves registradas",
+    "Passkey name": "Nombre de la llave",
+    "Remove this passkey? You will no longer be able to use it to sign in.":
+      "¿Quitar esta llave? Ya no podrás usarla para iniciar sesión.",
+    "No passkeys are registered yet.": "Aún no hay llaves registradas.",
+    "Add passkey": "Añadir llave de acceso",
+    "Scheduled task created. Open schedule details": "Tarea programada creada. Abrir detalles",
+    "Scrollable heatmap": "Mapa de calor desplazable",
+    "Candlestick plot": "Gráfico de velas",
+    "Return it here": "Devolverlo aquí",
+    "Chart type": "Tipo de gráfico",
+    Table: "Tabla",
+    "Sankey flow diagram": "Diagrama de Sankey",
+    "Chart legend": "Leyenda del gráfico",
+    "Data used in": "Datos usados en",
+    "Generated only from the structured data in this response.":
+      "Generado solo con los datos estructurados de esta respuesta.",
+    "Sign in with your device biometrics, PIN, or a compatible security key.":
+      "Inicia sesión con biometría, PIN o una llave de seguridad compatible.",
+    "Passkey settings could not be loaded.": "No se pudieron cargar los ajustes de llaves.",
+    "This browser cannot add a passkey. You can still manage existing passkeys.":
+      "Este navegador no puede añadir llaves. Puedes gestionar las existentes.",
+    "Registered Kova passkeys": "Llaves de Kova registradas",
+    "Remove this passkey? Keep another sign-in method. Other devices will be signed out.":
+      "¿Quitar esta llave? Mantén otro método de acceso. Se cerrarán otras sesiones.",
+    "Confirm removal": "Confirmar eliminación",
+    "Sign in with a passkey or two-factor authentication to remove a key.":
+      "Inicia sesión con una llave o verificación en dos pasos para quitarla.",
+    "Your device will ask you to verify. Adding a key signs out other devices.":
+      "Tu dispositivo te pedirá verificar. Añadir una llave cierra otras sesiones.",
+    "Confirm your password or sign in with two-factor authentication before adding a passkey.":
+      "Confirma tu contraseña o usa la verificación en dos pasos antes de añadir una llave.",
+    "You have reached the limit of ten passkeys.": "Has alcanzado el límite de diez llaves.",
+    "Project collaboration": "Colaboración en el proyecto",
+    "Owners manage roles; editors contribute; viewers read. The latest 100 comments update live while this panel is open.":
+      "Los propietarios gestionan roles, los editores contribuyen y los lectores leen. Los últimos 100 comentarios se actualizan en vivo.",
+    "My mentions": "Mis menciones",
+    "Add a project comment or inline note…": "Añade un comentario o nota…",
+    "Project comment": "Comentario del proyecto",
+    "Comment location": "Ubicación del comentario",
+    Mention: "Mencionar",
+    "Viewers can read collaboration activity but cannot post or edit Project content.":
+      "Los lectores pueden ver la actividad pero no publicar ni editar.",
+    "Loading project comments": "Cargando comentarios",
+    "No collaboration comments": "Sin comentarios",
+    "Add the first note or change the mentions filter.":
+      "Añade la primera nota o cambia el filtro.",
+    "Delete project comment?": "¿Eliminar comentario?",
+    "This comment will be permanently removed for every project member.":
+      "Este comentario se eliminará para todos los miembros.",
+    "Automation Builder": "Creador de automatizaciones",
+    "Build a scheduled workflow using capabilities supported by Scheduled Tasks.":
+      "Crea un flujo programado con las capacidades de Tareas programadas.",
+    "Automation name": "Nombre de la automatización",
+    "Weekly project briefing": "Resumen semanal del proyecto",
+    Action: "Acción",
+    "Summarize the progress and open questions in my project notes.":
+      "Resume el avance y las dudas abiertas de mis notas del proyecto.",
+    Condition: "Condición",
     Cooking: "Cocina",
     "Plan and adapt recipes with food safety in view.":
       "Planifica y adapta recetas teniendo en cuenta la seguridad alimentaria.",
@@ -3383,7 +3563,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Chat behavior": "Comportement des discussions",
     "Send shortcut": "Raccourci d'envoi",
     "Choose whether Enter sends a message or starts a new line.":
-      "Choisissez si Entrée envoie le message ou crée une nouvelle ligne.",
+      "Choisissez si Entrée envoie le message ou crée une ligne.",
     Enter: "Entrée",
     "Response length": "Longueur des réponses",
     "Choose the default length for new responses.":
@@ -3439,15 +3619,15 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Terms of service": "Conditions d'utilisation",
     "Refund policy": "Politique de remboursement",
     "Payments are securely handled by Stripe. We never see or store your card number.":
-      "Les paiements sont traités de manière sécurisée par Stripe. Nous ne voyons ni ne stockons jamais votre numéro de carte.",
+      "Stripe gère les paiements en toute sécurité. Nous ne voyons jamais votre numéro de carte.",
     "Customize shortcuts for common actions. Click a combo to record a new one.":
-      "Personnalisez les raccourcis des actions courantes. Cliquez sur une combinaison pour en enregistrer une nouvelle.",
+      "Personnalisez les raccourcis. Cliquez sur une combinaison pour en enregistrer une autre.",
     "Location-based personalization is not connected to chat or Maps yet.":
-      "La personnalisation selon la position n'est pas encore reliée au chat ni aux Cartes.",
+      "La personnalisation par lieu n'est pas encore reliée au chat ni aux Cartes.",
     "Manage voluntary trusted contacts": "Gérer les contacts de confiance",
     "Signed in as": "Connecté en tant que",
     "Sign in to manage two-factor authentication and active sessions.":
-      "Connectez-vous pour gérer la double authentification et les sessions actives.",
+      "Connectez-vous pour gérer la double authentification et les sessions.",
     "Privacy and data": "Confidentialité et données",
     "Saved memory": "Mémoire enregistrée",
     Security: "Sécurité",
@@ -3459,10 +3639,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Local device data": "Données locales de l'appareil",
     "Family Sharing": "Partage familial",
     "Found a bug or something off? Send it to our team and we'll take a look.":
-      "Un bug ou un souci ? Envoyez-le à notre équipe et nous y jetterons un œil.",
+      "Un bug ou un souci ? Envoyez-le à notre équipe.",
     "Open bug report form": "Ouvrir le formulaire de signalement",
     "Get help, contact support, or browse common questions.":
-      "Obtenez de l'aide, contactez l'assistance ou parcourez les questions courantes.",
+      "Obtenez de l'aide, contactez l'assistance ou parcourez la FAQ.",
     "Open help center": "Ouvrir le centre d'aide",
     "You'll be signed out of KovaGPT on this device.":
       "Vous serez déconnecté de KovaGPT sur cet appareil.",
@@ -3474,7 +3654,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Type DELETE to confirm": "Tapez DELETE pour confirmer",
     "Workspace preferences": "Préférences de l'espace de travail",
     "Defaults are saved on this device and never imply an action ran.":
-      "Les valeurs par défaut sont enregistrées sur cet appareil et n'impliquent jamais qu'une action a eu lieu.",
+      "Les valeurs par défaut sont enregistrées ici et n'impliquent aucune action exécutée.",
     "Settings sections": "Sections des paramètres",
     System: "Système",
     Light: "Clair",
@@ -3483,7 +3663,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "How signed-out data is stored": "Stockage des données hors connexion",
     "Help & legal": "Aide et mentions légales",
     "Get answers, review plans, or read how KovaGPT works.":
-      "Obtenez des réponses, consultez les forfaits ou découvrez le fonctionnement de KovaGPT.",
+      "Obtenez des réponses, voyez les forfaits ou découvrez KovaGPT.",
     "Plans and subscriptions": "Forfaits et abonnements",
     "Terms of Service": "Conditions d'utilisation",
     "Family controls are not available yet":
@@ -3503,7 +3683,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The maximum width of answers.": "La largeur maximale des réponses.",
     Motion: "Animations",
     "Your device’s reduced-motion preference takes priority.":
-      "La préférence de réduction des animations de votre appareil est prioritaire.",
+      "La préférence « réduire les animations » de l'appareil est prioritaire.",
     Contrast: "Contraste",
     "Increase the contrast of controls and borders.":
       "Augmentez le contraste des commandes et des bordures.",
@@ -4081,7 +4261,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Les préférences s'enregistrent automatiquement, sauf les formulaires avec « Enregistrer ».",
     "Appearance and preferences for this browser.": "Apparence et préférences de ce navigateur.",
     "These preferences save for this account on this device. Explicit instructions in the current chat take precedence over default length, tone, and format.":
-      "Ces préférences sont enregistrées pour ce compte sur cet appareil. Les instructions de la discussion en cours priment sur la longueur, le ton et le format.",
+      "Ces préférences sont enregistrées pour ce compte sur cet appareil. Les consignes de la discussion priment sur la longueur, le ton et le format par défaut.",
     "Custom instructions for this account on this device":
       "Instructions personnalisées pour ce compte sur cet appareil",
     Extended: "Étendu",
@@ -4096,11 +4276,11 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Resetting…": "Réinitialisation…",
     "Reset this profile's local data": "Réinitialiser les données locales de ce profil",
     "KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.":
-      "KovaGPT est conçu par Zachary Block. Notre mission : rendre une IA utile, bienveillante et fiable accessible à tous.",
+      "KovaGPT est créé par Zachary Block. Notre mission : une IA utile, bienveillante et fiable pour tous.",
     "Recover your account?": "Récupérer votre compte ?",
     "Working…": "En cours…",
     "Sign in to use account-backed chats, memory, and paid features. Browser preferences stay on this device.":
-      "Connectez-vous pour utiliser les discussions liées au compte, la mémoire et les fonctions payantes. Les préférences du navigateur restent sur cet appareil.",
+      "Connectez-vous pour les discussions, la mémoire et les fonctions payantes. Les préférences restent sur cet appareil.",
     "Saving keyboard shortcuts…": "Enregistrement des raccourcis…",
     "Keyboard shortcut preferences": "Préférences des raccourcis",
     "Retry reset": "Réessayer la réinitialisation",
@@ -4272,23 +4452,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Danger zone": "Zone de danger",
     "You can retry or cancel.": "Vous pouvez réessayer ou annuler.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
-      "Ces compteurs du navigateur ne sont pas votre quota. Ouvrez Utilisation pour les chiffres vérifiés.",
+      "Ces compteurs ne reflètent pas votre quota. Ouvrez Utilisation pour les chiffres vérifiés.",
     "Connection status, provider permissions, reconnection, and revocation are verified from the server-backed Apps page.":
       "L'état, les autorisations, la reconnexion et la révocation sont vérifiés sur la page Apps.",
     "Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat limit. Each meter shows its next reset or refresh.":
-      "Free et Plus ont une limite sur 5 heures et une limite hebdomadaire. Pro a une limite hebdomadaire. Chaque jauge indique son prochain renouvellement.",
+      "Free et Plus ont une limite sur 5 heures et une limite hebdomadaire. Pro a une limite hebdomadaire. Chaque jauge indique sa réinitialisation.",
     "Billing setup is incomplete. Plan changes are unavailable until the billing records and Stripe configuration are verified.":
-      "La facturation est incomplète. Les changements de forfait sont indisponibles jusqu'à vérification.",
+      "La facturation n'est pas finalisée. Changement de forfait impossible avant vérification de Stripe.",
     "For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.":
       "Pour un contrôle parental complet (temps d'écran, apps), utilisez les réglages de l'appareil.",
     "Signed-out chats stay in this tab until you refresh or close it. Your appearance preference remains in this browser, but nothing here is synced to an account. Read the":
       "Les discussions hors connexion restent dans cet onglet jusqu'à actualisation ou fermeture. L'apparence reste dans le navigateur, mais rien n'est synchronisé. Lisez la",
     "KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use your device and network parental controls in the meantime.":
-      "KovaGPT n'applique pas encore de politique familiale ni de code PIN. Utilisez en attendant les contrôles de l'appareil et du réseau.",
+      "KovaGPT n'applique pas encore de politique familiale ni de code PIN. Utilisez en attendant le contrôle parental de l'appareil et du réseau.",
     'Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl elsewhere.':
-      "Les raccourcis restent dans ce navigateur si le stockage est disponible. « Mod » = ⌘ sur macOS, Ctrl ailleurs.",
+      "Les raccourcis restent dans ce navigateur si possible. « Mod » = ⌘ sur macOS, Ctrl ailleurs.",
     "KovaGPT will not request, save, or send your device coordinates from Settings. You can still type a city or place into chat when location context is useful.":
-      "KovaGPT ne demandera, n'enregistrera ni n'enverra vos coordonnées depuis les paramètres. Vous pouvez saisir une ville dans le chat.",
+      "KovaGPT ne demande, n'enregistre ni n'envoie vos coordonnées depuis les Paramètres. Vous pouvez taper une ville dans la discussion.",
     "Search workspace": "Rechercher dans l'espace",
     "Focus message box": "Aller à la zone de saisie",
     "Generate image": "Générer une image",
@@ -4400,7 +4580,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Submit report": "Envoyer le signalement",
     "Project templates": "Modèles de projet",
     "Save project names, descriptions, instructions, and colors as reusable versions. Chats, files, memories, and members are not included.":
-      "Enregistrez noms, descriptions, instructions et couleurs comme versions réutilisables. Discussions, fichiers, souvenirs et membres non inclus.",
+      "Enregistrez noms, descriptions, instructions et couleurs comme versions réutilisables, sans discussions, fichiers, mémoires ni membres.",
     "New template": "Nouveau modèle",
     "Refresh templates": "Actualiser les modèles",
     "Retry same request": "Refaire la demande",
@@ -4411,7 +4591,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "Aucun modèle. Créez-en un ou demandez à un propriétaire de vous en partager un.",
     "Receive a shared template": "Recevoir un modèle partagé",
     "Give the owner your account ID. They choose whether you can view the template or also copy it.":
-      "Donnez votre identifiant au propriétaire. Il choisit si vous pouvez voir ou aussi copier le modèle.",
+      "Donnez votre ID de compte au propriétaire ; il décide si vous pouvez voir ou copier le modèle.",
     "Your account ID": "Votre identifiant",
     "Template details": "Détails du modèle",
     "Your draft starts from version": "Votre brouillon part de la version",
@@ -4424,10 +4604,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Published version": "Version publiée",
     "Loading version": "Chargement de la version",
     "The template changed. Refresh to use its latest permissions and revision.":
-      "Le modèle a changé. Actualisez pour utiliser ses dernières autorisations et révision.",
+      "Le modèle a changé. Actualisez pour ses dernières autorisations.",
     "Color:": "Couleur :",
     "Archived. Published versions remain available to you; sharing and copying are disabled.":
-      "Archivé. Les versions publiées restent disponibles ; partage et copie désactivés.",
+      "Archivé. Les versions publiées restent accessibles ; partage et copie désactivés.",
     "Edit as new version": "Modifier comme nouvelle version",
     "The owner shared this template for viewing only.":
       "Le propriétaire a partagé ce modèle en lecture seule.",
@@ -4437,12 +4617,12 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Allow creating projects from this template":
       "Autoriser la création de projets à partir de ce modèle",
     "Access includes all published versions. Saving an existing recipient changes their permission.":
-      "L'accès inclut toutes les versions publiées. Enregistrer un destinataire existant modifie son autorisation.",
+      "L'accès inclut toutes les versions publiées. Réenregistrer un destinataire change son autorisation.",
     "Save access": "Enregistrer l'accès",
     "No active recipients.": "Aucun destinataire actif.",
     "Archive template": "Archiver le modèle",
     "Choose a saved template to inspect a version or create a project. Built-in suggestions remain available in New project.":
-      "Choisissez un modèle pour consulter une version ou créer un projet. Les suggestions restent dans Nouveau projet.",
+      "Choisissez un modèle pour voir une version ou créer un projet. Les suggestions restent dans Nouveau projet.",
     "Archive this template?": "Archiver ce modèle ?",
     "Rules and pinned files apply to this chat only and are added to the prompt on the server.":
       "Les règles et fichiers épinglés ne s'appliquent qu'à cette discussion et sont ajoutés côté serveur.",
@@ -4514,7 +4694,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Reset: "Réinitialiser",
     "Auto-adapt to me": "S'adapter à moi",
     'Kova learns your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.':
-      "Kova apprend votre style (longueur, formalité, humour) et l'imite. Dites « plus court », « plus décontracté » ou « plus de détails » et il s'adapte.",
+      "Kova apprend votre style (longueur, ton, humour) et s'y adapte. Dites « plus court », « plus détendu » ou « plus de détails ».",
     "Two-factor authentication": "Double authentification",
     "Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.":
       "Ajoutez une app d'authentification (Google Authenticator, 1Password, Authy) pour plus de sécurité.",
@@ -5578,6 +5758,185 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The export failed. You can request another export when requests become available.":
       "L'export a échoué. Vous pourrez en demander un autre.",
     "Another request is available after": "Nouvelle demande possible après",
+    "Request availability could not be determined from this export. Refresh its status before requesting another.":
+      "Disponibilité inconnue pour cet export. Actualisez son état avant d'en demander un autre.",
+    "Remove this account export?": "Supprimer cet export ?",
+    "Cancel this queued export or remove its downloadable file. This does not delete your account records. A processing export cannot be canceled until its status changes.":
+      "Annulez l'export en file ou supprimez son fichier, sans supprimer vos données. Un export en cours ne peut être annulé avant changement d'état.",
+    "You're on the": "Vous êtes sur le forfait",
+    "Your own": "Votre propre",
+    "Usage data isn't available right now. If you need help understanding your limits, contact":
+      "Données d'utilisation indisponibles. Pour de l'aide sur vos limites, contactez",
+    "Model-training preferences are not available in Settings. Review the":
+      "Les préférences d'entraînement ne sont pas dans les Paramètres. Consultez la",
+    "Version 1.0": "Version 1.0",
+    "Sign in to use": "Connectez-vous pour utiliser",
+    "Narrow conversation": "Réduire la conversation",
+    "Widen conversation": "Élargir la conversation",
+    "Close Canvas": "Fermer le canevas",
+    "Pasted text options": "Options du texte collé",
+    "Attach full text": "Joindre le texte complet",
+    "What you can do": "Ce que vous pouvez faire",
+    "How it works": "Fonctionnement",
+    "Example prompts": "Exemples de prompts",
+    "Related pages": "Pages associées",
+    "Getting Started": "Bien démarrer",
+    "Signing in does not resend a message. It may change the current account.":
+      "La connexion ne renvoie pas le message et peut changer de compte.",
+    "Save or copy your current message and attachments, then clear them before signing in. Cancel or save any next message too. Drafts are not transferred between accounts.":
+      "Enregistrez ou copiez votre message et vos pièces jointes, puis effacez-les avant de vous connecter. Idem pour le message suivant. Les brouillons ne passent pas d'un compte à l'autre.",
+    "Select image": "Sélectionner une image",
+    "Note for image": "Note pour l'image",
+    "What should change?": "Que faut-il changer ?",
+    "This browser’s saved data was cleared. Close and reload Library.":
+      "Données du navigateur effacées. Fermez et rechargez la Bibliothèque.",
+    "Up to 50 versions per item. Deleting this item revokes every version and schedules removal of its original files.":
+      "Jusqu'à 50 versions par élément. Le supprimer révoque toutes les versions et planifie la suppression des fichiers.",
+    "Read version": "Lire la version",
+    "Replace original document": "Remplacer le document original",
+    "PDF, DOCX, XLSX or PPTX, up to 10 MB. The new original and extracted text replace the current version together.":
+      "PDF, DOCX, XLSX ou PPTX, 10 Mo max. Le nouvel original et son texte remplacent la version actuelle.",
+    "Text from version": "Texte de la version",
+    "Saving preserves the current text as an earlier version. Text is limited to 300 KB.":
+      "Enregistrer garde le texte actuel comme version précédente. Limite : 300 Ko.",
+    "Discard unsaved version changes?": "Abandonner les modifications de version ?",
+    "Are you sure you want to log out?": "Voulez-vous vraiment vous déconnecter ?",
+    "Download selected files": "Télécharger les fichiers choisis",
+    "Selected file downloads": "Téléchargements sélectionnés",
+    "Unsupported:": "Non pris en charge :",
+    "Auto-adapt to me.": "S'adapter à moi.",
+    "Metric categories": "Catégories de mesures",
+    "No readings for this source in the selected range.":
+      "Aucune mesure pour cette source sur la période.",
+    "Apple Health": "Apple Santé",
+    "Connection options": "Options de connexion",
+    "Apple Health report file": "Fichier de rapport Santé",
+    "Import Apple Health data": "Importer les données Santé",
+    "Clear imported data": "Effacer les données importées",
+    "Disconnect Apple Health": "Déconnecter Santé",
+    "Connect Apple Health": "Connecter Santé",
+    "Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates. You can also open an export from Connection options.":
+      "Ouvrez cet onglet dans l'app iPhone pour connecter Santé et recevoir des mises à jour. Vous pouvez aussi ouvrir un export.",
+    "Create project from v": "Créer un projet depuis v",
+    "Timer controls": "Commandes du minuteur",
+    "Close timers": "Fermer les minuteurs",
+    "Loading timers…": "Chargement des minuteurs…",
+    "No timers yet.": "Aucun minuteur.",
+    Start: "Démarrer",
+    "Select model": "Choisir le modèle",
+    "Reset to recommended model and Lite effort": "Revenir au modèle recommandé et à l'effort Lite",
+    Default: "Par défaut",
+    "Recommended ·": "Recommandé ·",
+    "Map previews are not available yet. No saved device location is used.":
+      "Aperçus de carte indisponibles. Aucune position enregistrée n'est utilisée.",
+    "Finish or clear your current message and attachments before signing in. Close this prompt to return to your unchanged draft.":
+      "Terminez ou effacez votre message et pièces jointes avant de vous connecter. Fermez pour revenir au brouillon.",
+    "KovaGPT developer console": "Console développeur KovaGPT",
+    "Platform Inspector": "Inspecteur de plateforme",
+    "Development only": "Développement uniquement",
+    "Close developer console": "Fermer la console",
+    "Feature flags": "Drapeaux de fonctionnalités",
+    Extensions: "Extensions",
+    "Recent timings": "Temps récents",
+    "No metrics recorded yet.": "Aucune mesure enregistrée.",
+    "Event timeline": "Chronologie des événements",
+    "Checking image-edit availability…": "Vérification de l'édition d'images…",
+    "Image editing is not enabled. You can generate a new image.":
+      "L'édition n'est pas activée. Vous pouvez générer une nouvelle image.",
+    "Select an original image and describe the change above. The result is a new image; your Library original stays available.":
+      "Choisissez une image et décrivez le changement. Le résultat est une nouvelle image ; l'original reste dans la Bibliothèque.",
+    "Original image": "Image originale",
+    "Choose a Library image": "Choisir une image de la Bibliothèque",
+    "Optional PNG mask": "Masque PNG facultatif",
+    "No mask": "Aucun masque",
+    "First page": "Première page",
+    "Next images": "Images suivantes",
+    "No matching Library images on this page.": "Aucune image correspondante sur cette page.",
+    "Last run:": "Dernière exécution :",
+    "Saved task history": "Historique des tâches",
+    "Sprite sheet exports": "Exports de planches de sprites",
+    "Use an evenly spaced grid. Frames are read left to right, then top to bottom.":
+      "Utilisez une grille régulière. Lecture de gauche à droite, puis de haut en bas.",
+    "Use up to 32 frames and a delay from 40 to 2,000 ms in 10 ms steps.":
+      "Jusqu'à 32 images et un délai de 40 à 2 000 ms par pas de 10 ms.",
+    "Loading versions…": "Chargement des versions…",
+    "No saved edits for this response yet. Select text in the answer and choose “Edit selection” to create one.":
+      "Aucune modification. Sélectionnez du texte et choisissez « Modifier la sélection ».",
+    "Instruction:": "Instruction :",
+    "Full previous version": "Version précédente complète",
+    "KovaGPT home": "Accueil KovaGPT",
+    "Footer navigation": "Navigation de pied de page",
+    "Explore all pages": "Explorer toutes les pages",
+    "Search the page directory": "Rechercher dans l'annuaire",
+    "Find a page...": "Trouver une page...",
+    "All public pages": "Toutes les pages publiques",
+    "No matching pages.": "Aucune page correspondante.",
+    "Passkeys and security keys": "Clés d'accès et de sécurité",
+    "Sign in with your device biometrics, PIN, password manager, or a compatible hardware security key.":
+      "Connectez-vous avec la biométrie, un PIN, un gestionnaire de mots de passe ou une clé de sécurité.",
+    "This browser cannot add a passkey, but you can still review, rename, or remove registered passkeys.":
+      "Ce navigateur ne peut pas ajouter de clé, mais vous pouvez gérer celles existantes.",
+    "Loading passkeys": "Chargement des clés",
+    "Passkeys could not be loaded. Please try again.": "Clés non chargées. Réessayez.",
+    "Registered passkeys": "Clés enregistrées",
+    "Passkey name": "Nom de la clé",
+    "Remove this passkey? You will no longer be able to use it to sign in.":
+      "Supprimer cette clé ? Vous ne pourrez plus l'utiliser.",
+    "No passkeys are registered yet.": "Aucune clé enregistrée.",
+    "Add passkey": "Ajouter une clé d'accès",
+    "Scheduled task created. Open schedule details": "Tâche planifiée créée. Ouvrir les détails",
+    "Scrollable heatmap": "Carte de chaleur défilante",
+    "Candlestick plot": "Graphique en chandeliers",
+    "Return it here": "Le ramener ici",
+    "Chart type": "Type de graphique",
+    Table: "Tableau",
+    "Sankey flow diagram": "Diagramme de Sankey",
+    "Chart legend": "Légende",
+    "Data used in": "Données utilisées dans",
+    "Generated only from the structured data in this response.":
+      "Généré uniquement à partir des données de cette réponse.",
+    "Sign in with your device biometrics, PIN, or a compatible security key.":
+      "Connectez-vous avec la biométrie, un PIN ou une clé compatible.",
+    "Passkey settings could not be loaded.": "Paramètres des clés non chargés.",
+    "This browser cannot add a passkey. You can still manage existing passkeys.":
+      "Ce navigateur ne peut pas ajouter de clé. Gérez celles existantes.",
+    "Registered Kova passkeys": "Clés Kova enregistrées",
+    "Remove this passkey? Keep another sign-in method. Other devices will be signed out.":
+      "Supprimer cette clé ? Gardez une autre méthode. Les autres appareils seront déconnectés.",
+    "Confirm removal": "Confirmer la suppression",
+    "Sign in with a passkey or two-factor authentication to remove a key.":
+      "Connectez-vous avec une clé ou la double authentification pour la supprimer.",
+    "Your device will ask you to verify. Adding a key signs out other devices.":
+      "Votre appareil demandera une vérification. Ajouter une clé déconnecte les autres appareils.",
+    "Confirm your password or sign in with two-factor authentication before adding a passkey.":
+      "Confirmez votre mot de passe ou la double authentification avant d'ajouter une clé.",
+    "You have reached the limit of ten passkeys.": "Vous avez atteint la limite de dix clés.",
+    "Project collaboration": "Collaboration sur le projet",
+    "Owners manage roles; editors contribute; viewers read. The latest 100 comments update live while this panel is open.":
+      "Les propriétaires gèrent les rôles, les éditeurs contribuent, les lecteurs lisent. Les 100 derniers commentaires se mettent à jour en direct.",
+    "My mentions": "Mes mentions",
+    "Add a project comment or inline note…": "Ajoutez un commentaire ou une note…",
+    "Project comment": "Commentaire du projet",
+    "Comment location": "Emplacement du commentaire",
+    Mention: "Mentionner",
+    "Viewers can read collaboration activity but cannot post or edit Project content.":
+      "Les lecteurs voient l'activité mais ne peuvent ni publier ni modifier.",
+    "Loading project comments": "Chargement des commentaires",
+    "No collaboration comments": "Aucun commentaire",
+    "Add the first note or change the mentions filter.":
+      "Ajoutez la première note ou changez le filtre.",
+    "Delete project comment?": "Supprimer le commentaire ?",
+    "This comment will be permanently removed for every project member.":
+      "Ce commentaire sera supprimé pour tous les membres.",
+    "Automation Builder": "Créateur d'automatisations",
+    "Build a scheduled workflow using capabilities supported by Scheduled Tasks.":
+      "Créez un flux planifié avec les capacités des tâches planifiées.",
+    "Automation name": "Nom de l'automatisation",
+    "Weekly project briefing": "Point hebdomadaire du projet",
+    Action: "Action",
+    "Summarize the progress and open questions in my project notes.":
+      "Résume l'avancement et les questions ouvertes de mes notes.",
+    Condition: "Condition",
     Cooking: "Cuisine",
     "Plan and adapt recipes with food safety in view.":
       "Planifiez et adaptez des recettes en tenant compte de la sécurité alimentaire.",
@@ -6744,7 +7103,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Chat behavior": "Chat-Verhalten",
     "Send shortcut": "Senden-Kürzel",
     "Choose whether Enter sends a message or starts a new line.":
-      "Lege fest, ob Enter die Nachricht sendet oder eine neue Zeile beginnt.",
+      "Wähle, ob Eingabe sendet oder eine neue Zeile beginnt.",
     Enter: "Enter",
     "Response length": "Antwortlänge",
     "Choose the default length for new responses.": "Wähle die Standardlänge für neue Antworten.",
@@ -6798,15 +7157,15 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Terms of service": "Nutzungsbedingungen",
     "Refund policy": "Rückerstattungsrichtlinie",
     "Payments are securely handled by Stripe. We never see or store your card number.":
-      "Zahlungen werden sicher über Stripe abgewickelt. Wir sehen oder speichern deine Kartennummer nie.",
+      "Stripe verarbeitet Zahlungen sicher. Wir sehen deine Kartennummer nie.",
     "Customize shortcuts for common actions. Click a combo to record a new one.":
-      "Passe Kürzel für häufige Aktionen an. Klicke auf eine Kombination, um eine neue aufzunehmen.",
+      "Passe Tastenkürzel an. Klicke auf eine Kombination, um eine neue aufzunehmen.",
     "Location-based personalization is not connected to chat or Maps yet.":
-      "Standortbasierte Personalisierung ist noch nicht mit Chat oder Karten verbunden.",
+      "Standortbasierte Anpassung ist noch nicht mit Chat oder Karten verbunden.",
     "Manage voluntary trusted contacts": "Vertrauenskontakte verwalten",
     "Signed in as": "Angemeldet als",
     "Sign in to manage two-factor authentication and active sessions.":
-      "Melde dich an, um Zwei-Faktor-Authentifizierung und aktive Sitzungen zu verwalten.",
+      "Melde dich an, um 2FA und Sitzungen zu verwalten.",
     "Privacy and data": "Datenschutz und Daten",
     "Saved memory": "Gespeichertes Gedächtnis",
     Security: "Sicherheit",
@@ -6818,10 +7177,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Local device data": "Lokale Gerätedaten",
     "Family Sharing": "Familienfreigabe",
     "Found a bug or something off? Send it to our team and we'll take a look.":
-      "Einen Fehler gefunden? Schick ihn an unser Team, wir sehen es uns an.",
+      "Fehler gefunden? Schick ihn an unser Team.",
     "Open bug report form": "Fehlerformular öffnen",
     "Get help, contact support, or browse common questions.":
-      "Hilfe erhalten, Support kontaktieren oder häufige Fragen ansehen.",
+      "Hilfe erhalten, Support kontaktieren oder FAQ ansehen.",
     "Open help center": "Hilfe-Center öffnen",
     "You'll be signed out of KovaGPT on this device.":
       "Du wirst auf diesem Gerät von KovaGPT abgemeldet.",
@@ -6833,7 +7192,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Type DELETE to confirm": "Zum Bestätigen DELETE eingeben",
     "Workspace preferences": "Arbeitsbereich-Einstellungen",
     "Defaults are saved on this device and never imply an action ran.":
-      "Standards werden auf diesem Gerät gespeichert und bedeuten nie, dass eine Aktion ausgeführt wurde.",
+      "Standards werden auf diesem Gerät gespeichert und bedeuten nicht, dass etwas lief.",
     "Settings sections": "Einstellungsbereiche",
     System: "System",
     Light: "Hell",
@@ -6842,7 +7201,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "How signed-out data is stored": "So werden Daten ohne Anmeldung gespeichert",
     "Help & legal": "Hilfe & Rechtliches",
     "Get answers, review plans, or read how KovaGPT works.":
-      "Antworten finden, Tarife prüfen oder lesen, wie KovaGPT funktioniert.",
+      "Antworten erhalten, Tarife ansehen oder lesen, wie KovaGPT funktioniert.",
     "Plans and subscriptions": "Tarife und Abos",
     "Terms of Service": "Nutzungsbedingungen",
     "Family controls are not available yet": "Familienkontrollen sind noch nicht verfügbar",
@@ -6860,7 +7219,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The maximum width of answers.": "Die maximale Breite von Antworten.",
     Motion: "Bewegung",
     "Your device’s reduced-motion preference takes priority.":
-      "Die Einstellung „Bewegung reduzieren“ deines Geräts hat Vorrang.",
+      "Die Einstellung „Bewegung reduzieren“ des Geräts hat Vorrang.",
     Contrast: "Kontrast",
     "Increase the contrast of controls and borders.":
       "Kontrast von Steuerelementen und Rändern erhöhen.",
@@ -7441,7 +7800,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Appearance and preferences for this browser.":
       "Darstellung und Einstellungen für diesen Browser.",
     "These preferences save for this account on this device. Explicit instructions in the current chat take precedence over default length, tone, and format.":
-      "Diese Einstellungen gelten für dieses Konto auf diesem Gerät. Anweisungen im aktuellen Chat haben Vorrang vor Länge, Ton und Format.",
+      "Diese Einstellungen gelten für dieses Konto auf diesem Gerät. Anweisungen im Chat haben Vorrang vor Standardlänge, -ton und -format.",
     "Custom instructions for this account on this device":
       "Eigene Anweisungen für dieses Konto auf diesem Gerät",
     Extended: "Erweitert",
@@ -7456,11 +7815,11 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Resetting…": "Wird zurückgesetzt…",
     "Reset this profile's local data": "Lokale Daten dieses Profils zurücksetzen",
     "KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.":
-      "KovaGPT wird von Zachary Block entwickelt. Unser Ziel ist eine hilfreiche, freundliche und vertrauenswürdige KI für alle.",
+      "KovaGPT wird von Zachary Block entwickelt. Unser Ziel: hilfreiche, freundliche und vertrauenswürdige KI für alle.",
     "Recover your account?": "Konto wiederherstellen?",
     "Working…": "Wird bearbeitet…",
     "Sign in to use account-backed chats, memory, and paid features. Browser preferences stay on this device.":
-      "Melde dich an für kontogebundene Chats, Gedächtnis und Bezahlfunktionen. Browsereinstellungen bleiben auf diesem Gerät.",
+      "Melde dich an für Kontochats, Gedächtnis und Bezahlfunktionen. Browsereinstellungen bleiben hier.",
     "Saving keyboard shortcuts…": "Kürzel werden gespeichert…",
     "Keyboard shortcut preferences": "Tastenkürzel-Einstellungen",
     "Retry reset": "Zurücksetzen wiederholen",
@@ -7633,23 +7992,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Danger zone": "Gefahrenbereich",
     "You can retry or cancel.": "Du kannst es erneut versuchen oder abbrechen.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
-      "Diese Browserzähler sind nicht dein Kontingent. Unter Nutzung findest du geprüfte Werte.",
+      "Diese Zähler sind nicht dein Kontingent. Öffne Nutzung für geprüfte Werte.",
     "Connection status, provider permissions, reconnection, and revocation are verified from the server-backed Apps page.":
       "Status, Berechtigungen, Neuverbindung und Widerruf werden auf der Apps-Seite geprüft.",
     "Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat limit. Each meter shows its next reset or refresh.":
-      "Free und Plus haben ein 5-Stunden- und ein Wochenlimit, Pro ein Wochenlimit. Jede Anzeige zeigt die nächste Erneuerung.",
+      "Free und Plus haben ein 5-Stunden- und ein Wochenlimit, Pro ein Wochenlimit. Jede Anzeige zeigt den nächsten Reset.",
     "Billing setup is incomplete. Plan changes are unavailable until the billing records and Stripe configuration are verified.":
-      "Die Abrechnung ist unvollständig. Tarifwechsel sind erst nach Prüfung möglich.",
+      "Die Abrechnung ist unvollständig. Tarifwechsel erst nach Prüfung von Stripe möglich.",
     "For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.":
-      "Für vollständige Kindersicherung (Bildschirmzeit, Apps) nutze die Geräteeinstellungen.",
+      "Für umfassende Kindersicherung (Bildschirmzeit, Apps) nutze die Geräteeinstellungen.",
     "Signed-out chats stay in this tab until you refresh or close it. Your appearance preference remains in this browser, but nothing here is synced to an account. Read the":
       "Chats ohne Anmeldung bleiben in diesem Tab, bis du neu lädst oder ihn schließt. Die Darstellung bleibt im Browser, nichts wird synchronisiert. Lies die",
     "KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use your device and network parental controls in the meantime.":
-      "KovaGPT setzt noch keine Familienrichtlinie oder PIN-Sperre durch. Nutze bis dahin Geräte- und Netzwerkkontrollen.",
+      "KovaGPT setzt noch keine Familienrichtlinie oder PIN-Sperre durch. Nutze bis dahin Geräte- und Netzwerk-Kindersicherung.",
     'Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl elsewhere.':
-      "Kürzel bleiben in diesem Browser, wenn Speicher verfügbar ist. „Mod“ ist ⌘ auf macOS, sonst Strg.",
+      "Kürzel bleiben in diesem Browser. „Mod“ ist ⌘ auf macOS, sonst Strg.",
     "KovaGPT will not request, save, or send your device coordinates from Settings. You can still type a city or place into chat when location context is useful.":
-      "KovaGPT fragt, speichert oder sendet keine Koordinaten aus den Einstellungen. Du kannst eine Stadt im Chat nennen.",
+      "KovaGPT fragt, speichert oder sendet keine Koordinaten aus den Einstellungen. Du kannst eine Stadt in den Chat schreiben.",
     "Search workspace": "Arbeitsbereich durchsuchen",
     "Focus message box": "Zum Eingabefeld",
     "Generate image": "Bild erstellen",
@@ -7761,7 +8120,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Submit report": "Meldung senden",
     "Project templates": "Projektvorlagen",
     "Save project names, descriptions, instructions, and colors as reusable versions. Chats, files, memories, and members are not included.":
-      "Speichere Namen, Beschreibungen, Anweisungen und Farben als wiederverwendbare Versionen. Chats, Dateien, Erinnerungen und Mitglieder sind nicht enthalten.",
+      "Speichere Namen, Beschreibungen, Anweisungen und Farben als Vorlagen – ohne Chats, Dateien, Erinnerungen oder Mitglieder.",
     "New template": "Neue Vorlage",
     "Refresh templates": "Vorlagen aktualisieren",
     "Retry same request": "Anfrage wiederholen",
@@ -7769,10 +8128,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Your templates and shared templates": "Deine und geteilte Vorlagen",
     "Loading templates…": "Vorlagen werden geladen…",
     "No saved templates yet. Create one or ask an owner to share one with you.":
-      "Noch keine Vorlagen. Erstelle eine oder bitte einen Inhaber, eine zu teilen.",
+      "Noch keine Vorlagen. Erstelle eine oder bitte einen Eigentümer, eine zu teilen.",
     "Receive a shared template": "Geteilte Vorlage empfangen",
     "Give the owner your account ID. They choose whether you can view the template or also copy it.":
-      "Gib dem Inhaber deine Konto-ID. Er entscheidet, ob du die Vorlage nur ansehen oder auch kopieren darfst.",
+      "Gib dem Eigentümer deine Konto-ID. Er entscheidet über Ansehen oder Kopieren.",
     "Your account ID": "Deine Konto-ID",
     "Template details": "Vorlagendetails",
     "Your draft starts from version": "Dein Entwurf basiert auf Version",
@@ -7785,7 +8144,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Published version": "Veröffentlichte Version",
     "Loading version": "Version wird geladen",
     "The template changed. Refresh to use its latest permissions and revision.":
-      "Die Vorlage hat sich geändert. Aktualisiere für aktuelle Berechtigungen und Revision.",
+      "Die Vorlage hat sich geändert. Aktualisiere für neueste Rechte und Version.",
     "Color:": "Farbe:",
     "Archived. Published versions remain available to you; sharing and copying are disabled.":
       "Archiviert. Veröffentlichte Versionen bleiben verfügbar; Teilen und Kopieren sind aus.",
@@ -7797,12 +8156,12 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Ask the recipient for their account ID": "Frag den Empfänger nach seiner Konto-ID",
     "Allow creating projects from this template": "Projekte aus dieser Vorlage erlauben",
     "Access includes all published versions. Saving an existing recipient changes their permission.":
-      "Der Zugriff umfasst alle veröffentlichten Versionen. Speichern eines bestehenden Empfängers ändert seine Berechtigung.",
+      "Zugriff umfasst alle veröffentlichten Versionen. Speichern eines Empfängers ändert seine Rechte.",
     "Save access": "Zugriff speichern",
     "No active recipients.": "Keine aktiven Empfänger.",
     "Archive template": "Vorlage archivieren",
     "Choose a saved template to inspect a version or create a project. Built-in suggestions remain available in New project.":
-      "Wähle eine Vorlage, um eine Version anzusehen oder ein Projekt zu erstellen. Vorschläge findest du unter Neues Projekt.",
+      "Wähle eine Vorlage, um eine Version zu sehen oder ein Projekt zu erstellen. Vorschläge bleiben unter „Neues Projekt“.",
     "Archive this template?": "Diese Vorlage archivieren?",
     "Rules and pinned files apply to this chat only and are added to the prompt on the server.":
       "Regeln und angeheftete Dateien gelten nur für diesen Chat und werden serverseitig hinzugefügt.",
@@ -7874,7 +8233,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Reset: "Zurücksetzen",
     "Auto-adapt to me": "An mich anpassen",
     'Kova learns your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.':
-      "Kova lernt deinen Stil (Länge, Förmlichkeit, Humor) und übernimmt ihn. Sag „kürzer“, „lockerer“ oder „mehr Details“.",
+      "Kova lernt deinen Stil (Länge, Förmlichkeit, Humor) und passt sich an. Sag „kürzer“, „lockerer“ oder „mehr Details“.",
     "Two-factor authentication": "Zwei-Faktor-Authentifizierung",
     "Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.":
       "Füge eine Authenticator-App (Google Authenticator, 1Password, Authy) als zweite Schutzebene hinzu.",
@@ -8936,6 +9295,186 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The export failed. You can request another export when requests become available.":
       "Der Export ist fehlgeschlagen. Du kannst später einen neuen anfordern.",
     "Another request is available after": "Neue Anfrage möglich nach",
+    "Request availability could not be determined from this export. Refresh its status before requesting another.":
+      "Verfügbarkeit unklar. Aktualisiere den Status vor einer neuen Anfrage.",
+    "Remove this account export?": "Diesen Export entfernen?",
+    "Cancel this queued export or remove its downloadable file. This does not delete your account records. A processing export cannot be canceled until its status changes.":
+      "Brich den Export ab oder entferne die Datei; deine Kontodaten bleiben. Ein laufender Export ist erst nach Statuswechsel abbrechbar.",
+    "You're on the": "Du hast den Tarif",
+    "Your own": "Dein eigenes",
+    "Usage data isn't available right now. If you need help understanding your limits, contact":
+      "Nutzungsdaten sind nicht verfügbar. Für Hilfe zu Limits wende dich an",
+    "Model-training preferences are not available in Settings. Review the":
+      "Einstellungen zum Modelltraining gibt es hier nicht. Siehe die",
+    "Version 1.0": "Version 1.0",
+    "Sign in to use": "Zum Nutzen anmelden",
+    "Narrow conversation": "Gespräch schmaler",
+    "Widen conversation": "Gespräch breiter",
+    "Close Canvas": "Canvas schließen",
+    "Pasted text options": "Optionen für eingefügten Text",
+    "Attach full text": "Volltext anhängen",
+    "What you can do": "Was du tun kannst",
+    "How it works": "So funktioniert es",
+    "Example prompts": "Beispiel-Prompts",
+    "Related pages": "Verwandte Seiten",
+    "Getting Started": "Erste Schritte",
+    "Signing in does not resend a message. It may change the current account.":
+      "Anmelden sendet keine Nachricht erneut und kann das Konto wechseln.",
+    "Save or copy your current message and attachments, then clear them before signing in. Cancel or save any next message too. Drafts are not transferred between accounts.":
+      "Speichere oder kopiere Nachricht und Anhänge und lösche sie vor dem Anmelden. Ebenso die nächste Nachricht. Entwürfe werden nicht übertragen.",
+    "Select image": "Bild auswählen",
+    "Note for image": "Notiz zum Bild",
+    "What should change?": "Was soll sich ändern?",
+    "This browser’s saved data was cleared. Close and reload Library.":
+      "Browserdaten gelöscht. Schließe und lade die Bibliothek neu.",
+    "Up to 50 versions per item. Deleting this item revokes every version and schedules removal of its original files.":
+      "Bis zu 50 Versionen pro Element. Löschen widerruft alle Versionen und plant das Entfernen der Dateien.",
+    "Read version": "Version lesen",
+    "Replace original document": "Originaldokument ersetzen",
+    "PDF, DOCX, XLSX or PPTX, up to 10 MB. The new original and extracted text replace the current version together.":
+      "PDF, DOCX, XLSX oder PPTX, bis 10 MB. Neues Original und Text ersetzen die aktuelle Version.",
+    "Text from version": "Text aus Version",
+    "Saving preserves the current text as an earlier version. Text is limited to 300 KB.":
+      "Speichern bewahrt den aktuellen Text als ältere Version. Max. 300 KB.",
+    "Discard unsaved version changes?": "Ungespeicherte Versionsänderungen verwerfen?",
+    "Are you sure you want to log out?": "Möchtest du dich wirklich abmelden?",
+    "Download selected files": "Ausgewählte Dateien herunterladen",
+    "Selected file downloads": "Ausgewählte Downloads",
+    "Unsupported:": "Nicht unterstützt:",
+    "Auto-adapt to me.": "Automatisch an mich anpassen.",
+    "Metric categories": "Messkategorien",
+    "No readings for this source in the selected range.":
+      "Keine Messwerte für diese Quelle im Zeitraum.",
+    "Apple Health": "Apple Health",
+    "Connection options": "Verbindungsoptionen",
+    "Apple Health report file": "Apple-Health-Berichtsdatei",
+    "Import Apple Health data": "Apple-Health-Daten importieren",
+    "Clear imported data": "Importierte Daten löschen",
+    "Disconnect Apple Health": "Apple Health trennen",
+    "Connect Apple Health": "Apple Health verbinden",
+    "Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates. You can also open an export from Connection options.":
+      "Öffne diesen Tab in der iPhone-App, um Apple Health zu verbinden. Du kannst auch einen Export öffnen.",
+    "Create project from v": "Projekt aus v erstellen",
+    "Timer controls": "Timer-Steuerung",
+    "Close timers": "Timer schließen",
+    "Loading timers…": "Timer werden geladen…",
+    "No timers yet.": "Noch keine Timer.",
+    Start: "Start",
+    "Select model": "Modell wählen",
+    "Reset to recommended model and Lite effort": "Auf empfohlenes Modell und Lite zurücksetzen",
+    Default: "Standard",
+    "Recommended ·": "Empfohlen ·",
+    "Map previews are not available yet. No saved device location is used.":
+      "Kartenvorschauen sind noch nicht verfügbar. Kein gespeicherter Standort wird genutzt.",
+    "Finish or clear your current message and attachments before signing in. Close this prompt to return to your unchanged draft.":
+      "Beende oder lösche Nachricht und Anhänge vor dem Anmelden. Schließe, um zum Entwurf zurückzukehren.",
+    "KovaGPT developer console": "KovaGPT-Entwicklerkonsole",
+    "Platform Inspector": "Plattform-Inspektor",
+    "Development only": "Nur Entwicklung",
+    "Close developer console": "Konsole schließen",
+    "Feature flags": "Feature-Flags",
+    Extensions: "Erweiterungen",
+    "Recent timings": "Letzte Zeiten",
+    "No metrics recorded yet.": "Noch keine Messwerte.",
+    "Event timeline": "Ereignis-Zeitachse",
+    "Checking image-edit availability…": "Bildbearbeitung wird geprüft…",
+    "Image editing is not enabled. You can generate a new image.":
+      "Bildbearbeitung ist nicht aktiv. Du kannst ein neues Bild erstellen.",
+    "Select an original image and describe the change above. The result is a new image; your Library original stays available.":
+      "Wähle ein Bild und beschreibe die Änderung. Es entsteht ein neues Bild; das Original bleibt.",
+    "Original image": "Originalbild",
+    "Choose a Library image": "Bibliotheksbild wählen",
+    "Optional PNG mask": "Optionale PNG-Maske",
+    "No mask": "Keine Maske",
+    "First page": "Erste Seite",
+    "Next images": "Nächste Bilder",
+    "No matching Library images on this page.": "Keine passenden Bilder auf dieser Seite.",
+    "Last run:": "Letzter Lauf:",
+    "Saved task history": "Aufgabenverlauf",
+    "Sprite sheet exports": "Sprite-Sheet-Exporte",
+    "Use an evenly spaced grid. Frames are read left to right, then top to bottom.":
+      "Nutze ein gleichmäßiges Raster. Frames werden von links nach rechts, dann von oben nach unten gelesen.",
+    "Use up to 32 frames and a delay from 40 to 2,000 ms in 10 ms steps.":
+      "Bis zu 32 Frames und 40–2.000 ms Verzögerung in 10-ms-Schritten.",
+    "Loading versions…": "Versionen werden geladen…",
+    "No saved edits for this response yet. Select text in the answer and choose “Edit selection” to create one.":
+      "Noch keine Bearbeitungen. Markiere Text und wähle „Auswahl bearbeiten“.",
+    "Instruction:": "Anweisung:",
+    "Full previous version": "Vollständige vorherige Version",
+    "KovaGPT home": "KovaGPT-Startseite",
+    "Footer navigation": "Fußzeilennavigation",
+    "Explore all pages": "Alle Seiten entdecken",
+    "Search the page directory": "Seitenverzeichnis durchsuchen",
+    "Find a page...": "Seite finden...",
+    "All public pages": "Alle öffentlichen Seiten",
+    "No matching pages.": "Keine passenden Seiten.",
+    "Passkeys and security keys": "Passkeys und Sicherheitsschlüssel",
+    "Sign in with your device biometrics, PIN, password manager, or a compatible hardware security key.":
+      "Melde dich mit Biometrie, PIN, Passwortmanager oder Sicherheitsschlüssel an.",
+    "This browser cannot add a passkey, but you can still review, rename, or remove registered passkeys.":
+      "Dieser Browser kann keinen Passkey hinzufügen, aber du kannst vorhandene verwalten.",
+    "Loading passkeys": "Passkeys werden geladen",
+    "Passkeys could not be loaded. Please try again.":
+      "Passkeys konnten nicht laden. Bitte erneut versuchen.",
+    "Registered passkeys": "Registrierte Passkeys",
+    "Passkey name": "Passkey-Name",
+    "Remove this passkey? You will no longer be able to use it to sign in.":
+      "Passkey entfernen? Du kannst dich damit nicht mehr anmelden.",
+    "No passkeys are registered yet.": "Noch keine Passkeys registriert.",
+    "Add passkey": "Passkey hinzufügen",
+    "Scheduled task created. Open schedule details": "Geplante Aufgabe erstellt. Details öffnen",
+    "Scrollable heatmap": "Scrollbare Heatmap",
+    "Candlestick plot": "Kerzendiagramm",
+    "Return it here": "Hierher zurückholen",
+    "Chart type": "Diagrammtyp",
+    Table: "Tabelle",
+    "Sankey flow diagram": "Sankey-Diagramm",
+    "Chart legend": "Diagrammlegende",
+    "Data used in": "Verwendete Daten in",
+    "Generated only from the structured data in this response.":
+      "Nur aus den strukturierten Daten dieser Antwort erstellt.",
+    "Sign in with your device biometrics, PIN, or a compatible security key.":
+      "Melde dich mit Biometrie, PIN oder Sicherheitsschlüssel an.",
+    "Passkey settings could not be loaded.": "Passkey-Einstellungen konnten nicht laden.",
+    "This browser cannot add a passkey. You can still manage existing passkeys.":
+      "Dieser Browser kann keinen Passkey hinzufügen. Vorhandene kannst du verwalten.",
+    "Registered Kova passkeys": "Registrierte Kova-Passkeys",
+    "Remove this passkey? Keep another sign-in method. Other devices will be signed out.":
+      "Passkey entfernen? Behalte eine andere Anmeldemethode. Andere Geräte werden abgemeldet.",
+    "Confirm removal": "Entfernen bestätigen",
+    "Sign in with a passkey or two-factor authentication to remove a key.":
+      "Melde dich per Passkey oder 2FA an, um einen Schlüssel zu entfernen.",
+    "Your device will ask you to verify. Adding a key signs out other devices.":
+      "Dein Gerät fragt nach Bestätigung. Ein neuer Schlüssel meldet andere Geräte ab.",
+    "Confirm your password or sign in with two-factor authentication before adding a passkey.":
+      "Bestätige dein Passwort oder 2FA, bevor du einen Passkey hinzufügst.",
+    "You have reached the limit of ten passkeys.": "Du hast das Limit von zehn Passkeys erreicht.",
+    "Project collaboration": "Projektzusammenarbeit",
+    "Owners manage roles; editors contribute; viewers read. The latest 100 comments update live while this panel is open.":
+      "Eigentümer verwalten Rollen, Bearbeiter tragen bei, Leser lesen. Die letzten 100 Kommentare aktualisieren sich live.",
+    "My mentions": "Meine Erwähnungen",
+    "Add a project comment or inline note…": "Kommentar oder Notiz hinzufügen…",
+    "Project comment": "Projektkommentar",
+    "Comment location": "Kommentarposition",
+    Mention: "Erwähnen",
+    "Viewers can read collaboration activity but cannot post or edit Project content.":
+      "Leser sehen die Aktivität, können aber nichts posten oder bearbeiten.",
+    "Loading project comments": "Kommentare werden geladen",
+    "No collaboration comments": "Keine Kommentare",
+    "Add the first note or change the mentions filter.":
+      "Füge die erste Notiz hinzu oder ändere den Filter.",
+    "Delete project comment?": "Projektkommentar löschen?",
+    "This comment will be permanently removed for every project member.":
+      "Der Kommentar wird für alle Mitglieder entfernt.",
+    "Automation Builder": "Automations-Builder",
+    "Build a scheduled workflow using capabilities supported by Scheduled Tasks.":
+      "Erstelle einen geplanten Ablauf mit den Funktionen geplanter Aufgaben.",
+    "Automation name": "Name der Automation",
+    "Weekly project briefing": "Wöchentliches Projekt-Briefing",
+    Action: "Aktion",
+    "Summarize the progress and open questions in my project notes.":
+      "Fasse Fortschritt und offene Fragen meiner Projektnotizen zusammen.",
+    Condition: "Bedingung",
     Cooking: "Kochen",
     "Plan and adapt recipes with food safety in view.":
       "Rezepte planen und anpassen, mit Blick auf Lebensmittelsicherheit.",
@@ -10095,7 +10634,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Chat behavior": "Comportamento do chat",
     "Send shortcut": "Atalho de envio",
     "Choose whether Enter sends a message or starts a new line.":
-      "Escolha se Enter envia a mensagem ou inicia uma nova linha.",
+      "Escolha se Enter envia ou cria nova linha.",
     Enter: "Enter",
     "Response length": "Tamanho da resposta",
     "Choose the default length for new responses.": "Escolha o tamanho padrão das respostas.",
@@ -10148,15 +10687,15 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Terms of service": "Termos de serviço",
     "Refund policy": "Política de reembolso",
     "Payments are securely handled by Stripe. We never see or store your card number.":
-      "Os pagamentos são processados com segurança pela Stripe. Nunca vemos nem guardamos o número do seu cartão.",
+      "O Stripe processa pagamentos com segurança. Nunca vemos seu cartão.",
     "Customize shortcuts for common actions. Click a combo to record a new one.":
-      "Personalize atalhos para ações comuns. Clique em uma combinação para gravar outra.",
+      "Personalize atalhos. Clique numa combinação para gravar outra.",
     "Location-based personalization is not connected to chat or Maps yet.":
-      "A personalização por localização ainda não está ligada ao chat nem aos Mapas.",
+      "A personalização por local ainda não está ligada ao chat nem a Mapas.",
     "Manage voluntary trusted contacts": "Gerenciar contatos de confiança",
     "Signed in as": "Conectado como",
     "Sign in to manage two-factor authentication and active sessions.":
-      "Entre para gerenciar a verificação em duas etapas e as sessões ativas.",
+      "Entre para gerenciar a verificação em duas etapas e sessões.",
     "Privacy and data": "Privacidade e dados",
     "Saved memory": "Memória salva",
     Security: "Segurança",
@@ -10168,10 +10707,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Local device data": "Dados locais do dispositivo",
     "Family Sharing": "Compartilhamento familiar",
     "Found a bug or something off? Send it to our team and we'll take a look.":
-      "Encontrou um erro? Envie para nossa equipe e vamos verificar.",
+      "Achou um bug? Envie para nossa equipe.",
     "Open bug report form": "Abrir formulário de erro",
     "Get help, contact support, or browse common questions.":
-      "Obtenha ajuda, fale com o suporte ou veja perguntas frequentes.",
+      "Obtenha ajuda, fale com o suporte ou veja as dúvidas comuns.",
     "Open help center": "Abrir central de ajuda",
     "You'll be signed out of KovaGPT on this device.": "Você sairá do KovaGPT neste dispositivo.",
     "Reset this profile's local data?": "Redefinir os dados locais deste perfil?",
@@ -10182,7 +10721,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Type DELETE to confirm": "Digite DELETE para confirmar",
     "Workspace preferences": "Preferências do espaço de trabalho",
     "Defaults are saved on this device and never imply an action ran.":
-      "Os padrões ficam salvos neste dispositivo e nunca indicam que uma ação foi executada.",
+      "Os padrões ficam neste dispositivo e não indicam que algo foi executado.",
     "Settings sections": "Seções de configurações",
     System: "Sistema",
     Light: "Claro",
@@ -10191,7 +10730,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "How signed-out data is stored": "Como os dados sem login são armazenados",
     "Help & legal": "Ajuda e jurídico",
     "Get answers, review plans, or read how KovaGPT works.":
-      "Obtenha respostas, veja planos ou leia como o KovaGPT funciona.",
+      "Tire dúvidas, veja planos ou saiba como o KovaGPT funciona.",
     "Plans and subscriptions": "Planos e assinaturas",
     "Terms of Service": "Termos de Serviço",
     "Family controls are not available yet": "Os controles familiares ainda não estão disponíveis",
@@ -10209,7 +10748,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The maximum width of answers.": "A largura máxima das respostas.",
     Motion: "Movimento",
     "Your device’s reduced-motion preference takes priority.":
-      "A preferência de movimento reduzido do seu dispositivo tem prioridade.",
+      "A preferência de movimento reduzido do dispositivo tem prioridade.",
     Contrast: "Contraste",
     "Increase the contrast of controls and borders.": "Aumente o contraste de controles e bordas.",
     "Layout size": "Tamanho do layout",
@@ -10784,7 +11323,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       'As preferências são salvas automaticamente, exceto formulários com "Salvar alterações".',
     "Appearance and preferences for this browser.": "Aparência e preferências deste navegador.",
     "These preferences save for this account on this device. Explicit instructions in the current chat take precedence over default length, tone, and format.":
-      "Estas preferências ficam salvas nesta conta neste dispositivo. Instruções no chat atual têm prioridade sobre tamanho, tom e formato.",
+      "Estas preferências valem para esta conta neste dispositivo. Instruções no chat têm prioridade sobre tamanho, tom e formato padrão.",
     "Custom instructions for this account on this device":
       "Instruções personalizadas para esta conta neste dispositivo",
     Extended: "Estendido",
@@ -10799,11 +11338,11 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Resetting…": "Redefinindo…",
     "Reset this profile's local data": "Redefinir os dados locais deste perfil",
     "KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.":
-      "O KovaGPT é criado por Zachary Block. Nossa missão é levar a todos uma IA útil, gentil e confiável.",
+      "O KovaGPT é criado por Zachary Block. Nossa missão é oferecer a todos uma IA útil, gentil e confiável.",
     "Recover your account?": "Recuperar sua conta?",
     "Working…": "Processando…",
     "Sign in to use account-backed chats, memory, and paid features. Browser preferences stay on this device.":
-      "Entre para usar chats na conta, memória e recursos pagos. As preferências do navegador ficam neste dispositivo.",
+      "Entre para usar chats na conta, memória e recursos pagos. Preferências ficam neste dispositivo.",
     "Saving keyboard shortcuts…": "Salvando atalhos…",
     "Keyboard shortcut preferences": "Preferências de atalhos",
     "Retry reset": "Tentar redefinir de novo",
@@ -10973,23 +11512,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Danger zone": "Zona de perigo",
     "You can retry or cancel.": "Você pode tentar de novo ou cancelar.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
-      "Estes contadores do navegador não são sua cota. Abra Uso para ver os dados verificados.",
+      "Estes contadores não são sua cota. Abra Uso para os números verificados.",
     "Connection status, provider permissions, reconnection, and revocation are verified from the server-backed Apps page.":
       "Status, permissões, reconexão e revogação são verificados na página de Apps.",
     "Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat limit. Each meter shows its next reset or refresh.":
-      "Free e Plus têm limite de 5 horas e semanal; o Pro tem limite semanal. Cada medidor mostra a próxima renovação.",
+      "Free e Plus têm limite de 5 horas e semanal. Pro tem limite semanal. Cada medidor mostra a renovação.",
     "Billing setup is incomplete. Plan changes are unavailable until the billing records and Stripe configuration are verified.":
-      "A cobrança não está completa. Mudanças de plano ficam indisponíveis até a verificação.",
+      "A cobrança está incompleta. Mudanças de plano só após verificar o Stripe.",
     "For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.":
-      "Para controle parental completo (tempo de tela, apps), use os ajustes do dispositivo.",
+      "Para controle parental completo (tempo de tela, apps), use as configurações do dispositivo.",
     "Signed-out chats stay in this tab until you refresh or close it. Your appearance preference remains in this browser, but nothing here is synced to an account. Read the":
       "Chats sem login ficam nesta aba até recarregar ou fechar. A aparência fica no navegador, mas nada é sincronizado. Leia a",
     "KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use your device and network parental controls in the meantime.":
-      "O KovaGPT ainda não aplica política familiar nem bloqueio por PIN. Use os controles do dispositivo e da rede.",
+      "O KovaGPT ainda não aplica política familiar nem PIN. Use os controles parentais do dispositivo e da rede.",
     'Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl elsewhere.':
-      'Os atalhos ficam neste navegador se houver armazenamento. "Mod" é ⌘ no macOS e Ctrl nos demais.',
+      'Atalhos ficam neste navegador. "Mod" é ⌘ no macOS e Ctrl nos demais.',
     "KovaGPT will not request, save, or send your device coordinates from Settings. You can still type a city or place into chat when location context is useful.":
-      "O KovaGPT não pedirá, salvará nem enviará suas coordenadas nas configurações. Você pode digitar uma cidade no chat.",
+      "O KovaGPT não pede, salva nem envia suas coordenadas pelas Configurações. Você pode digitar uma cidade no chat.",
     "Search workspace": "Pesquisar no espaço",
     "Focus message box": "Ir para a caixa de mensagem",
     "Generate image": "Gerar imagem",
@@ -11101,7 +11640,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Submit report": "Enviar denúncia",
     "Project templates": "Modelos de projeto",
     "Save project names, descriptions, instructions, and colors as reusable versions. Chats, files, memories, and members are not included.":
-      "Salve nomes, descrições, instruções e cores como versões reutilizáveis. Chats, arquivos, memórias e membros não entram.",
+      "Salve nomes, descrições, instruções e cores como versões reutilizáveis, sem chats, arquivos, memórias ou membros.",
     "New template": "Novo modelo",
     "Refresh templates": "Atualizar modelos",
     "Retry same request": "Repetir a solicitação",
@@ -11109,10 +11648,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Your templates and shared templates": "Seus modelos e os compartilhados",
     "Loading templates…": "Carregando modelos…",
     "No saved templates yet. Create one or ask an owner to share one with you.":
-      "Nenhum modelo ainda. Crie um ou peça a um dono para compartilhar.",
+      "Nenhum modelo ainda. Crie um ou peça a um dono que compartilhe.",
     "Receive a shared template": "Receber um modelo compartilhado",
     "Give the owner your account ID. They choose whether you can view the template or also copy it.":
-      "Passe seu ID de conta ao dono. Ele decide se você pode ver ou também copiar.",
+      "Passe seu ID ao dono; ele decide se você pode ver ou copiar.",
     "Your account ID": "Seu ID de conta",
     "Template details": "Detalhes do modelo",
     "Your draft starts from version": "Seu rascunho parte da versão",
@@ -11125,10 +11664,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Published version": "Versão publicada",
     "Loading version": "Carregando versão",
     "The template changed. Refresh to use its latest permissions and revision.":
-      "O modelo mudou. Atualize para usar as permissões e revisão mais recentes.",
+      "O modelo mudou. Atualize para a versão e permissões mais recentes.",
     "Color:": "Cor:",
     "Archived. Published versions remain available to you; sharing and copying are disabled.":
-      "Arquivado. As versões publicadas continuam disponíveis; compartilhar e copiar estão desativados.",
+      "Arquivado. Versões publicadas continuam disponíveis; compartilhar e copiar estão desativados.",
     "Edit as new version": "Editar como nova versão",
     "The owner shared this template for viewing only.":
       "O dono compartilhou este modelo só para visualização.",
@@ -11142,7 +11681,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "No active recipients.": "Nenhum destinatário ativo.",
     "Archive template": "Arquivar modelo",
     "Choose a saved template to inspect a version or create a project. Built-in suggestions remain available in New project.":
-      "Escolha um modelo para ver uma versão ou criar um projeto. As sugestões continuam em Novo projeto.",
+      "Escolha um modelo para ver uma versão ou criar um projeto. Sugestões ficam em Novo projeto.",
     "Archive this template?": "Arquivar este modelo?",
     "Rules and pinned files apply to this chat only and are added to the prompt on the server.":
       "Regras e arquivos fixados valem só para este chat e são adicionados no servidor.",
@@ -11214,7 +11753,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Reset: "Redefinir",
     "Auto-adapt to me": "Adaptar-se a mim",
     'Kova learns your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.':
-      'O Kova aprende seu estilo (tamanho, formalidade, humor) e o imita. Diga "mais curto", "mais casual" ou "mais detalhes" e ele se ajusta.',
+      'O Kova aprende seu estilo (tamanho, formalidade, humor) e o imita. Diga "mais curto", "mais casual" ou "mais detalhes".',
     "Two-factor authentication": "Verificação em duas etapas",
     "Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.":
       "Adicione um app autenticador (Google Authenticator, 1Password, Authy) para mais segurança.",
@@ -12271,6 +12810,185 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The export failed. You can request another export when requests become available.":
       "A exportação falhou. Você pode pedir outra quando possível.",
     "Another request is available after": "Outro pedido fica disponível após",
+    "Request availability could not be determined from this export. Refresh its status before requesting another.":
+      "Não foi possível saber a disponibilidade. Atualize o status antes de pedir outra.",
+    "Remove this account export?": "Remover esta exportação?",
+    "Cancel this queued export or remove its downloadable file. This does not delete your account records. A processing export cannot be canceled until its status changes.":
+      "Cancele a exportação na fila ou remova o arquivo; seus registros ficam. Uma em processamento só pode ser cancelada após mudar de status.",
+    "You're on the": "Você está no plano",
+    "Your own": "Seu próprio",
+    "Usage data isn't available right now. If you need help understanding your limits, contact":
+      "Dados de uso indisponíveis. Para ajuda com limites, contate",
+    "Model-training preferences are not available in Settings. Review the":
+      "Preferências de treinamento não estão nas Configurações. Veja a",
+    "Version 1.0": "Versão 1.0",
+    "Sign in to use": "Entre para usar",
+    "Narrow conversation": "Estreitar conversa",
+    "Widen conversation": "Alargar conversa",
+    "Close Canvas": "Fechar Canvas",
+    "Pasted text options": "Opções do texto colado",
+    "Attach full text": "Anexar texto completo",
+    "What you can do": "O que você pode fazer",
+    "How it works": "Como funciona",
+    "Example prompts": "Exemplos de prompts",
+    "Related pages": "Páginas relacionadas",
+    "Getting Started": "Primeiros passos",
+    "Signing in does not resend a message. It may change the current account.":
+      "Entrar não reenvia a mensagem e pode trocar a conta.",
+    "Save or copy your current message and attachments, then clear them before signing in. Cancel or save any next message too. Drafts are not transferred between accounts.":
+      "Salve ou copie a mensagem e anexos e limpe antes de entrar. Faça o mesmo com a próxima mensagem. Rascunhos não passam entre contas.",
+    "Select image": "Selecionar imagem",
+    "Note for image": "Nota para a imagem",
+    "What should change?": "O que deve mudar?",
+    "This browser’s saved data was cleared. Close and reload Library.":
+      "Dados do navegador apagados. Feche e recarregue a Biblioteca.",
+    "Up to 50 versions per item. Deleting this item revokes every version and schedules removal of its original files.":
+      "Até 50 versões por item. Excluir revoga todas e agenda a remoção dos arquivos.",
+    "Read version": "Ler versão",
+    "Replace original document": "Substituir documento original",
+    "PDF, DOCX, XLSX or PPTX, up to 10 MB. The new original and extracted text replace the current version together.":
+      "PDF, DOCX, XLSX ou PPTX, até 10 MB. O novo original e o texto substituem a versão atual.",
+    "Text from version": "Texto da versão",
+    "Saving preserves the current text as an earlier version. Text is limited to 300 KB.":
+      "Salvar mantém o texto atual como versão anterior. Limite de 300 KB.",
+    "Discard unsaved version changes?": "Descartar alterações da versão?",
+    "Are you sure you want to log out?": "Tem certeza de que quer sair?",
+    "Download selected files": "Baixar arquivos selecionados",
+    "Selected file downloads": "Downloads selecionados",
+    "Unsupported:": "Não suportado:",
+    "Auto-adapt to me.": "Adaptar-se a mim automaticamente.",
+    "Metric categories": "Categorias de métricas",
+    "No readings for this source in the selected range.": "Sem leituras desta fonte no período.",
+    "Apple Health": "Apple Saúde",
+    "Connection options": "Opções de conexão",
+    "Apple Health report file": "Arquivo de relatório do Saúde",
+    "Import Apple Health data": "Importar dados do Saúde",
+    "Clear imported data": "Limpar dados importados",
+    "Disconnect Apple Health": "Desconectar Saúde",
+    "Connect Apple Health": "Conectar Saúde",
+    "Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates. You can also open an export from Connection options.":
+      "Abra esta aba no app de iPhone para conectar o Saúde. Também dá para abrir uma exportação.",
+    "Create project from v": "Criar projeto da v",
+    "Timer controls": "Controles do timer",
+    "Close timers": "Fechar timers",
+    "Loading timers…": "Carregando timers…",
+    "No timers yet.": "Nenhum timer ainda.",
+    Start: "Iniciar",
+    "Select model": "Selecionar modelo",
+    "Reset to recommended model and Lite effort": "Voltar ao modelo recomendado e Lite",
+    Default: "Padrão",
+    "Recommended ·": "Recomendado ·",
+    "Map previews are not available yet. No saved device location is used.":
+      "Prévias de mapa indisponíveis. Nenhuma localização salva é usada.",
+    "Finish or clear your current message and attachments before signing in. Close this prompt to return to your unchanged draft.":
+      "Termine ou limpe a mensagem e anexos antes de entrar. Feche para voltar ao rascunho.",
+    "KovaGPT developer console": "Console do desenvolvedor KovaGPT",
+    "Platform Inspector": "Inspetor da plataforma",
+    "Development only": "Só desenvolvimento",
+    "Close developer console": "Fechar console",
+    "Feature flags": "Flags de recursos",
+    Extensions: "Extensões",
+    "Recent timings": "Tempos recentes",
+    "No metrics recorded yet.": "Nenhuma métrica ainda.",
+    "Event timeline": "Linha do tempo de eventos",
+    "Checking image-edit availability…": "Verificando edição de imagens…",
+    "Image editing is not enabled. You can generate a new image.":
+      "A edição não está ativada. Você pode gerar uma nova imagem.",
+    "Select an original image and describe the change above. The result is a new image; your Library original stays available.":
+      "Escolha uma imagem e descreva a mudança. O resultado é uma nova imagem; o original fica na Biblioteca.",
+    "Original image": "Imagem original",
+    "Choose a Library image": "Escolher imagem da Biblioteca",
+    "Optional PNG mask": "Máscara PNG opcional",
+    "No mask": "Sem máscara",
+    "First page": "Primeira página",
+    "Next images": "Próximas imagens",
+    "No matching Library images on this page.": "Nenhuma imagem correspondente nesta página.",
+    "Last run:": "Última execução:",
+    "Saved task history": "Histórico de tarefas",
+    "Sprite sheet exports": "Exportações de sprites",
+    "Use an evenly spaced grid. Frames are read left to right, then top to bottom.":
+      "Use uma grade uniforme. Quadros lidos da esquerda para a direita e de cima para baixo.",
+    "Use up to 32 frames and a delay from 40 to 2,000 ms in 10 ms steps.":
+      "Até 32 quadros e atraso de 40 a 2.000 ms em passos de 10 ms.",
+    "Loading versions…": "Carregando versões…",
+    "No saved edits for this response yet. Select text in the answer and choose “Edit selection” to create one.":
+      'Nenhuma edição ainda. Selecione texto e escolha "Editar seleção".',
+    "Instruction:": "Instrução:",
+    "Full previous version": "Versão anterior completa",
+    "KovaGPT home": "Início do KovaGPT",
+    "Footer navigation": "Navegação do rodapé",
+    "Explore all pages": "Explorar todas as páginas",
+    "Search the page directory": "Pesquisar o diretório",
+    "Find a page...": "Encontrar página...",
+    "All public pages": "Todas as páginas públicas",
+    "No matching pages.": "Nenhuma página encontrada.",
+    "Passkeys and security keys": "Chaves de acesso e de segurança",
+    "Sign in with your device biometrics, PIN, password manager, or a compatible hardware security key.":
+      "Entre com biometria, PIN, gerenciador de senhas ou chave de segurança compatível.",
+    "This browser cannot add a passkey, but you can still review, rename, or remove registered passkeys.":
+      "Este navegador não adiciona chaves, mas você pode gerenciar as existentes.",
+    "Loading passkeys": "Carregando chaves",
+    "Passkeys could not be loaded. Please try again.":
+      "Não foi possível carregar as chaves. Tente de novo.",
+    "Registered passkeys": "Chaves registradas",
+    "Passkey name": "Nome da chave",
+    "Remove this passkey? You will no longer be able to use it to sign in.":
+      "Remover esta chave? Você não poderá mais usá-la.",
+    "No passkeys are registered yet.": "Nenhuma chave registrada.",
+    "Add passkey": "Adicionar chave de acesso",
+    "Scheduled task created. Open schedule details": "Tarefa agendada criada. Abrir detalhes",
+    "Scrollable heatmap": "Mapa de calor rolável",
+    "Candlestick plot": "Gráfico de velas",
+    "Return it here": "Trazer de volta aqui",
+    "Chart type": "Tipo de gráfico",
+    Table: "Tabela",
+    "Sankey flow diagram": "Diagrama de Sankey",
+    "Chart legend": "Legenda do gráfico",
+    "Data used in": "Dados usados em",
+    "Generated only from the structured data in this response.":
+      "Gerado apenas com os dados estruturados desta resposta.",
+    "Sign in with your device biometrics, PIN, or a compatible security key.":
+      "Entre com biometria, PIN ou chave compatível.",
+    "Passkey settings could not be loaded.": "Não foi possível carregar as configurações.",
+    "This browser cannot add a passkey. You can still manage existing passkeys.":
+      "Este navegador não adiciona chaves. Gerencie as existentes.",
+    "Registered Kova passkeys": "Chaves Kova registradas",
+    "Remove this passkey? Keep another sign-in method. Other devices will be signed out.":
+      "Remover esta chave? Mantenha outro método. Outros dispositivos sairão.",
+    "Confirm removal": "Confirmar remoção",
+    "Sign in with a passkey or two-factor authentication to remove a key.":
+      "Entre com chave ou duas etapas para remover.",
+    "Your device will ask you to verify. Adding a key signs out other devices.":
+      "O dispositivo pedirá verificação. Adicionar uma chave desconecta outros.",
+    "Confirm your password or sign in with two-factor authentication before adding a passkey.":
+      "Confirme a senha ou use duas etapas antes de adicionar uma chave.",
+    "You have reached the limit of ten passkeys.": "Você atingiu o limite de dez chaves.",
+    "Project collaboration": "Colaboração no projeto",
+    "Owners manage roles; editors contribute; viewers read. The latest 100 comments update live while this panel is open.":
+      "Donos gerenciam funções, editores contribuem, leitores leem. Os últimos 100 comentários atualizam ao vivo.",
+    "My mentions": "Minhas menções",
+    "Add a project comment or inline note…": "Adicione um comentário ou nota…",
+    "Project comment": "Comentário do projeto",
+    "Comment location": "Local do comentário",
+    Mention: "Mencionar",
+    "Viewers can read collaboration activity but cannot post or edit Project content.":
+      "Leitores veem a atividade, mas não publicam nem editam.",
+    "Loading project comments": "Carregando comentários",
+    "No collaboration comments": "Sem comentários",
+    "Add the first note or change the mentions filter.":
+      "Adicione a primeira nota ou mude o filtro.",
+    "Delete project comment?": "Excluir comentário?",
+    "This comment will be permanently removed for every project member.":
+      "O comentário será removido para todos os membros.",
+    "Automation Builder": "Criador de automações",
+    "Build a scheduled workflow using capabilities supported by Scheduled Tasks.":
+      "Crie um fluxo agendado com os recursos de Tarefas agendadas.",
+    "Automation name": "Nome da automação",
+    "Weekly project briefing": "Resumo semanal do projeto",
+    Action: "Ação",
+    "Summarize the progress and open questions in my project notes.":
+      "Resuma o progresso e as dúvidas das notas do projeto.",
+    Condition: "Condição",
     Cooking: "Culinária",
     "Plan and adapt recipes with food safety in view.":
       "Planeje e adapte receitas pensando na segurança alimentar.",
@@ -13430,7 +14148,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Chat behavior": "チャットの動作",
     "Send shortcut": "送信ショートカット",
     "Choose whether Enter sends a message or starts a new line.":
-      "Enterでメッセージを送信するか改行するかを選択します。",
+      "Enterでメッセージを送信するか改行するかを選びます。",
     Enter: "Enter",
     "Response length": "応答の長さ",
     "Choose the default length for new responses.": "新しい応答の既定の長さを選択します。",
@@ -13486,9 +14204,9 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Payments are securely handled by Stripe. We never see or store your card number.":
       "支払いはStripeが安全に処理します。カード番号を閲覧・保存することはありません。",
     "Customize shortcuts for common actions. Click a combo to record a new one.":
-      "よく使う操作のショートカットをカスタマイズします。組み合わせをクリックして新しく記録します。",
+      "よく使う操作のショートカットを設定できます。組み合わせをクリックすると新しいキーを記録します。",
     "Location-based personalization is not connected to chat or Maps yet.":
-      "位置情報によるパーソナライズはまだチャットやマップに接続されていません。",
+      "位置情報によるパーソナライズは、まだチャットやマップに接続されていません。",
     "Manage voluntary trusted contacts": "信頼できる連絡先を管理",
     "Signed in as": "サインイン中:",
     "Sign in to manage two-factor authentication and active sessions.":
@@ -13504,10 +14222,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Local device data": "ローカルのデバイスデータ",
     "Family Sharing": "ファミリー共有",
     "Found a bug or something off? Send it to our team and we'll take a look.":
-      "バグや気になる点がありましたか？チームに送っていただければ確認します。",
+      "不具合やおかしな点を見つけたら、チームに送ってください。確認します。",
     "Open bug report form": "バグ報告フォームを開く",
     "Get help, contact support, or browse common questions.":
-      "ヘルプを受ける、サポートに連絡する、よくある質問を見る。",
+      "ヘルプ、サポートへの連絡、よくある質問はこちら。",
     "Open help center": "ヘルプセンターを開く",
     "You'll be signed out of KovaGPT on this device.":
       "このデバイスでKovaGPTからサインアウトします。",
@@ -13528,7 +14246,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "How signed-out data is stored": "サインアウト時のデータ保存方法",
     "Help & legal": "ヘルプと法的情報",
     "Get answers, review plans, or read how KovaGPT works.":
-      "回答を探す、プランを確認する、KovaGPTの仕組みを読む。",
+      "回答を見る、プランを確認する、KovaGPTの仕組みを読む。",
     "Plans and subscriptions": "プランとサブスクリプション",
     "Terms of Service": "利用規約",
     "Family controls are not available yet": "ファミリー管理はまだ利用できません",
@@ -14122,7 +14840,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "設定は自動保存されます（「変更を保存」があるフォームを除く）。",
     "Appearance and preferences for this browser.": "このブラウザの外観と設定。",
     "These preferences save for this account on this device. Explicit instructions in the current chat take precedence over default length, tone, and format.":
-      "これらの設定はこのデバイスのこのアカウントに保存されます。現在のチャットでの明示的な指示が、既定の長さ・トーン・形式より優先されます。",
+      "これらの設定はこのデバイスのこのアカウントに保存されます。チャット内の明示的な指示が既定の長さ・語調・形式より優先されます。",
     "Custom instructions for this account on this device":
       "このデバイスのこのアカウント用カスタム指示",
     Extended: "拡張",
@@ -14137,11 +14855,11 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Resetting…": "リセット中…",
     "Reset this profile's local data": "このプロファイルのローカルデータをリセット",
     "KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.":
-      "KovaGPTはZachary Blockが開発しています。私たちの使命は、役に立ち、親切で、信頼できるAIを誰もが使えるようにすることです。",
+      "KovaGPTはZachary Blockが開発しています。役に立ち、親切で、信頼できるAIを誰もが使えるようにすることが私たちの使命です。",
     "Recover your account?": "アカウントを復元しますか？",
     "Working…": "処理中…",
     "Sign in to use account-backed chats, memory, and paid features. Browser preferences stay on this device.":
-      "サインインすると、アカウント連携のチャット、メモリ、有料機能を使えます。ブラウザの設定はこのデバイスに残ります。",
+      "アカウントのチャット、メモリ、有料機能を使うにはサインインしてください。ブラウザの設定はこのデバイスに残ります。",
     "Saving keyboard shortcuts…": "ショートカットを保存中…",
     "Keyboard shortcut preferences": "キーボードショートカットの設定",
     "Retry reset": "リセットを再試行",
@@ -14313,23 +15031,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Danger zone": "危険な操作",
     "You can retry or cancel.": "再試行またはキャンセルできます。",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
-      "これはブラウザ内のカウンターで、アカウントの利用枠ではありません。確認済みの数値は「使用状況」で見られます。",
+      "これらのブラウザのカウンターはアカウントの利用枠ではありません。サーバーで確認した数値は「使用状況」で見られます。",
     "Connection status, provider permissions, reconnection, and revocation are verified from the server-backed Apps page.":
       "接続状態、権限、再接続、取り消しは「アプリ」ページで確認されます。",
     "Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat limit. Each meter shows its next reset or refresh.":
-      "FreeとPlusには5時間と週ごとの上限、Proには週ごとの上限があります。各メーターに次のリセット時期が表示されます。",
+      "FreeとPlusには5時間ごとの上限と週の上限があります。Proは週の上限のみです。各メーターに次のリセット時刻が表示されます。",
     "Billing setup is incomplete. Plan changes are unavailable until the billing records and Stripe configuration are verified.":
-      "請求設定が完了していません。確認が済むまでプランを変更できません。",
+      "請求の設定が未完了です。請求記録とStripeの設定が確認されるまでプランは変更できません。",
     "For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.":
-      "スクリーンタイムやアプリ制限など本格的なペアレンタルコントロールは、デバイスの設定を使ってください。",
+      "スクリーンタイムやアプリ制限などのペアレンタルコントロールは、デバイスの設定を使ってください。",
     "Signed-out chats stay in this tab until you refresh or close it. Your appearance preference remains in this browser, but nothing here is synced to an account. Read the":
       "サインアウト中のチャットは、再読み込みかタブを閉じるまでこのタブに残ります。外観設定はこのブラウザに残りますが、アカウントには同期されません。詳しくは",
     "KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use your device and network parental controls in the meantime.":
-      "KovaGPTは現在、アカウント単位のファミリー制限やPINロックを提供していません。当面はデバイスやネットワークの制限機能をお使いください。",
+      "KovaGPTは現在、アカウント単位の家族向けポリシーやPINロックを提供していません。当面はデバイスやネットワークのペアレンタルコントロールを使ってください。",
     'Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl elsewhere.':
-      "ストレージが使える場合、ショートカットはこのブラウザに保存されます。「Mod」はmacOSでは⌘、その他ではCtrlです。",
+      "ストレージが使える場合、ショートカットはこのブラウザに保存されます。「Mod」はmacOSでは⌘、それ以外ではCtrlです。",
     "KovaGPT will not request, save, or send your device coordinates from Settings. You can still type a city or place into chat when location context is useful.":
-      "KovaGPTは設定からデバイスの座標を要求・保存・送信しません。必要ならチャットで都市名などを入力できます。",
+      "KovaGPTは設定からデバイスの位置座標を要求・保存・送信しません。必要なときはチャットに都市名や場所を入力できます。",
     "Search workspace": "ワークスペースを検索",
     "Focus message box": "メッセージ欄に移動",
     "Generate image": "画像を生成",
@@ -14440,7 +15158,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Submit report": "報告を送信",
     "Project templates": "プロジェクトテンプレート",
     "Save project names, descriptions, instructions, and colors as reusable versions. Chats, files, memories, and members are not included.":
-      "プロジェクト名、説明、指示、色を再利用できるバージョンとして保存します。チャット、ファイル、メモリ、メンバーは含まれません。",
+      "プロジェクト名、説明、指示、色を再利用できる版として保存します。チャット、ファイル、メモリ、メンバーは含まれません。",
     "New template": "新しいテンプレート",
     "Refresh templates": "テンプレートを更新",
     "Retry same request": "同じリクエストを再試行",
@@ -14448,10 +15166,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Your templates and shared templates": "自分のテンプレートと共有テンプレート",
     "Loading templates…": "テンプレートを読み込み中…",
     "No saved templates yet. Create one or ask an owner to share one with you.":
-      "テンプレートはまだありません。作成するか、オーナーに共有を依頼してください。",
+      "保存したテンプレートはまだありません。作成するか、所有者に共有を依頼してください。",
     "Receive a shared template": "共有テンプレートを受け取る",
     "Give the owner your account ID. They choose whether you can view the template or also copy it.":
-      "アカウントIDをオーナーに伝えてください。閲覧のみかコピーも可能かはオーナーが決めます。",
+      "所有者にアカウントIDを伝えてください。閲覧のみかコピーも可能かは所有者が決めます。",
     "Your account ID": "あなたのアカウントID",
     "Template details": "テンプレートの詳細",
     "Your draft starts from version": "下書きの元バージョン",
@@ -14467,7 +15185,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "テンプレートが変更されました。最新の権限と版を使うには更新してください。",
     "Color:": "色：",
     "Archived. Published versions remain available to you; sharing and copying are disabled.":
-      "アーカイブ済み。公開バージョンは引き続き使えますが、共有とコピーは無効です。",
+      "アーカイブ済み。公開版は引き続き利用できますが、共有とコピーは無効です。",
     "Edit as new version": "新しいバージョンとして編集",
     "The owner shared this template for viewing only.":
       "オーナーはこのテンプレートを閲覧専用で共有しています。",
@@ -14476,12 +15194,12 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Ask the recipient for their account ID": "受信者にアカウントIDを聞いてください",
     "Allow creating projects from this template": "このテンプレートからのプロジェクト作成を許可",
     "Access includes all published versions. Saving an existing recipient changes their permission.":
-      "アクセスはすべての公開バージョンに及びます。既存の受信者を保存すると権限が変わります。",
+      "アクセスにはすべての公開版が含まれます。既存の受信者を保存し直すと権限が変わります。",
     "Save access": "アクセスを保存",
     "No active recipients.": "有効な受信者はいません。",
     "Archive template": "テンプレートをアーカイブ",
     "Choose a saved template to inspect a version or create a project. Built-in suggestions remain available in New project.":
-      "保存したテンプレートを選んでバージョンを確認するかプロジェクトを作成します。組み込みの候補は「新しいプロジェクト」にあります。",
+      "保存したテンプレートを選んで版を確認するか、プロジェクトを作成します。組み込みの候補は「新規プロジェクト」で使えます。",
     "Archive this template?": "このテンプレートをアーカイブしますか？",
     "Rules and pinned files apply to this chat only and are added to the prompt on the server.":
       "ルールと固定ファイルはこのチャットだけに適用され、サーバー側でプロンプトに追加されます。",
@@ -14553,7 +15271,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Reset: "リセット",
     "Auto-adapt to me": "自分に合わせる",
     'Kova learns your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.':
-      "Kovaはあなたのスタイル（長さ、丁寧さ、ユーモア）を学んで合わせます。「短く」「もっとカジュアルに」「詳しく」と言えば調整します。",
+      "Kovaはあなたのスタイル（長さ、丁寧さ、ユーモア）を学んで合わせます。「短く」「くだけて」「詳しく」と言えば調整します。",
     "Two-factor authentication": "二要素認証",
     "Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.":
       "認証アプリ（Google Authenticator、1Password、Authy）を追加してセキュリティを強化しましょう。",
@@ -15612,6 +16330,187 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The export failed. You can request another export when requests become available.":
       "エクスポートに失敗しました。依頼できるようになったら再度依頼してください。",
     "Another request is available after": "次に依頼できるのは",
+    "Request availability could not be determined from this export. Refresh its status before requesting another.":
+      "このエクスポートから次の依頼可否を判断できません。再依頼の前に状態を更新してください。",
+    "Remove this account export?": "このエクスポートを削除しますか？",
+    "Cancel this queued export or remove its downloadable file. This does not delete your account records. A processing export cannot be canceled until its status changes.":
+      "待機中のエクスポートを取り消すか、ダウンロードファイルを削除します。アカウントの記録は削除されません。処理中のものは状態が変わるまで取り消せません。",
+    "You're on the": "現在のプラン：",
+    "Your own": "自分の",
+    "Usage data isn't available right now. If you need help understanding your limits, contact":
+      "使用状況のデータは現在利用できません。上限についてのお問い合わせ：",
+    "Model-training preferences are not available in Settings. Review the":
+      "モデル学習の設定は「設定」にはありません。次を確認してください：",
+    "Version 1.0": "バージョン1.0",
+    "Sign in to use": "サインインして使う",
+    "Narrow conversation": "会話を狭く",
+    "Widen conversation": "会話を広く",
+    "Close Canvas": "キャンバスを閉じる",
+    "Pasted text options": "貼り付けたテキストのオプション",
+    "Attach full text": "全文を添付",
+    "What you can do": "できること",
+    "How it works": "仕組み",
+    "Example prompts": "プロンプトの例",
+    "Related pages": "関連ページ",
+    "Getting Started": "はじめに",
+    "Signing in does not resend a message. It may change the current account.":
+      "サインインしてもメッセージは再送されません。現在のアカウントが変わる場合があります。",
+    "Save or copy your current message and attachments, then clear them before signing in. Cancel or save any next message too. Drafts are not transferred between accounts.":
+      "サインイン前に現在のメッセージと添付を保存またはコピーして消去してください。次のメッセージも同様です。下書きはアカウント間で引き継がれません。",
+    "Select image": "画像を選択",
+    "Note for image": "画像へのメモ",
+    "What should change?": "何を変えますか？",
+    "This browser’s saved data was cleared. Close and reload Library.":
+      "このブラウザの保存データが消去されました。ライブラリを閉じて再読み込みしてください。",
+    "Up to 50 versions per item. Deleting this item revokes every version and schedules removal of its original files.":
+      "1項目につき最大50バージョン。削除するとすべての版が無効になり、元ファイルの削除が予約されます。",
+    "Read version": "バージョンを読む",
+    "Replace original document": "元のドキュメントを置き換える",
+    "PDF, DOCX, XLSX or PPTX, up to 10 MB. The new original and extracted text replace the current version together.":
+      "PDF、DOCX、XLSX、PPTX（最大10MB）。新しい元ファイルと抽出テキストが現在の版をまとめて置き換えます。",
+    "Text from version": "バージョンのテキスト",
+    "Saving preserves the current text as an earlier version. Text is limited to 300 KB.":
+      "保存すると現在のテキストが以前の版として残ります。テキストの上限は300KBです。",
+    "Discard unsaved version changes?": "未保存の版の変更を破棄しますか？",
+    "Are you sure you want to log out?": "ログアウトしますか？",
+    "Download selected files": "選択したファイルをダウンロード",
+    "Selected file downloads": "選択したファイルのダウンロード",
+    "Unsupported:": "未対応：",
+    "Auto-adapt to me.": "自動で自分に合わせる。",
+    "Metric categories": "指標のカテゴリ",
+    "No readings for this source in the selected range.":
+      "選択した期間にこのソースの記録はありません。",
+    "Apple Health": "Appleヘルスケア",
+    "Connection options": "接続オプション",
+    "Apple Health report file": "ヘルスケアのレポートファイル",
+    "Import Apple Health data": "ヘルスケアのデータを読み込む",
+    "Clear imported data": "読み込んだデータを消去",
+    "Disconnect Apple Health": "ヘルスケアの接続を解除",
+    "Connect Apple Health": "ヘルスケアを接続",
+    "Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates. You can also open an export from Connection options.":
+      "KovaGPTのiPhoneアプリでこのタブを開くと、ヘルスケアを接続して自動更新を受け取れます。接続オプションからエクスポートを開くこともできます。",
+    "Create project from v": "vからプロジェクトを作成",
+    "Timer controls": "タイマーの操作",
+    "Close timers": "タイマーを閉じる",
+    "Loading timers…": "タイマーを読み込み中…",
+    "No timers yet.": "タイマーはまだありません。",
+    Start: "開始",
+    "Select model": "モデルを選択",
+    "Reset to recommended model and Lite effort": "推奨モデルとLiteに戻す",
+    Default: "既定",
+    "Recommended ·": "おすすめ ·",
+    "Map previews are not available yet. No saved device location is used.":
+      "地図のプレビューはまだ利用できません。保存された位置情報は使いません。",
+    "Finish or clear your current message and attachments before signing in. Close this prompt to return to your unchanged draft.":
+      "サインイン前に現在のメッセージと添付を完了または消去してください。閉じると下書きに戻ります。",
+    "KovaGPT developer console": "KovaGPT開発者コンソール",
+    "Platform Inspector": "プラットフォームインスペクター",
+    "Development only": "開発時のみ",
+    "Close developer console": "開発者コンソールを閉じる",
+    "Feature flags": "機能フラグ",
+    Extensions: "拡張機能",
+    "Recent timings": "最近の計測",
+    "No metrics recorded yet.": "記録された指標はまだありません。",
+    "Event timeline": "イベントのタイムライン",
+    "Checking image-edit availability…": "画像編集の利用可否を確認中…",
+    "Image editing is not enabled. You can generate a new image.":
+      "画像編集は有効になっていません。新しい画像を生成できます。",
+    "Select an original image and describe the change above. The result is a new image; your Library original stays available.":
+      "元の画像を選び、上で変更内容を説明してください。結果は新しい画像になり、ライブラリの元画像はそのまま残ります。",
+    "Original image": "元の画像",
+    "Choose a Library image": "ライブラリの画像を選択",
+    "Optional PNG mask": "任意のPNGマスク",
+    "No mask": "マスクなし",
+    "First page": "最初のページ",
+    "Next images": "次の画像",
+    "No matching Library images on this page.": "このページに一致する画像はありません。",
+    "Last run:": "前回の実行：",
+    "Saved task history": "保存したタスクの履歴",
+    "Sprite sheet exports": "スプライトシートの書き出し",
+    "Use an evenly spaced grid. Frames are read left to right, then top to bottom.":
+      "等間隔のグリッドを使ってください。フレームは左から右、上から下の順に読み込みます。",
+    "Use up to 32 frames and a delay from 40 to 2,000 ms in 10 ms steps.":
+      "最大32フレーム、間隔は40〜2,000ms（10ms単位）です。",
+    "Loading versions…": "バージョンを読み込み中…",
+    "No saved edits for this response yet. Select text in the answer and choose “Edit selection” to create one.":
+      "この回答の保存済み編集はまだありません。回答のテキストを選び「選択範囲を編集」で作成できます。",
+    "Instruction:": "指示：",
+    "Full previous version": "以前の版（全文）",
+    "KovaGPT home": "KovaGPTホーム",
+    "Footer navigation": "フッターのナビゲーション",
+    "Explore all pages": "すべてのページを見る",
+    "Search the page directory": "ページ一覧を検索",
+    "Find a page...": "ページを探す...",
+    "All public pages": "すべての公開ページ",
+    "No matching pages.": "一致するページはありません。",
+    "Passkeys and security keys": "パスキーとセキュリティキー",
+    "Sign in with your device biometrics, PIN, password manager, or a compatible hardware security key.":
+      "デバイスの生体認証、PIN、パスワードマネージャー、対応するハードウェアキーでサインインできます。",
+    "This browser cannot add a passkey, but you can still review, rename, or remove registered passkeys.":
+      "このブラウザではパスキーを追加できませんが、登録済みのものの確認・名前変更・削除はできます。",
+    "Loading passkeys": "パスキーを読み込み中",
+    "Passkeys could not be loaded. Please try again.":
+      "パスキーを読み込めませんでした。もう一度お試しください。",
+    "Registered passkeys": "登録済みのパスキー",
+    "Passkey name": "パスキー名",
+    "Remove this passkey? You will no longer be able to use it to sign in.":
+      "このパスキーを削除しますか？今後サインインに使えなくなります。",
+    "No passkeys are registered yet.": "登録済みのパスキーはありません。",
+    "Add passkey": "パスキーを追加",
+    "Scheduled task created. Open schedule details":
+      "スケジュール済みタスクを作成しました。詳細を開く",
+    "Scrollable heatmap": "スクロールできるヒートマップ",
+    "Candlestick plot": "ローソク足チャート",
+    "Return it here": "ここに戻す",
+    "Chart type": "グラフの種類",
+    Table: "表",
+    "Sankey flow diagram": "サンキー図",
+    "Chart legend": "凡例",
+    "Data used in": "使用したデータ：",
+    "Generated only from the structured data in this response.":
+      "この回答の構造化データのみから生成しています。",
+    "Sign in with your device biometrics, PIN, or a compatible security key.":
+      "デバイスの生体認証、PIN、対応するセキュリティキーでサインインできます。",
+    "Passkey settings could not be loaded.": "パスキーの設定を読み込めませんでした。",
+    "This browser cannot add a passkey. You can still manage existing passkeys.":
+      "このブラウザではパスキーを追加できません。既存のものは管理できます。",
+    "Registered Kova passkeys": "登録済みのKovaパスキー",
+    "Remove this passkey? Keep another sign-in method. Other devices will be signed out.":
+      "このパスキーを削除しますか？別のサインイン方法を残してください。他のデバイスはサインアウトされます。",
+    "Confirm removal": "削除を確定",
+    "Sign in with a passkey or two-factor authentication to remove a key.":
+      "キーを削除するにはパスキーまたは二要素認証でサインインしてください。",
+    "Your device will ask you to verify. Adding a key signs out other devices.":
+      "デバイスで確認を求められます。キーを追加すると他のデバイスはサインアウトされます。",
+    "Confirm your password or sign in with two-factor authentication before adding a passkey.":
+      "パスキーを追加する前に、パスワードを確認するか二要素認証でサインインしてください。",
+    "You have reached the limit of ten passkeys.": "パスキーは最大10個までです。",
+    "Project collaboration": "プロジェクトの共同作業",
+    "Owners manage roles; editors contribute; viewers read. The latest 100 comments update live while this panel is open.":
+      "所有者はロールを管理し、編集者は投稿し、閲覧者は読むだけです。パネルを開いている間、最新100件のコメントがリアルタイムで更新されます。",
+    "My mentions": "自分へのメンション",
+    "Add a project comment or inline note…": "プロジェクトへのコメントやメモを追加…",
+    "Project comment": "プロジェクトのコメント",
+    "Comment location": "コメントの場所",
+    Mention: "メンション",
+    "Viewers can read collaboration activity but cannot post or edit Project content.":
+      "閲覧者は共同作業のアクティビティを読めますが、投稿や編集はできません。",
+    "Loading project comments": "コメントを読み込み中",
+    "No collaboration comments": "コメントはありません",
+    "Add the first note or change the mentions filter.":
+      "最初のメモを追加するか、メンションのフィルターを変えてください。",
+    "Delete project comment?": "コメントを削除しますか？",
+    "This comment will be permanently removed for every project member.":
+      "このコメントはプロジェクトの全メンバーから完全に削除されます。",
+    "Automation Builder": "オートメーションビルダー",
+    "Build a scheduled workflow using capabilities supported by Scheduled Tasks.":
+      "スケジュール済みタスクで使える機能を使って、定期実行のワークフローを作成します。",
+    "Automation name": "オートメーション名",
+    "Weekly project briefing": "プロジェクトの週次ブリーフィング",
+    Action: "アクション",
+    "Summarize the progress and open questions in my project notes.":
+      "プロジェクトメモの進捗と未解決の質問をまとめて。",
+    Condition: "条件",
     Cooking: "料理",
     "Plan and adapt recipes with food safety in view.": "食品の安全に配慮してレシピを計画・調整。",
     "Science and medicine": "科学と医療",
@@ -16761,7 +17660,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Chat behavior": "채팅 동작",
     "Send shortcut": "보내기 단축키",
     "Choose whether Enter sends a message or starts a new line.":
-      "Enter로 메시지를 보낼지 줄을 바꿀지 선택하세요.",
+      "Enter로 메시지를 보낼지 줄을 바꿀지 고르세요.",
     Enter: "Enter",
     "Response length": "응답 길이",
     "Choose the default length for new responses.": "새 응답의 기본 길이를 선택하세요.",
@@ -16816,9 +17715,9 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Payments are securely handled by Stripe. We never see or store your card number.":
       "결제는 Stripe에서 안전하게 처리됩니다. 카드 번호를 보거나 저장하지 않습니다.",
     "Customize shortcuts for common actions. Click a combo to record a new one.":
-      "자주 쓰는 동작의 단축키를 바꾸세요. 조합을 클릭해 새로 기록합니다.",
+      "자주 쓰는 작업의 단축키를 바꾸세요. 조합을 클릭해 새로 기록하세요.",
     "Location-based personalization is not connected to chat or Maps yet.":
-      "위치 기반 개인화는 아직 채팅이나 지도와 연결되지 않았습니다.",
+      "위치 기반 맞춤 설정은 아직 채팅이나 지도에 연결되지 않았습니다.",
     "Manage voluntary trusted contacts": "신뢰할 수 있는 연락처 관리",
     "Signed in as": "로그인 계정",
     "Sign in to manage two-factor authentication and active sessions.":
@@ -16834,10 +17733,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Local device data": "로컬 기기 데이터",
     "Family Sharing": "가족 공유",
     "Found a bug or something off? Send it to our team and we'll take a look.":
-      "버그나 이상한 점을 발견했나요? 팀에 보내 주시면 확인하겠습니다.",
+      "버그나 이상한 점이 있나요? 팀에 보내 주시면 살펴보겠습니다.",
     "Open bug report form": "버그 신고 양식 열기",
     "Get help, contact support, or browse common questions.":
-      "도움 받기, 지원팀 문의, 자주 묻는 질문 보기.",
+      "도움을 받거나 지원팀에 문의하거나 FAQ를 보세요.",
     "Open help center": "고객센터 열기",
     "You'll be signed out of KovaGPT on this device.": "이 기기에서 KovaGPT 로그아웃됩니다.",
     "Reset this profile's local data?": "이 프로필의 로컬 데이터를 초기화할까요?",
@@ -16848,7 +17747,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Type DELETE to confirm": "확인하려면 DELETE 입력",
     "Workspace preferences": "작업 공간 환경설정",
     "Defaults are saved on this device and never imply an action ran.":
-      "기본값은 이 기기에 저장되며 작업이 실행되었음을 뜻하지 않습니다.",
+      "기본값은 이 기기에 저장되며 작업 실행을 뜻하지 않습니다.",
     "Settings sections": "설정 섹션",
     System: "시스템",
     Light: "라이트",
@@ -16857,7 +17756,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "How signed-out data is stored": "로그아웃 상태 데이터 저장 방식",
     "Help & legal": "도움말 및 법적 고지",
     "Get answers, review plans, or read how KovaGPT works.":
-      "답변 찾기, 요금제 확인, KovaGPT 작동 방식 읽기.",
+      "답변을 얻고 요금제를 보거나 KovaGPT의 작동 방식을 읽어 보세요.",
     "Plans and subscriptions": "요금제 및 구독",
     "Terms of Service": "서비스 약관",
     "Family controls are not available yet": "가족 제어는 아직 사용할 수 없습니다",
@@ -16875,7 +17774,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The maximum width of answers.": "답변의 최대 너비.",
     Motion: "움직임",
     "Your device’s reduced-motion preference takes priority.":
-      "기기의 동작 줄이기 설정이 우선합니다.",
+      "기기의 동작 줄이기 설정이 우선 적용됩니다.",
     Contrast: "대비",
     "Increase the contrast of controls and borders.": "컨트롤과 테두리의 대비를 높입니다.",
     "Layout size": "레이아웃 크기",
@@ -17445,7 +18344,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       "환경설정은 자동 저장됩니다('변경사항 저장'이 있는 양식 제외).",
     "Appearance and preferences for this browser.": "이 브라우저의 모양 및 환경설정.",
     "These preferences save for this account on this device. Explicit instructions in the current chat take precedence over default length, tone, and format.":
-      "이 환경설정은 이 기기의 이 계정에 저장됩니다. 현재 채팅의 명시적 지시가 기본 길이, 어조, 형식보다 우선합니다.",
+      "이 설정은 이 기기의 이 계정에 저장됩니다. 채팅의 명시적 지시가 기본 길이, 어조, 형식보다 우선합니다.",
     "Custom instructions for this account on this device": "이 기기의 이 계정용 맞춤 지침",
     Extended: "확장",
     Free: "무료",
@@ -17459,11 +18358,11 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Resetting…": "초기화 중…",
     "Reset this profile's local data": "이 프로필의 로컬 데이터 초기화",
     "KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.":
-      "KovaGPT는 Zachary Block이 만듭니다. 우리의 목표는 유용하고 친절하며 신뢰할 수 있는 AI를 모두에게 제공하는 것입니다.",
+      "KovaGPT는 Zachary Block이 만듭니다. 누구나 유용하고 친절하며 신뢰할 수 있는 AI를 쓰게 하는 것이 목표입니다.",
     "Recover your account?": "계정을 복구할까요?",
     "Working…": "처리 중…",
     "Sign in to use account-backed chats, memory, and paid features. Browser preferences stay on this device.":
-      "로그인하면 계정 기반 채팅, 메모리, 유료 기능을 사용할 수 있습니다. 브라우저 환경설정은 이 기기에 남습니다.",
+      "계정 기반 채팅, 메모리, 유료 기능을 쓰려면 로그인하세요. 브라우저 설정은 이 기기에 남습니다.",
     "Saving keyboard shortcuts…": "단축키 저장 중…",
     "Keyboard shortcut preferences": "키보드 단축키 환경설정",
     "Retry reset": "초기화 다시 시도",
@@ -17633,23 +18532,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Danger zone": "위험 구역",
     "You can retry or cancel.": "다시 시도하거나 취소할 수 있습니다.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
-      "이 브라우저 카운터는 계정 한도가 아닙니다. 확인된 수치는 사용량에서 보세요.",
+      "이 브라우저 카운터는 계정 한도가 아닙니다. 서버 확인 수치는 사용량에서 보세요.",
     "Connection status, provider permissions, reconnection, and revocation are verified from the server-backed Apps page.":
       "연결 상태, 권한, 재연결, 취소는 앱 페이지에서 확인됩니다.",
     "Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat limit. Each meter shows its next reset or refresh.":
-      "Free와 Plus는 5시간 한도와 주간 한도가, Pro는 주간 한도가 있습니다. 각 측정기에 다음 초기화 시점이 표시됩니다.",
+      "Free와 Plus는 5시간 한도와 주간 한도가 있고 Pro는 주간 한도가 있습니다. 각 측정기에 다음 초기화 시점이 표시됩니다.",
     "Billing setup is incomplete. Plan changes are unavailable until the billing records and Stripe configuration are verified.":
-      "결제 설정이 완료되지 않았습니다. 확인 전까지 요금제를 바꿀 수 없습니다.",
+      "결제 설정이 완료되지 않았습니다. 결제 기록과 Stripe 구성이 확인될 때까지 요금제를 바꿀 수 없습니다.",
     "For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.":
-      "화면 시간, 앱 제한 같은 기기 수준의 자녀 보호는 기기 설정을 사용하세요.",
+      "스크린 타임, 앱 제한 등 전체 자녀 보호는 기기 설정을 사용하세요.",
     "Signed-out chats stay in this tab until you refresh or close it. Your appearance preference remains in this browser, but nothing here is synced to an account. Read the":
       "로그아웃 상태 채팅은 새로고침하거나 탭을 닫을 때까지 이 탭에 남습니다. 화면 설정은 브라우저에 남지만 계정과 동기화되지 않습니다. 자세한 내용은",
     "KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use your device and network parental controls in the meantime.":
-      "KovaGPT는 아직 계정 단위 가족 정책이나 PIN 잠금을 제공하지 않습니다. 그동안 기기와 네트워크 자녀 보호를 사용하세요.",
+      "KovaGPT는 아직 계정 단위 가족 정책이나 PIN 잠금을 적용하지 않습니다. 그동안 기기와 네트워크 자녀 보호를 사용하세요.",
     'Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl elsewhere.':
-      "저장 공간이 있으면 단축키는 이 브라우저에 저장됩니다. 'Mod'는 macOS에서 ⌘, 그 외에는 Ctrl입니다.",
+      '저장소가 있으면 단축키는 이 브라우저에 남습니다. "Mod"는 macOS에서 ⌘, 그 외에는 Ctrl입니다.',
     "KovaGPT will not request, save, or send your device coordinates from Settings. You can still type a city or place into chat when location context is useful.":
-      "KovaGPT는 설정에서 기기 좌표를 요청, 저장, 전송하지 않습니다. 필요하면 채팅에 도시 이름을 입력하세요.",
+      "KovaGPT는 설정에서 기기 좌표를 요청·저장·전송하지 않습니다. 필요하면 채팅에 도시나 장소를 입력하세요.",
     "Search workspace": "작업 공간 검색",
     "Focus message box": "메시지 입력창으로 이동",
     "Generate image": "이미지 생성",
@@ -17783,10 +18682,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Published version": "게시된 버전",
     "Loading version": "버전 불러오는 중",
     "The template changed. Refresh to use its latest permissions and revision.":
-      "템플릿이 변경되었습니다. 최신 권한과 버전을 쓰려면 새로고침하세요.",
+      "템플릿이 바뀌었습니다. 최신 권한과 버전을 쓰려면 새로고침하세요.",
     "Color:": "색상:",
     "Archived. Published versions remain available to you; sharing and copying are disabled.":
-      "보관됨. 게시된 버전은 계속 쓸 수 있지만 공유와 복사는 비활성화됩니다.",
+      "보관됨. 게시된 버전은 계속 사용할 수 있으며 공유와 복사는 비활성화됩니다.",
     "Edit as new version": "새 버전으로 편집",
     "The owner shared this template for viewing only.":
       "소유자가 이 템플릿을 보기 전용으로 공유했습니다.",
@@ -17795,12 +18694,12 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Ask the recipient for their account ID": "받는 사람에게 계정 ID를 요청하세요",
     "Allow creating projects from this template": "이 템플릿으로 프로젝트 만들기 허용",
     "Access includes all published versions. Saving an existing recipient changes their permission.":
-      "접근에는 모든 게시 버전이 포함됩니다. 기존 받는 사람을 저장하면 권한이 바뀝니다.",
+      "접근 권한에는 모든 게시 버전이 포함됩니다. 기존 받는 사람을 저장하면 권한이 바뀝니다.",
     "Save access": "접근 저장",
     "No active recipients.": "활성 받는 사람이 없습니다.",
     "Archive template": "템플릿 보관",
     "Choose a saved template to inspect a version or create a project. Built-in suggestions remain available in New project.":
-      "저장된 템플릿을 골라 버전을 보거나 프로젝트를 만드세요. 기본 제안은 새 프로젝트에 있습니다.",
+      "저장된 템플릿을 골라 버전을 확인하거나 프로젝트를 만드세요. 기본 제안은 새 프로젝트에 있습니다.",
     "Archive this template?": "이 템플릿을 보관할까요?",
     "Rules and pinned files apply to this chat only and are added to the prompt on the server.":
       "규칙과 고정 파일은 이 채팅에만 적용되며 서버에서 프롬프트에 추가됩니다.",
@@ -17872,7 +18771,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Reset: "초기화",
     "Auto-adapt to me": "나에게 맞추기",
     'Kova learns your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.':
-      "Kova는 내 스타일(길이, 격식, 유머)을 배워 따라 합니다. '더 짧게', '더 편하게', '더 자세히'라고 하면 조정합니다.",
+      'Kova가 스타일(길이, 격식, 유머)을 배워 맞춥니다. "더 짧게", "더 편하게", "더 자세히"라고 말하면 조정합니다.',
     "Two-factor authentication": "2단계 인증",
     "Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.":
       "인증 앱(Google Authenticator, 1Password, Authy)을 추가해 보안을 강화하세요.",
@@ -18930,6 +19829,187 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The export failed. You can request another export when requests become available.":
       "내보내기에 실패했습니다. 가능해지면 다시 요청하세요.",
     "Another request is available after": "다음 요청 가능 시점:",
+    "Request availability could not be determined from this export. Refresh its status before requesting another.":
+      "요청 가능 여부를 알 수 없습니다. 다시 요청하기 전에 상태를 새로고침하세요.",
+    "Remove this account export?": "이 내보내기를 삭제할까요?",
+    "Cancel this queued export or remove its downloadable file. This does not delete your account records. A processing export cannot be canceled until its status changes.":
+      "대기 중인 내보내기를 취소하거나 파일을 삭제합니다. 계정 기록은 삭제되지 않으며 처리 중인 내보내기는 상태가 바뀔 때까지 취소할 수 없습니다.",
+    "You're on the": "현재 요금제:",
+    "Your own": "나만의",
+    "Usage data isn't available right now. If you need help understanding your limits, contact":
+      "사용 데이터를 볼 수 없습니다. 한도 관련 도움은 다음으로 문의하세요:",
+    "Model-training preferences are not available in Settings. Review the":
+      "모델 학습 설정은 설정에 없습니다. 다음을 확인하세요:",
+    "Version 1.0": "버전 1.0",
+    "Sign in to use": "로그인해 사용",
+    "Narrow conversation": "대화 좁게",
+    "Widen conversation": "대화 넓게",
+    "Close Canvas": "캔버스 닫기",
+    "Pasted text options": "붙여넣은 텍스트 옵션",
+    "Attach full text": "전체 텍스트 첨부",
+    "What you can do": "할 수 있는 일",
+    "How it works": "작동 방식",
+    "Example prompts": "프롬프트 예시",
+    "Related pages": "관련 페이지",
+    "Getting Started": "시작하기",
+    "Signing in does not resend a message. It may change the current account.":
+      "로그인해도 메시지는 다시 전송되지 않으며 현재 계정이 바뀔 수 있습니다.",
+    "Save or copy your current message and attachments, then clear them before signing in. Cancel or save any next message too. Drafts are not transferred between accounts.":
+      "로그인하기 전에 현재 메시지와 첨부를 저장하거나 복사한 뒤 지우세요. 다음 메시지도 마찬가지입니다. 초안은 계정 간에 옮겨지지 않습니다.",
+    "Select image": "이미지 선택",
+    "Note for image": "이미지 메모",
+    "What should change?": "무엇을 바꿀까요?",
+    "This browser’s saved data was cleared. Close and reload Library.":
+      "브라우저 데이터가 삭제되었습니다. 라이브러리를 닫고 다시 불러오세요.",
+    "Up to 50 versions per item. Deleting this item revokes every version and schedules removal of its original files.":
+      "항목당 최대 50개 버전. 삭제하면 모든 버전이 취소되고 원본 파일 삭제가 예약됩니다.",
+    "Read version": "버전 읽기",
+    "Replace original document": "원본 문서 교체",
+    "PDF, DOCX, XLSX or PPTX, up to 10 MB. The new original and extracted text replace the current version together.":
+      "PDF, DOCX, XLSX, PPTX(최대 10MB). 새 원본과 추출 텍스트가 현재 버전을 함께 대체합니다.",
+    "Text from version": "버전 텍스트",
+    "Saving preserves the current text as an earlier version. Text is limited to 300 KB.":
+      "저장하면 현재 텍스트가 이전 버전으로 보존됩니다. 텍스트는 300KB까지입니다.",
+    "Discard unsaved version changes?": "저장하지 않은 버전 변경을 버릴까요?",
+    "Are you sure you want to log out?": "로그아웃하시겠어요?",
+    "Download selected files": "선택한 파일 다운로드",
+    "Selected file downloads": "선택한 파일 다운로드",
+    "Unsupported:": "지원 안 됨:",
+    "Auto-adapt to me.": "나에게 자동으로 맞추기.",
+    "Metric categories": "지표 범주",
+    "No readings for this source in the selected range.":
+      "선택한 기간에 이 소스의 측정값이 없습니다.",
+    "Apple Health": "Apple 건강",
+    "Connection options": "연결 옵션",
+    "Apple Health report file": "Apple 건강 보고서 파일",
+    "Import Apple Health data": "Apple 건강 데이터 가져오기",
+    "Clear imported data": "가져온 데이터 지우기",
+    "Disconnect Apple Health": "Apple 건강 연결 해제",
+    "Connect Apple Health": "Apple 건강 연결",
+    "Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates. You can also open an export from Connection options.":
+      "KovaGPT iPhone 앱에서 이 탭을 열어 Apple 건강을 연결하고 자동 업데이트를 받으세요. 연결 옵션에서 내보낸 파일을 열 수도 있습니다.",
+    "Create project from v": "v에서 프로젝트 만들기",
+    "Timer controls": "타이머 제어",
+    "Close timers": "타이머 닫기",
+    "Loading timers…": "타이머 불러오는 중…",
+    "No timers yet.": "아직 타이머가 없습니다.",
+    Start: "시작",
+    "Select model": "모델 선택",
+    "Reset to recommended model and Lite effort": "추천 모델과 Lite로 초기화",
+    Default: "기본",
+    "Recommended ·": "추천 ·",
+    "Map previews are not available yet. No saved device location is used.":
+      "지도 미리보기는 아직 없습니다. 저장된 기기 위치는 사용하지 않습니다.",
+    "Finish or clear your current message and attachments before signing in. Close this prompt to return to your unchanged draft.":
+      "로그인 전에 현재 메시지와 첨부를 마치거나 지우세요. 닫으면 초안으로 돌아갑니다.",
+    "KovaGPT developer console": "KovaGPT 개발자 콘솔",
+    "Platform Inspector": "플랫폼 검사기",
+    "Development only": "개발 전용",
+    "Close developer console": "개발자 콘솔 닫기",
+    "Feature flags": "기능 플래그",
+    Extensions: "확장 기능",
+    "Recent timings": "최근 측정",
+    "No metrics recorded yet.": "기록된 지표가 없습니다.",
+    "Event timeline": "이벤트 타임라인",
+    "Checking image-edit availability…": "이미지 편집 가능 여부 확인 중…",
+    "Image editing is not enabled. You can generate a new image.":
+      "이미지 편집이 활성화되지 않았습니다. 새 이미지를 생성할 수 있습니다.",
+    "Select an original image and describe the change above. The result is a new image; your Library original stays available.":
+      "원본 이미지를 고르고 위에 변경 내용을 설명하세요. 결과는 새 이미지이며 원본은 라이브러리에 남습니다.",
+    "Original image": "원본 이미지",
+    "Choose a Library image": "라이브러리 이미지 선택",
+    "Optional PNG mask": "선택 PNG 마스크",
+    "No mask": "마스크 없음",
+    "First page": "첫 페이지",
+    "Next images": "다음 이미지",
+    "No matching Library images on this page.": "이 페이지에 일치하는 이미지가 없습니다.",
+    "Last run:": "마지막 실행:",
+    "Saved task history": "저장된 작업 기록",
+    "Sprite sheet exports": "스프라이트 시트 내보내기",
+    "Use an evenly spaced grid. Frames are read left to right, then top to bottom.":
+      "균일한 격자를 쓰세요. 프레임은 왼쪽에서 오른쪽, 위에서 아래로 읽습니다.",
+    "Use up to 32 frames and a delay from 40 to 2,000 ms in 10 ms steps.":
+      "최대 32프레임, 지연 40–2,000ms(10ms 단위)를 사용하세요.",
+    "Loading versions…": "버전 불러오는 중…",
+    "No saved edits for this response yet. Select text in the answer and choose “Edit selection” to create one.":
+      '이 응답에 저장된 편집이 없습니다. 답변에서 텍스트를 선택하고 "선택 영역 편집"을 고르세요.',
+    "Instruction:": "지시:",
+    "Full previous version": "이전 버전 전체",
+    "KovaGPT home": "KovaGPT 홈",
+    "Footer navigation": "바닥글 탐색",
+    "Explore all pages": "모든 페이지 둘러보기",
+    "Search the page directory": "페이지 목록 검색",
+    "Find a page...": "페이지 찾기...",
+    "All public pages": "모든 공개 페이지",
+    "No matching pages.": "일치하는 페이지가 없습니다.",
+    "Passkeys and security keys": "패스키 및 보안 키",
+    "Sign in with your device biometrics, PIN, password manager, or a compatible hardware security key.":
+      "기기 생체 인증, PIN, 비밀번호 관리자, 호환 보안 키로 로그인하세요.",
+    "This browser cannot add a passkey, but you can still review, rename, or remove registered passkeys.":
+      "이 브라우저에서는 패스키를 추가할 수 없지만 등록된 패스키는 관리할 수 있습니다.",
+    "Loading passkeys": "패스키 불러오는 중",
+    "Passkeys could not be loaded. Please try again.":
+      "패스키를 불러올 수 없습니다. 다시 시도하세요.",
+    "Registered passkeys": "등록된 패스키",
+    "Passkey name": "패스키 이름",
+    "Remove this passkey? You will no longer be able to use it to sign in.":
+      "이 패스키를 제거할까요? 더 이상 로그인에 사용할 수 없습니다.",
+    "No passkeys are registered yet.": "등록된 패스키가 없습니다.",
+    "Add passkey": "패스키 추가",
+    "Scheduled task created. Open schedule details":
+      "예약 작업이 생성되었습니다. 일정 세부 정보 열기",
+    "Scrollable heatmap": "스크롤 가능한 히트맵",
+    "Candlestick plot": "캔들스틱 차트",
+    "Return it here": "여기로 되돌리기",
+    "Chart type": "차트 유형",
+    Table: "표",
+    "Sankey flow diagram": "생키 다이어그램",
+    "Chart legend": "차트 범례",
+    "Data used in": "사용된 데이터:",
+    "Generated only from the structured data in this response.":
+      "이 응답의 구조화 데이터로만 생성했습니다.",
+    "Sign in with your device biometrics, PIN, or a compatible security key.":
+      "기기 생체 인증, PIN, 호환 보안 키로 로그인하세요.",
+    "Passkey settings could not be loaded.": "패스키 설정을 불러올 수 없습니다.",
+    "This browser cannot add a passkey. You can still manage existing passkeys.":
+      "이 브라우저에서는 패스키를 추가할 수 없습니다. 기존 패스키는 관리할 수 있습니다.",
+    "Registered Kova passkeys": "등록된 Kova 패스키",
+    "Remove this passkey? Keep another sign-in method. Other devices will be signed out.":
+      "이 패스키를 제거할까요? 다른 로그인 방법을 유지하세요. 다른 기기는 로그아웃됩니다.",
+    "Confirm removal": "제거 확인",
+    "Sign in with a passkey or two-factor authentication to remove a key.":
+      "키를 제거하려면 패스키나 2단계 인증으로 로그인하세요.",
+    "Your device will ask you to verify. Adding a key signs out other devices.":
+      "기기가 확인을 요청합니다. 키를 추가하면 다른 기기는 로그아웃됩니다.",
+    "Confirm your password or sign in with two-factor authentication before adding a passkey.":
+      "패스키를 추가하기 전에 비밀번호를 확인하거나 2단계 인증으로 로그인하세요.",
+    "You have reached the limit of ten passkeys.": "패스키 한도(10개)에 도달했습니다.",
+    "Project collaboration": "프로젝트 협업",
+    "Owners manage roles; editors contribute; viewers read. The latest 100 comments update live while this panel is open.":
+      "소유자는 역할을 관리하고 편집자는 기여하며 뷰어는 읽기만 합니다. 이 패널이 열려 있는 동안 최근 댓글 100개가 실시간으로 업데이트됩니다.",
+    "My mentions": "내 멘션",
+    "Add a project comment or inline note…": "프로젝트 댓글이나 메모 추가…",
+    "Project comment": "프로젝트 댓글",
+    "Comment location": "댓글 위치",
+    Mention: "멘션",
+    "Viewers can read collaboration activity but cannot post or edit Project content.":
+      "뷰어는 협업 활동을 읽을 수 있지만 게시하거나 편집할 수 없습니다.",
+    "Loading project comments": "댓글 불러오는 중",
+    "No collaboration comments": "협업 댓글 없음",
+    "Add the first note or change the mentions filter.":
+      "첫 메모를 추가하거나 멘션 필터를 바꾸세요.",
+    "Delete project comment?": "프로젝트 댓글을 삭제할까요?",
+    "This comment will be permanently removed for every project member.":
+      "이 댓글은 모든 구성원에게서 영구 삭제됩니다.",
+    "Automation Builder": "자동화 빌더",
+    "Build a scheduled workflow using capabilities supported by Scheduled Tasks.":
+      "예약 작업이 지원하는 기능으로 예약 워크플로를 만드세요.",
+    "Automation name": "자동화 이름",
+    "Weekly project briefing": "주간 프로젝트 브리핑",
+    Action: "작업",
+    "Summarize the progress and open questions in my project notes.":
+      "프로젝트 메모의 진행 상황과 미해결 질문을 요약해 줘.",
+    Condition: "조건",
     Cooking: "요리",
     "Plan and adapt recipes with food safety in view.":
       "식품 안전을 고려해 레시피를 계획하고 조정하세요.",
@@ -20074,7 +21154,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Chat behavior": "سلوك المحادثة",
     "Send shortcut": "اختصار الإرسال",
     "Choose whether Enter sends a message or starts a new line.":
-      "اختر ما إذا كان Enter يرسل الرسالة أو يبدأ سطرًا جديدًا.",
+      "اختر هل يرسل Enter الرسالة أم يبدأ سطرًا جديدًا.",
     Enter: "Enter",
     "Response length": "طول الرد",
     "Choose the default length for new responses.": "اختر الطول الافتراضي للردود الجديدة.",
@@ -20127,15 +21207,15 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Terms of service": "شروط الخدمة",
     "Refund policy": "سياسة الاسترداد",
     "Payments are securely handled by Stripe. We never see or store your card number.":
-      "تتم معالجة المدفوعات بأمان عبر Stripe. لا نرى رقم بطاقتك ولا نخزّنه أبدًا.",
+      "يعالج Stripe المدفوعات بأمان، ولا نرى رقم بطاقتك أو نخزّنه.",
     "Customize shortcuts for common actions. Click a combo to record a new one.":
-      "خصّص الاختصارات للإجراءات الشائعة. انقر على اختصار لتسجيل اختصار جديد.",
+      "خصّص الاختصارات. انقر على تركيبة لتسجيل أخرى.",
     "Location-based personalization is not connected to chat or Maps yet.":
       "التخصيص حسب الموقع غير متصل بالمحادثة أو الخرائط بعد.",
     "Manage voluntary trusted contacts": "إدارة جهات الاتصال الموثوقة",
     "Signed in as": "تم تسجيل الدخول باسم",
     "Sign in to manage two-factor authentication and active sessions.":
-      "سجّل الدخول لإدارة المصادقة الثنائية والجلسات النشطة.",
+      "سجّل الدخول لإدارة المصادقة الثنائية والجلسات.",
     "Privacy and data": "الخصوصية والبيانات",
     "Saved memory": "الذاكرة المحفوظة",
     Security: "الأمان",
@@ -20147,10 +21227,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Local device data": "بيانات الجهاز المحلية",
     "Family Sharing": "المشاركة العائلية",
     "Found a bug or something off? Send it to our team and we'll take a look.":
-      "هل وجدت خطأً أو شيئًا غير صحيح؟ أرسله إلى فريقنا وسنراجعه.",
+      "وجدت خطأ؟ أرسله لفريقنا وسنراجعه.",
     "Open bug report form": "فتح نموذج الإبلاغ عن خطأ",
     "Get help, contact support, or browse common questions.":
-      "احصل على مساعدة أو تواصل مع الدعم أو تصفّح الأسئلة الشائعة.",
+      "احصل على المساعدة أو تواصل مع الدعم أو تصفّح الأسئلة الشائعة.",
     "Open help center": "فتح مركز المساعدة",
     "You'll be signed out of KovaGPT on this device.":
       "سيتم تسجيل خروجك من KovaGPT على هذا الجهاز.",
@@ -20162,7 +21242,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Type DELETE to confirm": "اكتب DELETE للتأكيد",
     "Workspace preferences": "تفضيلات مساحة العمل",
     "Defaults are saved on this device and never imply an action ran.":
-      "تُحفظ الإعدادات الافتراضية على هذا الجهاز ولا تعني أن إجراءً قد نُفّذ.",
+      "تُحفظ الإعدادات الافتراضية على هذا الجهاز ولا تعني تنفيذ أي إجراء.",
     "Settings sections": "أقسام الإعدادات",
     System: "النظام",
     Light: "فاتح",
@@ -20189,7 +21269,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The maximum width of answers.": "أقصى عرض للإجابات.",
     Motion: "الحركة",
     "Your device’s reduced-motion preference takes priority.":
-      "تُعطى الأولوية لتفضيل تقليل الحركة في جهازك.",
+      "تتقدم تفضيلات تقليل الحركة في جهازك.",
     Contrast: "التباين",
     "Increase the contrast of controls and borders.": "زيادة تباين عناصر التحكم والحدود.",
     "Layout size": "حجم التخطيط",
@@ -20760,7 +21840,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
       'تُحفظ التفضيلات تلقائيًا، باستثناء النماذج التي تحتوي على "حفظ التغييرات".',
     "Appearance and preferences for this browser.": "المظهر والتفضيلات لهذا المتصفح.",
     "These preferences save for this account on this device. Explicit instructions in the current chat take precedence over default length, tone, and format.":
-      "تُحفظ هذه التفضيلات لهذا الحساب على هذا الجهاز. تتقدم التعليمات الصريحة في المحادثة الحالية على الطول والنبرة والتنسيق الافتراضية.",
+      "تُحفظ هذه التفضيلات لهذا الحساب على هذا الجهاز، وتتقدم تعليمات المحادثة على الطول والنبرة والتنسيق الافتراضية.",
     "Custom instructions for this account on this device":
       "تعليمات مخصصة لهذا الحساب على هذا الجهاز",
     Extended: "موسّع",
@@ -20775,11 +21855,11 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Resetting…": "جارٍ إعادة التعيين…",
     "Reset this profile's local data": "إعادة تعيين البيانات المحلية لهذا الملف",
     "KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.":
-      "يطوّر KovaGPT زاكاري بلوك. مهمتنا إتاحة ذكاء اصطناعي مفيد ولطيف وجدير بالثقة للجميع.",
+      "يطوّر Zachary Block تطبيق KovaGPT، ومهمتنا إتاحة ذكاء اصطناعي مفيد ولطيف وموثوق للجميع.",
     "Recover your account?": "استرداد حسابك؟",
     "Working…": "جارٍ العمل…",
     "Sign in to use account-backed chats, memory, and paid features. Browser preferences stay on this device.":
-      "سجّل الدخول لاستخدام المحادثات المرتبطة بالحساب والذاكرة والميزات المدفوعة. تبقى تفضيلات المتصفح على هذا الجهاز.",
+      "سجّل الدخول لاستخدام محادثات الحساب والذاكرة والميزات المدفوعة. تبقى تفضيلات المتصفح هنا.",
     "Saving keyboard shortcuts…": "جارٍ حفظ الاختصارات…",
     "Keyboard shortcut preferences": "تفضيلات اختصارات لوحة المفاتيح",
     "Retry reset": "إعادة محاولة إعادة التعيين",
@@ -20949,23 +22029,23 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Danger zone": "منطقة الخطر",
     "You can retry or cancel.": "يمكنك إعادة المحاولة أو الإلغاء.",
     "These browser counters are not your account allowance. Open Usage for server-verified counts.":
-      "هذه العدادات في المتصفح ليست حصتك. افتح الاستخدام للأرقام المؤكدة.",
+      "هذه العدادات ليست حصتك. افتح الاستخدام للأرقام الموثّقة.",
     "Connection status, provider permissions, reconnection, and revocation are verified from the server-backed Apps page.":
       "يُتحقق من حالة الاتصال والأذونات وإعادة الربط والإلغاء في صفحة التطبيقات.",
     "Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat limit. Each meter shows its next reset or refresh.":
-      "لدى Free وPlus حد لكل 5 ساعات وحد أسبوعي، ولدى Pro حد أسبوعي. يعرض كل مؤشر موعد التجديد التالي.",
+      "لدى Free وPlus حد لكل 5 ساعات وحد أسبوعي، ولدى Pro حد أسبوعي. يعرض كل مؤشر موعد إعادة التعيين.",
     "Billing setup is incomplete. Plan changes are unavailable until the billing records and Stripe configuration are verified.":
-      "إعداد الفوترة غير مكتمل. تغييرات الخطة غير متاحة حتى التحقق.",
+      "إعداد الفوترة غير مكتمل؛ لا يمكن تغيير الخطة حتى التحقق من السجلات وStripe.",
     "For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.":
-      "لضوابط أبوية كاملة (وقت الشاشة، قيود التطبيقات) استخدم إعدادات جهازك.",
+      "للرقابة الأبوية الكاملة (وقت الشاشة والتطبيقات) استخدم إعدادات جهازك.",
     "Signed-out chats stay in this tab until you refresh or close it. Your appearance preference remains in this browser, but nothing here is synced to an account. Read the":
       "تبقى المحادثات دون تسجيل دخول في هذه العلامة حتى التحديث أو الإغلاق. يبقى تفضيل المظهر في المتصفح دون مزامنة. اقرأ",
     "KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use your device and network parental controls in the meantime.":
-      "لا يطبق KovaGPT حاليًا سياسة عائلية أو قفلًا برمز PIN. استخدم ضوابط الجهاز والشبكة في الأثناء.",
+      "لا يطبّق KovaGPT حاليًا سياسة عائلية أو قفل PIN. استخدم الرقابة الأبوية للجهاز والشبكة حتى ذلك الحين.",
     'Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl elsewhere.':
-      'تبقى الاختصارات في هذا المتصفح عند توفر التخزين. "Mod" هو ⌘ في macOS وCtrl في غيره.',
+      "تبقى الاختصارات في هذا المتصفح عند توفر التخزين. «Mod» هو ⌘ في macOS وCtrl في غيره.",
     "KovaGPT will not request, save, or send your device coordinates from Settings. You can still type a city or place into chat when location context is useful.":
-      "لن يطلب KovaGPT إحداثيات جهازك أو يحفظها أو يرسلها من الإعدادات. يمكنك كتابة مدينة في المحادثة عند الحاجة.",
+      "لن يطلب KovaGPT إحداثيات جهازك أو يحفظها أو يرسلها من الإعدادات، ويمكنك كتابة مدينة في المحادثة.",
     "Search workspace": "البحث في مساحة العمل",
     "Focus message box": "التركيز على مربع الرسالة",
     "Generate image": "إنشاء صورة",
@@ -21075,7 +22155,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Submit report": "إرسال البلاغ",
     "Project templates": "قوالب المشاريع",
     "Save project names, descriptions, instructions, and colors as reusable versions. Chats, files, memories, and members are not included.":
-      "احفظ أسماء المشاريع وأوصافها وتعليماتها وألوانها كإصدارات قابلة لإعادة الاستخدام، دون المحادثات والملفات والذكريات والأعضاء.",
+      "احفظ أسماء المشاريع وأوصافها وتعليماتها وألوانها كإصدارات قابلة لإعادة الاستخدام، دون المحادثات أو الملفات أو الأعضاء.",
     "New template": "قالب جديد",
     "Refresh templates": "تحديث القوالب",
     "Retry same request": "إعادة الطلب نفسه",
@@ -21083,10 +22163,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Your templates and shared templates": "قوالبك والقوالب المشتركة",
     "Loading templates…": "جارٍ تحميل القوالب…",
     "No saved templates yet. Create one or ask an owner to share one with you.":
-      "لا توجد قوالب محفوظة بعد. أنشئ واحدًا أو اطلب من مالك مشاركته.",
+      "لا قوالب محفوظة. أنشئ واحدًا أو اطلب من مالك مشاركته.",
     "Receive a shared template": "استلام قالب مشترك",
     "Give the owner your account ID. They choose whether you can view the template or also copy it.":
-      "أعطِ المالك معرّف حسابك، وهو يقرر إن كان بإمكانك العرض فقط أو النسخ أيضًا.",
+      "أعطِ المالك معرّف حسابك ليقرر هل يمكنك العرض أو النسخ أيضًا.",
     "Your account ID": "معرّف حسابك",
     "Template details": "تفاصيل القالب",
     "Your draft starts from version": "تبدأ مسودتك من الإصدار",
@@ -21099,10 +22179,10 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Published version": "الإصدار المنشور",
     "Loading version": "جارٍ تحميل الإصدار",
     "The template changed. Refresh to use its latest permissions and revision.":
-      "تغيّر القالب. حدّث لاستخدام أحدث أذوناته ومراجعته.",
+      "تغيّر القالب. حدّث لاستخدام أحدث الأذونات والإصدار.",
     "Color:": "اللون:",
     "Archived. Published versions remain available to you; sharing and copying are disabled.":
-      "مؤرشف. تبقى الإصدارات المنشورة متاحة لك، والمشاركة والنسخ معطلان.",
+      "مؤرشف. تبقى الإصدارات المنشورة متاحة، والمشاركة والنسخ معطلان.",
     "Edit as new version": "تعديل كإصدار جديد",
     "The owner shared this template for viewing only.": "شارك المالك هذا القالب للعرض فقط.",
     "Sharing access": "الوصول المشترك",
@@ -21110,12 +22190,12 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Ask the recipient for their account ID": "اطلب من المستلم معرّف حسابه",
     "Allow creating projects from this template": "السماح بإنشاء مشاريع من هذا القالب",
     "Access includes all published versions. Saving an existing recipient changes their permission.":
-      "يشمل الوصول كل الإصدارات المنشورة، وحفظ مستلم موجود يغيّر إذنه.",
+      "يشمل الوصول كل الإصدارات المنشورة، وحفظ مستلم موجود يغيّر صلاحيته.",
     "Save access": "حفظ الوصول",
     "No active recipients.": "لا يوجد مستلمون نشطون.",
     "Archive template": "أرشفة القالب",
     "Choose a saved template to inspect a version or create a project. Built-in suggestions remain available in New project.":
-      "اختر قالبًا محفوظًا لفحص إصدار أو إنشاء مشروع. تبقى الاقتراحات المدمجة في مشروع جديد.",
+      "اختر قالبًا لفحص إصدار أو إنشاء مشروع، وتبقى الاقتراحات المدمجة في مشروع جديد.",
     "Archive this template?": "أرشفة هذا القالب؟",
     "Rules and pinned files apply to this chat only and are added to the prompt on the server.":
       "تنطبق القواعد والملفات المثبتة على هذه المحادثة فقط وتُضاف في الخادم.",
@@ -21187,7 +22267,7 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     Reset: "إعادة تعيين",
     "Auto-adapt to me": "التكيف معي",
     'Kova learns your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.':
-      'يتعلم Kova أسلوبك (الطول والرسمية والفكاهة) ويحاكيه. قل "أقصر" أو "أكثر عفوية" أو "مزيد من التفاصيل" ليتكيف.',
+      "يتعلم Kova أسلوبك (الطول والرسمية والدعابة) ويحاكيه. قل «أقصر» أو «أقل رسمية» أو «مزيد من التفاصيل» ليتكيّف.",
     "Two-factor authentication": "المصادقة الثنائية",
     "Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.":
       "أضف تطبيق مصادقة (Google Authenticator أو 1Password أو Authy) كطبقة أمان ثانية.",
@@ -22234,6 +23314,184 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "The export failed. You can request another export when requests become available.":
       "فشل التصدير. يمكنك طلب آخر عند توفر الطلبات.",
     "Another request is available after": "يتوفر طلب آخر بعد",
+    "Request availability could not be determined from this export. Refresh its status before requesting another.":
+      "تعذّر تحديد توفر الطلب. حدّث الحالة قبل طلب آخر.",
+    "Remove this account export?": "إزالة هذا التصدير؟",
+    "Cancel this queued export or remove its downloadable file. This does not delete your account records. A processing export cannot be canceled until its status changes.":
+      "ألغِ التصدير المنتظر أو احذف ملفه دون حذف سجلاتك. لا يُلغى التصدير قيد المعالجة حتى تتغير حالته.",
+    "You're on the": "أنت على خطة",
+    "Your own": "خاصتك",
+    "Usage data isn't available right now. If you need help understanding your limits, contact":
+      "بيانات الاستخدام غير متاحة. للمساعدة في فهم حدودك تواصل مع",
+    "Model-training preferences are not available in Settings. Review the":
+      "تفضيلات تدريب النماذج غير متاحة في الإعدادات. راجع",
+    "Version 1.0": "الإصدار 1.0",
+    "Sign in to use": "سجّل الدخول لاستخدام",
+    "Narrow conversation": "تضييق المحادثة",
+    "Widen conversation": "توسيع المحادثة",
+    "Close Canvas": "إغلاق اللوحة",
+    "Pasted text options": "خيارات النص الملصوق",
+    "Attach full text": "إرفاق النص كاملًا",
+    "What you can do": "ما يمكنك فعله",
+    "How it works": "كيف يعمل",
+    "Example prompts": "أمثلة على الطلبات",
+    "Related pages": "صفحات ذات صلة",
+    "Getting Started": "البدء",
+    "Signing in does not resend a message. It may change the current account.":
+      "لا يعيد تسجيل الدخول إرسال الرسالة، وقد يغيّر الحساب الحالي.",
+    "Save or copy your current message and attachments, then clear them before signing in. Cancel or save any next message too. Drafts are not transferred between accounts.":
+      "احفظ رسالتك ومرفقاتها أو انسخها ثم امسحها قبل تسجيل الدخول، وكذلك الرسالة التالية. لا تنتقل المسودات بين الحسابات.",
+    "Select image": "اختيار صورة",
+    "Note for image": "ملاحظة للصورة",
+    "What should change?": "ما الذي يجب تغييره؟",
+    "This browser’s saved data was cleared. Close and reload Library.":
+      "مُسحت بيانات المتصفح. أغلق المكتبة وأعد تحميلها.",
+    "Up to 50 versions per item. Deleting this item revokes every version and schedules removal of its original files.":
+      "حتى 50 إصدارًا لكل عنصر. حذفه يلغي كل الإصدارات ويجدول إزالة ملفاته الأصلية.",
+    "Read version": "قراءة الإصدار",
+    "Replace original document": "استبدال المستند الأصلي",
+    "PDF, DOCX, XLSX or PPTX, up to 10 MB. The new original and extracted text replace the current version together.":
+      "PDF أو DOCX أو XLSX أو PPTX حتى 10 ميغابايت. يحل الأصل الجديد ونصه محل الإصدار الحالي.",
+    "Text from version": "نص من الإصدار",
+    "Saving preserves the current text as an earlier version. Text is limited to 300 KB.":
+      "يحفظ الحفظ النص الحالي كإصدار سابق، والحد 300 كيلوبايت.",
+    "Discard unsaved version changes?": "تجاهل تغييرات الإصدار غير المحفوظة؟",
+    "Are you sure you want to log out?": "هل تريد تسجيل الخروج؟",
+    "Download selected files": "تنزيل الملفات المحددة",
+    "Selected file downloads": "تنزيلات الملفات المحددة",
+    "Unsupported:": "غير مدعوم:",
+    "Auto-adapt to me.": "التكيّف معي تلقائيًا.",
+    "Metric categories": "فئات المقاييس",
+    "No readings for this source in the selected range.":
+      "لا قراءات لهذا المصدر في الفترة المحددة.",
+    "Apple Health": "صحة Apple",
+    "Connection options": "خيارات الاتصال",
+    "Apple Health report file": "ملف تقرير صحة Apple",
+    "Import Apple Health data": "استيراد بيانات صحة Apple",
+    "Clear imported data": "مسح البيانات المستوردة",
+    "Disconnect Apple Health": "فصل صحة Apple",
+    "Connect Apple Health": "ربط صحة Apple",
+    "Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates. You can also open an export from Connection options.":
+      "افتح هذه العلامة في تطبيق iPhone لربط صحة Apple وتلقي التحديثات، أو افتح ملف تصدير من خيارات الاتصال.",
+    "Create project from v": "إنشاء مشروع من v",
+    "Timer controls": "عناصر المؤقت",
+    "Close timers": "إغلاق المؤقتات",
+    "Loading timers…": "جارٍ تحميل المؤقتات…",
+    "No timers yet.": "لا مؤقتات بعد.",
+    Start: "بدء",
+    "Select model": "اختيار النموذج",
+    "Reset to recommended model and Lite effort": "إعادة إلى النموذج الموصى به وجهد Lite",
+    Default: "افتراضي",
+    "Recommended ·": "موصى به ·",
+    "Map previews are not available yet. No saved device location is used.":
+      "معاينات الخرائط غير متاحة بعد، ولا يُستخدم موقع محفوظ.",
+    "Finish or clear your current message and attachments before signing in. Close this prompt to return to your unchanged draft.":
+      "أكمل رسالتك ومرفقاتها أو امسحها قبل تسجيل الدخول، وأغلق للعودة إلى المسودة.",
+    "KovaGPT developer console": "وحدة تحكم مطوّري KovaGPT",
+    "Platform Inspector": "فاحص المنصة",
+    "Development only": "للتطوير فقط",
+    "Close developer console": "إغلاق وحدة التحكم",
+    "Feature flags": "أعلام الميزات",
+    Extensions: "الإضافات",
+    "Recent timings": "التوقيتات الأخيرة",
+    "No metrics recorded yet.": "لا مقاييس مسجلة بعد.",
+    "Event timeline": "الخط الزمني للأحداث",
+    "Checking image-edit availability…": "جارٍ التحقق من تعديل الصور…",
+    "Image editing is not enabled. You can generate a new image.":
+      "تعديل الصور غير مفعّل، ويمكنك إنشاء صورة جديدة.",
+    "Select an original image and describe the change above. The result is a new image; your Library original stays available.":
+      "اختر صورة أصلية وصف التغيير أعلاه. النتيجة صورة جديدة ويبقى الأصل في المكتبة.",
+    "Original image": "الصورة الأصلية",
+    "Choose a Library image": "اختر صورة من المكتبة",
+    "Optional PNG mask": "قناع PNG اختياري",
+    "No mask": "بلا قناع",
+    "First page": "الصفحة الأولى",
+    "Next images": "الصور التالية",
+    "No matching Library images on this page.": "لا صور مطابقة في هذه الصفحة.",
+    "Last run:": "آخر تشغيل:",
+    "Saved task history": "سجل المهام المحفوظة",
+    "Sprite sheet exports": "تصدير أوراق الرسوم",
+    "Use an evenly spaced grid. Frames are read left to right, then top to bottom.":
+      "استخدم شبكة متساوية. تُقرأ الإطارات من اليسار لليمين ثم من الأعلى للأسفل.",
+    "Use up to 32 frames and a delay from 40 to 2,000 ms in 10 ms steps.":
+      "حتى 32 إطارًا وتأخير من 40 إلى 2000 مللي ثانية بخطوات 10.",
+    "Loading versions…": "جارٍ تحميل الإصدارات…",
+    "No saved edits for this response yet. Select text in the answer and choose “Edit selection” to create one.":
+      "لا تعديلات محفوظة بعد. حدّد نصًا في الإجابة واختر «تعديل التحديد».",
+    "Instruction:": "التعليمات:",
+    "Full previous version": "الإصدار السابق كاملًا",
+    "KovaGPT home": "الصفحة الرئيسية لـ KovaGPT",
+    "Footer navigation": "تنقّل التذييل",
+    "Explore all pages": "استكشف كل الصفحات",
+    "Search the page directory": "البحث في دليل الصفحات",
+    "Find a page...": "ابحث عن صفحة...",
+    "All public pages": "كل الصفحات العامة",
+    "No matching pages.": "لا صفحات مطابقة.",
+    "Passkeys and security keys": "مفاتيح المرور والأمان",
+    "Sign in with your device biometrics, PIN, password manager, or a compatible hardware security key.":
+      "سجّل الدخول ببصمة جهازك أو PIN أو مدير كلمات المرور أو مفتاح أمان متوافق.",
+    "This browser cannot add a passkey, but you can still review, rename, or remove registered passkeys.":
+      "لا يمكن لهذا المتصفح إضافة مفتاح مرور، لكن يمكنك إدارة المفاتيح المسجلة.",
+    "Loading passkeys": "جارٍ تحميل مفاتيح المرور",
+    "Passkeys could not be loaded. Please try again.": "تعذّر تحميل مفاتيح المرور. حاول مجددًا.",
+    "Registered passkeys": "مفاتيح المرور المسجلة",
+    "Passkey name": "اسم مفتاح المرور",
+    "Remove this passkey? You will no longer be able to use it to sign in.":
+      "إزالة مفتاح المرور؟ لن تستطيع استخدامه لتسجيل الدخول.",
+    "No passkeys are registered yet.": "لا مفاتيح مرور مسجلة بعد.",
+    "Add passkey": "إضافة مفتاح مرور",
+    "Scheduled task created. Open schedule details": "أُنشئت المهمة المجدولة. افتح التفاصيل",
+    "Scrollable heatmap": "خريطة حرارية قابلة للتمرير",
+    "Candlestick plot": "مخطط الشموع",
+    "Return it here": "أعده هنا",
+    "Chart type": "نوع المخطط",
+    Table: "جدول",
+    "Sankey flow diagram": "مخطط سانكي",
+    "Chart legend": "مفتاح المخطط",
+    "Data used in": "البيانات المستخدمة في",
+    "Generated only from the structured data in this response.":
+      "مُنشأ فقط من البيانات المنظمة في هذا الرد.",
+    "Sign in with your device biometrics, PIN, or a compatible security key.":
+      "سجّل الدخول ببصمة جهازك أو PIN أو مفتاح أمان متوافق.",
+    "Passkey settings could not be loaded.": "تعذّر تحميل إعدادات مفاتيح المرور.",
+    "This browser cannot add a passkey. You can still manage existing passkeys.":
+      "لا يمكن لهذا المتصفح إضافة مفتاح مرور، ويمكنك إدارة الموجودة.",
+    "Registered Kova passkeys": "مفاتيح Kova المسجلة",
+    "Remove this passkey? Keep another sign-in method. Other devices will be signed out.":
+      "إزالة المفتاح؟ احتفظ بطريقة دخول أخرى، وستُسجّل الأجهزة الأخرى خروجها.",
+    "Confirm removal": "تأكيد الإزالة",
+    "Sign in with a passkey or two-factor authentication to remove a key.":
+      "سجّل الدخول بمفتاح مرور أو مصادقة ثنائية لإزالة مفتاح.",
+    "Your device will ask you to verify. Adding a key signs out other devices.":
+      "سيطلب جهازك التحقق، وإضافة مفتاح تُسجّل خروج الأجهزة الأخرى.",
+    "Confirm your password or sign in with two-factor authentication before adding a passkey.":
+      "أكّد كلمة المرور أو سجّل الدخول بمصادقة ثنائية قبل إضافة مفتاح.",
+    "You have reached the limit of ten passkeys.": "بلغت حد عشرة مفاتيح مرور.",
+    "Project collaboration": "التعاون في المشروع",
+    "Owners manage roles; editors contribute; viewers read. The latest 100 comments update live while this panel is open.":
+      "يدير المالكون الأدوار، ويساهم المحررون، ويقرأ المشاهدون. تُحدّث آخر 100 تعليق مباشرة.",
+    "My mentions": "إشاراتي",
+    "Add a project comment or inline note…": "أضف تعليقًا أو ملاحظة…",
+    "Project comment": "تعليق المشروع",
+    "Comment location": "موضع التعليق",
+    Mention: "إشارة",
+    "Viewers can read collaboration activity but cannot post or edit Project content.":
+      "يمكن للمشاهدين قراءة النشاط دون النشر أو التعديل.",
+    "Loading project comments": "جارٍ تحميل التعليقات",
+    "No collaboration comments": "لا تعليقات",
+    "Add the first note or change the mentions filter.": "أضف أول ملاحظة أو غيّر عامل التصفية.",
+    "Delete project comment?": "حذف تعليق المشروع؟",
+    "This comment will be permanently removed for every project member.":
+      "سيُحذف التعليق نهائيًا لكل أعضاء المشروع.",
+    "Automation Builder": "منشئ الأتمتة",
+    "Build a scheduled workflow using capabilities supported by Scheduled Tasks.":
+      "ابنِ سير عمل مجدولًا بقدرات المهام المجدولة.",
+    "Automation name": "اسم الأتمتة",
+    "Weekly project briefing": "ملخص أسبوعي للمشروع",
+    Action: "الإجراء",
+    "Summarize the progress and open questions in my project notes.":
+      "لخّص التقدم والأسئلة المفتوحة في ملاحظات مشروعي.",
+    Condition: "الشرط",
     Cooking: "الطبخ",
     "Plan and adapt recipes with food safety in view.":
       "خطّط للوصفات وعدّلها مع مراعاة سلامة الغذاء.",
