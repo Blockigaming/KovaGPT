@@ -325,7 +325,9 @@ export function AuthDialog({
           <p id="public-github-status" className="public-provider-status" role="status">
             {!providers.resolved && !providers.error && browserKovaAuthMode() !== "kova"
               ? "Checking GitHub availability…"
-              : "GitHub sign-in is coming soon. You can continue with email."}
+              : providers.error && browserKovaAuthMode() !== "kova"
+                ? "Couldn’t check GitHub sign-in. Refresh to try again."
+                : "GitHub sign-in is unavailable on this site. You can continue with email."}
           </p>
         )}
         <div className="public-auth-divider">OR</div>

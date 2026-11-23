@@ -302,7 +302,7 @@ for (const theme of ["light", "dark"] as const) {
       await Promise.all(images.map((image) => (image as HTMLImageElement).decode()));
     });
     await expect(page.locator("#public-google-status")).toContainText("unavailable");
-    await expect(page.locator("#public-github-status")).toContainText("coming soon");
+    await expect(page.locator("#public-github-status")).toContainText("unavailable on this site");
     await expect(page).toHaveScreenshot(`account-entry-${theme}.png`, {
       animations: "disabled",
       caret: "hide",
