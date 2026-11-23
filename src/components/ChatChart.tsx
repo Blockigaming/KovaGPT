@@ -39,6 +39,7 @@ import {
 } from "recharts";
 import {
   CHART_TYPES,
+  isExtraChartType,
   candlestickRows,
   chartToCsv,
   histogramRows,
@@ -47,6 +48,7 @@ import {
   type ChartSpec,
   type ChartType,
 } from "./chat-chart-utils";
+import { ChatChartExtra } from "./ChatChartExtra";
 import "./chat-chart.css";
 
 const chartNames = {
@@ -254,17 +256,41 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
     (["percent-stacked-bar", "funnel", "treemap"].includes(type) && !nonNegative) ||
     (type === "treemap" && !tree.length) ||
     (type === "bubble" && !hasBubble);
-  const displayTypes = CHART_TYPES.filter(
-    (candidate) =>
-      (candidate !== "scatter" || numericX) &&
-      (candidate !== "bubble" || hasBubble) &&
-      (candidate !== "treemap" || tree.length > 0) &&
-      (candidate !== "candlestick" || !!candlestickRows(spec)) &&
-      (candidate !== "sankey" || !!flow) &&
-      (candidate !== "waterfall" || !!waterfall) &&
-      (candidate !== "range" || !!range) &&
-      (!["percent-stacked-bar", "funnel", "treemap"].includes(candidate) || nonNegative),
-  );
+  // Extended families keep their own shape; the picker offers only that type.
+  const extra = isExtraChartType(type) ? type : null;
+  const reserved = new Set([
+    "lat",
+    "lon",
+    "lng",
+    "x",
+    "y",
+    "z",
+    "dx",
+    "dy",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "error",
+    "start",
+    "end",
+    "date",
+  ]);
+  const extraKeys = spec.keys?.length ? keys : keys.filter((key) => !reserved.has(key));
+  const displayTypes: ChartType[] = isExtraChartType(spec.type)
+    ? [spec.type]
+    : CHART_TYPES.filter(
+        (candidate) =>
+          (candidate !== "scatter" || numericX) &&
+          (candidate !== "bubble" || hasBubble) &&
+          (candidate !== "treemap" || tree.length > 0) &&
+          (candidate !== "candlestick" || !!candlestickRows(spec)) &&
+          (candidate !== "sankey" || !!flow) &&
+          (candidate !== "waterfall" || !!waterfall) &&
+          (candidate !== "range" || !!range) &&
+          (!["percent-stacked-bar", "funnel", "treemap"].includes(candidate) || nonNegative),
+      );
   const axes = (
     <>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -318,7 +344,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
               <SelectItem key={item} value={item}>
                 {item in chartNames
                   ? chartNames[item as keyof typeof chartNames]
-                  : item[0].toUpperCase() + item.slice(1)}
+                  : (item[0].toUpperCase() + item.slice(1)).replaceAll("-", " ")}
               </SelectItem>
             ))}
           </SelectContent>
@@ -353,7 +379,9 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           <Download className="h-4 w-4" /> CSV
         </button>
       </div>
-      {type === "sankey" && flow ? (
+      {extra ? (
+        <ChatChartExtra spec={spec} type={extra} colors={colors} xKey={xKey} keys={extraKeys} />
+      ) : type === "sankey" && flow ? (
         <div className="h-64 w-full sm:h-80" role="img" aria-label="Sankey flow diagram">
           <ResponsiveContainer width="100%" height="100%">
             <Sankey
@@ -566,7 +594,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           </ul>
         </div>
       )}
-      {(table || noCompatibleSeries || type === "sankey") && (
+      {(table || (!extra && noCompatibleSeries) || type === "sankey") && (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Data used in {spec.title ?? "chart"}</caption>
