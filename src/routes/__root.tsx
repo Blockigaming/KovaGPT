@@ -37,10 +37,10 @@ const HYDRATION_READY_EVENT = "kova:hydrated";
 // The blocking script runs after the render-blocking app stylesheet, before UI
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
 // applyThemeMode restores them atomically after setting the hydrated root class.
+// The website keeps the desktop experience on every device; a native KovaGPT
+// app shell names itself in its user agent and gets the phone-app presentation
+// before first paint.
 const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
-  // The website keeps the desktop experience on every device. A native KovaGPT
-  // app shell identifies itself in its user agent and gets the phone-app
-  // presentation before first paint.
   try {
     if (/\bKovaGPTApp\//.test(navigator.userAgent))
       document.documentElement.setAttribute("data-kova-surface", "app");
