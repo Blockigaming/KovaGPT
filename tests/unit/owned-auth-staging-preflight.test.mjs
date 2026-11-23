@@ -138,6 +138,35 @@ test("production, rehearsal, changed source/image, duplicate env and browser mod
   }
 });
 
+test("a private GHCR digest requires an existing staging pull credential reference", () => {
+  const packet = fixture();
+  const configuration = packet.app.properties.configuration;
+  const [container] = packet.app.properties.template.containers;
+  packet.imageReference = `ghcr.io/blockigaming/kovagpt-web@sha256:${"3".repeat(64)}`;
+  container.image = packet.imageReference;
+  assert.throws(() => validateOwnedAuthStagingConfiguration(packet), /ghcr_pull_secret/u);
+  configuration.registries = [
+    { server: "ghcr.io", username: "staging-reader", passwordSecretRef: "staging-ghcr-pull" },
+  ];
+  assert.throws(() => validateOwnedAuthStagingConfiguration(packet), /ghcr_pull_secret/u);
+  configuration.secrets.push({ name: "staging-ghcr-pull" });
+  assert.throws(() => validateOwnedAuthStagingConfiguration(packet), /staging_browser_project/u);
+  const ref = "fixturestaging000000";
+  const url = `https://${ref}.supabase.co`;
+  container.env.push({ name: "SUPABASE_URL", value: url });
+  Object.assign(packet.browserProvenance, { supabaseProjectRef: ref, supabaseUrl: url });
+  assert.equal(validateOwnedAuthStagingConfiguration(packet).imageReference, packet.imageReference);
+  const prodRef = "mfbycmbjygcfkrsuepxf";
+  const prodUrl = `https://${prodRef}.supabase.co`;
+  container.env.at(-1).value = prodUrl;
+  Object.assign(packet.browserProvenance, { supabaseProjectRef: prodRef, supabaseUrl: prodUrl });
+  assert.throws(() => validateOwnedAuthStagingConfiguration(packet), /staging_browser_project/u);
+
+  packet.imageReference = packet.imageReference.replace("/blockigaming/", "/unapproved/");
+  container.image = packet.imageReference;
+  assert.throws(() => validateOwnedAuthStagingConfiguration(packet), /immutable_image/u);
+});
+
 test("plaintext key, missing secret and enabled generation fail with sanitized error codes", () => {
   for (const change of ["plaintext", "missing", "generation"]) {
     const packet = fixture();

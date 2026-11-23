@@ -53,12 +53,13 @@ export function validateOwnedAuthStagingConfiguration({
       ))
   )
     fail("ingress");
-  if (
-    !/^[-a-z0-9.]+\.azurecr\.io\/[a-z0-9][a-z0-9/_.-]*@sha256:[a-f0-9]{64}$/u.test(
-      imageReference ?? "",
-    )
-  )
-    fail("immutable_image");
+  const ghcrImage = /^ghcr\.io\/blockigaming\/kovagpt-web@sha256:[a-f0-9]{64}$/u.test(
+    imageReference ?? "",
+  );
+  const acrImage = /^[-a-z0-9.]+\.azurecr\.io\/[a-z0-9][a-z0-9/_.-]*@sha256:[a-f0-9]{64}$/u.test(
+    imageReference ?? "",
+  );
+  if (!ghcrImage && !acrImage) fail("immutable_image");
   const containers = app.properties?.template?.containers;
   if (
     !Array.isArray(containers) ||
@@ -106,6 +107,21 @@ export function validateOwnedAuthStagingConfiguration({
   const secrets = app.properties?.configuration?.secrets;
   if (!Array.isArray(secrets)) fail("secret_references");
   const secretNames = new Set(secrets.map((entry) => entry?.name));
+  if (ghcrImage) {
+    const registries = app.properties.configuration.registries;
+    if (
+      !Array.isArray(registries) ||
+      !registries.some(
+        (registry) =>
+          registry?.server === "ghcr.io" &&
+          typeof registry.username === "string" &&
+          registry.username.trim() &&
+          registry.passwordSecretRef &&
+          secretNames.has(registry.passwordSecretRef),
+      )
+    )
+      fail("ghcr_pull_secret");
+  }
   for (const name of [
     "KOVA_AUTH_ENCRYPTION_KEY",
     "KOVA_AUTH_JWT_PRIVATE_KEY",
@@ -124,6 +140,17 @@ export function validateOwnedAuthStagingConfiguration({
     !HEX.test(browserProvenance.browserBundleSha256 ?? "")
   )
     fail("compiled_browser_mode");
+  if (ghcrImage) {
+    const ref = browserProvenance.supabaseProjectRef;
+    const url = `https://${ref}.supabase.co`;
+    if (
+      !/^[a-z0-9]{20}$/u.test(ref ?? "") ||
+      ref === "mfbycmbjygcfkrsuepxf" ||
+      browserProvenance.supabaseUrl !== url ||
+      ![url, `${url}/`].includes(value("SUPABASE_URL"))
+    )
+      fail("staging_browser_project");
+  }
   return {
     targetId: id,
     sourceSha,
