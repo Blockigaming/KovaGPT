@@ -15,7 +15,7 @@ function SettingsPage() {
     // chat replaces this component before AppShell can receive the open event.
     // Chat may mount after this navigation settles, so leave the request where
     // its listener checks on mount as well as dispatching the event.
-    (window as Window & { __kovaPendingSettingsTab?: string }).__kovaPendingSettingsTab = tab;
+    (window as Window & { __kovaSettingsTab?: string }).__kovaSettingsTab = tab;
     void navigate({ to: "/", replace: true }).then(() => {
       window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab } }));
     });

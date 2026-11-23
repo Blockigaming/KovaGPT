@@ -536,17 +536,12 @@ function KovaGPT() {
   }, []);
   // Listen for global open-settings events (fired from UserButton profile click).
   useEffect(() => {
-    const pending = window as Window & { __kovaPendingSettingsTab?: string };
+    const w = window as Window & { __kovaSettingsTab?: string };
     const h = (e: Event) => {
-      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab;
-      delete pending.__kovaPendingSettingsTab;
-      openSettings(tab);
+      w.__kovaSettingsTab = undefined;
+      openSettings((e as CustomEvent<{ tab?: string }>).detail?.tab);
     };
-    if (pending.__kovaPendingSettingsTab !== undefined) {
-      const tab = pending.__kovaPendingSettingsTab;
-      delete pending.__kovaPendingSettingsTab;
-      openSettings(tab);
-    }
+    if (w.__kovaSettingsTab) h(new CustomEvent("", { detail: { tab: w.__kovaSettingsTab } }));
     window.addEventListener("kova-open-settings", h);
     return () => window.removeEventListener("kova-open-settings", h);
   }, [openSettings]);
