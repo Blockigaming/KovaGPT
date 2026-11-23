@@ -176,11 +176,14 @@ test("all 38 connector marks use verified local assets with recorded provenance"
     assert.equal(item.brandAsset.status, "verified_local_asset");
     assert.equal(item.brandAsset.src, `/local-assets/${asset.file}`);
     assert.equal(item.brandAsset.src, review.PLUGIN_BRAND_ASSET_URLS[item.connector.id]);
+    assert.match(item.brandAsset.accent, /^#[0-9a-f]{6}$/u, item.connector.id);
     assert.equal(item.brandAsset.provenance, "src/assets/plugins/provenance.json");
     const bytes = readFileSync(`src/assets/plugins/${asset.file}`);
     assert.equal(createHash("sha256").update(bytes).digest("hex"), asset.sha256);
   }
   assert.equal(review.PLUGIN_BRAND_ASSET_URLS["ms-teams"], "/local-assets/microsoft-teams.svg");
+  assert.equal(review.getPluginReview("github").brandAsset.accent, "#000000");
+  assert.equal(review.getPluginReview("gmail").brandAsset.accent, "#e26558");
   const source = readFileSync("src/lib/plugin-review-catalog.ts", "utf8");
   assert.doesNotMatch(source, /fetch\(|https?:\/\/|localStorage|sessionStorage/);
 });

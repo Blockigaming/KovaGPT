@@ -402,18 +402,17 @@
   white-space: normal;
 }
 .spec400-plugin-scope-list {
+  display: grid;
+  gap: 4px;
   margin: 12px 0;
   font-size: 13px;
   line-height: 20px;
 }
-.spec400-plugin-scope-list summary {
-  cursor: pointer;
-  min-height: 32px;
-  display: list-item;
-  align-content: center;
+.spec400-plugin-scope-list h4 {
+  font-weight: 600;
 }
 .spec400-plugin-scope-list ul {
-  padding: 8px 0 8px 16px;
+  padding-inline-start: 16px;
   color: var(--muted-foreground);
   list-style: disc;
   overflow-wrap: anywhere;
@@ -1044,32 +1043,12 @@
 }
 
 .kova-connection-page {
-  --connection-accent: #8b76ea;
+  --connection-accent: var(--foreground);
+  --connection-accent-text: color-mix(in srgb, var(--foreground) 86%, var(--connection-accent));
   display: grid;
   gap: 24px;
   min-width: 0;
   font-family: var(--font-ui);
-}
-.kova-connection-page[data-connection-category="Calendar"] {
-  --connection-accent: #5e8cf1;
-}
-.kova-connection-page[data-connection-category="Storage & Files"] {
-  --connection-accent: #359ace;
-}
-.kova-connection-page[data-connection-category="Email"] {
-  --connection-accent: #e26558;
-}
-.kova-connection-page[data-connection-category="Social & Media"] {
-  --connection-accent: #d66eaf;
-}
-.kova-connection-page[data-connection-category="Notes & Docs"] {
-  --connection-accent: #d59b4d;
-}
-.kova-connection-page[data-connection-category="Communication"] {
-  --connection-accent: #a460d8;
-}
-.kova-connection-page[data-connection-category="Development"] {
-  --connection-accent: #49ac96;
 }
 .kova-connection-back {
   justify-self: start;
@@ -1112,6 +1091,7 @@
 }
 .kova-connection-hero h1 {
   margin: 0;
+  color: var(--connection-accent-text);
   overflow-wrap: anywhere;
   font-size: clamp(30px, 5cqi, 50px);
   letter-spacing: -0.035em;
@@ -1196,7 +1176,7 @@
   width: 18px;
   height: 18px;
   margin-top: 2px;
-  color: var(--muted-foreground);
+  color: var(--connection-accent-text);
 }
 .kova-connection-example p {
   margin-top: 4px;
@@ -1206,6 +1186,7 @@
 .kova-connection-permissions,
 .kova-connection-sidebar {
   display: grid;
+  align-content: start;
   gap: 16px;
   min-width: 0;
   padding: clamp(16px, 3cqi, 24px);
@@ -1296,10 +1277,20 @@
   font-weight: 640;
 }
 .kova-connection-example > div > h2 {
+  color: var(--connection-accent-text);
   font-size: 14px;
 }
 @container (min-width: 750px) {
   .kova-connection-layout {
     grid-template-columns: minmax(0, 7fr) minmax(210px, 3fr);
+    align-items: stretch;
+  }
+  .kova-connection-tab[data-state="active"] {
+    display: flex;
+    flex-direction: column;
+  }
+  .kova-connection-account,
+  .kova-connection-permissions {
+    flex: 1;
   }
 }

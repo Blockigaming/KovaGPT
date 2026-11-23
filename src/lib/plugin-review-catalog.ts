@@ -42,46 +42,50 @@ import webullLogo from "../assets/plugins/webull.png";
 import wixLogo from "../assets/plugins/wix.svg";
 
 /** Bundled brand assets with source and trademark provenance recorded alongside the artwork. */
-export const PLUGIN_BRAND_ASSET_URLS: Readonly<Record<string, string>> = {
-  gmail: gmailLogo,
-  "google-calendar": googleCalendarLogo,
-  "google-drive": googleDriveLogo,
-  outlook: outlookLogo,
-  onedrive: onedriveLogo,
-  sharepoint: sharepointLogo,
-  "ms-teams": msTeamsLogo,
-  notion: notionLogo,
-  github: githubLogo,
-  linear: linearLogo,
-  slack: slackLogo,
-  salesforce: salesforceLogo,
-  "android-health-connect": androidHealthLogo,
-  "apple-health": appleHealthLogo,
-  box: boxLogo,
-  calendly: calendlyLogo,
-  canva: canvaLogo,
-  "custom-mcp": customMcpLogo,
-  etoro: etoroLogo,
-  excalidraw: excalidrawLogo,
-  figma: figmaLogo,
-  gamma: gammaLogo,
-  "google-bigquery": bigQueryLogo,
-  granola: granolaLogo,
-  hubspot: hubspotLogo,
-  "hyperframes-heygen": hyperframesLogo,
-  "interactive-brokers": interactiveBrokersLogo,
-  meltwater: meltwaterLogo,
-  mixpanel: mixpanelLogo,
-  oura: ouraLogo,
-  "outlook-calendar": outlookCalendarLogo,
-  plaid: plaidLogo,
-  "sp-global": spGlobalLogo,
-  stripe: stripeLogo,
-  tana: tanaLogo,
-  vercel: vercelLogo,
-  webull: webullLogo,
-  wix: wixLogo,
+const pluginBrands: Readonly<Record<string, { src: string; accent: string }>> = {
+  gmail: { src: gmailLogo, accent: "#e26558" },
+  "google-calendar": { src: googleCalendarLogo, accent: "#3c90ff" },
+  "google-drive": { src: googleDriveLogo, accent: "#13ad61" },
+  outlook: { src: outlookLogo, accent: "#0078d4" },
+  onedrive: { src: onedriveLogo, accent: "#1490df" },
+  sharepoint: { src: sharepointLogo, accent: "#0078d4" },
+  "ms-teams": { src: msTeamsLogo, accent: "#6264a7" },
+  notion: { src: notionLogo, accent: "#000000" },
+  github: { src: githubLogo, accent: "#000000" },
+  linear: { src: linearLogo, accent: "#222326" },
+  slack: { src: slackLogo, accent: "#4a154b" },
+  salesforce: { src: salesforceLogo, accent: "#00a1e0" },
+  "android-health-connect": { src: androidHealthLogo, accent: "#4285f4" },
+  "apple-health": { src: appleHealthLogo, accent: "#ff244e" },
+  box: { src: boxLogo, accent: "#0061d5" },
+  calendly: { src: calendlyLogo, accent: "#3060b0" },
+  canva: { src: canvaLogo, accent: "#00c4cc" },
+  "custom-mcp": { src: customMcpLogo, accent: "#000000" },
+  etoro: { src: etoroLogo, accent: "#72fc8d" },
+  excalidraw: { src: excalidrawLogo, accent: "#6965db" },
+  figma: { src: figmaLogo, accent: "#a259ff" },
+  gamma: { src: gammaLogo, accent: "#3c63b3" },
+  "google-bigquery": { src: bigQueryLogo, accent: "#669df6" },
+  granola: { src: granolaLogo, accent: "#151515" },
+  hubspot: { src: hubspotLogo, accent: "#ff7a59" },
+  "hyperframes-heygen": { src: hyperframesLogo, accent: "#30dfa0" },
+  "interactive-brokers": { src: interactiveBrokersLogo, accent: "#e22222" },
+  meltwater: { src: meltwaterLogo, accent: "#20c0c0" },
+  mixpanel: { src: mixpanelLogo, accent: "#33547d" },
+  oura: { src: ouraLogo, accent: "#000000" },
+  "outlook-calendar": { src: outlookCalendarLogo, accent: "#305cc0" },
+  plaid: { src: plaidLogo, accent: "#1598ae" },
+  "sp-global": { src: spGlobalLogo, accent: "#d00030" },
+  stripe: { src: stripeLogo, accent: "#635bff" },
+  tana: { src: tanaLogo, accent: "#1688c4" },
+  vercel: { src: vercelLogo, accent: "#000000" },
+  webull: { src: webullLogo, accent: "#2060f0" },
+  wix: { src: wixLogo, accent: "#000000" },
 };
+
+export const PLUGIN_BRAND_ASSET_URLS: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(pluginBrands).map(([id, { src }]) => [id, src]),
+);
 
 /** Presentation-only launch review metadata. Never an authorization/connection registry. */
 export type PluginReviewPermission = {
@@ -99,6 +103,7 @@ export type PluginReviewEntry = {
   brandAsset: {
     status: "verified_local_asset" | "generic_placeholder";
     src: string;
+    accent?: string;
     provenance: string;
   };
 };
@@ -121,6 +126,7 @@ const supported = (
 function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewEntry {
   const connector = getConnector(id);
   if (!connector) throw new Error(`Missing launch review connector: ${id}`);
+  const brand = pluginBrands[id];
   if (isExtraWriteConnector(id)) {
     permissions = [
       ...permissions,
@@ -166,9 +172,10 @@ function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewE
         ]
       : permissions,
     brandAsset: {
-      status: PLUGIN_BRAND_ASSET_URLS[id] ? "verified_local_asset" : "generic_placeholder",
-      src: PLUGIN_BRAND_ASSET_URLS[id] ?? "",
-      provenance: PLUGIN_BRAND_ASSET_URLS[id] ? "src/assets/plugins/provenance.json" : "",
+      status: brand ? "verified_local_asset" : "generic_placeholder",
+      src: brand?.src ?? "",
+      accent: brand?.accent,
+      provenance: brand ? "src/assets/plugins/provenance.json" : "",
     },
   };
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type CSSProperties } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
 import { GOOGLE_CONNECT_IDS, type ConnectorItem } from "@/lib/connectors-catalog";
@@ -970,8 +970,9 @@ function AppsPage() {
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const pluginId = routeSearch.get("plugin");
-  const visibleSelectedApp =
-    isLoaded && activityReady && pluginId ? getPluginReview(pluginId)?.connector : undefined;
+  const selectedReview =
+    isLoaded && activityReady && pluginId ? getPluginReview(pluginId) : undefined;
+  const visibleSelectedApp = selectedReview?.connector;
   const detailId = visibleSelectedApp?.id;
   const teamsMessagesAfterConsent = routeSearch.get("teams_view") === "messages";
   useEffect(() => {
@@ -1710,7 +1711,7 @@ function AppsPage() {
           <article
             key={`${principal}:${visibleSelectedApp.id}`}
             className="kova-connection-page"
-            data-connection-category={visibleSelectedApp.category}
+            style={{ "--connection-accent": selectedReview?.brandAsset.accent } as CSSProperties}
             data-ui-reference="kova.connections.details"
             aria-labelledby="connection-title"
           >
@@ -1864,8 +1865,8 @@ function AppsPage() {
                                           ` · Provider write scope ${write ? "granted" : "not granted"}`}
                                       </p>
                                     )}
-                                    <details className="spec400-plugin-scope-list">
-                                      <summary>Current permission scope</summary>
+                                    <div className="spec400-plugin-scope-list">
+                                      <h4>Current permission scope</h4>
                                       {account.scopes?.length ? (
                                         <ul>
                                           {account.scopes.map((scope) => (
@@ -1878,7 +1879,7 @@ function AppsPage() {
                                           relying on access.
                                         </p>
                                       )}
-                                    </details>
+                                    </div>
                                     <div className="spec400-plugin-actions">
                                       {account.connected &&
                                         read &&

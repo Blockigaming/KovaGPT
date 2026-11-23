@@ -85,7 +85,7 @@ const result = await build({
   platform: "browser",
   format: "iife",
   jsx: "automatic",
-  loader: { ".svg": "dataurl" },
+  loader: { ".svg": "dataurl", ".png": "dataurl" },
   plugins: [
     {
       name: "spec400-plugins-offline-fixtures",
@@ -213,7 +213,7 @@ test("approved directory keeps all providers and offers Health examples and sear
   await expect(
     page.getByText("Browse and manage the tools you use with KovaGPT.", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(12);
+  await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(MASTER_CONNECTORS.length);
   for (const item of MASTER_CONNECTORS) {
     await expect(page.locator(`[data-plugin-id="${item.id}"]`)).toHaveCount(1);
   }
@@ -789,11 +789,21 @@ test("unavailable providers have readable details and no connection action", asy
 test("Manage shows verified account scopes and confirms a disconnect with workflow impact", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await boot(page, healthyGoogle);
   await page.getByRole("button", { name: "Connected Gmail", exact: true }).click();
-  await expect(page.getByRole("article")).toContainText("connected@example.test");
-  await page.getByText("Current permission scope", { exact: true }).click();
-  await expect(page.getByRole("article")).toContainText("gmail.readonly");
+  const connector = page.getByRole("article");
+  await expect(connector).toContainText("connected@example.test");
+  await expect(connector.getByRole("heading", { name: "Current permission scope" })).toBeVisible();
+  await expect(connector.getByText("gmail.readonly", { exact: true })).toBeVisible();
+  await expect(connector.locator(".spec400-plugin-scope-list summary")).toHaveCount(0);
+  const setup = connector.getByRole("region", { name: "Connector setup" });
+  const details = connector.getByRole("complementary", { name: "About this connection" });
+  const [setupBounds, detailBounds] = await Promise.all([
+    setup.boundingBox(),
+    details.boundingBox(),
+  ]);
+  expect(setupBounds!.y + setupBounds!.height).toBeCloseTo(detailBounds!.y + detailBounds!.height);
   await page
     .getByRole("button", { name: "Disconnect connected@example.test", exact: true })
     .click();
