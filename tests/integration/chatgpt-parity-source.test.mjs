@@ -98,7 +98,8 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.match(chatInput, /<ModelSelector/);
   assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
   assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
-  assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);
+  // Sheets follow the layout width; a touch-capable desktop keeps the popover.
+  assert.match(responsiveSelector, /const useSheet = !isDesktop;/);
   assert.match(responsiveSelector, /<MobileBottomSheet/);
   assert.match(responsiveSelector, /role="dialog"\s+aria-label="Choose response effort"/);
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
@@ -210,7 +211,10 @@ test("compact composer groups actions and preserves message editing and markdown
   assert.match(composer, /surface=\{showEmptyChat \? "empty" : "conversation"\}/);
   assert.match(route, /\{composer\}\s*<\/HomeWelcome>/);
   assert.match(route, /className="spec400-composer-dock[^"]*">[\s\S]*?\{composer\}\s*<\/div>/);
-  assert.match(chatInput, /disabled=\{!canSubmit\}\s+onClick=\{triggerSubmit\}/);
+  assert.match(
+    chatInput,
+    /disabled=\{!canSubmit\}\s+onClick=\{\(event\) => \{\s*if \(event\.detail > 0 && sendHoldConsumed\.current\) return;\s*triggerSubmit\(\);/,
+  );
   assert.match(chatInput, /aria-label="Send message"/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);

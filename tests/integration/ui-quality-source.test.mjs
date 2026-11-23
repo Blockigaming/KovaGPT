@@ -130,7 +130,11 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   );
   const sendButton = openingTag(composer, "button", /aria-label="Send message"/);
   assert.match(sendButton, /disabled=\{!canSubmit\}/);
-  assert.match(sendButton, /onClick=\{triggerSubmit\}/);
+  // A long-press consumes its own click; an ordinary activation submits.
+  assert.match(
+    sendButton,
+    /if \(event\.detail > 0 && sendHoldConsumed\.current\) return;\s*triggerSubmit\(\);/,
+  );
   assert.match(sendButton, /hidden=\{!hasDraft\}/);
   const submit = composer.slice(
     composer.indexOf("const triggerSubmit ="),

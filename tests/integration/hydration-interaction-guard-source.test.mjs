@@ -127,7 +127,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   const contracts = [
     ["tests/e2e/ai-core-parity.spec.ts", 1, 1],
     ["tests/e2e/connected-reliability.spec.ts", 1, 1],
-    ["tests/e2e/connectors-tasks-settings.spec.ts", 3, 3],
+    ["tests/e2e/connectors-tasks-settings.spec.ts", 4, 4],
     ["tests/e2e/core-chat-experience.spec.ts", 2, 2],
     ["tests/e2e/depth.spec.ts", 5, 5],
     ["tests/e2e/desktop-polish.spec.ts", 2, 2],
