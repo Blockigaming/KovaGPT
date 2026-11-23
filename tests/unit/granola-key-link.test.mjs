@@ -136,7 +136,7 @@ test("Notion stores a page-bound token only after the exact page can be read", a
   assert.equal(state.encryption, 1);
   assert.equal(state.writes[0][1].owner_id, owner);
   assert.equal(state.writes[0][1].provider_account_id, pageId);
-  assert.deepEqual(state.writes[0][1].granted_scopes, ["page:read"]);
+  assert.deepEqual(structuredClone(state.writes[0][1].granted_scopes), ["page:read"]);
   assert.equal(state.writes[0][1].access_token_ciphertext, "encrypted-fixture");
   assert.doesNotMatch(JSON.stringify(state.writes), /grn_fixture_only/u);
 
