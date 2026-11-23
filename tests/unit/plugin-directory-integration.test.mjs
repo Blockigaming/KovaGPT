@@ -7,7 +7,10 @@ test("launch directory exposes planned details without unsupported connect actio
   assert.match(route, /const filtered = catalog.filter/);
   assert.match(route, /connectionFilter === "connected" && !hasConnection/);
   // Category filters were removed: search also matches each provider's category.
-  assert.match(route, /\[c\.label, c\.description, c\.category, masterConnectorSearchText\(c\.id\)\]/);
+  assert.match(
+    route,
+    /\[c\.label, c\.description, c\.category, masterConnectorSearchText\(c\.id\)\]/,
+  );
   assert.doesNotMatch(route, /setCategory\(/);
   assert.match(route, /!configured\s*\? "Coming soon"/);
   assert.match(route, /selectedReview.permissions.map/);
