@@ -197,6 +197,14 @@ test("signed-in homepage initially scrolls to the latest content", async ({ page
   await expect(page.getByRole("button", { name: "Prepare or manage Work" })).toHaveCount(0);
   const home = page.locator(".kova-empty-chat");
   await expect(home.getByRole("heading", { name: "Continue working", exact: true })).toBeVisible();
+  const composerColor = await home
+    .locator(".spec400-composer")
+    .evaluate((node) => getComputedStyle(node).backgroundColor);
+  await expect(home.locator(".kova-composer-tray")).toHaveCSS("background-color", composerColor);
+  await expect(home.locator(".kova-desktop-recent-work button").first()).toHaveCSS(
+    "background-color",
+    composerColor,
+  );
   await expect
     .poll(() => home.evaluate((node) => node.scrollHeight - node.clientHeight))
     .toBeGreaterThan(8);

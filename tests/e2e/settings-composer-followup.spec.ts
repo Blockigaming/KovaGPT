@@ -11,8 +11,8 @@ for (const theme of ["dark", "light"] as const) {
     await fixture(page, theme, true);
     await page.goto("/settings/memory");
     await waitForKovaHydration(page);
-    // Settings opens as a modal over the app at every size.
-    const surface = page.locator(".kova-settings-dialog");
+    const surface = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(page.locator(".kova-topbar:visible")).toHaveCount(1);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
     await expect(
@@ -27,27 +27,22 @@ for (const theme of ["dark", "light"] as const) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
-      // Only the navigation heading names Settings on screen.
       expect(
         await surface.locator(".kova-settings-main-title").evaluate((node) => {
-          const box = node.getBoundingClientRect();
-          return box.width * box.height <= 1 || !node.checkVisibility();
+          const style = getComputedStyle(node.closest(".sr-only")!);
+          return { position: style.position, clipPath: style.clipPath };
         }),
-      ).toBe(true);
+      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     } else {
-      const backToPreviousPage = surface.getByRole("button", { name: "Back to app" });
-      await expect(backToPreviousPage).toBeHidden();
       await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
-      await expect(backToPreviousPage).toBeHidden();
       await expect(close).toBeVisible();
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
-      // Only the navigation heading names Settings on screen.
       expect(
         await surface.locator(".kova-settings-main-title").evaluate((node) => {
-          const box = node.getBoundingClientRect();
-          return box.width * box.height <= 1 || !node.checkVisibility();
+          const style = getComputedStyle(node.closest(".sr-only")!);
+          return { position: style.position, clipPath: style.clipPath };
         }),
-      ).toBe(true);
+      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
       await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
       await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
     }

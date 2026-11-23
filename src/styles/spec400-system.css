@@ -147,7 +147,7 @@ body :is(button, [role="button"]):active {
     scroll-behavior: auto !important;
   }
 }
-/* Settings is a routable page. The original modal remains for legacy callers. */
+/* Settings and workspace fields share the native select sizing. */
 body .kova-native-select {
   min-height: 44px;
   min-width: 0;
@@ -177,9 +177,11 @@ body .kova-assistant .kova-user-message {
 body .kova-assistant .kova-desktop-topbar {
   height: 64px !important;
   min-height: 64px !important;
-  border-bottom: 1px solid var(--border) !important;
 }
-body :is(.kova-assistant, .kova-app-shell) .kova-topbar:not(.kova-desktop-topbar) {
+body .kova-assistant .kova-topbar {
+  border-bottom: 0 !important;
+}
+body .kova-app-shell .kova-topbar:not(.kova-desktop-topbar) {
   border-bottom: 1px solid var(--border) !important;
 }
 body .kova-page,

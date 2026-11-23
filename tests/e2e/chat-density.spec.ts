@@ -47,7 +47,9 @@ test("reply bubbles, adjacent actions, and the compact composer fit the viewport
   await expect(bubble).toHaveCSS("border-top-left-radius", "0px");
   const copy = actions.getByRole("button", { name: "Copy response", exact: true });
   const good = actions.getByRole("button", { name: "Read aloud", exact: true });
-  const fineDesktop = await page.evaluate(() => matchMedia("(min-width: 1024px)").matches);
+  const fineDesktop = await page.evaluate(
+    () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
+  );
   const [copyBox, goodBox] = await Promise.all([copy.boundingBox(), good.boundingBox()]);
   expect(copyBox!.width).toBe(fineDesktop ? 28 : 44);
   expect(Math.abs(goodBox!.x - copyBox!.x - copyBox!.width)).toBeLessThanOrEqual(1);
@@ -75,9 +77,10 @@ test("desktop Settings renders and closes to chat", async ({ page }, testInfo) =
   await fixture(page, "dark");
   await page.goto("/settings/appearance");
   await waitForKovaHydration(page);
-  const settings = page.locator(".kova-settings-dialog");
+  const settings = page.getByRole("dialog", { name: "Settings", exact: true });
   await expect(settings).toBeVisible();
   await expect(settings.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
   await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(settings).toBeHidden();
   await expect(page).toHaveURL(/\/$/);
 });

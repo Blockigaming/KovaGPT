@@ -93,9 +93,6 @@ function fixture() {
     settings: { timeFormat: "system" },
     document,
     window: { location: { href: "https://local.invalid/settings/usage" } },
-    stableHref() {
-      return deps.window.location.href;
-    },
     usageStatusRef: { current: status },
     billingScopeRef: {
       current: { epoch: 0, open: true, tab: "usage", loggedIn: true, userKey: "owner-a" },

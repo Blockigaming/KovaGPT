@@ -63,6 +63,10 @@ const routeSource = await readFile(
   new URL("../../src/routes/settings.$section.tsx", import.meta.url),
   "utf8",
 );
+const chatRouteSource = await readFile(
+  new URL("../../src/routes/index.tsx", import.meta.url),
+  "utf8",
+);
 const parsed = ts.createSourceFile(
   "SettingsDialog.tsx",
   settingsSource,
@@ -260,6 +264,13 @@ test("settings navigation is centralized and routes every rendered category", ()
   const sectionForTab = execute(sectionFunction[0].getText(parsedModel).replace(/^export\s+/, ""), {
     SETTINGS_SECTIONS: sections,
   });
+  const [tabFunction] = matching(
+    parsedModel,
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === "settingsTabForSection",
+  );
+  const tabForSection = execute(tabFunction.getText(parsedModel).replace(/^export\s+/, ""), {
+    SETTINGS_SECTIONS: sections,
+  });
   const pageTabs = categories("destinationGroups");
   assert.match(settingsSource, /const groups = destinationGroups;/);
   assert.doesNotMatch(settingsSource, /const secondaryParents:|matchingSecondaryTabs/);
@@ -291,13 +302,16 @@ test("settings navigation is centralized and routes every rendered category", ()
     ],
   );
   for (const tab of pageTabs) {
-    assert.equal(sections[sectionForTab(tab.value)], tab.value);
+    assert.equal(tabForSection(sectionForTab(tab.value)), tab.value);
     assert.equal(panels.filter((value) => value === tab.value).length, 1, tab.label);
   }
-  // /settings/<section> reopens the Settings modal over chat at that section.
-  assert.match(routeSource, /SETTINGS_SECTIONS\[section as keyof typeof SETTINGS_SECTIONS\]/);
-  assert.match(routeSource, /new CustomEvent\("kova-open-settings", \{ detail: \{ tab \} \}\)/);
-  assert.match(settingsSource, /if \(page\) onSectionChange\?\.\(settingsSectionForTab\(value\)\)/);
+  assert.equal(tabForSection("__proto__"), "general");
+  assert.match(
+    routeSource,
+    /redirect\(\{ to: "\/", search: \{ settings: section \}, replace: true \}\)/,
+  );
+  assert.match(chatRouteSource, /openSettings\(settingsTabForSection\(linkedSettingsSection\)\)/);
+  assert.match(chatRouteSource, /initialTab=\{settingsTab\}/);
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
   assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);
   assert.match(settingsSource, /<TabsTrigger[\s\S]*?value=\{v\}/);

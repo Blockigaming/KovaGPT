@@ -381,7 +381,7 @@ function ImagesPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
-  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
+  const [sidebarOpen, setSidebarOpen, , sidebarIsDrawer] = useSidebarPreference();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -402,7 +402,6 @@ function ImagesPage() {
   const [history, setHistory] = useState<ImageHistoryItem[]>([]);
   const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
-  // Settings opens as a modal over the image workspace so unsaved work stays.
   const openSettings = useCallback((tab?: string) => {
     settingsReturnFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -871,7 +870,7 @@ function ImagesPage() {
         onSelect={() => {}}
         onNew={() => navigate({ to: "/" })}
         onDelete={() => {}}
-        open={sidebarOpen && !settingsOpen}
+        open={sidebarOpen && !(sidebarIsDrawer && settingsOpen)}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}

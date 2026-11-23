@@ -318,30 +318,6 @@ function SettingsPageContent({ children, className }: ComponentProps<typeof Dial
   );
 }
 
-// The modal mirrors its section into /settings/<section> so the address can be
-// shared, reloaded and reopened (the /settings route opens this modal again).
-// The router is not told: the page underneath stays mounted. This records the
-// page's own address so close restores it and "same page" guards compare
-// against it rather than against the mirrored one.
-const settingsUrlMirror: { base: string | null } = { base: null };
-function stableHref() {
-  if (typeof window === "undefined") return "";
-  return settingsUrlMirror.base ?? window.location.href;
-}
-function writeAddressQuietly(url: string) {
-  // The router patches history.replaceState to observe navigations; the native
-  // method changes only the address bar.
-  History.prototype.replaceState.call(window.history, window.history.state, "", url);
-}
-function restoreSettingsUrl() {
-  const base = settingsUrlMirror.base;
-  settingsUrlMirror.base = null;
-  if (base === null || typeof window === "undefined") return;
-  // A navigation started from inside Settings owns the address; leave it.
-  if (!window.location.pathname.startsWith("/settings/")) return;
-  writeAddressQuietly(base);
-}
-
 export function SettingsDialog({
   open,
   onOpenChange,
@@ -384,16 +360,6 @@ export function SettingsDialog({
   const { tier } = useTier();
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
   const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
-  useEffect(() => {
-    if (page || !open || typeof window === "undefined") return;
-    settingsUrlMirror.base ??= window.location.href;
-    const target = `/settings/${settingsSectionForTab(tab)}`;
-    if (window.location.pathname !== target) writeAddressQuietly(target);
-  }, [open, page, tab]);
-  useEffect(() => {
-    if (!page && !open) restoreSettingsUrl();
-  }, [open, page]);
-  useEffect(() => () => (page ? undefined : restoreSettingsUrl()), [page]);
   const [settingsQuery, setSettingsQuery] = useState("");
   const [mobileHome, setMobileHome] = useState(!initialTab);
   const [usage, setUsage] = useState<PlanUsageDto | null>(null);
@@ -436,7 +402,7 @@ export function SettingsDialog({
     [],
   );
   const usageRetryEpoch = billingScopeRef.current.epoch;
-  const usageRetryUrl = stableHref();
+  const usageRetryUrl = typeof window === "undefined" ? "" : window.location.href;
   const retryUsage = (event: React.MouseEvent<HTMLButtonElement>) => {
     const scope = billingScopeRef.current;
     const trigger = event.currentTarget;
@@ -445,7 +411,7 @@ export function SettingsDialog({
       scope.tab !== "usage" ||
       !scope.loggedIn ||
       currentAuthUserKeyRef.current !== userKey ||
-      usageRetryUrl !== stableHref() ||
+      usageRetryUrl !== window.location.href ||
       !trigger.isConnected ||
       trigger.closest('[inert], [aria-hidden="true"], [hidden]')
     )
@@ -1304,7 +1270,7 @@ export function SettingsDialog({
             returnFocusTarget ??
             (document.activeElement instanceof HTMLElement ? document.activeElement : null);
           returnFocusContextRef.current = {
-            url: stableHref(),
+            url: window.location.href,
             ownerId: currentAuthUserKeyRef.current,
           };
         }}
@@ -1316,7 +1282,7 @@ export function SettingsDialog({
           returnFocusContextRef.current = null;
           if (
             !context ||
-            context.url !== stableHref() ||
+            context.url !== window.location.href ||
             context.ownerId !== currentAuthUserKeyRef.current
           )
             return;
@@ -1350,12 +1316,12 @@ export function SettingsDialog({
             target.focus({ preventScroll: true });
             return document.activeElement === target;
           };
-          // A desktop menu item unmounts when Settings opens; its account
-          // trigger remains available. A closed mobile drawer instead restores
-          // its visible menu opener. Both fallbacks use the same focus guards.
+          // The sidebar can mount both account triggers. Skip the hidden one.
           if (
             !restore(previous) &&
-            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]')) &&
+            !Array.from(document.querySelectorAll<HTMLElement>('[aria-label="Account menu"]')).some(
+              restore,
+            ) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]')) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Toggle sidebar"]'))
           )
@@ -1365,9 +1331,7 @@ export function SettingsDialog({
         <DialogHeader
           className={
             loggedIn
-              ? page
-                ? "sr-only"
-                : "hidden"
+              ? "sr-only"
               : "kova-settings-page-header px-5 sm:px-7 pt-5 pb-4 border-b border-border"
           }
         >
