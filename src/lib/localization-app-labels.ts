@@ -2862,6 +2862,270 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Try an example": "Prueba un ejemplo",
     "Kova can make mistakes. Check important information, citations, and final wording.":
       "Kova puede equivocarse. Revisa la información, las citas y la redacción final.",
+    "This recovery policy is not enabled here. This screen cannot verify your current deletion status.":
+      "Esta política de recuperación no está activada aquí. Esta pantalla no puede verificar el estado de eliminación.",
+    "Recovery deadline · deletion eligible from":
+      "Plazo de recuperación · eliminación posible desde",
+    "The recovery deadline has passed. Actual deletion status is unknown; the time alone does not confirm that your account has been deleted.":
+      "El plazo ha vencido. Se desconoce el estado real; la fecha no confirma que la cuenta se haya eliminado.",
+    "Recover account cancels the scheduled deletion. Closing this dialog does not cancel it.":
+      "Recuperar la cuenta cancela la eliminación programada. Cerrar este cuadro no la cancela.",
+    "Account data was cleared from this browser. Reopen Privacy settings to check your export again.":
+      "Se borraron los datos de la cuenta del navegador. Vuelve a abrir Privacidad para comprobar la exportación.",
+    "Status refreshes while this section is open. The service does not provide a progress percentage or completion estimate.":
+      "El estado se actualiza mientras esta sección está abierta. No hay porcentaje ni estimación de finalización.",
+    "Removal of the export file is still pending. Account records are unaffected.":
+      "La eliminación del archivo sigue pendiente. Los registros de la cuenta no se ven afectados.",
+    "The previous request has not been confirmed. Only its status will be checked; another export request will not be sent.":
+      "La solicitud anterior no se confirmó. Solo se comprobará su estado; no se enviará otra.",
+    "Request tracking is unavailable in this browser. New export requests are disabled to prevent an unconfirmed request from being repeated.":
+      "El seguimiento no está disponible en este navegador. Se desactivan nuevas exportaciones para no repetir una no confirmada.",
+    "A clear answer starts with the": "Una respuesta clara empieza por",
+    "Page count, page selection and page-read results are unavailable for this attachment. Saved text-only records do not retain PDF page metadata. Attach the original PDF again to inspect its pages.":
+      "El número de páginas y la selección no están disponibles para este adjunto. Los registros de solo texto no guardan datos de página. Adjunta de nuevo el PDF original.",
+    "Truncated: only": "Truncado: solo",
+    "Bounded extracted text ·": "Texto extraído limitado ·",
+    "No readable text is included for this pin. It is":
+      "No se incluye texto legible para este elemento. Es",
+    "In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no daily limit. Daily limits reset at midnight UTC.":
+      "En el chat, pide al navegador en la nube que abra un enlace HTTPS público. Prioridad: Pro, luego Plus y luego Free. Free tiene 10 minutos al día, Plus 60 y Pro sin límite diario. Los límites se renuevan a medianoche UTC.",
+    "Site rules match an exact HTTPS domain. Subdomains have separate rules. Unlisted sites use Ask; each agent action still needs your approval.":
+      "Las reglas se aplican a un dominio HTTPS exacto; los subdominios tienen reglas propias. Los sitios no listados usan Preguntar y cada acción requiere tu aprobación.",
+    "This runner needs the site-rules update to enforce saved blocks. Block rules prevent new browser commands until that update is active.":
+      "Este ejecutor necesita la actualización de reglas para aplicar bloqueos. Hasta entonces, se impiden nuevos comandos del navegador.",
+    "Use Take over to enter passwords privately. Automation pauses while you have control. Return control when you are ready for the agent to use the signed-in session.":
+      "Usa Tomar el control para escribir contraseñas en privado. La automatización se pausa mientras controlas. Devuelve el control cuando el agente pueda usar la sesión.",
+    "Compatible browser images pause for popup and website confirmation requests. Downloads and device permission prompts remain blocked.":
+      "Las imágenes de navegador compatibles se pausan ante ventanas emergentes y confirmaciones. Las descargas y permisos del dispositivo siguen bloqueados.",
+    "Selection changes this message only. The full local extraction is kept for Restore while this attachment is in the composer. Saved Library copies are unchanged. This is a text preview, not an original PDF preview.":
+      "La selección solo cambia este mensaje. La extracción completa se guarda para Restaurar mientras el adjunto esté en el editor. Las copias de la Biblioteca no cambian. Es una vista de texto, no del PDF original.",
+    "Conversation model. Your chat model powers the conversation.":
+      "Modelo de la conversación. Tu modelo de chat impulsa la conversación.",
+    "Kova provides read access for this operation.":
+      "Kova ofrece acceso de lectura para esta operación.",
+    "This removes this account’s access from Kova and cancels its sync jobs. Other Microsoft services using the same account are affected. Remote provider revocation may remain pending.":
+      "Esto quita el acceso de la cuenta a Kova y cancela sus sincronizaciones. Afecta a otros servicios de Microsoft de la misma cuenta. La revocación en el proveedor puede quedar pendiente.",
+    "Private text, Markdown, CSV and JSON files for this developer project. Upload through the API with a files-scoped key. Files expire after 30 days; your account can store up to 100 files and 2 MiB across all projects.":
+      "Archivos privados de texto, Markdown, CSV y JSON del proyecto. Súbelos por la API con una clave de archivos. Caducan a los 30 días; hasta 100 archivos y 2 MiB en total.",
+    "Configure your developer account, project and spending limits in the":
+      "Configura tu cuenta, proyecto y límites en la",
+    "Enter this client's spending limits in": "Introduce los límites de este cliente en",
+    "Revoke access here even when new MCP authorization is disabled. These connections use developer projects and prepaid developer credit.":
+      "Revoca el acceso aquí aunque la nueva autorización MCP esté desactivada. Estas conexiones usan proyectos y crédito prepago.",
+    "/ request,": "/ solicitud,",
+    "/ day,": "/ día,",
+    "Searching sends your query and any place you enter to the configured search provider. Results are source reports and can be incomplete or outdated. KovaGPT stores request counts, not your search text.":
+      "Buscar envía tu consulta y el lugar al proveedor configurado. Los resultados pueden estar incompletos o desactualizados. KovaGPT guarda recuentos, no el texto.",
+    "For a product in a photo, ask chat to describe it, then paste the description here. Matching uses your text; it does not upload the photo or prove an exact visual match.":
+      "Para un producto en una foto, pide al chat que lo describa y pega la descripción aquí. No se sube la foto ni se garantiza coincidencia exacta.",
+    "No location permission has been requested. Local results are web links, with external maps and reservation handoffs.":
+      "No se ha pedido permiso de ubicación. Los resultados locales son enlaces web con mapas y reservas externos.",
+    "Merchant price, currency, and stock are unknown until checked. A check sends this source URL to the search provider.":
+      "Precio, moneda y stock se desconocen hasta comprobarlos. La comprobación envía la URL al proveedor.",
+    "Compare the exact variants and currencies shown. Prices may exclude shipping or tax; a source observation does not guarantee checkout price or stock.":
+      "Compara las variantes y monedas exactas. Los precios pueden excluir envío o impuestos y no garantizan el precio final ni el stock.",
+    "The source did not provide an unambiguous product with variants. Price and stock remain unknown.":
+      "La fuente no dio un producto claro con variantes. Precio y stock siguen sin conocerse.",
+    "The support service accepted your request. Your reply address is":
+      "El servicio de soporte recibió tu solicitud. Tu dirección de respuesta es",
+    "PNG/JPEG/WebP originals up to 8 MB. Masks must be PNG with transparency, up to 4 MB, and match the original dimensions. A mask guides edits; it does not guarantee pixel-perfect preservation.":
+      "Originales PNG/JPEG/WebP de hasta 8 MB. Las máscaras deben ser PNG con transparencia, de hasta 4 MB y del mismo tamaño. Guían la edición, sin garantizar precisión exacta.",
+    "Your selection stays unchanged. “Download started” means the file was handed to your browser; check your browser’s downloads to confirm it was saved.":
+      "Tu selección no cambia. «Descarga iniciada» significa que el archivo pasó al navegador; revisa tus descargas.",
+    "Replacements keep earlier versions private. Retained originals and text history count toward storage. Images and Work outputs keep their own generation history.":
+      "Los reemplazos mantienen privadas las versiones anteriores. Los originales y el historial cuentan para el almacenamiento.",
+    "Your unsaved text is still here. Select and copy anything you want to keep before closing. Refresh Library, then reopen Versions to check the saved text.":
+      "Tu texto sin guardar sigue aquí. Copia lo que quieras conservar antes de cerrar. Actualiza la Biblioteca y abre Versiones para comprobarlo.",
+    "These sources were included with the original response request. This does not tell us which facts influenced the answer or later edits. The current saved contents appear below and may have changed since that response.":
+      "Estas fuentes se incluyeron en la solicitud original. No indica qué datos influyeron en la respuesta. El contenido actual puede haber cambiado.",
+    "Verify your existing authenticator, then enroll a fresh Kova-owned authenticator. Hosted session authority is retired only after the new factor succeeds.":
+      "Verifica tu autenticador actual y registra uno nuevo de Kova. La autoridad anterior se retira solo cuando el nuevo funciona.",
+    "Confirm your password before adding an authenticator. For Google or passkey accounts, sign in again with that method and return here within five minutes; no password is needed.":
+      "Confirma tu contraseña antes de añadir un autenticador. Con Google o llave de acceso, vuelve a iniciar sesión y regresa en cinco minutos.",
+    "SSO:": "SSO:",
+    "Only a sole remaining owner can close the organization. This revokes access and invitations; retained audit records are not erased. Type":
+      "Solo el único propietario restante puede cerrarla. Se revocan accesos e invitaciones; los registros de auditoría se conservan. Escribe",
+    "SCIM provisions organization members through this organization’s SSO identity. Groups remain directory records; they do not share Projects or grant administrator access.":
+      "SCIM aprovisiona miembros mediante el SSO de la organización. Los grupos son registros de directorio; no comparten proyectos ni dan acceso de administrador.",
+    "I authorize this IdP to create and revoke its managed member access. Rotating invalidates the previous token.":
+      "Autorizo a este IdP a crear y revocar el acceso de sus miembros. Rotar invalida el token anterior.",
+    "A response preference for this account in this browser. Saving it does not rename your account. Leave blank to use no preferred name.":
+      "Una preferencia de respuesta para esta cuenta en este navegador. Guardarla no cambia el nombre de la cuenta. Déjalo vacío si no quieres nombre preferido.",
+    "Keep or clear your newer draft before restoring this version. Restoring does not send it. Kept only while this chat stays open. Up to three versions can be kept; restore or discard one before sending more.":
+      "Conserva o borra tu borrador reciente antes de restaurar. Restaurar no lo envía. Se guarda mientras el chat esté abierto; hasta tres versiones.",
+    "Track new inbox messages from this Google account. Starting or resetting uses a new baseline; earlier messages will not run Tasks.":
+      "Sigue los mensajes nuevos de esta cuenta de Google. Iniciar o reiniciar usa una nueva base; los mensajes anteriores no ejecutan tareas.",
+    "Enabling push registers and renews a Gmail watch for this grant. Stopping blocks local delivery; the provider watch expires naturally. Event tasks also require verified provider setup.":
+      "Activar push registra y renueva la vigilancia de Gmail. Detenerla bloquea la entrega local; la del proveedor caduca sola. Las tareas por eventos requieren configuración verificada.",
+    "Titan workspace systems": "Sistemas del espacio Titan",
+    "Deterministic health, evolution, and authorized replay—no generated claims.":
+      "Salud, evolución y reproducción autorizada deterministas, sin afirmaciones generadas.",
+    "Your resource mix in the last 30 days compared with the preceding 30 days.":
+      "Tu combinación de recursos en los últimos 30 días frente a los 30 anteriores.",
+    "Create workspace activity to establish your DNA baseline.":
+      "Genera actividad para establecer tu línea base.",
+    "Capture a metadata-only checkpoint. Content and titles are never stored in snapshots.":
+      "Captura un punto de control solo con metadatos. Nunca se guardan contenidos ni títulos.",
+    "Only resources you can still access are resolved. Revoked or deleted references stay hidden.":
+      "Solo se muestran recursos a los que aún tienes acceso. Los revocados o eliminados quedan ocultos.",
+    "No resources from this checkpoint are currently available.":
+      "No hay recursos disponibles de este punto.",
+    "Select a checkpoint to replay currently authorized resources.":
+      "Elige un punto para reproducir los recursos autorizados.",
+    "Bcc:": "CCO:",
+    "Private browser controls were cleared from this view.":
+      "Se quitaron los controles del navegador privado de esta vista.",
+    "You have control. Automation is blocked during takeover. Return control, then use Resume run to continue.":
+      "Tienes el control. La automatización está bloqueada. Devuelve el control y usa Reanudar.",
+    "Pause this run and wait for its current step to settle before taking over.":
+      "Pausa la ejecución y espera a que termine el paso actual antes de tomar el control.",
+    "Run status has changed. Refresh execution and browser status before taking over.":
+      "El estado cambió. Actualiza antes de tomar el control.",
+    "Pause Work before taking over. The model cannot read or act during takeover. Sessions close after five minutes; sign-in data is not saved to Work history. Hiding these controls does not end the session.":
+      "Pausa Trabajo antes de tomar el control. El modelo no lee ni actúa mientras tanto. Las sesiones se cierran a los cinco minutos y no se guardan datos de acceso. Ocultar los controles no termina la sesión.",
+    "This destination does not provide operative": "Este destino no proporciona",
+    "Unedited source preview only. Nothing is uploaded, generated or published. Image references are not included in saved drafts.":
+      "Solo vista previa sin editar. No se sube, genera ni publica nada. Las referencias de imagen no se guardan en borradores.",
+    "Keep the composition instructions here. Supported image tools remain in the existing workspace.":
+      "Guarda aquí las instrucciones de composición. Las herramientas de imagen siguen en el espacio actual.",
+    "PDF export and owner share controls require an actual supported output. Local review notes can be exported as JSON from Review tools below.":
+      "Exportar a PDF y compartir requieren un resultado compatible. Las notas locales se pueden exportar como JSON.",
+    "Loading secure checkout…": "Cargando pago seguro…",
+    Privacy: "Privacidad",
+    Terms: "Términos",
+    "Review text-only voice preview": "Revisar vista previa de voz en texto",
+    "Prepare a local inquiry": "Preparar una consulta local",
+    "Explore family guidance": "Ver guía para familias",
+    "Start shopping research": "Empezar investigación de compras",
+    "Review data controls": "Revisar controles de datos",
+    "Explore KovaGPT research": "Explorar la investigación de KovaGPT",
+    "Evaluate enterprise use": "Evaluar uso empresarial",
+    "View careers status": "Ver empleo",
+    "Review model guidance": "Revisar guía de modelos",
+    "Open research tools": "Abrir herramientas de investigación",
+    "Explore business use": "Explorar uso empresarial",
+    "Explore student guidance": "Ver guía para estudiantes",
+    "Review moderation": "Revisar moderación",
+    "Connect supported services with explicit permissions.":
+      "Conecta servicios compatibles con permisos explícitos.",
+    "Learn through explanations and guided practice.":
+      "Aprende con explicaciones y práctica guiada.",
+    "Ask focused questions against supported files.":
+      "Haz preguntas concretas sobre archivos compatibles.",
+    "Core chat with published daily allowances.": "Chat básico con cuotas diarias publicadas.",
+    "Higher allowances and advanced supported tools.": "Cuotas más altas y herramientas avanzadas.",
+    Pro: "Pro",
+    "Highest published allowances and reasoning modes.":
+      "Las cuotas más altas y modos de razonamiento.",
+    "Plan, review, and refine a clear narrative.": "Planifica, revisa y pule una narrativa clara.",
+    "Reason about structured data and calculations.": "Razona con datos estructurados y cálculos.",
+    "Organize general information with safety boundaries.":
+      "Organiza información general con límites de seguridad.",
+    "Structure comparisons without individualized advice.":
+      "Estructura comparaciones sin consejo personalizado.",
+    "404 · KovaGPT": "404 · KovaGPT",
+    "Start with the product basics, practice on low-risk work, and learn how to verify output before using AI in consequential workflows.":
+      "Empieza por lo básico, practica en tareas de bajo riesgo y aprende a verificar resultados antes de usar IA en trabajos importantes.",
+    "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.":
+      "Mejora borradores rígidos con KovaGPT para un tono más claro, ritmo variado y voz personal, sin promesas sobre detectores de IA.",
+    "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.":
+      "Pide imágenes generadas por IA con KovaGPT, elige ajustes y guarda resultados cuando el proveedor esté disponible.",
+    "KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.":
+      "KovaGPT ayuda a escribir, aprender, programar, investigar, generar ideas e imágenes. Como la IA puede equivocarse, revisa y verifica siempre la información importante.",
+    "KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.":
+      "No uses KovaGPT como única fuente para decisiones médicas, legales, financieras, de emergencia o seguridad. En situaciones graves o urgentes, acude a un profesional.",
+    "Users may not use KovaGPT to create harmful, illegal, abusive, deceptive, or dangerous content. This includes attempts to harm others, bypass security systems, steal private information, or abuse the platform.":
+      "No se puede usar KovaGPT para crear contenido dañino, ilegal, abusivo, engañoso o peligroso, incluidos intentos de dañar, eludir seguridad, robar datos o abusar de la plataforma.",
+    "KovaGPT is meant to help you learn, brainstorm, and understand topics. Do not use it to cheat, submit work you did not understand, or break your school's rules.":
+      "KovaGPT está pensado para ayudarte a aprender y entender. No lo uses para copiar, entregar trabajos que no entiendes ni romper las normas de tu centro.",
+    "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.":
+      "Redacta, reescribe y revisa correos, ensayos, publicaciones y guiones con KovaGPT.",
+    "This connection record is retained. Reconnect to restore access.":
+      "El registro de conexión se conserva. Vuelve a conectar para restaurar el acceso.",
+    "Known schedule dependencies could not be checked. Review your schedules before disconnecting; other dependencies may exist.":
+      "No se pudieron comprobar las dependencias. Revisa tus programaciones antes de desconectar.",
+    "This plugin is coming soon. Its listed capabilities are proposals. No account is connected and no permissions have been requested.":
+      "Este complemento llegará pronto. Sus funciones son propuestas. No hay cuenta conectada ni permisos solicitados.",
+    "This connection requests your Google profile and email, plus only":
+      "Esta conexión solicita tu perfil y correo de Google, y solo",
+    "Other Google services require their own Connect action. Previously approved services remain connected.":
+      "Otros servicios de Google requieren su propia conexión. Los ya aprobados siguen conectados.",
+    "GitHub will ask you to choose an account and approve access. Only authorized installations and explicitly granted repositories are available to Kova.":
+      "GitHub te pedirá elegir cuenta y aprobar el acceso. Kova solo verá instalaciones autorizadas y repositorios concedidos.",
+    "Sign in to Kova before connecting an account. You’ll choose the provider account after selecting Connect.":
+      "Inicia sesión en Kova antes de conectar una cuenta. Elegirás la cuenta tras pulsar Conectar.",
+    "Choose the account for new Gmail, Calendar and Drive requests. Existing confirmed actions remain bound to their original account.":
+      "Elige la cuenta para nuevas solicitudes de Gmail, Calendar y Drive. Las acciones confirmadas siguen en su cuenta original.",
+    "Your connection record is retained, but Google authorization has expired or was revoked. Reconnect to restore access.":
+      "El registro se conserva, pero la autorización de Google caducó o se revocó. Vuelve a conectar.",
+    "Community publication ·": "Publicación en la comunidad ·",
+    "We asked our email provider to send a sign-in link to":
+      "Pedimos a nuestro proveedor que envíe un enlace de acceso a",
+    "Use at least": "Usa al menos",
+    "Pricing page": "Página de precios",
+    "Organization · KovaGPT": "Organización · KovaGPT",
+    "Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces.":
+      "Agentes de la cuenta, estado de proveedores, controles de ejecución y orquestación.",
+    "Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled until an organization backend validates this configuration.":
+      "Invitaciones, equipos, auditoría, SSO y SCIM siguen desactivados hasta que un backend valide la configuración.",
+    "No server drafts. Installation, diagnostics, health, updates, and permissions activate only after backend discovery verifies a manifest.":
+      "Sin borradores de servidor. Instalación, diagnóstico, estado, actualizaciones y permisos se activan tras verificar un manifiesto.",
+    "Existing production models continue through the server provider registry. This surface never exposes credentials or permits browser-side provider secrets.":
+      "Los modelos de producción siguen por el registro del servidor. Esta pantalla nunca expone credenciales ni secretos en el navegador.",
+    "Saved agents are reusable account-scoped instruction profiles. Execution remains separate and is available only when the authenticated runner and plan entitlement are healthy.":
+      "Los agentes guardados son perfiles de instrucciones reutilizables. La ejecución es aparte y solo está disponible con un ejecutor y plan válidos.",
+    "If optional tracking is introduced, the applicable notices and consent controls must be provided before that tracking runs. Installing the desktop or web app does not change the privacy choices for your account.":
+      "Si se introduce seguimiento opcional, se mostrarán avisos y controles de consentimiento antes. Instalar la app no cambia tus opciones de privacidad.",
+    "Kova may update this policy as the service and its providers change. The updated date at the top identifies the current version. Material changes may also be communicated in the product or by email when appropriate.":
+      "Kova puede actualizar esta política según cambien el servicio y sus proveedores. La fecha superior indica la versión. Los cambios importantes pueden comunicarse en el producto o por correo.",
+    "When you send a message, the service may retrieve relevant excerpts from this project's uploaded files. Exact excerpts and readiness are not loaded here.":
+      "Al enviar un mensaje, el servicio puede recuperar fragmentos de los archivos del proyecto. Aquí no se cargan los fragmentos exactos.",
+    "No saved results are explicitly attached to this message. The service may also use saved project memory; those entries are not loaded here.":
+      "No hay resultados guardados adjuntos. El servicio puede usar la memoria del proyecto; esas entradas no se cargan aquí.",
+    "Project context follows existing membership and retrieval rules. Individual entries cannot be excluded for a single message here.":
+      "El contexto sigue las reglas de membresía. Aquí no se pueden excluir entradas para un solo mensaje.",
+    "I checked Projects and want to retry creating this project.":
+      "He revisado Proyectos y quiero volver a crearlo.",
+    "KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.":
+      "Las suscripciones de KovaGPT dan acceso a herramientas de IA, límites de uso, imágenes, subidas y otras funciones premium.",
+    "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact":
+      "Los reembolsos se revisan caso por caso. Si crees que hubo un cargo erróneo o no pudiste acceder a funciones pagadas, escribe a",
+    "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.":
+      "KovaGPT puede denegar reembolsos si se usaron las funciones de pago, si la solicitud parece abusiva o no cumple nuestros criterios.",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.":
+      "Nada en esta política limita los derechos legales del consumidor. No envíes el número completo de tarjeta, contraseñas ni códigos al pedir ayuda.",
+    "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact":
+      "Puedes cancelar desde la configuración. Se detienen las renovaciones, pero el plan sigue activo hasta el final del periodo. Si necesitas ayuda, escribe a",
+    "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.":
+      "Usa KovaGPT para organizar material, resumir, comparar opciones y estructurar notas, verificando fuentes.",
+    "Sign in to review your saved tasks and background execution availability.":
+      "Inicia sesión para revisar tus tareas guardadas y la ejecución en segundo plano.",
+    "Account access could not be verified. Your signed-in session is preserved.":
+      "No se pudo verificar el acceso. Tu sesión se conserva.",
+    "Scheduled Tasks Status": "Estado de tareas programadas",
+    "Retry the same request to check the outcome.":
+      "Reintenta la misma solicitud para ver el resultado.",
+    "Scheduled task pages": "Páginas de tareas programadas",
+    "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.":
+      "Pide a KovaGPT explicaciones, preguntas de práctica, resúmenes, tarjetas y ejemplos resueltos, y verifica con fuentes del curso.",
+    "Standard ·": "Estándar ·",
+    "Premium · 5× usage": "Premium · 5× uso",
+    "New connections are not activated. Existing invitations and connections can still be declined, revoked, blocked, or removed.":
+      "No se activan conexiones nuevas. Las existentes aún pueden rechazarse, revocarse, bloquearse o quitarse.",
+    "They must review and consent in their own account. Invitations expire after seven days.":
+      "Deben revisar y aceptar en su cuenta. Las invitaciones caducan a los siete días.",
+    "I agree to share my verified account email with this person and invite them to a voluntary contact connection.":
+      "Acepto compartir mi correo verificado con esta persona e invitarla a una conexión voluntaria.",
+    "Emails shown here were verified when the invitation was created. No email delivery is enabled.":
+      "Los correos se verificaron al crear la invitación. No se envían correos.",
+    "This connection does not authorize monitoring, automatic alerts, or account access. Acceptance is optional. This review expires in ten minutes.":
+      "Esta conexión no autoriza supervisión, alertas ni acceso a la cuenta. Aceptar es opcional. La revisión caduca en diez minutos.",
+    "I consent to this voluntary connection and sharing my verified account email. I can revoke it at any time.":
+      "Acepto esta conexión voluntaria y compartir mi correo verificado. Puedo revocarla cuando quiera.",
+    "Up to 50 recent records. Removing a finished record removes it for both parties.":
+      "Hasta 50 registros recientes. Quitar uno finalizado lo elimina para ambos.",
+    "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
+      "Redacta, revisa, corrige, resume y cuenta texto en espacios centrados con la interfaz de Kova.",
     Cooking: "Cocina",
     "Plan and adapt recipes with food safety in view.":
       "Planifica y adapta recetas teniendo en cuenta la seguridad alimentaria.",
@@ -6865,6 +7129,270 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Try an example": "Essayez un exemple",
     "Kova can make mistakes. Check important information, citations, and final wording.":
       "Kova peut se tromper. Vérifiez informations, citations et formulation finale.",
+    "This recovery policy is not enabled here. This screen cannot verify your current deletion status.":
+      "Cette politique de récupération n'est pas activée ici. Cet écran ne peut pas vérifier l'état de suppression.",
+    "Recovery deadline · deletion eligible from":
+      "Date limite de récupération · suppression possible dès",
+    "The recovery deadline has passed. Actual deletion status is unknown; the time alone does not confirm that your account has been deleted.":
+      "Le délai est passé. L'état réel est inconnu ; la date seule ne confirme pas la suppression.",
+    "Recover account cancels the scheduled deletion. Closing this dialog does not cancel it.":
+      "Récupérer le compte annule la suppression prévue. Fermer cette fenêtre ne l'annule pas.",
+    "Account data was cleared from this browser. Reopen Privacy settings to check your export again.":
+      "Données du compte effacées du navigateur. Rouvrez Confidentialité pour vérifier l'export.",
+    "Status refreshes while this section is open. The service does not provide a progress percentage or completion estimate.":
+      "L'état s'actualise tant que la section est ouverte, sans pourcentage ni estimation.",
+    "Removal of the export file is still pending. Account records are unaffected.":
+      "La suppression du fichier est en attente. Les données du compte ne sont pas touchées.",
+    "The previous request has not been confirmed. Only its status will be checked; another export request will not be sent.":
+      "La demande précédente n'est pas confirmée. Seul son état sera vérifié ; aucune nouvelle demande n'est envoyée.",
+    "Request tracking is unavailable in this browser. New export requests are disabled to prevent an unconfirmed request from being repeated.":
+      "Le suivi est indisponible dans ce navigateur. Les nouveaux exports sont désactivés pour éviter les doublons.",
+    "A clear answer starts with the": "Une réponse claire commence par",
+    "Page count, page selection and page-read results are unavailable for this attachment. Saved text-only records do not retain PDF page metadata. Attach the original PDF again to inspect its pages.":
+      "Nombre et sélection de pages indisponibles pour cette pièce jointe. Les textes enregistrés ne gardent pas les pages. Joignez à nouveau le PDF.",
+    "Truncated: only": "Tronqué : seulement",
+    "Bounded extracted text ·": "Texte extrait limité ·",
+    "No readable text is included for this pin. It is":
+      "Aucun texte lisible pour cet élément. Il est",
+    "In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no daily limit. Daily limits reset at midnight UTC.":
+      "Dans le chat, demandez au navigateur cloud d'ouvrir un lien HTTPS public. Priorité : Pro, puis Plus, puis Free. Free : 10 min/jour, Plus : 60 min, Pro : illimité. Réinitialisation à minuit UTC.",
+    "Site rules match an exact HTTPS domain. Subdomains have separate rules. Unlisted sites use Ask; each agent action still needs your approval.":
+      "Les règles visent un domaine HTTPS exact ; les sous-domaines ont leurs propres règles. Les sites non listés utilisent Demander ; chaque action requiert votre accord.",
+    "This runner needs the site-rules update to enforce saved blocks. Block rules prevent new browser commands until that update is active.":
+      "Cet exécuteur doit être mis à jour pour appliquer les blocages. D'ici là, les nouvelles commandes sont bloquées.",
+    "Use Take over to enter passwords privately. Automation pauses while you have control. Return control when you are ready for the agent to use the signed-in session.":
+      "Utilisez Prendre la main pour saisir les mots de passe en privé. L'automatisation se met en pause. Rendez la main quand l'agent peut utiliser la session.",
+    "Compatible browser images pause for popup and website confirmation requests. Downloads and device permission prompts remain blocked.":
+      "Les navigateurs compatibles se mettent en pause pour les pop-ups et confirmations. Téléchargements et autorisations restent bloqués.",
+    "Selection changes this message only. The full local extraction is kept for Restore while this attachment is in the composer. Saved Library copies are unchanged. This is a text preview, not an original PDF preview.":
+      "La sélection ne change que ce message. L'extraction complète reste disponible pour Restaurer. Les copies de la Bibliothèque sont inchangées. Aperçu texte, pas du PDF original.",
+    "Conversation model. Your chat model powers the conversation.":
+      "Modèle de la discussion. Votre modèle de chat l'alimente.",
+    "Kova provides read access for this operation.":
+      "Kova fournit un accès en lecture pour cette opération.",
+    "This removes this account’s access from Kova and cancels its sync jobs. Other Microsoft services using the same account are affected. Remote provider revocation may remain pending.":
+      "Cela retire l'accès de ce compte à Kova et annule les synchronisations. D'autres services Microsoft du même compte sont touchés. La révocation chez le fournisseur peut rester en attente.",
+    "Private text, Markdown, CSV and JSON files for this developer project. Upload through the API with a files-scoped key. Files expire after 30 days; your account can store up to 100 files and 2 MiB across all projects.":
+      "Fichiers privés texte, Markdown, CSV et JSON du projet. Import via l'API avec une clé « fichiers ». Expiration après 30 jours ; 100 fichiers et 2 Mio max.",
+    "Configure your developer account, project and spending limits in the":
+      "Configurez compte, projet et limites dans la",
+    "Enter this client's spending limits in": "Saisissez les limites de ce client en",
+    "Revoke access here even when new MCP authorization is disabled. These connections use developer projects and prepaid developer credit.":
+      "Révoquez l'accès ici même si les nouvelles autorisations MCP sont désactivées. Ces connexions utilisent projets et crédit prépayé.",
+    "/ request,": "/ requête,",
+    "/ day,": "/ jour,",
+    "Searching sends your query and any place you enter to the configured search provider. Results are source reports and can be incomplete or outdated. KovaGPT stores request counts, not your search text.":
+      "La recherche envoie votre requête et le lieu au fournisseur configuré. Les résultats peuvent être incomplets ou datés. KovaGPT garde des compteurs, pas le texte.",
+    "For a product in a photo, ask chat to describe it, then paste the description here. Matching uses your text; it does not upload the photo or prove an exact visual match.":
+      "Pour un produit en photo, demandez au chat de le décrire puis collez la description. La photo n'est pas envoyée.",
+    "No location permission has been requested. Local results are web links, with external maps and reservation handoffs.":
+      "Aucune autorisation de localisation demandée. Les résultats locaux sont des liens web vers cartes et réservations externes.",
+    "Merchant price, currency, and stock are unknown until checked. A check sends this source URL to the search provider.":
+      "Prix, devise et stock inconnus avant vérification, qui envoie l'URL au fournisseur.",
+    "Compare the exact variants and currencies shown. Prices may exclude shipping or tax; a source observation does not guarantee checkout price or stock.":
+      "Comparez les variantes et devises exactes. Les prix peuvent exclure livraison ou taxes, sans garantie de prix final ni de stock.",
+    "The source did not provide an unambiguous product with variants. Price and stock remain unknown.":
+      "La source n'indique pas de produit précis. Prix et stock restent inconnus.",
+    "The support service accepted your request. Your reply address is":
+      "L'assistance a reçu votre demande. Votre adresse de réponse est",
+    "PNG/JPEG/WebP originals up to 8 MB. Masks must be PNG with transparency, up to 4 MB, and match the original dimensions. A mask guides edits; it does not guarantee pixel-perfect preservation.":
+      "Originaux PNG/JPEG/WebP jusqu'à 8 Mo. Masques PNG transparents, 4 Mo max., aux mêmes dimensions. Un masque guide sans garantir la précision au pixel.",
+    "Your selection stays unchanged. “Download started” means the file was handed to your browser; check your browser’s downloads to confirm it was saved.":
+      "Votre sélection reste inchangée. « Téléchargement lancé » signifie que le fichier a été transmis au navigateur ; vérifiez vos téléchargements.",
+    "Replacements keep earlier versions private. Retained originals and text history count toward storage. Images and Work outputs keep their own generation history.":
+      "Les remplacements gardent les versions antérieures privées. Originaux et historique comptent dans le stockage.",
+    "Your unsaved text is still here. Select and copy anything you want to keep before closing. Refresh Library, then reopen Versions to check the saved text.":
+      "Votre texte non enregistré est toujours là. Copiez ce que vous voulez garder, puis actualisez la Bibliothèque et rouvrez Versions.",
+    "These sources were included with the original response request. This does not tell us which facts influenced the answer or later edits. The current saved contents appear below and may have changed since that response.":
+      "Ces sources ont accompagné la demande initiale, sans indiquer lesquelles ont influencé la réponse. Le contenu actuel a pu changer.",
+    "Verify your existing authenticator, then enroll a fresh Kova-owned authenticator. Hosted session authority is retired only after the new factor succeeds.":
+      "Vérifiez votre authentificateur actuel puis enregistrez-en un nouveau. L'ancien n'est retiré qu'après réussite.",
+    "Confirm your password before adding an authenticator. For Google or passkey accounts, sign in again with that method and return here within five minutes; no password is needed.":
+      "Confirmez votre mot de passe avant d'ajouter un authentificateur. Avec Google ou clé d'accès, reconnectez-vous et revenez sous cinq minutes.",
+    "SSO:": "SSO :",
+    "Only a sole remaining owner can close the organization. This revokes access and invitations; retained audit records are not erased. Type":
+      "Seul le dernier propriétaire peut fermer l'organisation. Accès et invitations sont révoqués ; l'audit est conservé. Saisissez",
+    "SCIM provisions organization members through this organization’s SSO identity. Groups remain directory records; they do not share Projects or grant administrator access.":
+      "SCIM provisionne les membres via le SSO. Les groupes restent des fiches d'annuaire, sans partage de projets ni droits d'admin.",
+    "I authorize this IdP to create and revoke its managed member access. Rotating invalidates the previous token.":
+      "J'autorise cet IdP à créer et révoquer l'accès des membres gérés. La rotation invalide l'ancien jeton.",
+    "A response preference for this account in this browser. Saving it does not rename your account. Leave blank to use no preferred name.":
+      "Préférence de réponse pour ce compte dans ce navigateur, sans renommer le compte. Laissez vide pour aucun nom.",
+    "Keep or clear your newer draft before restoring this version. Restoring does not send it. Kept only while this chat stays open. Up to three versions can be kept; restore or discard one before sending more.":
+      "Gardez ou effacez votre brouillon récent avant de restaurer. Restaurer n'envoie rien. Conservé tant que la discussion est ouverte ; trois versions max.",
+    "Track new inbox messages from this Google account. Starting or resetting uses a new baseline; earlier messages will not run Tasks.":
+      "Suivez les nouveaux messages de ce compte Google. Démarrer ou réinitialiser crée une nouvelle base ; les anciens messages ne lancent pas de tâches.",
+    "Enabling push registers and renews a Gmail watch for this grant. Stopping blocks local delivery; the provider watch expires naturally. Event tasks also require verified provider setup.":
+      "Activer le push enregistre et renouvelle la surveillance Gmail. L'arrêter bloque la livraison locale ; la surveillance expire d'elle-même.",
+    "Titan workspace systems": "Systèmes de l'espace Titan",
+    "Deterministic health, evolution, and authorized replay—no generated claims.":
+      "Santé, évolution et relecture autorisée déterministes, sans affirmations générées.",
+    "Your resource mix in the last 30 days compared with the preceding 30 days.":
+      "Votre répartition des ressources sur 30 jours comparée aux 30 précédents.",
+    "Create workspace activity to establish your DNA baseline.":
+      "Créez de l'activité pour établir votre base de référence.",
+    "Capture a metadata-only checkpoint. Content and titles are never stored in snapshots.":
+      "Capturez un point de contrôle de métadonnées, sans contenu ni titres.",
+    "Only resources you can still access are resolved. Revoked or deleted references stay hidden.":
+      "Seules les ressources encore accessibles s'affichent ; les références révoquées restent masquées.",
+    "No resources from this checkpoint are currently available.":
+      "Aucune ressource disponible pour ce point.",
+    "Select a checkpoint to replay currently authorized resources.":
+      "Choisissez un point pour revoir les ressources autorisées.",
+    "Bcc:": "Cci :",
+    "Private browser controls were cleared from this view.":
+      "Les commandes du navigateur privé ont été effacées.",
+    "You have control. Automation is blocked during takeover. Return control, then use Resume run to continue.":
+      "Vous avez la main. L'automatisation est bloquée. Rendez la main puis reprenez.",
+    "Pause this run and wait for its current step to settle before taking over.":
+      "Mettez en pause et attendez la fin de l'étape avant de prendre la main.",
+    "Run status has changed. Refresh execution and browser status before taking over.":
+      "L'état a changé. Actualisez avant de prendre la main.",
+    "Pause Work before taking over. The model cannot read or act during takeover. Sessions close after five minutes; sign-in data is not saved to Work history. Hiding these controls does not end the session.":
+      "Mettez Travail en pause avant de prendre la main. Le modèle ne lit ni n'agit. Sessions fermées après cinq minutes ; identifiants non enregistrés. Masquer ne termine pas la session.",
+    "This destination does not provide operative": "Cette destination ne fournit pas de",
+    "Unedited source preview only. Nothing is uploaded, generated or published. Image references are not included in saved drafts.":
+      "Aperçu brut uniquement. Rien n'est importé, généré ni publié. Les images ne sont pas incluses dans les brouillons.",
+    "Keep the composition instructions here. Supported image tools remain in the existing workspace.":
+      "Gardez ici les consignes de composition. Les outils d'image restent dans l'espace existant.",
+    "PDF export and owner share controls require an actual supported output. Local review notes can be exported as JSON from Review tools below.":
+      "L'export PDF et le partage exigent une sortie prise en charge. Les notes locales s'exportent en JSON.",
+    "Loading secure checkout…": "Chargement du paiement sécurisé…",
+    Privacy: "Confidentialité",
+    Terms: "Conditions",
+    "Review text-only voice preview": "Voir l'aperçu vocal en texte",
+    "Prepare a local inquiry": "Préparer une demande locale",
+    "Explore family guidance": "Conseils pour les familles",
+    "Start shopping research": "Lancer une recherche d'achat",
+    "Review data controls": "Voir les contrôles des données",
+    "Explore KovaGPT research": "Découvrir la recherche KovaGPT",
+    "Evaluate enterprise use": "Évaluer l'usage en entreprise",
+    "View careers status": "Voir les offres d'emploi",
+    "Review model guidance": "Voir le guide des modèles",
+    "Open research tools": "Ouvrir les outils de recherche",
+    "Explore business use": "Découvrir l'usage professionnel",
+    "Explore student guidance": "Conseils pour les étudiants",
+    "Review moderation": "Voir la modération",
+    "Connect supported services with explicit permissions.":
+      "Connectez des services avec des autorisations explicites.",
+    "Learn through explanations and guided practice.":
+      "Apprenez avec explications et exercices guidés.",
+    "Ask focused questions against supported files.":
+      "Posez des questions précises sur vos fichiers.",
+    "Core chat with published daily allowances.": "Discussion de base avec quotas quotidiens.",
+    "Higher allowances and advanced supported tools.": "Quotas plus élevés et outils avancés.",
+    Pro: "Pro",
+    "Highest published allowances and reasoning modes.":
+      "Quotas les plus élevés et modes de raisonnement.",
+    "Plan, review, and refine a clear narrative.": "Planifiez, relisez et affinez un récit clair.",
+    "Reason about structured data and calculations.":
+      "Raisonnez sur données structurées et calculs.",
+    "Organize general information with safety boundaries.":
+      "Organisez des informations générales avec garde-fous.",
+    "Structure comparisons without individualized advice.":
+      "Structurez des comparaisons sans conseil personnalisé.",
+    "404 · KovaGPT": "404 · KovaGPT",
+    "Start with the product basics, practice on low-risk work, and learn how to verify output before using AI in consequential workflows.":
+      "Commencez par les bases, pratiquez sur des tâches peu risquées et apprenez à vérifier avant tout usage important.",
+    "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.":
+      "Retravaillez des brouillons figés avec KovaGPT pour un ton plus clair et une voix plus personnelle, sans promesse sur les détecteurs d'IA.",
+    "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.":
+      "Demandez des images IA à KovaGPT, choisissez des préréglages et enregistrez les résultats quand le fournisseur est disponible.",
+    "KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.":
+      "KovaGPT aide à écrire, apprendre, coder, rechercher, trouver des idées et créer des images. L'IA pouvant se tromper, vérifiez toujours les informations importantes.",
+    "KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.":
+      "N'utilisez pas KovaGPT comme seule source pour des décisions médicales, juridiques, financières, d'urgence ou de sécurité. En cas grave ou urgent, contactez un professionnel.",
+    "Users may not use KovaGPT to create harmful, illegal, abusive, deceptive, or dangerous content. This includes attempts to harm others, bypass security systems, steal private information, or abuse the platform.":
+      "Il est interdit d'utiliser KovaGPT pour créer du contenu nuisible, illégal, abusif, trompeur ou dangereux, y compris pour nuire, contourner la sécurité, voler des données ou abuser de la plateforme.",
+    "KovaGPT is meant to help you learn, brainstorm, and understand topics. Do not use it to cheat, submit work you did not understand, or break your school's rules.":
+      "KovaGPT sert à apprendre et comprendre. Ne l'utilisez pas pour tricher, rendre un travail non compris ou enfreindre les règles de l'école.",
+    "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.":
+      "Rédigez, réécrivez et relisez e-mails, essais, posts et scripts avec KovaGPT.",
+    "This connection record is retained. Reconnect to restore access.":
+      "L'enregistrement est conservé. Reconnectez-vous pour rétablir l'accès.",
+    "Known schedule dependencies could not be checked. Review your schedules before disconnecting; other dependencies may exist.":
+      "Dépendances non vérifiées. Vérifiez vos planifications avant de déconnecter.",
+    "This plugin is coming soon. Its listed capabilities are proposals. No account is connected and no permissions have been requested.":
+      "Ce plug-in arrive bientôt. Ses capacités sont des propositions. Aucun compte connecté, aucune autorisation demandée.",
+    "This connection requests your Google profile and email, plus only":
+      "Cette connexion demande votre profil et e-mail Google, et uniquement",
+    "Other Google services require their own Connect action. Previously approved services remain connected.":
+      "Les autres services Google nécessitent leur propre connexion. Ceux déjà approuvés restent connectés.",
+    "GitHub will ask you to choose an account and approve access. Only authorized installations and explicitly granted repositories are available to Kova.":
+      "GitHub vous demandera de choisir un compte et d'approuver. Kova ne voit que les installations et dépôts autorisés.",
+    "Sign in to Kova before connecting an account. You’ll choose the provider account after selecting Connect.":
+      "Connectez-vous à Kova avant de lier un compte. Vous choisirez le compte après Connecter.",
+    "Choose the account for new Gmail, Calendar and Drive requests. Existing confirmed actions remain bound to their original account.":
+      "Choisissez le compte pour les nouvelles demandes Gmail, Agenda et Drive. Les actions confirmées restent liées à leur compte.",
+    "Your connection record is retained, but Google authorization has expired or was revoked. Reconnect to restore access.":
+      "L'enregistrement est conservé, mais l'autorisation Google a expiré ou été révoquée. Reconnectez-vous.",
+    "Community publication ·": "Publication communautaire ·",
+    "We asked our email provider to send a sign-in link to":
+      "Nous avons demandé l'envoi d'un lien de connexion à",
+    "Use at least": "Utilisez au moins",
+    "Pricing page": "Page des tarifs",
+    "Organization · KovaGPT": "Organisation · KovaGPT",
+    "Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces.":
+      "Agents du compte, santé des fournisseurs, contrôles d'exécution et orchestration.",
+    "Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled until an organization backend validates this configuration.":
+      "Invitations, équipes, audit, SSO et SCIM restent désactivés jusqu'à validation par un backend.",
+    "No server drafts. Installation, diagnostics, health, updates, and permissions activate only after backend discovery verifies a manifest.":
+      "Aucun brouillon. Installation, diagnostics, mises à jour et autorisations s'activent après vérification d'un manifeste.",
+    "Existing production models continue through the server provider registry. This surface never exposes credentials or permits browser-side provider secrets.":
+      "Les modèles de production passent par le registre serveur. Aucun identifiant ni secret n'est exposé au navigateur.",
+    "Saved agents are reusable account-scoped instruction profiles. Execution remains separate and is available only when the authenticated runner and plan entitlement are healthy.":
+      "Les agents enregistrés sont des profils d'instructions réutilisables. L'exécution est distincte et n'est disponible qu'avec un exécuteur et un forfait valides.",
+    "If optional tracking is introduced, the applicable notices and consent controls must be provided before that tracking runs. Installing the desktop or web app does not change the privacy choices for your account.":
+      "Si un suivi facultatif est introduit, avis et consentement seront fournis avant. Installer l'app ne change pas vos choix.",
+    "Kova may update this policy as the service and its providers change. The updated date at the top identifies the current version. Material changes may also be communicated in the product or by email when appropriate.":
+      "Kova peut mettre à jour cette politique. La date en haut indique la version. Les changements importants peuvent être annoncés dans le produit ou par e-mail.",
+    "When you send a message, the service may retrieve relevant excerpts from this project's uploaded files. Exact excerpts and readiness are not loaded here.":
+      "Lors de l'envoi, le service peut récupérer des extraits des fichiers du projet. Ils ne sont pas chargés ici.",
+    "No saved results are explicitly attached to this message. The service may also use saved project memory; those entries are not loaded here.":
+      "Aucun résultat enregistré n'est joint. Le service peut utiliser la mémoire du projet, non chargée ici.",
+    "Project context follows existing membership and retrieval rules. Individual entries cannot be excluded for a single message here.":
+      "Le contexte suit les règles d'adhésion. On ne peut exclure d'entrée pour un seul message ici.",
+    "I checked Projects and want to retry creating this project.":
+      "J'ai vérifié Projets et je veux réessayer.",
+    "KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.":
+      "Les abonnements KovaGPT donnent accès aux outils IA, limites, images, imports et autres fonctions premium.",
+    "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact":
+      "Les remboursements sont étudiés au cas par cas. En cas d'erreur de prélèvement ou d'accès impossible, contactez",
+    "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.":
+      "KovaGPT peut refuser un remboursement si les fonctions payantes ont été utilisées, si la demande semble abusive ou non conforme.",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.":
+      "Rien ici ne limite vos droits légaux. N'envoyez jamais de numéro de carte complet, mot de passe ou code de sécurité.",
+    "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact":
+      "Vous pouvez résilier depuis les paramètres. Les renouvellements s'arrêtent, mais le forfait reste actif jusqu'à la fin de la période. Pour de l'aide, contactez",
+    "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.":
+      "Utilisez KovaGPT pour organiser vos documents, résumer, comparer et structurer vos notes, avec vérification des sources.",
+    "Sign in to review your saved tasks and background execution availability.":
+      "Connectez-vous pour voir vos tâches et l'exécution en arrière-plan.",
+    "Account access could not be verified. Your signed-in session is preserved.":
+      "Accès non vérifié. Votre session est conservée.",
+    "Scheduled Tasks Status": "État des tâches planifiées",
+    "Retry the same request to check the outcome.": "Relancez la même demande pour vérifier.",
+    "Scheduled task pages": "Pages des tâches planifiées",
+    "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.":
+      "Demandez à KovaGPT explications, exercices, résumés, fiches et exemples, puis vérifiez avec vos cours.",
+    "Standard ·": "Standard ·",
+    "Premium · 5× usage": "Premium · usage ×5",
+    "New connections are not activated. Existing invitations and connections can still be declined, revoked, blocked, or removed.":
+      "Aucune nouvelle connexion n'est activée. Les existantes peuvent être refusées, révoquées, bloquées ou supprimées.",
+    "They must review and consent in their own account. Invitations expire after seven days.":
+      "Elles doivent accepter dans leur compte. Les invitations expirent après sept jours.",
+    "I agree to share my verified account email with this person and invite them to a voluntary contact connection.":
+      "J'accepte de partager mon e-mail vérifié avec cette personne et de l'inviter à une connexion volontaire.",
+    "Emails shown here were verified when the invitation was created. No email delivery is enabled.":
+      "Les e-mails ont été vérifiés à la création de l'invitation. Aucun envoi d'e-mail n'est activé.",
+    "This connection does not authorize monitoring, automatic alerts, or account access. Acceptance is optional. This review expires in ten minutes.":
+      "Cette connexion n'autorise ni surveillance, ni alertes, ni accès au compte. Facultatif. Expire dans dix minutes.",
+    "I consent to this voluntary connection and sharing my verified account email. I can revoke it at any time.":
+      "J'accepte cette connexion volontaire et le partage de mon e-mail. Je peux la révoquer à tout moment.",
+    "Up to 50 recent records. Removing a finished record removes it for both parties.":
+      "Jusqu'à 50 enregistrements récents. Supprimer un enregistrement terminé le retire pour les deux parties.",
+    "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
+      "Rédigez, révisez, vérifiez, résumez et comptez du texte dans des espaces dédiés de Kova.",
     Cooking: "Cuisine",
     "Plan and adapt recipes with food safety in view.":
       "Planifiez et adaptez des recettes en tenant compte de la sécurité alimentaire.",
@@ -10864,6 +11392,268 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Try an example": "Beispiel ausprobieren",
     "Kova can make mistakes. Check important information, citations, and final wording.":
       "Kova kann Fehler machen. Prüfe Informationen, Zitate und Formulierung.",
+    "This recovery policy is not enabled here. This screen cannot verify your current deletion status.":
+      "Diese Wiederherstellungsrichtlinie ist hier nicht aktiv. Der Löschstatus lässt sich hier nicht prüfen.",
+    "Recovery deadline · deletion eligible from": "Wiederherstellungsfrist · Löschung möglich ab",
+    "The recovery deadline has passed. Actual deletion status is unknown; the time alone does not confirm that your account has been deleted.":
+      "Die Frist ist abgelaufen. Der tatsächliche Status ist unbekannt; das Datum bestätigt keine Löschung.",
+    "Recover account cancels the scheduled deletion. Closing this dialog does not cancel it.":
+      "„Konto wiederherstellen“ bricht die Löschung ab. Schließen tut das nicht.",
+    "Account data was cleared from this browser. Reopen Privacy settings to check your export again.":
+      "Kontodaten wurden aus dem Browser gelöscht. Öffne Datenschutz erneut, um den Export zu prüfen.",
+    "Status refreshes while this section is open. The service does not provide a progress percentage or completion estimate.":
+      "Der Status aktualisiert sich, solange der Bereich offen ist. Es gibt keinen Fortschritt in Prozent.",
+    "Removal of the export file is still pending. Account records are unaffected.":
+      "Das Entfernen der Datei steht noch aus. Kontodaten bleiben unberührt.",
+    "The previous request has not been confirmed. Only its status will be checked; another export request will not be sent.":
+      "Die vorige Anfrage ist unbestätigt. Nur ihr Status wird geprüft; keine neue wird gesendet.",
+    "Request tracking is unavailable in this browser. New export requests are disabled to prevent an unconfirmed request from being repeated.":
+      "Anfrageverfolgung ist hier nicht verfügbar. Neue Exporte sind gesperrt, um Doppelungen zu vermeiden.",
+    "A clear answer starts with the": "Eine klare Antwort beginnt mit",
+    "Page count, page selection and page-read results are unavailable for this attachment. Saved text-only records do not retain PDF page metadata. Attach the original PDF again to inspect its pages.":
+      "Seitenzahl und -auswahl sind für diesen Anhang nicht verfügbar. Reine Textdatensätze speichern keine Seiten. Hänge das Original-PDF erneut an.",
+    "Truncated: only": "Gekürzt: nur",
+    "Bounded extracted text ·": "Begrenzter extrahierter Text ·",
+    "No readable text is included for this pin. It is":
+      "Für diese Anheftung ist kein lesbarer Text enthalten. Es ist",
+    "In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no daily limit. Daily limits reset at midnight UTC.":
+      "Bitte im Chat den Cloud-Browser, einen öffentlichen HTTPS-Link zu öffnen. Priorität: Pro, Plus, Free. Free 10 Min./Tag, Plus 60 Min., Pro unbegrenzt. Reset um Mitternacht UTC.",
+    "Site rules match an exact HTTPS domain. Subdomains have separate rules. Unlisted sites use Ask; each agent action still needs your approval.":
+      "Regeln gelten für eine exakte HTTPS-Domain; Subdomains haben eigene. Nicht gelistete Sites nutzen „Fragen“; jede Aktion braucht Zustimmung.",
+    "This runner needs the site-rules update to enforce saved blocks. Block rules prevent new browser commands until that update is active.":
+      "Dieser Runner braucht das Regel-Update für Sperren. Bis dahin sind neue Browserbefehle blockiert.",
+    "Use Take over to enter passwords privately. Automation pauses while you have control. Return control when you are ready for the agent to use the signed-in session.":
+      "Nutze „Übernehmen“, um Passwörter privat einzugeben. Die Automatisierung pausiert. Gib die Kontrolle zurück, wenn der Agent die Sitzung nutzen darf.",
+    "Compatible browser images pause for popup and website confirmation requests. Downloads and device permission prompts remain blocked.":
+      "Kompatible Browser pausieren bei Pop-ups und Bestätigungen. Downloads und Geräteberechtigungen bleiben gesperrt.",
+    "Selection changes this message only. The full local extraction is kept for Restore while this attachment is in the composer. Saved Library copies are unchanged. This is a text preview, not an original PDF preview.":
+      "Die Auswahl ändert nur diese Nachricht. Die volle Extraktion bleibt zum Wiederherstellen. Bibliothekskopien bleiben gleich. Textvorschau, kein PDF-Original.",
+    "Conversation model. Your chat model powers the conversation.":
+      "Gesprächsmodell. Dein Chatmodell führt das Gespräch.",
+    "Kova provides read access for this operation.": "Kova bietet für diesen Vorgang Lesezugriff.",
+    "This removes this account’s access from Kova and cancels its sync jobs. Other Microsoft services using the same account are affected. Remote provider revocation may remain pending.":
+      "Entfernt den Kova-Zugriff dieses Kontos und bricht Syncs ab. Andere Microsoft-Dienste desselben Kontos sind betroffen. Der Widerruf beim Anbieter kann ausstehen.",
+    "Private text, Markdown, CSV and JSON files for this developer project. Upload through the API with a files-scoped key. Files expire after 30 days; your account can store up to 100 files and 2 MiB across all projects.":
+      "Private Text-, Markdown-, CSV- und JSON-Dateien für das Projekt. Upload per API mit Datei-Schlüssel. Ablauf nach 30 Tagen; max. 100 Dateien und 2 MiB.",
+    "Configure your developer account, project and spending limits in the":
+      "Richte Konto, Projekt und Limits ein in der",
+    "Enter this client's spending limits in": "Limits dieses Clients eingeben in",
+    "Revoke access here even when new MCP authorization is disabled. These connections use developer projects and prepaid developer credit.":
+      "Widerrufe hier den Zugriff, auch wenn neue MCP-Autorisierung aus ist. Diese Verbindungen nutzen Projekte und Prepaid-Guthaben.",
+    "/ request,": "/ Anfrage,",
+    "/ day,": "/ Tag,",
+    "Searching sends your query and any place you enter to the configured search provider. Results are source reports and can be incomplete or outdated. KovaGPT stores request counts, not your search text.":
+      "Die Suche sendet Anfrage und Ort an den Anbieter. Ergebnisse können unvollständig oder veraltet sein. KovaGPT speichert nur Zählungen.",
+    "For a product in a photo, ask chat to describe it, then paste the description here. Matching uses your text; it does not upload the photo or prove an exact visual match.":
+      "Für ein Produkt auf einem Foto: Lass es im Chat beschreiben und füge die Beschreibung ein. Das Foto wird nicht hochgeladen.",
+    "No location permission has been requested. Local results are web links, with external maps and reservation handoffs.":
+      "Keine Standortberechtigung angefragt. Lokale Ergebnisse sind Weblinks mit externen Karten und Reservierungen.",
+    "Merchant price, currency, and stock are unknown until checked. A check sends this source URL to the search provider.":
+      "Preis, Währung und Bestand sind bis zur Prüfung unbekannt. Die Prüfung sendet die URL an den Anbieter.",
+    "Compare the exact variants and currencies shown. Prices may exclude shipping or tax; a source observation does not guarantee checkout price or stock.":
+      "Vergleiche genaue Varianten und Währungen. Preise können Versand oder Steuern ausschließen und garantieren nichts.",
+    "The source did not provide an unambiguous product with variants. Price and stock remain unknown.":
+      "Die Quelle nennt kein eindeutiges Produkt. Preis und Bestand bleiben unbekannt.",
+    "The support service accepted your request. Your reply address is":
+      "Der Support hat deine Anfrage angenommen. Deine Antwortadresse ist",
+    "PNG/JPEG/WebP originals up to 8 MB. Masks must be PNG with transparency, up to 4 MB, and match the original dimensions. A mask guides edits; it does not guarantee pixel-perfect preservation.":
+      "Originale PNG/JPEG/WebP bis 8 MB. Masken als PNG mit Transparenz, bis 4 MB, gleiche Maße. Masken leiten, garantieren aber nichts pixelgenau.",
+    "Your selection stays unchanged. “Download started” means the file was handed to your browser; check your browser’s downloads to confirm it was saved.":
+      "Deine Auswahl bleibt. „Download gestartet“ heißt, die Datei ging an den Browser; prüfe deine Downloads.",
+    "Replacements keep earlier versions private. Retained originals and text history count toward storage. Images and Work outputs keep their own generation history.":
+      "Ersetzungen halten frühere Versionen privat. Originale und Verlauf zählen zum Speicher.",
+    "Your unsaved text is still here. Select and copy anything you want to keep before closing. Refresh Library, then reopen Versions to check the saved text.":
+      "Dein ungespeicherter Text ist noch da. Kopiere, was du behalten willst, aktualisiere die Bibliothek und öffne Versionen.",
+    "These sources were included with the original response request. This does not tell us which facts influenced the answer or later edits. The current saved contents appear below and may have changed since that response.":
+      "Diese Quellen waren in der ursprünglichen Anfrage. Das sagt nicht, was die Antwort beeinflusst hat. Der aktuelle Inhalt kann abweichen.",
+    "Verify your existing authenticator, then enroll a fresh Kova-owned authenticator. Hosted session authority is retired only after the new factor succeeds.":
+      "Bestätige deinen Authenticator und richte einen neuen von Kova ein. Der alte wird erst danach entfernt.",
+    "Confirm your password before adding an authenticator. For Google or passkey accounts, sign in again with that method and return here within five minutes; no password is needed.":
+      "Bestätige dein Passwort vor dem Hinzufügen. Bei Google oder Passkey neu anmelden und binnen fünf Minuten zurückkehren.",
+    "SSO:": "SSO:",
+    "Only a sole remaining owner can close the organization. This revokes access and invitations; retained audit records are not erased. Type":
+      "Nur der letzte Eigentümer kann schließen. Zugriffe und Einladungen werden widerrufen; Prüfprotokolle bleiben. Gib ein",
+    "SCIM provisions organization members through this organization’s SSO identity. Groups remain directory records; they do not share Projects or grant administrator access.":
+      "SCIM stellt Mitglieder über das SSO bereit. Gruppen bleiben Verzeichniseinträge ohne Projektfreigabe oder Adminrechte.",
+    "I authorize this IdP to create and revoke its managed member access. Rotating invalidates the previous token.":
+      "Ich erlaube diesem IdP, verwaltete Zugänge zu erstellen und zu widerrufen. Rotieren macht das alte Token ungültig.",
+    "A response preference for this account in this browser. Saving it does not rename your account. Leave blank to use no preferred name.":
+      "Eine Antwortvorliebe für dieses Konto in diesem Browser; benennt das Konto nicht um. Leer lassen für keinen Namen.",
+    "Keep or clear your newer draft before restoring this version. Restoring does not send it. Kept only while this chat stays open. Up to three versions can be kept; restore or discard one before sending more.":
+      "Behalte oder lösche den neueren Entwurf vor dem Wiederherstellen. Nichts wird gesendet. Bleibt, solange der Chat offen ist; max. drei Versionen.",
+    "Track new inbox messages from this Google account. Starting or resetting uses a new baseline; earlier messages will not run Tasks.":
+      "Neue Posteingangsnachrichten verfolgen. Start oder Reset setzt eine neue Basis; ältere Nachrichten lösen keine Aufgaben aus.",
+    "Enabling push registers and renews a Gmail watch for this grant. Stopping blocks local delivery; the provider watch expires naturally. Event tasks also require verified provider setup.":
+      "Push registriert und erneuert eine Gmail-Überwachung. Stoppen blockiert die lokale Zustellung; die Überwachung läuft aus.",
+    "Titan workspace systems": "Titan-Arbeitsbereichssysteme",
+    "Deterministic health, evolution, and authorized replay—no generated claims.":
+      "Deterministische Gesundheit, Entwicklung und Wiedergabe – keine generierten Aussagen.",
+    "Your resource mix in the last 30 days compared with the preceding 30 days.":
+      "Deine Ressourcen der letzten 30 Tage im Vergleich zu den 30 davor.",
+    "Create workspace activity to establish your DNA baseline.":
+      "Erzeuge Aktivität, um deine Basis festzulegen.",
+    "Capture a metadata-only checkpoint. Content and titles are never stored in snapshots.":
+      "Erfasse einen reinen Metadaten-Checkpoint. Inhalte und Titel werden nie gespeichert.",
+    "Only resources you can still access are resolved. Revoked or deleted references stay hidden.":
+      "Nur noch zugängliche Ressourcen werden aufgelöst; widerrufene bleiben verborgen.",
+    "No resources from this checkpoint are currently available.":
+      "Keine Ressourcen dieses Checkpoints verfügbar.",
+    "Select a checkpoint to replay currently authorized resources.":
+      "Wähle einen Checkpoint zur Wiedergabe.",
+    "Bcc:": "Bcc:",
+    "Private browser controls were cleared from this view.":
+      "Private Browsersteuerung wurde aus der Ansicht entfernt.",
+    "You have control. Automation is blocked during takeover. Return control, then use Resume run to continue.":
+      "Du hast die Kontrolle; Automatisierung ist gesperrt. Gib zurück und setze fort.",
+    "Pause this run and wait for its current step to settle before taking over.":
+      "Pausiere und warte auf den aktuellen Schritt, bevor du übernimmst.",
+    "Run status has changed. Refresh execution and browser status before taking over.":
+      "Der Status hat sich geändert. Aktualisiere vor dem Übernehmen.",
+    "Pause Work before taking over. The model cannot read or act during takeover. Sessions close after five minutes; sign-in data is not saved to Work history. Hiding these controls does not end the session.":
+      "Pausiere Arbeit vor dem Übernehmen. Das Modell liest und handelt nicht. Sitzungen enden nach fünf Minuten; Anmeldedaten werden nicht gespeichert. Ausblenden beendet nichts.",
+    "This destination does not provide operative": "Dieses Ziel liefert keinen gültigen",
+    "Unedited source preview only. Nothing is uploaded, generated or published. Image references are not included in saved drafts.":
+      "Nur unbearbeitete Vorschau. Nichts wird hochgeladen, erzeugt oder veröffentlicht. Bildreferenzen fehlen in Entwürfen.",
+    "Keep the composition instructions here. Supported image tools remain in the existing workspace.":
+      "Behalte die Kompositionsanweisungen hier. Bildtools bleiben im bestehenden Bereich.",
+    "PDF export and owner share controls require an actual supported output. Local review notes can be exported as JSON from Review tools below.":
+      "PDF-Export und Freigabe brauchen eine unterstützte Ausgabe. Lokale Notizen lassen sich als JSON exportieren.",
+    "Loading secure checkout…": "Sichere Kasse wird geladen…",
+    Privacy: "Datenschutz",
+    Terms: "Bedingungen",
+    "Review text-only voice preview": "Textbasierte Sprachvorschau ansehen",
+    "Prepare a local inquiry": "Lokale Anfrage vorbereiten",
+    "Explore family guidance": "Familienhinweise ansehen",
+    "Start shopping research": "Kaufrecherche starten",
+    "Review data controls": "Datenkontrollen prüfen",
+    "Explore KovaGPT research": "KovaGPT-Recherche entdecken",
+    "Evaluate enterprise use": "Unternehmenseinsatz bewerten",
+    "View careers status": "Karrierestatus ansehen",
+    "Review model guidance": "Modellhinweise ansehen",
+    "Open research tools": "Recherchetools öffnen",
+    "Explore business use": "Geschäftliche Nutzung entdecken",
+    "Explore student guidance": "Hinweise für Lernende",
+    "Review moderation": "Moderation ansehen",
+    "Connect supported services with explicit permissions.":
+      "Verbinde Dienste mit ausdrücklichen Rechten.",
+    "Learn through explanations and guided practice.":
+      "Lerne mit Erklärungen und angeleitetem Üben.",
+    "Ask focused questions against supported files.": "Stelle gezielte Fragen zu Dateien.",
+    "Core chat with published daily allowances.": "Basis-Chat mit täglichen Kontingenten.",
+    "Higher allowances and advanced supported tools.": "Höhere Kontingente und erweiterte Tools.",
+    Pro: "Pro",
+    "Highest published allowances and reasoning modes.": "Höchste Kontingente und Denkmodi.",
+    "Plan, review, and refine a clear narrative.":
+      "Plane, prüfe und verfeinere eine klare Erzählung.",
+    "Reason about structured data and calculations.":
+      "Mit strukturierten Daten und Berechnungen arbeiten.",
+    "Organize general information with safety boundaries.":
+      "Allgemeine Infos mit Sicherheitsgrenzen ordnen.",
+    "Structure comparisons without individualized advice.":
+      "Vergleiche strukturieren, ohne individuelle Beratung.",
+    "404 · KovaGPT": "404 · KovaGPT",
+    "Start with the product basics, practice on low-risk work, and learn how to verify output before using AI in consequential workflows.":
+      "Starte mit den Grundlagen, übe an risikoarmen Aufgaben und lerne Prüfen, bevor KI Wichtiges übernimmt.",
+    "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.":
+      "Überarbeite steife Entwürfe mit KovaGPT für klareren Ton und persönlichere Stimme – ohne Versprechen zu KI-Detektoren.",
+    "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.":
+      "Erstelle KI-Bilder aus Text mit KovaGPT, wähle Vorlagen und speichere Ergebnisse, wenn der Anbieter verfügbar ist.",
+    "KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.":
+      "KovaGPT hilft beim Schreiben, Lernen, Programmieren, Recherchieren, Ideenfinden und Bilderstellen. Da KI Fehler macht, prüfe Wichtiges immer.",
+    "KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.":
+      "Nutze KovaGPT nicht als einzige Quelle für medizinische, rechtliche, finanzielle, Notfall- oder Sicherheitsentscheidungen. Wende dich in ernsten Fällen an Fachleute.",
+    "Users may not use KovaGPT to create harmful, illegal, abusive, deceptive, or dangerous content. This includes attempts to harm others, bypass security systems, steal private information, or abuse the platform.":
+      "KovaGPT darf nicht für schädliche, illegale, missbräuchliche, täuschende oder gefährliche Inhalte genutzt werden – auch nicht, um zu schaden, Sicherheit zu umgehen oder Daten zu stehlen.",
+    "KovaGPT is meant to help you learn, brainstorm, and understand topics. Do not use it to cheat, submit work you did not understand, or break your school's rules.":
+      "KovaGPT soll dir beim Lernen und Verstehen helfen. Nutze es nicht zum Schummeln oder um Schulregeln zu brechen.",
+    "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.":
+      "Entwirf, überarbeite und prüfe E-Mails, Essays, Posts und Skripte mit KovaGPT.",
+    "This connection record is retained. Reconnect to restore access.":
+      "Der Verbindungseintrag bleibt. Verbinde neu für Zugriff.",
+    "Known schedule dependencies could not be checked. Review your schedules before disconnecting; other dependencies may exist.":
+      "Abhängigkeiten konnten nicht geprüft werden. Prüfe deine Zeitpläne vor dem Trennen.",
+    "This plugin is coming soon. Its listed capabilities are proposals. No account is connected and no permissions have been requested.":
+      "Dieses Plug-in kommt bald. Funktionen sind Vorschläge. Kein Konto verbunden, keine Rechte angefragt.",
+    "This connection requests your Google profile and email, plus only":
+      "Diese Verbindung fragt Google-Profil und E-Mail an, plus nur",
+    "Other Google services require their own Connect action. Previously approved services remain connected.":
+      "Andere Google-Dienste brauchen eine eigene Verbindung. Freigegebene bleiben verbunden.",
+    "GitHub will ask you to choose an account and approve access. Only authorized installations and explicitly granted repositories are available to Kova.":
+      "GitHub fragt nach Konto und Zustimmung. Kova sieht nur autorisierte Installationen und freigegebene Repos.",
+    "Sign in to Kova before connecting an account. You’ll choose the provider account after selecting Connect.":
+      "Melde dich bei Kova an, bevor du ein Konto verbindest. Das Konto wählst du danach.",
+    "Choose the account for new Gmail, Calendar and Drive requests. Existing confirmed actions remain bound to their original account.":
+      "Wähle das Konto für neue Gmail-, Kalender- und Drive-Anfragen. Bestätigte Aktionen bleiben beim alten Konto.",
+    "Your connection record is retained, but Google authorization has expired or was revoked. Reconnect to restore access.":
+      "Der Eintrag bleibt, aber die Google-Freigabe ist abgelaufen oder widerrufen. Verbinde neu.",
+    "Community publication ·": "Community-Veröffentlichung ·",
+    "We asked our email provider to send a sign-in link to":
+      "Wir haben einen Anmeldelink angefordert an",
+    "Use at least": "Mindestens",
+    "Pricing page": "Preisseite",
+    "Organization · KovaGPT": "Organisation · KovaGPT",
+    "Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces.":
+      "Kontobezogene Agenten, Anbieterstatus, Ausführungssteuerung und Orchestrierung.",
+    "Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled until an organization backend validates this configuration.":
+      "Einladungen, Teams, Audit, SSO und SCIM bleiben aus, bis ein Backend die Konfiguration bestätigt.",
+    "No server drafts. Installation, diagnostics, health, updates, and permissions activate only after backend discovery verifies a manifest.":
+      "Keine Server-Entwürfe. Installation, Diagnose, Updates und Rechte starten erst nach Manifest-Prüfung.",
+    "Existing production models continue through the server provider registry. This surface never exposes credentials or permits browser-side provider secrets.":
+      "Produktionsmodelle laufen über das Serververzeichnis. Hier werden keine Zugangsdaten oder Geheimnisse offengelegt.",
+    "Saved agents are reusable account-scoped instruction profiles. Execution remains separate and is available only when the authenticated runner and plan entitlement are healthy.":
+      "Gespeicherte Agenten sind wiederverwendbare Anweisungsprofile. Ausführung ist getrennt und nur mit gültigem Runner und Tarif möglich.",
+    "If optional tracking is introduced, the applicable notices and consent controls must be provided before that tracking runs. Installing the desktop or web app does not change the privacy choices for your account.":
+      "Falls optionales Tracking kommt, gibt es vorher Hinweise und Einwilligung. Die App-Installation ändert nichts an deinen Einstellungen.",
+    "Kova may update this policy as the service and its providers change. The updated date at the top identifies the current version. Material changes may also be communicated in the product or by email when appropriate.":
+      "Kova kann diese Richtlinie aktualisieren. Das Datum oben nennt die Version. Wichtige Änderungen werden ggf. im Produkt oder per E-Mail mitgeteilt.",
+    "When you send a message, the service may retrieve relevant excerpts from this project's uploaded files. Exact excerpts and readiness are not loaded here.":
+      "Beim Senden können Auszüge aus Projektdateien abgerufen werden. Sie werden hier nicht geladen.",
+    "No saved results are explicitly attached to this message. The service may also use saved project memory; those entries are not loaded here.":
+      "Keine gespeicherten Ergebnisse angehängt. Projektgedächtnis kann genutzt werden; es wird hier nicht geladen.",
+    "Project context follows existing membership and retrieval rules. Individual entries cannot be excluded for a single message here.":
+      "Der Kontext folgt den Mitgliedsregeln. Einzelne Einträge lassen sich hier nicht ausschließen.",
+    "I checked Projects and want to retry creating this project.":
+      "Ich habe Projekte geprüft und will es erneut erstellen.",
+    "KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.":
+      "KovaGPT-Abos bieten KI-Tools, Kontingente, Bilder, Uploads und weitere Premiumfunktionen.",
+    "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact":
+      "Erstattungen werden einzeln geprüft. Bei Fehlbuchung oder fehlendem Zugriff wende dich an",
+    "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.":
+      "KovaGPT kann Erstattungen ablehnen, wenn Bezahlfunktionen genutzt wurden oder die Anfrage missbräuchlich wirkt.",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.":
+      "Nichts hier schränkt gesetzliche Rechte ein. Sende nie vollständige Kartennummern, Passwörter oder Sicherheitscodes.",
+    "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact":
+      "Du kannst in den Einstellungen kündigen. Verlängerungen stoppen, der Tarif bleibt bis Periodenende aktiv. Hilfe:",
+    "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.":
+      "Nutze KovaGPT, um Material zu ordnen, zusammenzufassen, zu vergleichen und Notizen zu strukturieren – mit Quellenprüfung.",
+    "Sign in to review your saved tasks and background execution availability.":
+      "Melde dich an, um Aufgaben und Hintergrundausführung zu prüfen.",
+    "Account access could not be verified. Your signed-in session is preserved.":
+      "Zugriff nicht bestätigt. Deine Sitzung bleibt.",
+    "Scheduled Tasks Status": "Status geplanter Aufgaben",
+    "Retry the same request to check the outcome.":
+      "Wiederhole die Anfrage, um das Ergebnis zu prüfen.",
+    "Scheduled task pages": "Seiten geplanter Aufgaben",
+    "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.":
+      "Frag KovaGPT nach Erklärungen, Übungsfragen, Zusammenfassungen, Karteikarten und Beispielen und prüfe sie mit Kursquellen.",
+    "Standard ·": "Standard ·",
+    "Premium · 5× usage": "Premium · 5× Nutzung",
+    "New connections are not activated. Existing invitations and connections can still be declined, revoked, blocked, or removed.":
+      "Neue Verbindungen werden nicht aktiviert. Bestehende lassen sich ablehnen, widerrufen, sperren oder entfernen.",
+    "They must review and consent in their own account. Invitations expire after seven days.":
+      "Sie müssen im eigenen Konto zustimmen. Einladungen laufen nach sieben Tagen ab.",
+    "I agree to share my verified account email with this person and invite them to a voluntary contact connection.":
+      "Ich teile meine bestätigte E-Mail mit dieser Person und lade sie zu einer freiwilligen Verbindung ein.",
+    "Emails shown here were verified when the invitation was created. No email delivery is enabled.":
+      "Die E-Mails wurden beim Erstellen geprüft. Es werden keine E-Mails versendet.",
+    "This connection does not authorize monitoring, automatic alerts, or account access. Acceptance is optional. This review expires in ten minutes.":
+      "Diese Verbindung erlaubt keine Überwachung, Warnungen oder Kontozugriff. Freiwillig. Läuft in zehn Minuten ab.",
+    "I consent to this voluntary connection and sharing my verified account email. I can revoke it at any time.":
+      "Ich stimme dieser freiwilligen Verbindung und dem Teilen meiner E-Mail zu und kann jederzeit widerrufen.",
+    "Up to 50 recent records. Removing a finished record removes it for both parties.":
+      "Bis zu 50 Einträge. Entfernen gilt für beide Seiten.",
+    "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
+      "Entwerfen, überarbeiten, prüfen, zusammenfassen und zählen in fokussierten Kova-Bereichen.",
     Cooking: "Kochen",
     "Plan and adapt recipes with food safety in view.":
       "Rezepte planen und anpassen, mit Blick auf Lebensmittelsicherheit.",
@@ -14841,6 +15631,267 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Try an example": "Experimente um exemplo",
     "Kova can make mistakes. Check important information, citations, and final wording.":
       "O Kova pode errar. Confira informações, citações e o texto final.",
+    "This recovery policy is not enabled here. This screen cannot verify your current deletion status.":
+      "Esta política de recuperação não está ativa aqui. Esta tela não verifica o status de exclusão.",
+    "Recovery deadline · deletion eligible from":
+      "Prazo de recuperação · exclusão possível a partir de",
+    "The recovery deadline has passed. Actual deletion status is unknown; the time alone does not confirm that your account has been deleted.":
+      "O prazo passou. O status real é desconhecido; a data não confirma a exclusão.",
+    "Recover account cancels the scheduled deletion. Closing this dialog does not cancel it.":
+      "Recuperar a conta cancela a exclusão agendada. Fechar não cancela.",
+    "Account data was cleared from this browser. Reopen Privacy settings to check your export again.":
+      "Dados da conta apagados do navegador. Reabra Privacidade para verificar a exportação.",
+    "Status refreshes while this section is open. The service does not provide a progress percentage or completion estimate.":
+      "O status atualiza com a seção aberta. Não há porcentagem nem estimativa.",
+    "Removal of the export file is still pending. Account records are unaffected.":
+      "A remoção do arquivo está pendente. Os registros da conta não mudam.",
+    "The previous request has not been confirmed. Only its status will be checked; another export request will not be sent.":
+      "O pedido anterior não foi confirmado. Só o status será verificado; nenhum novo é enviado.",
+    "Request tracking is unavailable in this browser. New export requests are disabled to prevent an unconfirmed request from being repeated.":
+      "O acompanhamento está indisponível aqui. Novas exportações estão desativadas para evitar repetições.",
+    "A clear answer starts with the": "Uma resposta clara começa por",
+    "Page count, page selection and page-read results are unavailable for this attachment. Saved text-only records do not retain PDF page metadata. Attach the original PDF again to inspect its pages.":
+      "Contagem e seleção de páginas indisponíveis. Registros só de texto não guardam páginas. Anexe o PDF original de novo.",
+    "Truncated: only": "Truncado: apenas",
+    "Bounded extracted text ·": "Texto extraído limitado ·",
+    "No readable text is included for this pin. It is":
+      "Nenhum texto legível para este item. Ele é",
+    "In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no daily limit. Daily limits reset at midnight UTC.":
+      "No chat, peça ao navegador na nuvem para abrir um link HTTPS público. Prioridade: Pro, Plus, Free. Free tem 10 min/dia, Plus 60 e Pro sem limite. Renova à meia-noite UTC.",
+    "Site rules match an exact HTTPS domain. Subdomains have separate rules. Unlisted sites use Ask; each agent action still needs your approval.":
+      "Regras valem para um domínio HTTPS exato; subdomínios têm regras próprias. Sites não listados usam Perguntar e cada ação exige aprovação.",
+    "This runner needs the site-rules update to enforce saved blocks. Block rules prevent new browser commands until that update is active.":
+      "Este executor precisa da atualização de regras para aplicar bloqueios. Até lá, novos comandos ficam bloqueados.",
+    "Use Take over to enter passwords privately. Automation pauses while you have control. Return control when you are ready for the agent to use the signed-in session.":
+      "Use Assumir para digitar senhas em privado. A automação pausa enquanto você controla. Devolva quando o agente puder usar a sessão.",
+    "Compatible browser images pause for popup and website confirmation requests. Downloads and device permission prompts remain blocked.":
+      "Navegadores compatíveis pausam em pop-ups e confirmações. Downloads e permissões continuam bloqueados.",
+    "Selection changes this message only. The full local extraction is kept for Restore while this attachment is in the composer. Saved Library copies are unchanged. This is a text preview, not an original PDF preview.":
+      "A seleção muda só esta mensagem. A extração completa fica para Restaurar. Cópias da Biblioteca não mudam. É uma prévia de texto, não do PDF.",
+    "Conversation model. Your chat model powers the conversation.":
+      "Modelo da conversa. Seu modelo de chat conduz a conversa.",
+    "Kova provides read access for this operation.":
+      "O Kova fornece acesso de leitura para esta operação.",
+    "This removes this account’s access from Kova and cancels its sync jobs. Other Microsoft services using the same account are affected. Remote provider revocation may remain pending.":
+      "Remove o acesso da conta ao Kova e cancela sincronizações. Outros serviços Microsoft da mesma conta são afetados. A revogação no provedor pode ficar pendente.",
+    "Private text, Markdown, CSV and JSON files for this developer project. Upload through the API with a files-scoped key. Files expire after 30 days; your account can store up to 100 files and 2 MiB across all projects.":
+      "Arquivos privados de texto, Markdown, CSV e JSON do projeto. Envie pela API com chave de arquivos. Expiram em 30 dias; até 100 arquivos e 2 MiB.",
+    "Configure your developer account, project and spending limits in the":
+      "Configure conta, projeto e limites no",
+    "Enter this client's spending limits in": "Informe os limites deste cliente em",
+    "Revoke access here even when new MCP authorization is disabled. These connections use developer projects and prepaid developer credit.":
+      "Revogue o acesso aqui mesmo com novas autorizações MCP desativadas. Essas conexões usam projetos e crédito pré-pago.",
+    "/ request,": "/ solicitação,",
+    "/ day,": "/ dia,",
+    "Searching sends your query and any place you enter to the configured search provider. Results are source reports and can be incomplete or outdated. KovaGPT stores request counts, not your search text.":
+      "A busca envia sua consulta e o local ao provedor. Resultados podem estar incompletos ou desatualizados. O KovaGPT guarda contagens, não o texto.",
+    "For a product in a photo, ask chat to describe it, then paste the description here. Matching uses your text; it does not upload the photo or prove an exact visual match.":
+      "Para um produto em foto, peça ao chat para descrevê-lo e cole aqui. A foto não é enviada.",
+    "No location permission has been requested. Local results are web links, with external maps and reservation handoffs.":
+      "Nenhuma permissão de localização foi pedida. Resultados locais são links com mapas e reservas externos.",
+    "Merchant price, currency, and stock are unknown until checked. A check sends this source URL to the search provider.":
+      "Preço, moeda e estoque são desconhecidos até verificar. A verificação envia a URL ao provedor.",
+    "Compare the exact variants and currencies shown. Prices may exclude shipping or tax; a source observation does not guarantee checkout price or stock.":
+      "Compare variantes e moedas exatas. Preços podem excluir frete ou impostos e não garantem valor final nem estoque.",
+    "The source did not provide an unambiguous product with variants. Price and stock remain unknown.":
+      "A fonte não indicou um produto claro. Preço e estoque continuam desconhecidos.",
+    "The support service accepted your request. Your reply address is":
+      "O suporte recebeu seu pedido. Seu endereço de resposta é",
+    "PNG/JPEG/WebP originals up to 8 MB. Masks must be PNG with transparency, up to 4 MB, and match the original dimensions. A mask guides edits; it does not guarantee pixel-perfect preservation.":
+      "Originais PNG/JPEG/WebP até 8 MB. Máscaras PNG com transparência, até 4 MB e mesmo tamanho. Guiam a edição sem garantir precisão.",
+    "Your selection stays unchanged. “Download started” means the file was handed to your browser; check your browser’s downloads to confirm it was saved.":
+      'Sua seleção não muda. "Download iniciado" significa que o arquivo foi ao navegador; confira os downloads.',
+    "Replacements keep earlier versions private. Retained originals and text history count toward storage. Images and Work outputs keep their own generation history.":
+      "Substituições mantêm versões anteriores privadas. Originais e histórico contam no armazenamento.",
+    "Your unsaved text is still here. Select and copy anything you want to keep before closing. Refresh Library, then reopen Versions to check the saved text.":
+      "Seu texto não salvo continua aqui. Copie o que quiser manter, atualize a Biblioteca e reabra Versões.",
+    "These sources were included with the original response request. This does not tell us which facts influenced the answer or later edits. The current saved contents appear below and may have changed since that response.":
+      "Estas fontes foram incluídas no pedido original, sem indicar o que influenciou a resposta. O conteúdo atual pode ter mudado.",
+    "Verify your existing authenticator, then enroll a fresh Kova-owned authenticator. Hosted session authority is retired only after the new factor succeeds.":
+      "Confirme o autenticador atual e cadastre um novo do Kova. O antigo só sai depois que o novo funcionar.",
+    "Confirm your password before adding an authenticator. For Google or passkey accounts, sign in again with that method and return here within five minutes; no password is needed.":
+      "Confirme a senha antes de adicionar. Com Google ou chave de acesso, entre de novo e volte em cinco minutos.",
+    "SSO:": "SSO:",
+    "Only a sole remaining owner can close the organization. This revokes access and invitations; retained audit records are not erased. Type":
+      "Só o último dono pode encerrar. Acessos e convites são revogados; registros de auditoria ficam. Digite",
+    "SCIM provisions organization members through this organization’s SSO identity. Groups remain directory records; they do not share Projects or grant administrator access.":
+      "O SCIM provisiona membros via SSO. Grupos são registros de diretório; não compartilham projetos nem dão acesso de administrador.",
+    "I authorize this IdP to create and revoke its managed member access. Rotating invalidates the previous token.":
+      "Autorizo este IdP a criar e revogar acessos de membros. Rotacionar invalida o token anterior.",
+    "A response preference for this account in this browser. Saving it does not rename your account. Leave blank to use no preferred name.":
+      "Preferência de resposta para esta conta neste navegador; não renomeia a conta. Deixe vazio para nenhum nome.",
+    "Keep or clear your newer draft before restoring this version. Restoring does not send it. Kept only while this chat stays open. Up to three versions can be kept; restore or discard one before sending more.":
+      "Mantenha ou limpe o rascunho mais novo antes de restaurar. Restaurar não envia. Fica enquanto o chat estiver aberto; até três versões.",
+    "Track new inbox messages from this Google account. Starting or resetting uses a new baseline; earlier messages will not run Tasks.":
+      "Acompanhe novas mensagens desta conta Google. Iniciar ou redefinir cria nova base; mensagens antigas não executam tarefas.",
+    "Enabling push registers and renews a Gmail watch for this grant. Stopping blocks local delivery; the provider watch expires naturally. Event tasks also require verified provider setup.":
+      "Ativar o push registra e renova o monitoramento do Gmail. Parar bloqueia a entrega local; o do provedor expira sozinho.",
+    "Titan workspace systems": "Sistemas do espaço Titan",
+    "Deterministic health, evolution, and authorized replay—no generated claims.":
+      "Saúde, evolução e replay determinísticos, sem alegações geradas.",
+    "Your resource mix in the last 30 days compared with the preceding 30 days.":
+      "Seu mix de recursos nos últimos 30 dias versus os 30 anteriores.",
+    "Create workspace activity to establish your DNA baseline.":
+      "Gere atividade para definir sua linha de base.",
+    "Capture a metadata-only checkpoint. Content and titles are never stored in snapshots.":
+      "Capture um ponto de controle só com metadados, sem conteúdo nem títulos.",
+    "Only resources you can still access are resolved. Revoked or deleted references stay hidden.":
+      "Só recursos ainda acessíveis aparecem; revogados ficam ocultos.",
+    "No resources from this checkpoint are currently available.":
+      "Nenhum recurso deste ponto disponível.",
+    "Select a checkpoint to replay currently authorized resources.":
+      "Selecione um ponto para revisar recursos autorizados.",
+    "Bcc:": "Cco:",
+    "Private browser controls were cleared from this view.":
+      "Os controles do navegador privado foram limpos.",
+    "You have control. Automation is blocked during takeover. Return control, then use Resume run to continue.":
+      "Você está no controle; a automação está bloqueada. Devolva e retome.",
+    "Pause this run and wait for its current step to settle before taking over.":
+      "Pause e espere o passo atual terminar antes de assumir.",
+    "Run status has changed. Refresh execution and browser status before taking over.":
+      "O status mudou. Atualize antes de assumir.",
+    "Pause Work before taking over. The model cannot read or act during takeover. Sessions close after five minutes; sign-in data is not saved to Work history. Hiding these controls does not end the session.":
+      "Pause o Trabalho antes de assumir. O modelo não lê nem age. Sessões fecham em cinco minutos; dados de login não são salvos. Ocultar não encerra.",
+    "This destination does not provide operative": "Este destino não fornece",
+    "Unedited source preview only. Nothing is uploaded, generated or published. Image references are not included in saved drafts.":
+      "Só prévia sem edição. Nada é enviado, gerado ou publicado. Imagens não entram nos rascunhos.",
+    "Keep the composition instructions here. Supported image tools remain in the existing workspace.":
+      "Guarde aqui as instruções de composição. As ferramentas de imagem continuam no espaço atual.",
+    "PDF export and owner share controls require an actual supported output. Local review notes can be exported as JSON from Review tools below.":
+      "Exportar PDF e compartilhar exigem uma saída suportada. Notas locais podem ir para JSON.",
+    "Loading secure checkout…": "Carregando pagamento seguro…",
+    Privacy: "Privacidade",
+    Terms: "Termos",
+    "Review text-only voice preview": "Revisar prévia de voz em texto",
+    "Prepare a local inquiry": "Preparar consulta local",
+    "Explore family guidance": "Ver orientações para famílias",
+    "Start shopping research": "Começar pesquisa de compras",
+    "Review data controls": "Revisar controles de dados",
+    "Explore KovaGPT research": "Explorar a pesquisa do KovaGPT",
+    "Evaluate enterprise use": "Avaliar uso empresarial",
+    "View careers status": "Ver vagas",
+    "Review model guidance": "Ver orientações de modelos",
+    "Open research tools": "Abrir ferramentas de pesquisa",
+    "Explore business use": "Explorar uso empresarial",
+    "Explore student guidance": "Ver orientações para estudantes",
+    "Review moderation": "Revisar moderação",
+    "Connect supported services with explicit permissions.":
+      "Conecte serviços com permissões explícitas.",
+    "Learn through explanations and guided practice.": "Aprenda com explicações e prática guiada.",
+    "Ask focused questions against supported files.": "Faça perguntas diretas sobre arquivos.",
+    "Core chat with published daily allowances.": "Chat básico com cotas diárias.",
+    "Higher allowances and advanced supported tools.": "Cotas maiores e ferramentas avançadas.",
+    Pro: "Pro",
+    "Highest published allowances and reasoning modes.": "Maiores cotas e modos de raciocínio.",
+    "Plan, review, and refine a clear narrative.": "Planeje, revise e refine uma narrativa clara.",
+    "Reason about structured data and calculations.":
+      "Raciocine com dados estruturados e cálculos.",
+    "Organize general information with safety boundaries.":
+      "Organize informações gerais com limites de segurança.",
+    "Structure comparisons without individualized advice.":
+      "Estruture comparações sem aconselhamento individual.",
+    "404 · KovaGPT": "404 · KovaGPT",
+    "Start with the product basics, practice on low-risk work, and learn how to verify output before using AI in consequential workflows.":
+      "Comece pelo básico, pratique em tarefas de baixo risco e aprenda a verificar antes de usar IA em trabalhos importantes.",
+    "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.":
+      "Revise rascunhos rígidos com o KovaGPT para tom mais claro e voz pessoal, sem promessas sobre detectores de IA.",
+    "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.":
+      "Peça imagens de IA ao KovaGPT, escolha predefinições e salve resultados quando o provedor estiver disponível.",
+    "KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.":
+      "O KovaGPT ajuda a escrever, aprender, programar, pesquisar, ter ideias e gerar imagens. Como a IA pode errar, sempre verifique o que é importante.",
+    "KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.":
+      "Não use o KovaGPT como única fonte para decisões médicas, jurídicas, financeiras, de emergência ou segurança. Em casos graves, procure um profissional.",
+    "Users may not use KovaGPT to create harmful, illegal, abusive, deceptive, or dangerous content. This includes attempts to harm others, bypass security systems, steal private information, or abuse the platform.":
+      "É proibido usar o KovaGPT para conteúdo nocivo, ilegal, abusivo, enganoso ou perigoso, incluindo prejudicar outros, burlar segurança, roubar dados ou abusar da plataforma.",
+    "KovaGPT is meant to help you learn, brainstorm, and understand topics. Do not use it to cheat, submit work you did not understand, or break your school's rules.":
+      "O KovaGPT serve para aprender e entender. Não o use para colar, entregar trabalhos que não entendeu ou violar regras da escola.",
+    "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.":
+      "Escreva, reescreva e revise e-mails, redações, posts e roteiros com o KovaGPT.",
+    "This connection record is retained. Reconnect to restore access.":
+      "O registro é mantido. Reconecte para restaurar o acesso.",
+    "Known schedule dependencies could not be checked. Review your schedules before disconnecting; other dependencies may exist.":
+      "Não foi possível verificar dependências. Revise agendamentos antes de desconectar.",
+    "This plugin is coming soon. Its listed capabilities are proposals. No account is connected and no permissions have been requested.":
+      "Este plugin chega em breve. Recursos são propostas. Nenhuma conta conectada nem permissão pedida.",
+    "This connection requests your Google profile and email, plus only":
+      "Esta conexão pede seu perfil e e-mail do Google, e só",
+    "Other Google services require their own Connect action. Previously approved services remain connected.":
+      "Outros serviços Google precisam da própria conexão. Os aprovados continuam conectados.",
+    "GitHub will ask you to choose an account and approve access. Only authorized installations and explicitly granted repositories are available to Kova.":
+      "O GitHub pedirá conta e aprovação. O Kova só vê instalações e repositórios autorizados.",
+    "Sign in to Kova before connecting an account. You’ll choose the provider account after selecting Connect.":
+      "Entre no Kova antes de conectar uma conta. Você escolhe a conta depois.",
+    "Choose the account for new Gmail, Calendar and Drive requests. Existing confirmed actions remain bound to their original account.":
+      "Escolha a conta para novas solicitações de Gmail, Agenda e Drive. Ações confirmadas ficam na conta original.",
+    "Your connection record is retained, but Google authorization has expired or was revoked. Reconnect to restore access.":
+      "O registro é mantido, mas a autorização do Google expirou ou foi revogada. Reconecte.",
+    "Community publication ·": "Publicação na comunidade ·",
+    "We asked our email provider to send a sign-in link to":
+      "Pedimos o envio de um link de login para",
+    "Use at least": "Use pelo menos",
+    "Pricing page": "Página de preços",
+    "Organization · KovaGPT": "Organização · KovaGPT",
+    "Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces.":
+      "Agentes da conta, saúde dos provedores, controles de execução e orquestração.",
+    "Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled until an organization backend validates this configuration.":
+      "Convites, equipes, auditoria, SSO e SCIM ficam desativados até um backend validar.",
+    "No server drafts. Installation, diagnostics, health, updates, and permissions activate only after backend discovery verifies a manifest.":
+      "Sem rascunhos. Instalação, diagnóstico, atualizações e permissões só após verificar um manifesto.",
+    "Existing production models continue through the server provider registry. This surface never exposes credentials or permits browser-side provider secrets.":
+      "Modelos de produção seguem pelo registro do servidor. Nada de credenciais ou segredos no navegador.",
+    "Saved agents are reusable account-scoped instruction profiles. Execution remains separate and is available only when the authenticated runner and plan entitlement are healthy.":
+      "Agentes salvos são perfis de instruções reutilizáveis. A execução é separada e só funciona com executor e plano válidos.",
+    "If optional tracking is introduced, the applicable notices and consent controls must be provided before that tracking runs. Installing the desktop or web app does not change the privacy choices for your account.":
+      "Se houver rastreamento opcional, avisos e consentimento virão antes. Instalar o app não muda suas escolhas.",
+    "Kova may update this policy as the service and its providers change. The updated date at the top identifies the current version. Material changes may also be communicated in the product or by email when appropriate.":
+      "O Kova pode atualizar esta política. A data no topo indica a versão. Mudanças relevantes podem ser avisadas no produto ou por e-mail.",
+    "When you send a message, the service may retrieve relevant excerpts from this project's uploaded files. Exact excerpts and readiness are not loaded here.":
+      "Ao enviar, o serviço pode buscar trechos dos arquivos do projeto. Eles não são carregados aqui.",
+    "No saved results are explicitly attached to this message. The service may also use saved project memory; those entries are not loaded here.":
+      "Nenhum resultado salvo anexado. A memória do projeto pode ser usada; não é carregada aqui.",
+    "Project context follows existing membership and retrieval rules. Individual entries cannot be excluded for a single message here.":
+      "O contexto segue as regras de participação. Não dá para excluir itens para uma só mensagem aqui.",
+    "I checked Projects and want to retry creating this project.":
+      "Verifiquei Projetos e quero tentar criar de novo.",
+    "KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.":
+      "As assinaturas do KovaGPT dão acesso a ferramentas de IA, limites, imagens, envios e outros recursos premium.",
+    "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact":
+      "Reembolsos são analisados caso a caso. Se houve cobrança indevida ou falta de acesso, contate",
+    "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.":
+      "O KovaGPT pode negar reembolsos se os recursos pagos foram usados ou se o pedido parecer abusivo.",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.":
+      "Nada aqui limita direitos legais. Nunca envie número completo do cartão, senha ou código de segurança.",
+    "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact":
+      "Você pode cancelar nas configurações. As renovações param, mas o plano segue até o fim do período. Para ajuda, contate",
+    "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.":
+      "Use o KovaGPT para organizar material, resumir, comparar e estruturar notas, verificando fontes.",
+    "Sign in to review your saved tasks and background execution availability.":
+      "Entre para ver tarefas salvas e a execução em segundo plano.",
+    "Account access could not be verified. Your signed-in session is preserved.":
+      "Acesso não verificado. Sua sessão foi mantida.",
+    "Scheduled Tasks Status": "Status das tarefas agendadas",
+    "Retry the same request to check the outcome.": "Repita o pedido para ver o resultado.",
+    "Scheduled task pages": "Páginas de tarefas agendadas",
+    "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.":
+      "Peça ao KovaGPT explicações, exercícios, resumos, flashcards e exemplos e verifique com fontes do curso.",
+    "Standard ·": "Padrão ·",
+    "Premium · 5× usage": "Premium · 5× uso",
+    "New connections are not activated. Existing invitations and connections can still be declined, revoked, blocked, or removed.":
+      "Novas conexões não são ativadas. As existentes ainda podem ser recusadas, revogadas, bloqueadas ou removidas.",
+    "They must review and consent in their own account. Invitations expire after seven days.":
+      "Elas precisam aceitar na própria conta. Convites expiram em sete dias.",
+    "I agree to share my verified account email with this person and invite them to a voluntary contact connection.":
+      "Concordo em compartilhar meu e-mail verificado e convidar esta pessoa para uma conexão voluntária.",
+    "Emails shown here were verified when the invitation was created. No email delivery is enabled.":
+      "Os e-mails foram verificados na criação do convite. Nenhum e-mail é enviado.",
+    "This connection does not authorize monitoring, automatic alerts, or account access. Acceptance is optional. This review expires in ten minutes.":
+      "Esta conexão não autoriza monitoramento, alertas ou acesso à conta. É opcional. Expira em dez minutos.",
+    "I consent to this voluntary connection and sharing my verified account email. I can revoke it at any time.":
+      "Concordo com esta conexão voluntária e com o compartilhamento do e-mail. Posso revogar a qualquer momento.",
+    "Up to 50 recent records. Removing a finished record removes it for both parties.":
+      "Até 50 registros recentes. Remover um finalizado o remove para ambos.",
+    "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
+      "Escreva, revise, confira, resuma e conte texto em espaços focados com a interface do Kova.",
     Cooking: "Culinária",
     "Plan and adapt recipes with food safety in view.":
       "Planeje e adapte receitas pensando na segurança alimentar.",
@@ -18826,6 +19877,262 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Try an example": "例を試す",
     "Kova can make mistakes. Check important information, citations, and final wording.":
       "Kovaは間違えることがあります。重要な情報、引用、最終的な表現を確認してください。",
+    "This recovery policy is not enabled here. This screen cannot verify your current deletion status.":
+      "この復元ポリシーはここでは有効ではありません。この画面では削除状況を確認できません。",
+    "Recovery deadline · deletion eligible from": "復元期限・削除可能になる日時",
+    "The recovery deadline has passed. Actual deletion status is unknown; the time alone does not confirm that your account has been deleted.":
+      "復元期限を過ぎました。実際の削除状況は不明で、時刻だけでは削除済みとは言えません。",
+    "Recover account cancels the scheduled deletion. Closing this dialog does not cancel it.":
+      "「アカウントを復元」で予定された削除が取り消されます。ダイアログを閉じても取り消されません。",
+    "Account data was cleared from this browser. Reopen Privacy settings to check your export again.":
+      "このブラウザからアカウントデータが消去されました。エクスポートを確認するにはプライバシー設定を開き直してください。",
+    "Status refreshes while this section is open. The service does not provide a progress percentage or completion estimate.":
+      "このセクションを開いている間、状況は更新されます。進捗率や完了見込みは提供されません。",
+    "Removal of the export file is still pending. Account records are unaffected.":
+      "エクスポートファイルの削除は保留中です。アカウントの記録には影響しません。",
+    "The previous request has not been confirmed. Only its status will be checked; another export request will not be sent.":
+      "前回のリクエストは確認されていません。状態のみ確認し、新たなエクスポート依頼は送信しません。",
+    "Request tracking is unavailable in this browser. New export requests are disabled to prevent an unconfirmed request from being repeated.":
+      "このブラウザではリクエストを追跡できません。未確認の依頼が重複しないよう、新しいエクスポート依頼は無効です。",
+    "A clear answer starts with the": "わかりやすい回答は次から始まります：",
+    "Page count, page selection and page-read results are unavailable for this attachment. Saved text-only records do not retain PDF page metadata. Attach the original PDF again to inspect its pages.":
+      "この添付ではページ数、ページ選択、読み取り結果を利用できません。テキストのみの記録にはPDFのページ情報が残りません。ページを確認するには元のPDFを添付し直してください。",
+    "Truncated: only": "切り詰め：",
+    "Bounded extracted text ·": "上限付きの抽出テキスト ·",
+    "No readable text is included for this pin. It is":
+      "この固定項目には読み取れるテキストが含まれていません。状態：",
+    "In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no daily limit. Daily limits reset at midnight UTC.":
+      "チャットでクラウドブラウザに公開HTTPSリンクを開くよう依頼します。優先順位はPro、Plus、Freeの順。Freeは1日10分、Plusは60分、Proは上限なし。毎日UTC午前0時にリセットされます。",
+    "Site rules match an exact HTTPS domain. Subdomains have separate rules. Unlisted sites use Ask; each agent action still needs your approval.":
+      "サイトルールは完全一致のHTTPSドメインに適用され、サブドメインは別ルールです。未登録のサイトは「確認」となり、エージェントの各操作には承認が必要です。",
+    "This runner needs the site-rules update to enforce saved blocks. Block rules prevent new browser commands until that update is active.":
+      "保存したブロックを適用するには、この実行環境にサイトルールの更新が必要です。更新が有効になるまでブラウザの新しい操作はブロックされます。",
+    "Use Take over to enter passwords privately. Automation pauses while you have control. Return control when you are ready for the agent to use the signed-in session.":
+      "パスワードを非公開で入力するには「操作を引き継ぐ」を使います。操作中は自動化が一時停止します。エージェントにサインイン済みセッションを使わせる準備ができたら操作を戻してください。",
+    "Compatible browser images pause for popup and website confirmation requests. Downloads and device permission prompts remain blocked.":
+      "対応ブラウザは、ポップアップやサイトの確認要求で一時停止します。ダウンロードとデバイスの許可要求はブロックされたままです。",
+    "Selection changes this message only. The full local extraction is kept for Restore while this attachment is in the composer. Saved Library copies are unchanged. This is a text preview, not an original PDF preview.":
+      "選択はこのメッセージにだけ反映されます。添付が入力欄にある間は、復元用に全体の抽出結果を保持します。ライブラリのコピーは変わりません。これは元のPDFではなくテキストのプレビューです。",
+    "Conversation model. Your chat model powers the conversation.":
+      "会話のモデル。チャットモデルが会話を担当します。",
+    "Kova provides read access for this operation.": "この操作でKovaが使うのは読み取り権限です。",
+    "This removes this account’s access from Kova and cancels its sync jobs. Other Microsoft services using the same account are affected. Remote provider revocation may remain pending.":
+      "このアカウントのKovaへのアクセスを削除し、同期ジョブを取り消します。同じアカウントを使う他のMicrosoftサービスにも影響します。プロバイダー側での取り消しは保留になる場合があります。",
+    "Private text, Markdown, CSV and JSON files for this developer project. Upload through the API with a files-scoped key. Files expire after 30 days; your account can store up to 100 files and 2 MiB across all projects.":
+      "この開発者プロジェクト用の非公開テキスト、Markdown、CSV、JSONファイル。ファイル用キーでAPIからアップロードします。30日で失効し、全プロジェクト合計で最大100ファイル・2MiBまで保存できます。",
+    "Configure your developer account, project and spending limits in the":
+      "開発者アカウント、プロジェクト、支出上限の設定先：",
+    "Enter this client's spending limits in": "このクライアントの支出上限の単位：",
+    "Revoke access here even when new MCP authorization is disabled. These connections use developer projects and prepaid developer credit.":
+      "新しいMCP認可が無効でも、ここでアクセスを取り消せます。これらの接続は開発者プロジェクトとプリペイドクレジットを使います。",
+    "/ request,": "/ リクエスト、",
+    "/ day,": "/ 日、",
+    "Searching sends your query and any place you enter to the configured search provider. Results are source reports and can be incomplete or outdated. KovaGPT stores request counts, not your search text.":
+      "検索すると、クエリと入力した場所が設定済みの検索プロバイダーに送られます。結果は情報源の報告で、不完全・古い場合があります。KovaGPTが保存するのは件数のみで、検索テキストは保存しません。",
+    "For a product in a photo, ask chat to describe it, then paste the description here. Matching uses your text; it does not upload the photo or prove an exact visual match.":
+      "写真の商品は、チャットで説明させてからその説明をここに貼り付けてください。照合はテキストで行い、写真のアップロードや完全一致の保証はしません。",
+    "No location permission has been requested. Local results are web links, with external maps and reservation handoffs.":
+      "位置情報の許可は求めていません。地域の結果はウェブリンクで、外部の地図や予約に引き継ぎます。",
+    "Merchant price, currency, and stock are unknown until checked. A check sends this source URL to the search provider.":
+      "販売者の価格、通貨、在庫は確認するまで不明です。確認するとこのURLが検索プロバイダーに送られます。",
+    "Compare the exact variants and currencies shown. Prices may exclude shipping or tax; a source observation does not guarantee checkout price or stock.":
+      "表示されたバリエーションと通貨を正確に比較してください。価格に送料や税が含まれない場合があり、表示は決済時の価格や在庫を保証しません。",
+    "The source did not provide an unambiguous product with variants. Price and stock remain unknown.":
+      "情報源は特定できる商品とバリエーションを示しませんでした。価格と在庫は不明のままです。",
+    "The support service accepted your request. Your reply address is":
+      "サポートがリクエストを受け付けました。返信先：",
+    "PNG/JPEG/WebP originals up to 8 MB. Masks must be PNG with transparency, up to 4 MB, and match the original dimensions. A mask guides edits; it does not guarantee pixel-perfect preservation.":
+      "元画像はPNG/JPEG/WebPで最大8MB。マスクは透過PNGで最大4MB、元画像と同じサイズが必要です。マスクは編集の目安で、ピクセル単位の保持は保証しません。",
+    "Your selection stays unchanged. “Download started” means the file was handed to your browser; check your browser’s downloads to confirm it was saved.":
+      "選択は変わりません。「ダウンロード開始」はファイルをブラウザに渡したという意味です。保存されたかはブラウザのダウンロードで確認してください。",
+    "Replacements keep earlier versions private. Retained originals and text history count toward storage. Images and Work outputs keep their own generation history.":
+      "置き換えても以前の版は非公開で残ります。保持された元ファイルとテキスト履歴は容量に含まれます。画像とワークの出力は独自の生成履歴を持ちます。",
+    "Your unsaved text is still here. Select and copy anything you want to keep before closing. Refresh Library, then reopen Versions to check the saved text.":
+      "未保存のテキストはまだ残っています。閉じる前に残したい部分をコピーしてください。ライブラリを更新し、バージョンを開き直して保存内容を確認できます。",
+    "These sources were included with the original response request. This does not tell us which facts influenced the answer or later edits. The current saved contents appear below and may have changed since that response.":
+      "これらのソースは元の回答リクエストに含まれていました。どの事実が回答や後の編集に影響したかは示しません。現在の保存内容は下に表示され、回答時から変わっている場合があります。",
+    "Verify your existing authenticator, then enroll a fresh Kova-owned authenticator. Hosted session authority is retired only after the new factor succeeds.":
+      "現在の認証アプリを確認してから、Kovaの新しい認証アプリを登録します。以前の認証は新しい要素が成功してから無効になります。",
+    "Confirm your password before adding an authenticator. For Google or passkey accounts, sign in again with that method and return here within five minutes; no password is needed.":
+      "認証アプリを追加する前にパスワードを確認してください。GoogleやパスキーのアカウントはそのSign-in方法で再度サインインし、5分以内に戻ってください。パスワードは不要です。",
+    "SSO:": "SSO：",
+    "Only a sole remaining owner can close the organization. This revokes access and invitations; retained audit records are not erased. Type":
+      "組織を閉鎖できるのは最後に残った所有者だけです。アクセスと招待は取り消されますが、監査記録は消去されません。次を入力：",
+    "SCIM provisions organization members through this organization’s SSO identity. Groups remain directory records; they do not share Projects or grant administrator access.":
+      "SCIMはこの組織のSSO IDを通じてメンバーをプロビジョニングします。グループはディレクトリの記録で、プロジェクトの共有や管理者権限の付与は行いません。",
+    "I authorize this IdP to create and revoke its managed member access. Rotating invalidates the previous token.":
+      "このIdPが管理メンバーのアクセスを作成・取り消すことを許可します。ローテーションすると以前のトークンは無効になります。",
+    "A response preference for this account in this browser. Saving it does not rename your account. Leave blank to use no preferred name.":
+      "このブラウザでのこのアカウント用の返答設定です。保存してもアカウント名は変わりません。呼び名が不要なら空欄にしてください。",
+    "Keep or clear your newer draft before restoring this version. Restoring does not send it. Kept only while this chat stays open. Up to three versions can be kept; restore or discard one before sending more.":
+      "この版を復元する前に新しい下書きを残すか消去してください。復元しても送信はされません。このチャットを開いている間だけ保持され、最大3つまでです。さらに送信する前に1つ復元または破棄してください。",
+    "Track new inbox messages from this Google account. Starting or resetting uses a new baseline; earlier messages will not run Tasks.":
+      "このGoogleアカウントの新着メールを追跡します。開始やリセットで新しい基準点になり、それ以前のメールではタスクは実行されません。",
+    "Enabling push registers and renews a Gmail watch for this grant. Stopping blocks local delivery; the provider watch expires naturally. Event tasks also require verified provider setup.":
+      "プッシュを有効にすると、この許可に対してGmailの監視を登録・更新します。停止するとローカル配信が止まり、プロバイダー側の監視は自然に失効します。イベントタスクには確認済みのプロバイダー設定も必要です。",
+    "Titan workspace systems": "Titanワークスペースシステム",
+    "Deterministic health, evolution, and authorized replay—no generated claims.":
+      "決定論的な健全性・推移・許可されたリプレイ。生成された主張は含みません。",
+    "Your resource mix in the last 30 days compared with the preceding 30 days.":
+      "直近30日のリソース構成を、その前の30日と比較します。",
+    "Create workspace activity to establish your DNA baseline.":
+      "基準となるDNAを作るにはワークスペースで活動してください。",
+    "Capture a metadata-only checkpoint. Content and titles are never stored in snapshots.":
+      "メタデータのみのチェックポイントを記録します。スナップショットに内容やタイトルは保存されません。",
+    "Only resources you can still access are resolved. Revoked or deleted references stay hidden.":
+      "現在もアクセスできるリソースだけを表示し、取り消し・削除された参照は非表示のままです。",
+    "No resources from this checkpoint are currently available.":
+      "このチェックポイントのリソースは現在ありません。",
+    "Select a checkpoint to replay currently authorized resources.":
+      "チェックポイントを選ぶと、現在許可されたリソースをリプレイします。",
+    "Bcc:": "Bcc：",
+    "Private browser controls were cleared from this view.":
+      "非公開ブラウザの操作はこの画面から消去されました。",
+    "You have control. Automation is blocked during takeover. Return control, then use Resume run to continue.":
+      "操作中です。引き継ぎ中は自動化がブロックされます。操作を戻してから「実行を再開」で続けてください。",
+    "Pause this run and wait for its current step to settle before taking over.":
+      "引き継ぐ前にこの実行を一時停止し、現在のステップが落ち着くのを待ってください。",
+    "Run status has changed. Refresh execution and browser status before taking over.":
+      "実行状況が変わりました。引き継ぐ前に実行とブラウザの状態を更新してください。",
+    "Pause Work before taking over. The model cannot read or act during takeover. Sessions close after five minutes; sign-in data is not saved to Work history. Hiding these controls does not end the session.":
+      "引き継ぐ前にワークを一時停止してください。引き継ぎ中、モデルは閲覧も操作もできません。セッションは5分で終了し、サインイン情報はワーク履歴に保存されません。操作パネルを隠してもセッションは終わりません。",
+    "This destination does not provide operative": "この送信先は有効な次を提供しません：",
+    "Unedited source preview only. Nothing is uploaded, generated or published. Image references are not included in saved drafts.":
+      "未編集のソースのプレビューのみです。アップロード、生成、公開は行いません。画像の参照は保存した下書きに含まれません。",
+    "Keep the composition instructions here. Supported image tools remain in the existing workspace.":
+      "構図の指示はここに残してください。対応する画像ツールは既存のワークスペースにあります。",
+    "PDF export and owner share controls require an actual supported output. Local review notes can be exported as JSON from Review tools below.":
+      "PDF書き出しと所有者による共有には、対応する実際の出力が必要です。ローカルのレビューメモは下のレビューツールからJSONで書き出せます。",
+    "Loading secure checkout…": "安全な決済を読み込み中…",
+    Privacy: "プライバシー",
+    Terms: "利用規約",
+    "Review text-only voice preview": "テキストのみの音声プレビューを確認",
+    "Prepare a local inquiry": "ローカルの問い合わせを準備",
+    "Explore family guidance": "家族向けガイドを見る",
+    "Start shopping research": "買い物リサーチを始める",
+    "Review data controls": "データ管理を確認",
+    "Explore KovaGPT research": "KovaGPTのリサーチを見る",
+    "Evaluate enterprise use": "企業での利用を検討",
+    "View careers status": "採用情報を見る",
+    "Review model guidance": "モデルのガイドを確認",
+    "Open research tools": "リサーチツールを開く",
+    "Explore business use": "ビジネスでの利用を見る",
+    "Explore student guidance": "学生向けガイドを見る",
+    "Review moderation": "モデレーションを確認",
+    "Connect supported services with explicit permissions.": "対応サービスを明示的な権限で接続。",
+    "Learn through explanations and guided practice.": "説明とガイド付き練習で学ぶ。",
+    "Ask focused questions against supported files.": "対応ファイルについて的を絞って質問。",
+    "Core chat with published daily allowances.": "公開された1日の利用枠付きの基本チャット。",
+    "Higher allowances and advanced supported tools.": "より多い利用枠と高度なツール。",
+    Pro: "Pro",
+    "Highest published allowances and reasoning modes.": "最大の利用枠と推論モード。",
+    "Plan, review, and refine a clear narrative.": "わかりやすい構成を計画・見直し・磨く。",
+    "Reason about structured data and calculations.": "構造化データと計算を考える。",
+    "Organize general information with safety boundaries.": "安全の範囲内で一般的な情報を整理。",
+    "Structure comparisons without individualized advice.": "個別の助言なしで比較を整理。",
+    "404 · KovaGPT": "404 · KovaGPT",
+    "Start with the product basics, practice on low-risk work, and learn how to verify output before using AI in consequential workflows.":
+      "まず基本を押さえ、リスクの低い作業で練習し、重要な業務でAIを使う前に出力の確認方法を身につけましょう。",
+    "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.":
+      "硬い・ありきたりな下書きをKovaGPTで見直し、語調をわかりやすく、リズムに変化を、より自分らしい声に。AI検出ツールについての保証はしません。",
+    "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.":
+      "KovaGPTでテキストからAI画像を生成し、プリセットを選び、画像プロバイダーが利用可能なときに結果を保存できます。",
+    "KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.":
+      "KovaGPTは、文章作成、学習、コーディング、リサーチ、ブレインストーミング、画像生成を支援します。AIは間違えることがあるため、重要な情報は必ず確認してください。",
+    "KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.":
+      "医療・法律・金融・緊急・安全に関する判断で、KovaGPTを唯一の情報源にしないでください。深刻または急を要する場合は、資格のある専門家や信頼できる情報源に相談してください。",
+    "Users may not use KovaGPT to create harmful, illegal, abusive, deceptive, or dangerous content. This includes attempts to harm others, bypass security systems, steal private information, or abuse the platform.":
+      "有害、違法、虐待的、欺瞞的、危険なコンテンツの作成にKovaGPTを使うことはできません。他者への加害、セキュリティの回避、個人情報の窃取、プラットフォームの悪用も含みます。",
+    "KovaGPT is meant to help you learn, brainstorm, and understand topics. Do not use it to cheat, submit work you did not understand, or break your school's rules.":
+      "KovaGPTは学び、考え、理解するためのものです。カンニングや理解していない課題の提出、学校の規則違反には使わないでください。",
+    "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.":
+      "KovaGPTでメール、作文、投稿、台本などを下書き・書き直し・見直し。",
+    "This connection record is retained. Reconnect to restore access.":
+      "この接続記録は保持されます。アクセスを戻すには再接続してください。",
+    "Known schedule dependencies could not be checked. Review your schedules before disconnecting; other dependencies may exist.":
+      "既知のスケジュール依存を確認できませんでした。接続解除の前にスケジュールを確認してください。他にも依存がある可能性があります。",
+    "This plugin is coming soon. Its listed capabilities are proposals. No account is connected and no permissions have been requested.":
+      "このプラグインは近日公開予定です。記載の機能は予定で、アカウントは接続されておらず権限も要求していません。",
+    "This connection requests your Google profile and email, plus only":
+      "この接続で要求するのはGoogleのプロフィールとメール、および次のみです：",
+    "Other Google services require their own Connect action. Previously approved services remain connected.":
+      "他のGoogleサービスは個別に接続が必要です。承認済みのサービスは接続されたままです。",
+    "GitHub will ask you to choose an account and approve access. Only authorized installations and explicitly granted repositories are available to Kova.":
+      "GitHubでアカウントを選び、アクセスを承認します。Kovaが使えるのは許可したインストールと明示的に付与したリポジトリだけです。",
+    "Sign in to Kova before connecting an account. You’ll choose the provider account after selecting Connect.":
+      "アカウントを接続する前にKovaにサインインしてください。「接続」を選ぶとプロバイダーのアカウントを選べます。",
+    "Choose the account for new Gmail, Calendar and Drive requests. Existing confirmed actions remain bound to their original account.":
+      "新しいGmail・カレンダー・ドライブのリクエストに使うアカウントを選びます。確定済みの操作は元のアカウントに紐づいたままです。",
+    "Your connection record is retained, but Google authorization has expired or was revoked. Reconnect to restore access.":
+      "接続記録は保持されていますが、Googleの認可が期限切れか取り消されています。再接続してください。",
+    "Community publication ·": "コミュニティ公開 ·",
+    "We asked our email provider to send a sign-in link to":
+      "サインインリンクの送信を依頼しました：",
+    "Use at least": "最低",
+    "Pricing page": "料金ページ",
+    "Organization · KovaGPT": "組織 · KovaGPT",
+    "Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces.":
+      "アカウント単位のエージェント、プロバイダーの状態、実行制御、オーケストレーション画面。",
+    "Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled until an organization backend validates this configuration.":
+      "組織のバックエンドがこの設定を検証するまで、招待、チーム、監査保存、SSO確認、SCIMは無効のままです。",
+    "No server drafts. Installation, diagnostics, health, updates, and permissions activate only after backend discovery verifies a manifest.":
+      "サーバーの下書きはありません。インストール、診断、状態、更新、権限は、バックエンドがマニフェストを確認してから有効になります。",
+    "Existing production models continue through the server provider registry. This surface never exposes credentials or permits browser-side provider secrets.":
+      "既存の本番モデルはサーバーのプロバイダー登録を通じて引き続き動作します。この画面で認証情報が表示されたり、ブラウザ側にシークレットを置いたりすることはありません。",
+    "Saved agents are reusable account-scoped instruction profiles. Execution remains separate and is available only when the authenticated runner and plan entitlement are healthy.":
+      "保存したエージェントは、アカウント単位で再利用できる指示プロファイルです。実行は別で、認証済みの実行環境とプランが正常なときにのみ利用できます。",
+    "If optional tracking is introduced, the applicable notices and consent controls must be provided before that tracking runs. Installing the desktop or web app does not change the privacy choices for your account.":
+      "任意のトラッキングを導入する場合は、実施前に該当する通知と同意の管理を提供します。デスクトップ版やウェブアプリをインストールしても、アカウントのプライバシー設定は変わりません。",
+    "Kova may update this policy as the service and its providers change. The updated date at the top identifies the current version. Material changes may also be communicated in the product or by email when appropriate.":
+      "サービスやプロバイダーの変更に応じて、Kovaは本ポリシーを更新することがあります。冒頭の更新日が現在の版を示します。重要な変更は製品内やメールでお知らせする場合があります。",
+    "When you send a message, the service may retrieve relevant excerpts from this project's uploaded files. Exact excerpts and readiness are not loaded here.":
+      "メッセージを送信すると、このプロジェクトのアップロードファイルから関連箇所を取得する場合があります。正確な抜粋と準備状況はここでは読み込みません。",
+    "No saved results are explicitly attached to this message. The service may also use saved project memory; those entries are not loaded here.":
+      "このメッセージに明示的に添付された保存結果はありません。プロジェクトの保存メモリが使われる場合もありますが、ここでは読み込みません。",
+    "Project context follows existing membership and retrieval rules. Individual entries cannot be excluded for a single message here.":
+      "プロジェクトのコンテキストは既存のメンバーシップと取得ルールに従います。ここで1つのメッセージだけ特定の項目を除外することはできません。",
+    "I checked Projects and want to retry creating this project.":
+      "プロジェクトを確認したので、作成を再試行します。",
+    "KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.":
+      "KovaGPTのサブスクリプションで、AIツール、利用枠、画像生成、ファイルアップロードなどのプレミアム機能を利用できます。",
+    "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact":
+      "返金は個別に検討します。誤って請求された、請求に問題があった、支払い後に有料機能を使えなかった場合は、次までご連絡ください：",
+    "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.":
+      "有料機能が使われた場合、不正と思われる場合、または返金基準を満たさない場合、KovaGPTは返金を拒否することがあります。",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.":
+      "本ポリシーは法律上の返金その他の消費者の権利を制限するものではありません。請求のサポートを依頼する際、カード番号全体、パスワード、セキュリティコードは送らないでください。",
+    "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact":
+      "KovaGPTのサブスクリプションはアカウント設定から解約できます。解約すると今後の更新は止まりますが、現在のプランは請求期間の終わりまで有効な場合があります。解約のお手伝いが必要な場合は次へ：",
+    "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.":
+      "KovaGPTで資料の整理、要約の下書き、選択肢の比較、メモの構成を行い、情報源とプロバイダーを確認しましょう。",
+    "Sign in to review your saved tasks and background execution availability.":
+      "保存したタスクとバックグラウンド実行の利用可否を確認するにはサインインしてください。",
+    "Account access could not be verified. Your signed-in session is preserved.":
+      "アカウントへのアクセスを確認できませんでした。サインイン状態は保持されています。",
+    "Scheduled Tasks Status": "スケジュール済みタスクの状況",
+    "Retry the same request to check the outcome.":
+      "同じリクエストを再試行して結果を確認してください。",
+    "Scheduled task pages": "スケジュール済みタスクのページ",
+    "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.":
+      "KovaGPTに説明、練習問題、ノートの要約、単語カード、解き方の例を頼み、信頼できる授業の資料で確認しましょう。",
+    "Standard ·": "スタンダード ·",
+    "Premium · 5× usage": "プレミアム · 5倍の使用量",
+    "New connections are not activated. Existing invitations and connections can still be declined, revoked, blocked, or removed.":
+      "新しい接続は有効化されません。既存の招待や接続は辞退・取り消し・ブロック・削除できます。",
+    "They must review and consent in their own account. Invitations expire after seven days.":
+      "相手は自分のアカウントで確認・同意する必要があります。招待は7日で失効します。",
+    "I agree to share my verified account email with this person and invite them to a voluntary contact connection.":
+      "確認済みのメールアドレスをこの人と共有し、任意の連絡先接続に招待することに同意します。",
+    "Emails shown here were verified when the invitation was created. No email delivery is enabled.":
+      "ここに表示されるメールは招待作成時に確認されたものです。メール配信は有効になっていません。",
+    "This connection does not authorize monitoring, automatic alerts, or account access. Acceptance is optional. This review expires in ten minutes.":
+      "この接続は見守り、自動通知、アカウントへのアクセスを許可するものではありません。承諾は任意です。この確認画面は10分で失効します。",
+    "I consent to this voluntary connection and sharing my verified account email. I can revoke it at any time.":
+      "この任意の接続と確認済みメールアドレスの共有に同意します。いつでも取り消せます。",
+    "Up to 50 recent records. Removing a finished record removes it for both parties.":
+      "最近の記録を最大50件表示。完了した記録を削除すると双方から削除されます。",
+    "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
+      "おなじみのKovaの画面で、文章の下書き、推敲、チェック、要約、文字数カウントができます。",
     Cooking: "料理",
     "Plan and adapt recipes with food safety in view.": "食品の安全に配慮してレシピを計画・調整。",
     "Science and medicine": "科学と医療",
@@ -22787,6 +24094,264 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Try an example": "예시 사용해 보기",
     "Kova can make mistakes. Check important information, citations, and final wording.":
       "Kova는 실수할 수 있습니다. 중요한 정보, 인용, 최종 문구를 확인하세요.",
+    "This recovery policy is not enabled here. This screen cannot verify your current deletion status.":
+      "이 복구 정책은 여기서 활성화되지 않았습니다. 이 화면에서는 삭제 상태를 확인할 수 없습니다.",
+    "Recovery deadline · deletion eligible from": "복구 기한 · 삭제 가능 시점",
+    "The recovery deadline has passed. Actual deletion status is unknown; the time alone does not confirm that your account has been deleted.":
+      "복구 기한이 지났습니다. 실제 삭제 여부는 알 수 없으며 시간만으로 삭제를 확인할 수 없습니다.",
+    "Recover account cancels the scheduled deletion. Closing this dialog does not cancel it.":
+      "계정 복구를 누르면 예약된 삭제가 취소됩니다. 대화상자를 닫아도 취소되지 않습니다.",
+    "Account data was cleared from this browser. Reopen Privacy settings to check your export again.":
+      "브라우저에서 계정 데이터가 지워졌습니다. 내보내기를 확인하려면 개인정보 설정을 다시 여세요.",
+    "Status refreshes while this section is open. The service does not provide a progress percentage or completion estimate.":
+      "이 섹션이 열려 있는 동안 상태가 갱신됩니다. 진행률이나 완료 예상은 제공되지 않습니다.",
+    "Removal of the export file is still pending. Account records are unaffected.":
+      "내보내기 파일 삭제가 대기 중입니다. 계정 기록에는 영향이 없습니다.",
+    "The previous request has not been confirmed. Only its status will be checked; another export request will not be sent.":
+      "이전 요청이 확인되지 않았습니다. 상태만 확인하며 새 내보내기 요청은 보내지 않습니다.",
+    "Request tracking is unavailable in this browser. New export requests are disabled to prevent an unconfirmed request from being repeated.":
+      "이 브라우저에서는 요청 추적을 할 수 없습니다. 미확인 요청이 반복되지 않도록 새 내보내기 요청이 비활성화됩니다.",
+    "A clear answer starts with the": "명확한 답변은 다음에서 시작합니다:",
+    "Page count, page selection and page-read results are unavailable for this attachment. Saved text-only records do not retain PDF page metadata. Attach the original PDF again to inspect its pages.":
+      "이 첨부에서는 페이지 수, 선택, 읽기 결과를 쓸 수 없습니다. 텍스트 전용 기록은 페이지 정보를 남기지 않으니 원본 PDF를 다시 첨부하세요.",
+    "Truncated: only": "잘림: 다음만",
+    "Bounded extracted text ·": "제한된 추출 텍스트 ·",
+    "No readable text is included for this pin. It is":
+      "이 고정 항목에는 읽을 수 있는 텍스트가 없습니다. 상태:",
+    "In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no daily limit. Daily limits reset at midnight UTC.":
+      "채팅에서 클라우드 브라우저에 공개 HTTPS 링크를 열어 달라고 요청하세요. 우선순위는 Pro, Plus, Free 순이며 Free는 하루 10분, Plus는 60분, Pro는 무제한입니다. 한도는 UTC 자정에 초기화됩니다.",
+    "Site rules match an exact HTTPS domain. Subdomains have separate rules. Unlisted sites use Ask; each agent action still needs your approval.":
+      "사이트 규칙은 정확한 HTTPS 도메인에 적용되며 하위 도메인은 별도 규칙입니다. 목록에 없는 사이트는 '묻기'를 쓰며 모든 에이전트 작업은 승인이 필요합니다.",
+    "This runner needs the site-rules update to enforce saved blocks. Block rules prevent new browser commands until that update is active.":
+      "저장된 차단을 적용하려면 이 실행기에 사이트 규칙 업데이트가 필요합니다. 업데이트 전까지 새 브라우저 명령은 차단됩니다.",
+    "Use Take over to enter passwords privately. Automation pauses while you have control. Return control when you are ready for the agent to use the signed-in session.":
+      "비밀번호를 비공개로 입력하려면 직접 제어를 사용하세요. 제어 중에는 자동화가 일시 중지됩니다. 에이전트가 로그인 세션을 써도 되면 제어를 반환하세요.",
+    "Compatible browser images pause for popup and website confirmation requests. Downloads and device permission prompts remain blocked.":
+      "호환 브라우저는 팝업과 확인 요청에서 일시 중지됩니다. 다운로드와 기기 권한 요청은 계속 차단됩니다.",
+    "Selection changes this message only. The full local extraction is kept for Restore while this attachment is in the composer. Saved Library copies are unchanged. This is a text preview, not an original PDF preview.":
+      "선택은 이 메시지에만 적용됩니다. 첨부가 입력창에 있는 동안 전체 추출본은 복원용으로 유지되며 라이브러리 사본은 바뀌지 않습니다. 원본 PDF가 아닌 텍스트 미리보기입니다.",
+    "Conversation model. Your chat model powers the conversation.":
+      "대화 모델. 채팅 모델이 대화를 처리합니다.",
+    "Kova provides read access for this operation.": "이 작업에서 Kova는 읽기 권한을 제공합니다.",
+    "This removes this account’s access from Kova and cancels its sync jobs. Other Microsoft services using the same account are affected. Remote provider revocation may remain pending.":
+      "이 계정의 Kova 접근을 제거하고 동기화를 취소합니다. 같은 계정을 쓰는 다른 Microsoft 서비스도 영향을 받으며 공급자 측 취소는 대기 상태일 수 있습니다.",
+    "Private text, Markdown, CSV and JSON files for this developer project. Upload through the API with a files-scoped key. Files expire after 30 days; your account can store up to 100 files and 2 MiB across all projects.":
+      "이 개발자 프로젝트의 비공개 텍스트, Markdown, CSV, JSON 파일입니다. 파일 범위 키로 API에서 업로드하며 30일 후 만료되고 전체 최대 100개, 2MiB까지 저장됩니다.",
+    "Configure your developer account, project and spending limits in the":
+      "개발자 계정, 프로젝트, 지출 한도 설정 위치:",
+    "Enter this client's spending limits in": "이 클라이언트의 지출 한도 입력 단위:",
+    "Revoke access here even when new MCP authorization is disabled. These connections use developer projects and prepaid developer credit.":
+      "새 MCP 인증이 비활성화되어도 여기서 접근을 취소할 수 있습니다. 이 연결은 개발자 프로젝트와 선불 크레딧을 사용합니다.",
+    "/ request,": "/ 요청,",
+    "/ day,": "/ 일,",
+    "Searching sends your query and any place you enter to the configured search provider. Results are source reports and can be incomplete or outdated. KovaGPT stores request counts, not your search text.":
+      "검색하면 검색어와 입력한 장소가 구성된 검색 공급자로 전송됩니다. 결과는 출처 보고이며 불완전하거나 오래될 수 있습니다. KovaGPT는 검색어가 아닌 요청 횟수만 저장합니다.",
+    "For a product in a photo, ask chat to describe it, then paste the description here. Matching uses your text; it does not upload the photo or prove an exact visual match.":
+      "사진 속 제품은 채팅에 설명을 요청한 뒤 여기에 붙여넣으세요. 텍스트로 매칭하며 사진을 올리거나 정확한 일치를 보장하지 않습니다.",
+    "No location permission has been requested. Local results are web links, with external maps and reservation handoffs.":
+      "위치 권한을 요청하지 않았습니다. 지역 결과는 외부 지도와 예약으로 연결되는 웹 링크입니다.",
+    "Merchant price, currency, and stock are unknown until checked. A check sends this source URL to the search provider.":
+      "판매자 가격, 통화, 재고는 확인 전까지 알 수 없습니다. 확인하면 이 URL이 검색 공급자로 전송됩니다.",
+    "Compare the exact variants and currencies shown. Prices may exclude shipping or tax; a source observation does not guarantee checkout price or stock.":
+      "표시된 정확한 옵션과 통화를 비교하세요. 가격에 배송비나 세금이 빠질 수 있으며 결제 가격이나 재고를 보장하지 않습니다.",
+    "The source did not provide an unambiguous product with variants. Price and stock remain unknown.":
+      "출처가 명확한 제품과 옵션을 제공하지 않았습니다. 가격과 재고는 알 수 없습니다.",
+    "The support service accepted your request. Your reply address is":
+      "지원팀이 요청을 접수했습니다. 회신 주소:",
+    "PNG/JPEG/WebP originals up to 8 MB. Masks must be PNG with transparency, up to 4 MB, and match the original dimensions. A mask guides edits; it does not guarantee pixel-perfect preservation.":
+      "원본은 PNG/JPEG/WebP 최대 8MB. 마스크는 투명 PNG, 최대 4MB, 원본과 같은 크기여야 합니다. 마스크는 편집을 안내할 뿐 픽셀 단위 보존을 보장하지 않습니다.",
+    "Your selection stays unchanged. “Download started” means the file was handed to your browser; check your browser’s downloads to confirm it was saved.":
+      '선택은 그대로입니다. "다운로드 시작"은 파일을 브라우저에 넘겼다는 뜻이니 다운로드 목록에서 저장 여부를 확인하세요.',
+    "Replacements keep earlier versions private. Retained originals and text history count toward storage. Images and Work outputs keep their own generation history.":
+      "교체해도 이전 버전은 비공개로 유지됩니다. 보관된 원본과 텍스트 기록은 저장 공간에 포함되며 이미지와 작업 결과는 자체 생성 기록을 유지합니다.",
+    "Your unsaved text is still here. Select and copy anything you want to keep before closing. Refresh Library, then reopen Versions to check the saved text.":
+      "저장하지 않은 텍스트가 남아 있습니다. 닫기 전에 필요한 내용을 복사하고 라이브러리를 새로고침한 뒤 버전을 다시 열어 확인하세요.",
+    "These sources were included with the original response request. This does not tell us which facts influenced the answer or later edits. The current saved contents appear below and may have changed since that response.":
+      "이 출처들은 원래 응답 요청에 포함되었습니다. 어떤 사실이 답변에 영향을 줬는지는 알 수 없으며 현재 저장된 내용은 그 이후 바뀌었을 수 있습니다.",
+    "Verify your existing authenticator, then enroll a fresh Kova-owned authenticator. Hosted session authority is retired only after the new factor succeeds.":
+      "기존 인증기를 확인한 뒤 새 Kova 인증기를 등록하세요. 새 인증이 성공한 뒤에만 이전 권한이 해제됩니다.",
+    "Confirm your password before adding an authenticator. For Google or passkey accounts, sign in again with that method and return here within five minutes; no password is needed.":
+      "인증기를 추가하기 전에 비밀번호를 확인하세요. Google이나 패스키 계정은 그 방법으로 다시 로그인해 5분 안에 돌아오면 되며 비밀번호는 필요 없습니다.",
+    "SSO:": "SSO:",
+    "Only a sole remaining owner can close the organization. This revokes access and invitations; retained audit records are not erased. Type":
+      "남은 유일한 소유자만 조직을 닫을 수 있습니다. 접근과 초대는 취소되지만 감사 기록은 지워지지 않습니다. 입력:",
+    "SCIM provisions organization members through this organization’s SSO identity. Groups remain directory records; they do not share Projects or grant administrator access.":
+      "SCIM은 조직 SSO로 구성원을 프로비저닝합니다. 그룹은 디렉터리 기록일 뿐 프로젝트를 공유하거나 관리자 권한을 주지 않습니다.",
+    "I authorize this IdP to create and revoke its managed member access. Rotating invalidates the previous token.":
+      "이 IdP가 관리 구성원 접근을 만들고 취소하도록 승인합니다. 교체하면 이전 토큰은 무효가 됩니다.",
+    "A response preference for this account in this browser. Saving it does not rename your account. Leave blank to use no preferred name.":
+      "이 브라우저의 이 계정용 응답 설정입니다. 저장해도 계정 이름은 바뀌지 않으며 비워 두면 선호 이름을 쓰지 않습니다.",
+    "Keep or clear your newer draft before restoring this version. Restoring does not send it. Kept only while this chat stays open. Up to three versions can be kept; restore or discard one before sending more.":
+      "이 버전을 복원하기 전에 최신 초안을 유지하거나 지우세요. 복원해도 전송되지 않으며 채팅이 열려 있는 동안 최대 3개까지 유지됩니다.",
+    "Track new inbox messages from this Google account. Starting or resetting uses a new baseline; earlier messages will not run Tasks.":
+      "이 Google 계정의 새 받은편지함 메시지를 추적합니다. 시작이나 초기화 시 새 기준을 쓰며 이전 메시지는 작업을 실행하지 않습니다.",
+    "Enabling push registers and renews a Gmail watch for this grant. Stopping blocks local delivery; the provider watch expires naturally. Event tasks also require verified provider setup.":
+      "푸시를 켜면 이 권한에 대한 Gmail 감시를 등록·갱신합니다. 중지하면 로컬 전달이 막히고 공급자 감시는 자연 만료됩니다. 이벤트 작업에는 검증된 공급자 설정도 필요합니다.",
+    "Titan workspace systems": "Titan 작업 공간 시스템",
+    "Deterministic health, evolution, and authorized replay—no generated claims.":
+      "결정적 상태, 변화, 승인된 재생 — 생성된 주장은 없습니다.",
+    "Your resource mix in the last 30 days compared with the preceding 30 days.":
+      "최근 30일 리소스 구성을 이전 30일과 비교합니다.",
+    "Create workspace activity to establish your DNA baseline.":
+      "기준선을 만들려면 작업 공간 활동을 쌓으세요.",
+    "Capture a metadata-only checkpoint. Content and titles are never stored in snapshots.":
+      "메타데이터 전용 체크포인트를 캡처합니다. 내용과 제목은 저장되지 않습니다.",
+    "Only resources you can still access are resolved. Revoked or deleted references stay hidden.":
+      "아직 접근 가능한 리소스만 표시되며 취소되거나 삭제된 참조는 숨겨집니다.",
+    "No resources from this checkpoint are currently available.":
+      "이 체크포인트의 리소스를 현재 사용할 수 없습니다.",
+    "Select a checkpoint to replay currently authorized resources.":
+      "체크포인트를 골라 승인된 리소스를 재생하세요.",
+    "Bcc:": "숨은 참조:",
+    "Private browser controls were cleared from this view.":
+      "이 화면에서 비공개 브라우저 제어가 지워졌습니다.",
+    "You have control. Automation is blocked during takeover. Return control, then use Resume run to continue.":
+      "직접 제어 중입니다. 자동화가 차단됩니다. 제어를 반환한 뒤 실행 재개를 누르세요.",
+    "Pause this run and wait for its current step to settle before taking over.":
+      "직접 제어하기 전에 실행을 멈추고 현재 단계가 끝나길 기다리세요.",
+    "Run status has changed. Refresh execution and browser status before taking over.":
+      "실행 상태가 바뀌었습니다. 직접 제어 전에 상태를 새로고침하세요.",
+    "Pause Work before taking over. The model cannot read or act during takeover. Sessions close after five minutes; sign-in data is not saved to Work history. Hiding these controls does not end the session.":
+      "직접 제어 전에 작업을 일시 중지하세요. 그동안 모델은 읽거나 행동할 수 없습니다. 세션은 5분 후 닫히며 로그인 정보는 기록에 저장되지 않습니다. 제어를 숨겨도 세션은 끝나지 않습니다.",
+    "This destination does not provide operative": "이 대상은 유효한 다음을 제공하지 않습니다:",
+    "Unedited source preview only. Nothing is uploaded, generated or published. Image references are not included in saved drafts.":
+      "편집되지 않은 원본 미리보기입니다. 업로드·생성·게시되지 않으며 이미지 참조는 초안에 저장되지 않습니다.",
+    "Keep the composition instructions here. Supported image tools remain in the existing workspace.":
+      "구성 지침은 여기에 두세요. 지원되는 이미지 도구는 기존 작업 공간에 있습니다.",
+    "PDF export and owner share controls require an actual supported output. Local review notes can be exported as JSON from Review tools below.":
+      "PDF 내보내기와 공유에는 지원되는 실제 결과가 필요합니다. 로컬 검토 메모는 아래 검토 도구에서 JSON으로 내보낼 수 있습니다.",
+    "Loading secure checkout…": "보안 결제 불러오는 중…",
+    Privacy: "개인정보",
+    Terms: "약관",
+    "Review text-only voice preview": "텍스트 음성 미리보기 검토",
+    "Prepare a local inquiry": "로컬 문의 준비",
+    "Explore family guidance": "가족 안내 보기",
+    "Start shopping research": "쇼핑 리서치 시작",
+    "Review data controls": "데이터 제어 검토",
+    "Explore KovaGPT research": "KovaGPT 리서치 살펴보기",
+    "Evaluate enterprise use": "기업 사용 평가",
+    "View careers status": "채용 현황 보기",
+    "Review model guidance": "모델 안내 검토",
+    "Open research tools": "리서치 도구 열기",
+    "Explore business use": "비즈니스 활용 살펴보기",
+    "Explore student guidance": "학생 안내 보기",
+    "Review moderation": "운영 정책 검토",
+    "Connect supported services with explicit permissions.":
+      "지원 서비스를 명시적 권한으로 연결하세요.",
+    "Learn through explanations and guided practice.": "설명과 안내 연습으로 배우세요.",
+    "Ask focused questions against supported files.": "지원 파일에 대해 구체적으로 질문하세요.",
+    "Core chat with published daily allowances.": "공개된 일일 한도의 기본 채팅.",
+    "Higher allowances and advanced supported tools.": "더 높은 한도와 고급 도구.",
+    Pro: "Pro",
+    "Highest published allowances and reasoning modes.": "가장 높은 한도와 추론 모드.",
+    "Plan, review, and refine a clear narrative.": "명확한 서사를 계획하고 검토하며 다듬으세요.",
+    "Reason about structured data and calculations.": "구조화 데이터와 계산을 추론하세요.",
+    "Organize general information with safety boundaries.":
+      "안전 범위 안에서 일반 정보를 정리하세요.",
+    "Structure comparisons without individualized advice.":
+      "개인 맞춤 조언 없이 비교를 구성하세요.",
+    "404 · KovaGPT": "404 · KovaGPT",
+    "Start with the product basics, practice on low-risk work, and learn how to verify output before using AI in consequential workflows.":
+      "기본부터 시작해 위험이 낮은 작업으로 연습하고, 중요한 업무에 AI를 쓰기 전에 결과 검증 방법을 익히세요.",
+    "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.":
+      "딱딱하거나 평범한 초안을 KovaGPT로 다듬어 더 명확한 어조와 다양한 흐름, 개성 있는 목소리를 만드세요. AI 탐지기에 대한 약속은 없습니다.",
+    "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.":
+      "KovaGPT로 텍스트에서 AI 이미지를 요청하고 프리셋을 고르며 공급자가 가능할 때 결과를 저장하세요.",
+    "KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.":
+      "KovaGPT는 글쓰기, 학습, 코딩, 리서치, 브레인스토밍, 이미지 생성을 돕습니다. AI는 실수할 수 있으니 중요한 정보는 꼭 확인하세요.",
+    "KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.":
+      "의료, 법률, 금융, 응급, 안전 결정에 KovaGPT를 유일한 근거로 쓰지 마세요. 심각하거나 급한 상황에서는 자격 있는 전문가에게 문의하세요.",
+    "Users may not use KovaGPT to create harmful, illegal, abusive, deceptive, or dangerous content. This includes attempts to harm others, bypass security systems, steal private information, or abuse the platform.":
+      "KovaGPT로 유해하거나 불법적이거나 학대적이거나 기만적이거나 위험한 콘텐츠를 만들 수 없습니다. 타인 피해, 보안 우회, 개인정보 탈취, 플랫폼 남용 시도도 포함됩니다.",
+    "KovaGPT is meant to help you learn, brainstorm, and understand topics. Do not use it to cheat, submit work you did not understand, or break your school's rules.":
+      "KovaGPT는 배우고 아이디어를 내고 이해하도록 돕기 위한 것입니다. 부정행위나 이해하지 못한 과제 제출, 학교 규칙 위반에 쓰지 마세요.",
+    "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.":
+      "KovaGPT로 이메일, 에세이, 게시물, 대본 등을 쓰고 다시 쓰고 검토하세요.",
+    "This connection record is retained. Reconnect to restore access.":
+      "연결 기록은 유지됩니다. 접근을 복원하려면 다시 연결하세요.",
+    "Known schedule dependencies could not be checked. Review your schedules before disconnecting; other dependencies may exist.":
+      "예약 종속성을 확인할 수 없습니다. 연결을 해제하기 전에 예약을 검토하세요.",
+    "This plugin is coming soon. Its listed capabilities are proposals. No account is connected and no permissions have been requested.":
+      "이 플러그인은 곧 출시됩니다. 기능은 제안 사항이며 계정 연결이나 권한 요청은 없습니다.",
+    "This connection requests your Google profile and email, plus only":
+      "이 연결은 Google 프로필과 이메일, 그리고 다음만 요청합니다:",
+    "Other Google services require their own Connect action. Previously approved services remain connected.":
+      "다른 Google 서비스는 별도 연결이 필요합니다. 이미 승인된 서비스는 계속 연결됩니다.",
+    "GitHub will ask you to choose an account and approve access. Only authorized installations and explicitly granted repositories are available to Kova.":
+      "GitHub에서 계정을 고르고 접근을 승인합니다. Kova는 승인된 설치와 명시적으로 허용한 저장소만 사용합니다.",
+    "Sign in to Kova before connecting an account. You’ll choose the provider account after selecting Connect.":
+      "계정을 연결하기 전에 Kova에 로그인하세요. 연결을 누른 뒤 공급자 계정을 고릅니다.",
+    "Choose the account for new Gmail, Calendar and Drive requests. Existing confirmed actions remain bound to their original account.":
+      "새 Gmail, 캘린더, Drive 요청에 쓸 계정을 고르세요. 이미 확인된 작업은 원래 계정에 남습니다.",
+    "Your connection record is retained, but Google authorization has expired or was revoked. Reconnect to restore access.":
+      "연결 기록은 유지되지만 Google 인증이 만료되었거나 취소되었습니다. 다시 연결하세요.",
+    "Community publication ·": "커뮤니티 게시 ·",
+    "We asked our email provider to send a sign-in link to":
+      "다음 주소로 로그인 링크 발송을 요청했습니다:",
+    "Use at least": "최소",
+    "Pricing page": "요금 페이지",
+    "Organization · KovaGPT": "조직 · KovaGPT",
+    "Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces.":
+      "계정 범위 에이전트, 공급자 상태, 실행 제어, 오케스트레이션 화면.",
+    "Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled until an organization backend validates this configuration.":
+      "조직 백엔드가 구성을 검증할 때까지 초대, 팀, 감사 보존, SSO 확인, SCIM은 비활성화됩니다.",
+    "No server drafts. Installation, diagnostics, health, updates, and permissions activate only after backend discovery verifies a manifest.":
+      "서버 초안이 없습니다. 설치, 진단, 상태, 업데이트, 권한은 매니페스트 검증 후 활성화됩니다.",
+    "Existing production models continue through the server provider registry. This surface never exposes credentials or permits browser-side provider secrets.":
+      "기존 운영 모델은 서버 공급자 레지스트리로 계속 동작합니다. 이 화면은 자격 증명을 노출하거나 브라우저에 비밀을 허용하지 않습니다.",
+    "Saved agents are reusable account-scoped instruction profiles. Execution remains separate and is available only when the authenticated runner and plan entitlement are healthy.":
+      "저장된 에이전트는 재사용 가능한 지침 프로필입니다. 실행은 별도이며 인증된 실행기와 요금제가 정상일 때만 가능합니다.",
+    "If optional tracking is introduced, the applicable notices and consent controls must be provided before that tracking runs. Installing the desktop or web app does not change the privacy choices for your account.":
+      "선택적 추적이 도입되면 실행 전에 안내와 동의 설정을 제공합니다. 데스크톱 또는 웹 앱 설치는 계정의 개인정보 선택을 바꾸지 않습니다.",
+    "Kova may update this policy as the service and its providers change. The updated date at the top identifies the current version. Material changes may also be communicated in the product or by email when appropriate.":
+      "Kova는 서비스와 공급자 변경에 따라 이 정책을 업데이트할 수 있습니다. 상단 날짜가 현재 버전이며 중요한 변경은 제품이나 이메일로 알릴 수 있습니다.",
+    "When you send a message, the service may retrieve relevant excerpts from this project's uploaded files. Exact excerpts and readiness are not loaded here.":
+      "메시지를 보내면 프로젝트 파일에서 관련 발췌를 가져올 수 있습니다. 정확한 발췌와 준비 상태는 여기서 불러오지 않습니다.",
+    "No saved results are explicitly attached to this message. The service may also use saved project memory; those entries are not loaded here.":
+      "이 메시지에 첨부된 저장 결과는 없습니다. 프로젝트 메모리가 사용될 수 있으나 여기서 불러오지 않습니다.",
+    "Project context follows existing membership and retrieval rules. Individual entries cannot be excluded for a single message here.":
+      "프로젝트 컨텍스트는 기존 구성원 및 검색 규칙을 따릅니다. 여기서 한 메시지에 대해 개별 항목을 제외할 수 없습니다.",
+    "I checked Projects and want to retry creating this project.":
+      "프로젝트를 확인했으며 다시 만들기를 시도합니다.",
+    "KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.":
+      "KovaGPT 구독으로 AI 도구, 사용 한도, 이미지 생성, 파일 업로드 등 프리미엄 기능을 이용할 수 있습니다.",
+    "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact":
+      "환불은 개별적으로 검토합니다. 잘못 청구되었거나 결제 후 유료 기능을 쓸 수 없었다면 다음으로 문의하세요:",
+    "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.":
+      "유료 기능을 사용했거나 요청이 남용으로 보이거나 환불 기준에 맞지 않으면 KovaGPT는 환불을 거절할 수 있습니다.",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.":
+      "이 정책은 법에 따른 환불이나 소비자 권리를 제한하지 않습니다. 결제 지원 요청 시 카드 번호 전체, 비밀번호, 보안 코드는 보내지 마세요.",
+    "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact":
+      "계정 설정에서 KovaGPT 구독을 해지할 수 있습니다. 해지하면 갱신이 멈추지만 현재 요금제는 청구 기간이 끝날 때까지 유지될 수 있습니다. 도움이 필요하면 문의:",
+    "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.":
+      "KovaGPT로 자료를 정리하고 요약을 작성하며 선택지를 비교하고 메모를 구조화하세요. 출처와 공급자를 확인하세요.",
+    "Sign in to review your saved tasks and background execution availability.":
+      "저장된 작업과 백그라운드 실행 여부를 보려면 로그인하세요.",
+    "Account access could not be verified. Your signed-in session is preserved.":
+      "계정 접근을 확인할 수 없습니다. 로그인 세션은 유지됩니다.",
+    "Scheduled Tasks Status": "예약 작업 상태",
+    "Retry the same request to check the outcome.": "같은 요청을 다시 시도해 결과를 확인하세요.",
+    "Scheduled task pages": "예약 작업 페이지",
+    "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.":
+      "KovaGPT에 설명, 연습 문제, 노트 요약, 플래시카드, 풀이 예제를 요청하고 신뢰할 수 있는 수업 자료로 확인하세요.",
+    "Standard ·": "스탠다드 ·",
+    "Premium · 5× usage": "프리미엄 · 5배 사용량",
+    "New connections are not activated. Existing invitations and connections can still be declined, revoked, blocked, or removed.":
+      "새 연결은 활성화되지 않습니다. 기존 초대와 연결은 거절, 취소, 차단, 삭제할 수 있습니다.",
+    "They must review and consent in their own account. Invitations expire after seven days.":
+      "상대가 자신의 계정에서 검토하고 동의해야 합니다. 초대는 7일 후 만료됩니다.",
+    "I agree to share my verified account email with this person and invite them to a voluntary contact connection.":
+      "확인된 계정 이메일을 이 사람과 공유하고 자발적 연락 연결에 초대하는 데 동의합니다.",
+    "Emails shown here were verified when the invitation was created. No email delivery is enabled.":
+      "여기 표시된 이메일은 초대 생성 시 확인되었습니다. 이메일 발송은 활성화되지 않았습니다.",
+    "This connection does not authorize monitoring, automatic alerts, or account access. Acceptance is optional. This review expires in ten minutes.":
+      "이 연결은 모니터링, 자동 알림, 계정 접근을 허용하지 않습니다. 수락은 선택이며 이 검토는 10분 후 만료됩니다.",
+    "I consent to this voluntary connection and sharing my verified account email. I can revoke it at any time.":
+      "이 자발적 연결과 확인된 이메일 공유에 동의하며 언제든 취소할 수 있습니다.",
+    "Up to 50 recent records. Removing a finished record removes it for both parties.":
+      "최근 기록 최대 50개. 완료된 기록을 삭제하면 양쪽 모두에서 사라집니다.",
+    "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
+      "익숙한 Kova 화면에서 텍스트를 작성, 수정, 확인, 요약, 집계하세요.",
     Cooking: "요리",
     "Plan and adapt recipes with food safety in view.":
       "식품 안전을 고려해 레시피를 계획하고 조정하세요.",
@@ -26726,6 +28291,259 @@ export const APP_LABELS: Partial<Record<SupportedLocale, Record<string, string>>
     "Try an example": "جرّب مثالًا",
     "Kova can make mistakes. Check important information, citations, and final wording.":
       "قد يخطئ Kova. تحقّق من المعلومات والاستشهادات والصياغة النهائية.",
+    "This recovery policy is not enabled here. This screen cannot verify your current deletion status.":
+      "سياسة الاسترداد غير مفعّلة هنا، ولا يمكن لهذه الشاشة التحقق من حالة الحذف.",
+    "Recovery deadline · deletion eligible from": "موعد الاسترداد · الحذف ممكن من",
+    "The recovery deadline has passed. Actual deletion status is unknown; the time alone does not confirm that your account has been deleted.":
+      "انقضى موعد الاسترداد، وحالة الحذف الفعلية غير معروفة؛ الوقت وحده لا يؤكد الحذف.",
+    "Recover account cancels the scheduled deletion. Closing this dialog does not cancel it.":
+      "استرداد الحساب يلغي الحذف المجدول، وإغلاق النافذة لا يلغيه.",
+    "Account data was cleared from this browser. Reopen Privacy settings to check your export again.":
+      "مُسحت بيانات الحساب من المتصفح. أعد فتح الخصوصية للتحقق من التصدير.",
+    "Status refreshes while this section is open. The service does not provide a progress percentage or completion estimate.":
+      "تُحدّث الحالة ما دام القسم مفتوحًا، دون نسبة تقدّم أو تقدير للاكتمال.",
+    "Removal of the export file is still pending. Account records are unaffected.":
+      "إزالة ملف التصدير معلّقة، ولا تتأثر سجلات الحساب.",
+    "The previous request has not been confirmed. Only its status will be checked; another export request will not be sent.":
+      "لم يُؤكَّد الطلب السابق؛ ستُفحص حالته فقط دون إرسال طلب آخر.",
+    "Request tracking is unavailable in this browser. New export requests are disabled to prevent an unconfirmed request from being repeated.":
+      "تتبع الطلبات غير متاح هنا، وتُعطّل طلبات التصدير الجديدة لتجنب التكرار.",
+    "A clear answer starts with the": "تبدأ الإجابة الواضحة بـ",
+    "Page count, page selection and page-read results are unavailable for this attachment. Saved text-only records do not retain PDF page metadata. Attach the original PDF again to inspect its pages.":
+      "عدد الصفحات واختيارها غير متاح لهذا المرفق؛ لا تحتفظ السجلات النصية ببيانات الصفحات. أرفق ملف PDF الأصلي مجددًا.",
+    "Truncated: only": "مقتطع: فقط",
+    "Bounded extracted text ·": "نص مستخرج محدود ·",
+    "No readable text is included for this pin. It is": "لا يتضمن هذا العنصر نصًا مقروءًا. إنه",
+    "In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no daily limit. Daily limits reset at midnight UTC.":
+      "اطلب في المحادثة من المتصفح السحابي فتح رابط HTTPS عام. الأولوية لـ Pro ثم Plus ثم Free. لـ Free عشر دقائق يوميًا ولـ Plus ستون، وPro بلا حد. تُعاد الحدود عند منتصف الليل UTC.",
+    "Site rules match an exact HTTPS domain. Subdomains have separate rules. Unlisted sites use Ask; each agent action still needs your approval.":
+      "تنطبق القواعد على نطاق HTTPS مطابق، وللنطاقات الفرعية قواعدها. تستخدم المواقع غير المدرجة «اسأل»، وكل إجراء يتطلب موافقتك.",
+    "This runner needs the site-rules update to enforce saved blocks. Block rules prevent new browser commands until that update is active.":
+      "يحتاج هذا المنفّذ تحديث القواعد لتطبيق الحظر، وتُمنع الأوامر الجديدة حتى يُفعّل.",
+    "Use Take over to enter passwords privately. Automation pauses while you have control. Return control when you are ready for the agent to use the signed-in session.":
+      "استخدم «تولَّ التحكم» لإدخال كلمات المرور بخصوصية؛ تتوقف الأتمتة أثناء تحكمك. أعد التحكم عندما يكون الوكيل جاهزًا لاستخدام الجلسة.",
+    "Compatible browser images pause for popup and website confirmation requests. Downloads and device permission prompts remain blocked.":
+      "تتوقف المتصفحات المتوافقة عند النوافذ المنبثقة وطلبات التأكيد، وتبقى التنزيلات وأذونات الجهاز محظورة.",
+    "Selection changes this message only. The full local extraction is kept for Restore while this attachment is in the composer. Saved Library copies are unchanged. This is a text preview, not an original PDF preview.":
+      "يغيّر التحديد هذه الرسالة فقط، ويُحفظ الاستخراج الكامل للاستعادة. لا تتغير نسخ المكتبة. هذه معاينة نصية لا معاينة PDF أصلية.",
+    "Conversation model. Your chat model powers the conversation.":
+      "نموذج المحادثة. يشغّل نموذج الدردشة المحادثة.",
+    "Kova provides read access for this operation.": "يوفر Kova صلاحية القراءة لهذه العملية.",
+    "This removes this account’s access from Kova and cancels its sync jobs. Other Microsoft services using the same account are affected. Remote provider revocation may remain pending.":
+      "يزيل هذا وصول الحساب إلى Kova ويلغي المزامنة، ويؤثر في خدمات Microsoft الأخرى للحساب نفسه، وقد يبقى الإلغاء لدى المزوّد معلّقًا.",
+    "Private text, Markdown, CSV and JSON files for this developer project. Upload through the API with a files-scoped key. Files expire after 30 days; your account can store up to 100 files and 2 MiB across all projects.":
+      "ملفات نصية وMarkdown وCSV وJSON خاصة لهذا المشروع. ارفعها عبر API بمفتاح خاص بالملفات. تنتهي بعد 30 يومًا، وحتى 100 ملف و2 ميبيبايت إجمالًا.",
+    "Configure your developer account, project and spending limits in the":
+      "اضبط حسابك ومشروعك وحدودك في",
+    "Enter this client's spending limits in": "أدخل حدود إنفاق هذا العميل بـ",
+    "Revoke access here even when new MCP authorization is disabled. These connections use developer projects and prepaid developer credit.":
+      "ألغِ الوصول هنا حتى عند تعطيل تفويض MCP الجديد؛ تستخدم هذه الاتصالات مشاريع المطوّر والرصيد المسبق.",
+    "/ request,": "/ طلب،",
+    "/ day,": "/ يوم،",
+    "Searching sends your query and any place you enter to the configured search provider. Results are source reports and can be incomplete or outdated. KovaGPT stores request counts, not your search text.":
+      "يُرسل البحث استعلامك والمكان إلى مزوّد البحث. قد تكون النتائج ناقصة أو قديمة، ويخزن KovaGPT عدد الطلبات لا نص البحث.",
+    "For a product in a photo, ask chat to describe it, then paste the description here. Matching uses your text; it does not upload the photo or prove an exact visual match.":
+      "لمنتج في صورة، اطلب من المحادثة وصفه ثم الصق الوصف هنا. لا تُرفع الصورة ولا تُضمن مطابقة دقيقة.",
+    "No location permission has been requested. Local results are web links, with external maps and reservation handoffs.":
+      "لم يُطلب إذن الموقع؛ النتائج المحلية روابط ويب مع خرائط وحجوزات خارجية.",
+    "Merchant price, currency, and stock are unknown until checked. A check sends this source URL to the search provider.":
+      "السعر والعملة والمخزون غير معروفة حتى الفحص، الذي يرسل الرابط إلى مزوّد البحث.",
+    "Compare the exact variants and currencies shown. Prices may exclude shipping or tax; a source observation does not guarantee checkout price or stock.":
+      "قارن الأصناف والعملات المعروضة بدقة؛ قد تستثني الأسعار الشحن أو الضريبة ولا تضمن السعر النهائي أو المخزون.",
+    "The source did not provide an unambiguous product with variants. Price and stock remain unknown.":
+      "لم يقدّم المصدر منتجًا واضحًا بأصنافه، ويبقى السعر والمخزون غير معروفين.",
+    "The support service accepted your request. Your reply address is":
+      "قبل الدعم طلبك. عنوان الرد هو",
+    "PNG/JPEG/WebP originals up to 8 MB. Masks must be PNG with transparency, up to 4 MB, and match the original dimensions. A mask guides edits; it does not guarantee pixel-perfect preservation.":
+      "الأصول PNG/JPEG/WebP حتى 8 ميغابايت. يجب أن يكون القناع PNG شفافًا حتى 4 ميغابايت وبالأبعاد نفسها، ويوجّه التعديل دون ضمان الدقة.",
+    "Your selection stays unchanged. “Download started” means the file was handed to your browser; check your browser’s downloads to confirm it was saved.":
+      "يبقى تحديدك كما هو. «بدأ التنزيل» يعني تسليم الملف للمتصفح؛ تحقق من التنزيلات.",
+    "Replacements keep earlier versions private. Retained originals and text history count toward storage. Images and Work outputs keep their own generation history.":
+      "تبقى الإصدارات السابقة خاصة عند الاستبدال، وتُحتسب الأصول والسجل من التخزين.",
+    "Your unsaved text is still here. Select and copy anything you want to keep before closing. Refresh Library, then reopen Versions to check the saved text.":
+      "نصك غير المحفوظ ما زال هنا. انسخ ما تريد قبل الإغلاق، ثم حدّث المكتبة وافتح الإصدارات.",
+    "These sources were included with the original response request. This does not tell us which facts influenced the answer or later edits. The current saved contents appear below and may have changed since that response.":
+      "أُرفقت هذه المصادر بالطلب الأصلي، ولا يبيّن ذلك ما أثّر في الإجابة. قد يكون المحتوى الحالي تغيّر.",
+    "Verify your existing authenticator, then enroll a fresh Kova-owned authenticator. Hosted session authority is retired only after the new factor succeeds.":
+      "تحقق من المصادقة الحالية ثم سجّل مصادقة Kova جديدة؛ لا يُلغى السابق إلا بعد نجاح الجديد.",
+    "Confirm your password before adding an authenticator. For Google or passkey accounts, sign in again with that method and return here within five minutes; no password is needed.":
+      "أكّد كلمة المرور قبل إضافة مصادقة. لحسابات Google أو مفتاح المرور سجّل الدخول مجددًا وعُد خلال خمس دقائق.",
+    "SSO:": "SSO:",
+    "Only a sole remaining owner can close the organization. This revokes access and invitations; retained audit records are not erased. Type":
+      "لا يغلق المؤسسة إلا المالك الأخير. تُلغى الوصول والدعوات، وتبقى سجلات التدقيق. اكتب",
+    "SCIM provisions organization members through this organization’s SSO identity. Groups remain directory records; they do not share Projects or grant administrator access.":
+      "يوفّر SCIM الأعضاء عبر SSO للمؤسسة. تبقى المجموعات سجلات دليل ولا تشارك المشاريع أو تمنح صلاحيات إدارية.",
+    "I authorize this IdP to create and revoke its managed member access. Rotating invalidates the previous token.":
+      "أفوّض مزوّد الهوية هذا بإنشاء وصول الأعضاء وإلغائه، والتدوير يُبطل الرمز السابق.",
+    "A response preference for this account in this browser. Saving it does not rename your account. Leave blank to use no preferred name.":
+      "تفضيل للرد لهذا الحساب في هذا المتصفح، ولا يغيّر اسم الحساب. اتركه فارغًا لعدم استخدام اسم.",
+    "Keep or clear your newer draft before restoring this version. Restoring does not send it. Kept only while this chat stays open. Up to three versions can be kept; restore or discard one before sending more.":
+      "احتفظ بالمسودة الأحدث أو امسحها قبل الاستعادة؛ لا تُرسل الاستعادة شيئًا. تُحفظ أثناء فتح المحادثة، وحتى ثلاث نسخ.",
+    "Track new inbox messages from this Google account. Starting or resetting uses a new baseline; earlier messages will not run Tasks.":
+      "تتبّع رسائل البريد الجديدة من حساب Google هذا؛ البدء أو إعادة التعيين ينشئ أساسًا جديدًا ولا تشغّل الرسائل الأقدم المهام.",
+    "Enabling push registers and renews a Gmail watch for this grant. Stopping blocks local delivery; the provider watch expires naturally. Event tasks also require verified provider setup.":
+      "يسجّل تفعيل الدفع مراقبة Gmail ويجدّدها؛ الإيقاف يمنع التسليم المحلي وتنتهي المراقبة تلقائيًا.",
+    "Titan workspace systems": "أنظمة مساحة Titan",
+    "Deterministic health, evolution, and authorized replay—no generated claims.":
+      "سلامة وتطور وإعادة عرض حتمية، دون ادعاءات مولّدة.",
+    "Your resource mix in the last 30 days compared with the preceding 30 days.":
+      "مزيج مواردك في آخر 30 يومًا مقارنة بالثلاثين السابقة.",
+    "Create workspace activity to establish your DNA baseline.": "أنشئ نشاطًا لتأسيس خط الأساس.",
+    "Capture a metadata-only checkpoint. Content and titles are never stored in snapshots.":
+      "التقط نقطة تحقق للبيانات الوصفية فقط، دون محتوى أو عناوين.",
+    "Only resources you can still access are resolved. Revoked or deleted references stay hidden.":
+      "تُعرض الموارد التي ما زلت تصل إليها فقط، وتبقى الملغاة مخفية.",
+    "No resources from this checkpoint are currently available.":
+      "لا موارد متاحة من نقطة التحقق هذه.",
+    "Select a checkpoint to replay currently authorized resources.":
+      "اختر نقطة تحقق لإعادة عرض الموارد المصرّح بها.",
+    "Bcc:": "نسخة مخفية:",
+    "Private browser controls were cleared from this view.":
+      "مُسحت عناصر المتصفح الخاص من هذا العرض.",
+    "You have control. Automation is blocked during takeover. Return control, then use Resume run to continue.":
+      "التحكم بيدك والأتمتة محظورة. أعد التحكم ثم استأنف.",
+    "Pause this run and wait for its current step to settle before taking over.":
+      "أوقف التشغيل وانتظر انتهاء الخطوة الحالية قبل تولي التحكم.",
+    "Run status has changed. Refresh execution and browser status before taking over.":
+      "تغيّرت الحالة. حدّث قبل تولي التحكم.",
+    "Pause Work before taking over. The model cannot read or act during takeover. Sessions close after five minutes; sign-in data is not saved to Work history. Hiding these controls does not end the session.":
+      "أوقف العمل قبل تولي التحكم؛ لا يقرأ النموذج ولا يتصرف. تُغلق الجلسات بعد خمس دقائق ولا تُحفظ بيانات الدخول. إخفاء العناصر لا ينهي الجلسة.",
+    "This destination does not provide operative": "لا توفر هذه الوجهة",
+    "Unedited source preview only. Nothing is uploaded, generated or published. Image references are not included in saved drafts.":
+      "معاينة للمصدر دون تعديل؛ لا يُرفع أو يُنشأ أو يُنشر شيء، ولا تُحفظ مراجع الصور في المسودات.",
+    "Keep the composition instructions here. Supported image tools remain in the existing workspace.":
+      "احتفظ بتعليمات التكوين هنا، وتبقى أدوات الصور في مساحة العمل الحالية.",
+    "PDF export and owner share controls require an actual supported output. Local review notes can be exported as JSON from Review tools below.":
+      "يتطلب تصدير PDF والمشاركة مخرجًا مدعومًا فعليًا، ويمكن تصدير الملاحظات المحلية بصيغة JSON.",
+    "Loading secure checkout…": "جارٍ تحميل الدفع الآمن…",
+    Privacy: "الخصوصية",
+    Terms: "الشروط",
+    "Review text-only voice preview": "مراجعة معاينة الصوت النصية",
+    "Prepare a local inquiry": "تجهيز استفسار محلي",
+    "Explore family guidance": "استكشف إرشادات العائلة",
+    "Start shopping research": "ابدأ بحث التسوق",
+    "Review data controls": "مراجعة عناصر البيانات",
+    "Explore KovaGPT research": "استكشف أبحاث KovaGPT",
+    "Evaluate enterprise use": "تقييم الاستخدام المؤسسي",
+    "View careers status": "عرض الوظائف",
+    "Review model guidance": "مراجعة إرشادات النماذج",
+    "Open research tools": "فتح أدوات البحث",
+    "Explore business use": "استكشف الاستخدام التجاري",
+    "Explore student guidance": "استكشف إرشادات الطلاب",
+    "Review moderation": "مراجعة الإشراف",
+    "Connect supported services with explicit permissions.": "اربط الخدمات المدعومة بأذونات صريحة.",
+    "Learn through explanations and guided practice.": "تعلّم بالشروح والتدريب الموجّه.",
+    "Ask focused questions against supported files.": "اطرح أسئلة مركّزة على الملفات المدعومة.",
+    "Core chat with published daily allowances.": "محادثة أساسية بحصص يومية معلنة.",
+    "Higher allowances and advanced supported tools.": "حصص أعلى وأدوات متقدمة.",
+    Pro: "Pro",
+    "Highest published allowances and reasoning modes.": "أعلى الحصص وأوضاع التفكير.",
+    "Plan, review, and refine a clear narrative.": "خطّط لسرد واضح وراجعه وحسّنه.",
+    "Reason about structured data and calculations.": "استدل على البيانات المنظمة والحسابات.",
+    "Organize general information with safety boundaries.":
+      "نظّم المعلومات العامة ضمن حدود السلامة.",
+    "Structure comparisons without individualized advice.": "نظّم المقارنات دون نصيحة شخصية.",
+    "404 · KovaGPT": "404 · KovaGPT",
+    "Start with the product basics, practice on low-risk work, and learn how to verify output before using AI in consequential workflows.":
+      "ابدأ بالأساسيات وتدرّب على مهام منخفضة المخاطر وتعلّم التحقق قبل استخدام الذكاء الاصطناعي في الأعمال المهمة.",
+    "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.":
+      "حسّن المسودات الجامدة مع KovaGPT لنبرة أوضح وإيقاع متنوع وصوت شخصي، دون وعود بشأن كاشفات الذكاء الاصطناعي.",
+    "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.":
+      "اطلب صورًا بالذكاء الاصطناعي من KovaGPT واختر إعدادات مسبقة واحفظ النتائج عند توفر المزوّد.",
+    "KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.":
+      "صُمّم KovaGPT للمساعدة في الكتابة والتعلم والبرمجة والبحث وتوليد الأفكار والصور. ولأن الذكاء الاصطناعي قد يخطئ، تحقّق دائمًا من المعلومات المهمة.",
+    "KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.":
+      "لا تستخدم KovaGPT مصدرًا وحيدًا للقرارات الطبية أو القانونية أو المالية أو الطارئة أو الأمنية، وتواصل مع مختص في الحالات الجدية.",
+    "Users may not use KovaGPT to create harmful, illegal, abusive, deceptive, or dangerous content. This includes attempts to harm others, bypass security systems, steal private information, or abuse the platform.":
+      "لا يجوز استخدام KovaGPT لإنشاء محتوى ضار أو غير قانوني أو مسيء أو مضلل أو خطير، بما في ذلك إيذاء الآخرين أو تجاوز الأمان أو سرقة البيانات.",
+    "KovaGPT is meant to help you learn, brainstorm, and understand topics. Do not use it to cheat, submit work you did not understand, or break your school's rules.":
+      "صُمّم KovaGPT لمساعدتك على التعلم والفهم. لا تستخدمه للغش أو تسليم عمل لم تفهمه أو مخالفة قواعد مدرستك.",
+    "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.":
+      "صِغ وأعد كتابة وراجع الرسائل والمقالات والمنشورات والنصوص مع KovaGPT.",
+    "This connection record is retained. Reconnect to restore access.":
+      "يُحتفظ بسجل الاتصال. أعد الاتصال لاستعادة الوصول.",
+    "Known schedule dependencies could not be checked. Review your schedules before disconnecting; other dependencies may exist.":
+      "تعذّر فحص التبعيات المعروفة. راجع جداولك قبل الفصل.",
+    "This plugin is coming soon. Its listed capabilities are proposals. No account is connected and no permissions have been requested.":
+      "هذه الإضافة قادمة قريبًا. قدراتها مقترحة، ولا حساب متصل ولا أذونات مطلوبة.",
+    "This connection requests your Google profile and email, plus only":
+      "يطلب هذا الاتصال ملفك وبريدك في Google، وفقط",
+    "Other Google services require their own Connect action. Previously approved services remain connected.":
+      "تتطلب خدمات Google الأخرى ربطًا خاصًا، وتبقى الخدمات المعتمدة متصلة.",
+    "GitHub will ask you to choose an account and approve access. Only authorized installations and explicitly granted repositories are available to Kova.":
+      "سيطلب GitHub اختيار حساب والموافقة، ولا يصل Kova إلا للتثبيتات والمستودعات الممنوحة.",
+    "Sign in to Kova before connecting an account. You’ll choose the provider account after selecting Connect.":
+      "سجّل الدخول إلى Kova قبل ربط حساب، وستختار حساب المزوّد بعد «ربط».",
+    "Choose the account for new Gmail, Calendar and Drive requests. Existing confirmed actions remain bound to their original account.":
+      "اختر الحساب لطلبات Gmail والتقويم وDrive الجديدة، وتبقى الإجراءات المؤكدة مرتبطة بحسابها.",
+    "Your connection record is retained, but Google authorization has expired or was revoked. Reconnect to restore access.":
+      "يُحتفظ بالسجل لكن تفويض Google انتهى أو أُلغي. أعد الاتصال.",
+    "Community publication ·": "نشر مجتمعي ·",
+    "We asked our email provider to send a sign-in link to": "طلبنا إرسال رابط تسجيل الدخول إلى",
+    "Use at least": "استخدم على الأقل",
+    "Pricing page": "صفحة الأسعار",
+    "Organization · KovaGPT": "المؤسسة · KovaGPT",
+    "Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces.":
+      "وكلاء الحساب وسلامة المزوّدين وعناصر التنفيذ وواجهات التنسيق.",
+    "Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled until an organization backend validates this configuration.":
+      "تبقى الدعوات والفرق والتدقيق وSSO وSCIM معطلة حتى يتحقق خادم المؤسسة من التهيئة.",
+    "No server drafts. Installation, diagnostics, health, updates, and permissions activate only after backend discovery verifies a manifest.":
+      "لا مسودات خوادم. تتفعّل التثبيت والتشخيص والتحديثات والأذونات بعد التحقق من البيان.",
+    "Existing production models continue through the server provider registry. This surface never exposes credentials or permits browser-side provider secrets.":
+      "تستمر نماذج الإنتاج عبر سجل الخادم، ولا تكشف هذه الواجهة بيانات اعتماد أو أسرارًا في المتصفح.",
+    "Saved agents are reusable account-scoped instruction profiles. Execution remains separate and is available only when the authenticated runner and plan entitlement are healthy.":
+      "الوكلاء المحفوظون ملفات تعليمات قابلة لإعادة الاستخدام، والتنفيذ منفصل ومتاح فقط مع منفّذ وخطة سليمين.",
+    "If optional tracking is introduced, the applicable notices and consent controls must be provided before that tracking runs. Installing the desktop or web app does not change the privacy choices for your account.":
+      "إن أُضيف تتبّع اختياري، تُقدَّم الإشعارات والموافقة قبل تشغيله، ولا يغيّر تثبيت التطبيق خياراتك.",
+    "Kova may update this policy as the service and its providers change. The updated date at the top identifies the current version. Material changes may also be communicated in the product or by email when appropriate.":
+      "قد يحدّث Kova هذه السياسة مع تغيّر الخدمة ومزوديها، ويحدد التاريخ أعلاه الإصدار الحالي، وقد تُبلّغ التغييرات المهمة داخل المنتج أو بالبريد.",
+    "When you send a message, the service may retrieve relevant excerpts from this project's uploaded files. Exact excerpts and readiness are not loaded here.":
+      "عند الإرسال قد تسترجع الخدمة مقتطفات من ملفات المشروع، ولا تُحمّل هنا.",
+    "No saved results are explicitly attached to this message. The service may also use saved project memory; those entries are not loaded here.":
+      "لا نتائج محفوظة مرفقة، وقد تُستخدم ذاكرة المشروع دون تحميلها هنا.",
+    "Project context follows existing membership and retrieval rules. Individual entries cannot be excluded for a single message here.":
+      "يتبع سياق المشروع قواعد العضوية، ولا يمكن استثناء عناصر لرسالة واحدة هنا.",
+    "I checked Projects and want to retry creating this project.":
+      "تحققت من المشاريع وأريد إعادة إنشاء هذا المشروع.",
+    "KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.":
+      "توفر اشتراكات KovaGPT أدوات الذكاء الاصطناعي والحصص وإنشاء الصور ورفع الملفات وميزات مميزة أخرى.",
+    "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact":
+      "تُراجع طلبات الاسترداد كل حالة على حدة. إن ظننت أنك خُصمت خطأً أو لم تصل للميزات المدفوعة، تواصل مع",
+    "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.":
+      "يحق لـ KovaGPT رفض الاسترداد إذا استُخدمت الميزات المدفوعة أو بدا الطلب مسيئًا أو لم يستوفِ المعايير.",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.":
+      "لا تحدّ هذه السياسة من أي حق قانوني. لا ترسل رقم البطاقة كاملًا أو كلمة المرور أو رمز الأمان.",
+    "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact":
+      "يمكنك إلغاء اشتراكك من الإعدادات؛ تتوقف التجديدات وقد تبقى خطتك حتى نهاية الفترة. للمساعدة تواصل مع",
+    "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.":
+      "استخدم KovaGPT لتنظيم المواد وصياغة الملخصات ومقارنة الخيارات وهيكلة الملاحظات مع التحقق من المصادر.",
+    "Sign in to review your saved tasks and background execution availability.":
+      "سجّل الدخول لمراجعة مهامك المحفوظة وتوفر التنفيذ في الخلفية.",
+    "Account access could not be verified. Your signed-in session is preserved.":
+      "تعذّر التحقق من الوصول، وجلستك محفوظة.",
+    "Scheduled Tasks Status": "حالة المهام المجدولة",
+    "Retry the same request to check the outcome.": "أعد الطلب نفسه للتحقق من النتيجة.",
+    "Scheduled task pages": "صفحات المهام المجدولة",
+    "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.":
+      "اطلب من KovaGPT شروحًا وأسئلة تدريب وملخصات وبطاقات وأمثلة محلولة، ثم تحقق منها بمصادر المقرر.",
+    "Standard ·": "قياسي ·",
+    "Premium · 5× usage": "مميز · 5 أضعاف الاستخدام",
+    "New connections are not activated. Existing invitations and connections can still be declined, revoked, blocked, or removed.":
+      "لا تُفعّل اتصالات جديدة، ويمكن رفض الحالية أو إلغاؤها أو حظرها أو إزالتها.",
+    "They must review and consent in their own account. Invitations expire after seven days.":
+      "يجب أن يراجع المدعو ويوافق في حسابه، وتنتهي الدعوات بعد سبعة أيام.",
+    "I agree to share my verified account email with this person and invite them to a voluntary contact connection.":
+      "أوافق على مشاركة بريدي الموثّق مع هذا الشخص ودعوته لاتصال طوعي.",
+    "Emails shown here were verified when the invitation was created. No email delivery is enabled.":
+      "تم التحقق من البريد عند إنشاء الدعوة، ولا يُرسل أي بريد.",
+    "This connection does not authorize monitoring, automatic alerts, or account access. Acceptance is optional. This review expires in ten minutes.":
+      "لا يخوّل هذا الاتصال المراقبة أو التنبيهات أو الوصول للحساب، والقبول اختياري، وتنتهي المراجعة خلال عشر دقائق.",
+    "I consent to this voluntary connection and sharing my verified account email. I can revoke it at any time.":
+      "أوافق على هذا الاتصال الطوعي ومشاركة بريدي، ويمكنني إلغاؤه في أي وقت.",
+    "Up to 50 recent records. Removing a finished record removes it for both parties.":
+      "حتى 50 سجلًا حديثًا، وإزالة سجل منتهٍ تزيله لدى الطرفين.",
+    "Draft, revise, check, summarize, and count text in focused workspaces built around the same familiar Kova interface.":
+      "صِغ النص وراجعه وتحقق منه ولخّصه وعدّه في مساحات مركّزة بواجهة Kova المألوفة.",
     Cooking: "الطبخ",
     "Plan and adapt recipes with food safety in view.":
       "خطّط للوصفات وعدّلها مع مراعاة سلامة الغذاء.",
