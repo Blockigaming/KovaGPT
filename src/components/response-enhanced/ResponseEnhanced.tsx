@@ -13,8 +13,8 @@ import { ArrowDown, ArrowUp, Check, Copy, Download, Search, X } from "lucide-rea
 import { highlightLines } from "@/lib/code-highlight";
 import { formatMediaTime, parseMediaTitle } from "@/lib/response-media.mjs";
 import { compareCells, rowsToDelimited, type TableModel } from "@/lib/response-table.mjs";
-// Mermaid is copied as a prebuilt asset (not bundled): it loads only when a diagram appears.
-import mermaidScriptUrl from "mermaid/dist/mermaid.min.js?url";
+// Mermaid is served as its prebuilt file (see vite.config.ts) and loads only for diagrams.
+const mermaidScriptUrl = "/assets/vendor/mermaid-12.3.0.min.js";
 import "./response-enhanced.css";
 
 type MermaidApi = {
