@@ -1,6 +1,6 @@
 # KovaGPT connector master list
 
-The Connections directory includes the 31 requested services and eight retained services. Health includes WHOOP, Oura, Apple Health, and Android Health Connect. Existing catalog IDs remain stable. Outlook Mail uses `outlook`.
+The Connections directory includes the 31 requested services and seven retained services. Health includes Oura, Apple Health, and Android Health Connect. Outlook Mail uses `outlook`.
 
 Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service directory remains available for compatibility, but does not expand the approved master scope.
 
@@ -42,7 +42,6 @@ Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service dire
 | Slack                                         | `slack`                  | Apps                                            |
 | Plaid                                         | `plaid`                  | Finances; production/security approval required |
 | Oura                                          | `oura`                   | Health; eligible developer accounts required    |
-| WHOOP                                         | `whoop`                  | Health; eligible developer accounts required    |
 | Apple Health                                  | `apple-health`           | iOS companion, signing and device consent       |
 | Android Health Connect                        | `android-health-connect` | Android companion, signing and device consent   |
 
@@ -53,7 +52,7 @@ A catalog entry alone never enables OAuth, provider calls, account access, tradi
 | Dedicated Google flows                                | Gmail, Google Drive, Google Calendar                                                                                                                                            |
 | Work-app reads with provider setup and consent        | Box, Calendly, Canva, Figma, Gamma, GitHub, BigQuery, HubSpot, Linear, Microsoft Teams, Notion, OneDrive, Outlook Mail, Outlook Calendar, Salesforce, SharePoint, Slack, Stripe |
 | User credential and provider acceptance               | eToro, Granola, HyperFrames by HeyGen, Meltwater, Mixpanel, Vercel                                                                                                              |
-| Finance or health setup and consent                   | Plaid, Oura, WHOOP                                                                                                                                                              |
+| Finance or health setup and consent                   | Plaid, Oura                                                                                                                                                                     |
 | Diagram file exchange                                 | Excalidraw                                                                                                                                                                      |
 | Dedicated account credentials and provider acceptance | Interactive Brokers, S&P Global, Webull, Wix                                                                                                                                    |
 | Hosted OAuth client and workspace consent             | Tana                                                                                                                                                                            |

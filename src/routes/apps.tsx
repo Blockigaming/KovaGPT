@@ -101,7 +101,6 @@ const WORKING_IDS = new Set<string>([
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
 const NATIVE_HEALTH_IDS = new Set(["apple-health", "android-health-connect"]);
-const CLOUD_HEALTH_IDS = new Set(["oura", "whoop"]);
 const PLUGIN_CATEGORIES = [
   ...new Set(MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector.category)),
 ].sort();
@@ -1348,7 +1347,7 @@ function AppsPage() {
   const configuredOf = (id: string) => {
     if (id === "github") return visibleGithubData?.configured !== false;
     if (NATIVE_HEALTH_IDS.has(id)) return true;
-    if (CLOUD_HEALTH_IDS.has(id))
+    if (id === "oura")
       return (
         otherConnections.data?.configuredProviders.some((provider) => provider.id === id) === true
       );
@@ -1387,7 +1386,7 @@ function AppsPage() {
         return "connected";
       return "idle";
     }
-    if (CLOUD_HEALTH_IDS.has(id)) {
+    if (id === "oura") {
       if (otherConnections.loading) return "syncing";
       if (otherConnections.error || !configuredOf(id)) return "temporarily_unavailable";
       const accounts =
@@ -1437,7 +1436,7 @@ function AppsPage() {
       );
     if (id === "github")
       return !!visibleGithubData?.accounts.some((account) => account.status !== "disconnected");
-    if (CLOUD_HEALTH_IDS.has(id))
+    if (id === "oura")
       return (
         otherConnections.data?.accounts.some(
           (account) => account.provider_id === id && account.status !== "revoked",
@@ -1843,7 +1842,7 @@ function AppsPage() {
                     reload={refreshGitHub}
                   />
                 ) : NATIVE_HEALTH_IDS.has(visibleSelectedApp.id) ||
-                  CLOUD_HEALTH_IDS.has(visibleSelectedApp.id) ||
+                  visibleSelectedApp.id === "oura" ||
                   visibleSelectedApp.id === "plaid" ? (
                   <Button
                     onClick={() => {
@@ -1852,7 +1851,7 @@ function AppsPage() {
                       const params = new URLSearchParams(searchString);
                       params.delete("plugin");
                       params.set("connection_view", view);
-                      if (CLOUD_HEALTH_IDS.has(id)) params.set("health_provider", id);
+                      if (id === "oura") params.set("health_provider", id);
                       else params.delete("health_provider");
                       setSelectedApp(null);
                       setConnectionGroup(view);
@@ -2084,7 +2083,7 @@ function AppsPage() {
                 <HealthConnectionsPanel
                   key={`health:${userKey ?? "guest"}`}
                   visible={connectionGroup === "health"}
-                  requestedProvider={new URLSearchParams(searchString).get("health_provider")}
+                  manageOura={new URLSearchParams(searchString).get("health_provider") === "oura"}
                   ownerId={isSignedIn ? userKey : null}
                   data={otherConnections.data}
                   loading={otherConnections.loading}

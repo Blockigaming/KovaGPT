@@ -228,17 +228,6 @@ const dedicatedConnections: Record<
       ),
     ],
   },
-  whoop: {
-    note: "Manage WHOOP in Health. Connection requires WHOOP developer credentials and account consent.",
-    permissions: [
-      supported(
-        "read",
-        "Read WHOOP sleep, recovery, strain, and resting heart rate with your approval",
-        "src/health/health-read.server.mjs",
-        "src/components/HealthConnectionsPanel.tsx",
-      ),
-    ],
-  },
   "apple-health": {
     note: "The native mobile companion reads Apple Health with iPhone permissions. Availability depends on a signed app install.",
     permissions: [

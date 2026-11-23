@@ -6,39 +6,12 @@ import {
   readHealthSummary,
 } from "../../src/health/health-read.server.mjs";
 import { readOuraAnalytics } from "../../src/health/oura-analytics.server.mjs";
-import { whoopDashboardReport } from "../../src/health/whoop-dashboard.mjs";
 import { oauthRefreshRequest } from "../../src/integrations/oauth-token-request.server.mjs";
 import {
   CONNECTION_FLOWS,
   connectionAuthorizationUrl,
 } from "../../src/integrations/connection-flows.mjs";
 const now = Date.parse("2026-10-31T12:00:00Z");
-
-test("WHOOP dashboard groups permitted readings and discards ungranted or invalid samples", () => {
-  const report = whoopDashboardReport({
-    provider: "whoop",
-    fetchedAt: new Date(now).toISOString(),
-    missing: ["sleep"],
-    summaries: [
-      { metric: "sleep", date: "2026-10-30", score: 75 },
-      { metric: "recovery", date: "2026-10-30", score: 90, restingHeartRate: 60 },
-      { metric: "recovery", date: "2026-11-01", score: 66 },
-      { metric: "activity", date: "2026-10-30", score: 7, scoreUnit: "strain" },
-      { metric: "activity", date: "2026-10-30", score: 18, scoreUnit: "strain" },
-      { metric: "activity", date: "2026-10-30", score: 100, scoreUnit: "strain" },
-    ],
-  });
-  assert.deepEqual(report.missing, ["sleep"]);
-  assert.deepEqual(Object.keys(report.metrics), [
-    "whoop.recovery",
-    "whoop.restingHeartRate",
-    "whoop.strain",
-  ]);
-  assert.deepEqual(report.metrics["whoop.strain"], [
-    { name: "WHOOP", days: [{ date: "2026-10-30", value: 18 }] },
-  ]);
-  assert.equal(whoopDashboardReport({ provider: "oura" }), null);
-});
 
 test("health requests are fixed HTTPS GETs with bounded dates and provider API v2 paths", () => {
   const expected = { oura: "api.ouraring.com", whoop: "api.prod.whoop.com" };
