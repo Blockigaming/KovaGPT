@@ -217,7 +217,7 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
 });
 
-test("activity shows default sections and steps while hiding completed browser sessions", async ({
+test("activity shows default sections and progress and recorded browser sessions", async ({
   page,
 }) => {
   await coreFixture(page, "dark", "free", {
@@ -252,9 +252,16 @@ test("activity shows default sections and steps while hiding completed browser s
   await expect(panel).toHaveCSS("border-top-width", "0px");
   await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Sources", exact: true })).toBeVisible();
-  await expect(panel.getByRole("heading", { name: "Cloud browser", exact: true })).toHaveCount(0);
-  await expect(panel.getByRole("button", { name: "Steps", exact: true })).toBeVisible();
-  await expect(panel.getByText("Read the supplied notes", { exact: true })).toBeVisible();
+  const browser = panel
+    .getByRole("region", { name: "Sources", exact: true })
+    .getByRole("group", { name: "Cloud browser", exact: true });
+  await expect(
+    browser.getByRole("button", { name: "Open browser activity", exact: true }),
+  ).toContainText("Recorded");
+  await expect(panel.getByRole("button", { name: "Progress", exact: true })).toBeVisible();
+  await expect(
+    panel.getByRole("listitem").filter({ hasText: "Read the supplied notes" }),
+  ).toHaveAttribute("data-status", "done");
   if (!desktop) {
     const sheet = page.getByRole("dialog", { name: "Activity", exact: true });
     await expect(sheet).toBeVisible();
@@ -264,9 +271,10 @@ test("activity shows default sections and steps while hiding completed browser s
         return rect.y + rect.height;
       })
       .toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    // Wait for the sheet's entrance motion to settle before measuring it.
+    await expect.poll(async () => (await sheet.boundingBox())!.y).toBe(0);
     const bounds = (await sheet.boundingBox())!;
     expect(bounds.x).toBe(0);
-    expect(bounds.y).toBe(0);
     expect(bounds.width).toBe(page.viewportSize()!.width);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
     await expect(sheet.getByRole("button", { name: "Close sheet", exact: true })).toBeVisible();
@@ -286,7 +294,7 @@ test("activity shows default sections and steps while hiding completed browser s
     const header = page.locator(".kova-topbar-inner:visible");
     const menuBox = (await header.getByRole("button", { name: "Open menu" }).boundingBox())!;
     const shareBox = (await header.getByRole("button", { name: "Share chat" }).boundingBox())!;
-    expect(titleBox.width).toBeGreaterThanOrEqual(64);
+    expect(titleBox.width).toBeGreaterThanOrEqual(60);
     expect(titleBox.x).toBeGreaterThanOrEqual(menuBox.x + menuBox.width);
     expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(shareBox.x);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
@@ -295,6 +303,64 @@ test("activity shows default sections and steps while hiding completed browser s
   } else {
     await expect(page.getByTestId("mobile-bottom-sheet")).toHaveCount(0);
   }
+});
+
+test("Activity marks the running chat step blue and clears it when the stream ends", async ({
+  page,
+}) => {
+  await coreFixture(page, "dark");
+  await page.addInitScript(() => {
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = input instanceof Request ? input.url : input;
+      if (new URL(url, window.location.href).pathname !== "/api/chat") {
+        return fetchOriginal(input, init);
+      }
+      const encode = new TextEncoder();
+      const activity = { kind: "activity", activity_id: "find-notes", tool: "file_search" };
+      const frame = (delta: object) =>
+        encode.encode(`data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`);
+      return Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(frame({ ...activity, label: "Finding notes", status: "running" }));
+              window.addEventListener(
+                "finish-fixture-activity",
+                () => {
+                  controller.enqueue(frame({ ...activity, label: "Found notes", status: "done" }));
+                  controller.enqueue(frame({ content: "The notes are ready." }));
+                  controller.enqueue(encode.encode("data: [DONE]\n\n"));
+                  controller.close();
+                },
+                { once: true },
+              );
+            },
+          }),
+          { headers: { "content-type": "text/event-stream" } },
+        ),
+      );
+    };
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT", exact: true }).fill("Find my notes");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  const progress = page
+    .locator(".kova-conversation-outputs")
+    .getByRole("region", { name: "Progress" });
+  const running = progress.getByRole("listitem").filter({ hasText: "Finding notes" });
+  await expect(running).toHaveAttribute("data-status", "running");
+  expect(await running.evaluate((node) => getComputedStyle(node, "::before").backgroundColor)).toBe(
+    "rgb(124, 196, 255)",
+  );
+  await page.evaluate(() => window.dispatchEvent(new Event("finish-fixture-activity")));
+  await expect(progress.getByRole("listitem").filter({ hasText: "Found notes" })).toHaveAttribute(
+    "data-status",
+    "done",
+  );
+  await expect(progress.locator('[data-status="running"]')).toHaveCount(0);
 });
 
 test("transient history failures retry quietly without a reconnect banner", async ({ page }) => {

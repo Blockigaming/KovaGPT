@@ -692,6 +692,7 @@ export const Route = createFileRoute("/api/chat")({
               locale,
               chatId,
               personality,
+              goal,
               projectId,
               temporary,
               temporaryContext,
@@ -1709,6 +1710,9 @@ export const Route = createFileRoute("/api/chat")({
                     CREATOR_INSTRUCTION +
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
+                    (goal
+                      ? `\n\n--- Conversation goal set by the user ---\n${goal}\n--- End goal ---\nWork toward this goal in each reply. When it looks complete, say so plainly and suggest what is left, if anything.`
+                      : "") +
                     voiceStyle +
                     memoryBlock +
                     (conversationSummary?.block ?? "") +

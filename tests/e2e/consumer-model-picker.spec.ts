@@ -4,13 +4,13 @@ import { waitForKovaHydration } from "./hydration";
 import { revealContinueWorking } from "./current-ui";
 
 const products = [
-  "kova-argon-4.6",
-  "kova-neon-4.6",
-  "kova-xenon-5",
-  "kova-argon-4.5",
-  "kova-neon-4.5",
-  "kova-xenon-4.6",
   "kova-xenon-6.1",
+  "kova-xenon-5",
+  "kova-xenon-4.6",
+  "kova-neon-4.6",
+  "kova-neon-4.5",
+  "kova-argon-4.6",
+  "kova-argon-4.5",
 ];
 for (const [tier, selected, label, permitted] of [
   ["free", "kova-argon-4.6", "Kova Argon 4.6", 1],
@@ -40,11 +40,23 @@ for (const [tier, selected, label, permitted] of [
       await trigger.click();
       const picker = page.getByRole("dialog", { name: "Select model", exact: true });
       await expect(picker).toBeVisible();
+      await expect(trigger).toHaveCSS("border-width", "0px");
+      await expect(picker).toHaveCSS("border-width", "0px");
       await expect(picker.getByRole("slider", { name: "Response effort" })).toHaveAttribute(
         "aria-valuetext",
         "Lite",
       );
       await picker.getByRole("button", { name: "Select model", exact: true }).click();
+      await expect(picker).toHaveCSS("border-width", "0px");
+      expect(
+        await picker
+          .getByTestId(/^consumer-model-kova-/)
+          .evaluateAll((buttons) =>
+            buttons.map((button) =>
+              button.getAttribute("data-testid")?.replace("consumer-model-", ""),
+            ),
+          ),
+      ).toEqual(products);
       for (const [index, id] of products.entries()) {
         const button = picker.getByTestId(`consumer-model-${id}`);
         await expect(button).toBeVisible();

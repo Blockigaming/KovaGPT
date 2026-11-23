@@ -11,8 +11,8 @@ for (const theme of ["dark", "light"] as const) {
     await fixture(page, theme, true);
     await page.goto("/settings/memory");
     await waitForKovaHydration(page);
-    const surface = page.locator("section.kova-settings-page");
-    await expect(page.locator(".kova-topbar")).toHaveCount(0);
+    const surface = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(page.locator(".kova-topbar:visible")).toHaveCount(1);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
     await expect(
@@ -28,20 +28,17 @@ for (const theme of ["dark", "light"] as const) {
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
-        await surface.locator("h1").evaluate((node) => {
+        await surface.locator(".kova-settings-main-title").evaluate((node) => {
           const style = getComputedStyle(node.closest(".sr-only")!);
           return { position: style.position, clipPath: style.clipPath };
         }),
       ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     } else {
-      const backToPreviousPage = surface.getByRole("button", { name: "Back to app" });
-      await expect(backToPreviousPage).toBeHidden();
       await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
-      await expect(backToPreviousPage).toBeHidden();
       await expect(close).toBeVisible();
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
-        await surface.locator("h1").evaluate((node) => {
+        await surface.locator(".kova-settings-main-title").evaluate((node) => {
           const style = getComputedStyle(node.closest(".sr-only")!);
           return { position: style.position, clipPath: style.clipPath };
         }),

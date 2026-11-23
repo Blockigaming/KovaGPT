@@ -100,6 +100,7 @@ function fixture(
       ];
     },
     useEffect() {},
+    useCallback: (callback) => callback,
     useSyncExternalStore: () => true,
     lazy: (loader) => String(loader).match(/Composer[A-Za-z]+/)?.[0] ?? "Lazy",
     Suspense: "Suspense",
@@ -117,6 +118,7 @@ function fixture(
     "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
     "@/components/PastedTextCard": { PastedTextCard: "PastedTextCard" },
+    "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
     "@/lib/link-preview.mjs": linkPreview,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
@@ -264,7 +266,12 @@ function fixture(
     offer: () => nodes(tree).find((node) => node.type === "ComposerPasteOffer")?.props,
     input: () => nodes(tree).find((node) => node.type === "textarea").props,
     async click(label) {
-      await button(label).onClick();
+      await button(label).onClick({
+        detail: 0,
+        currentTarget: { isConnected: true, focus() {} },
+        preventDefault() {},
+        stopPropagation() {},
+      });
       await flush();
     },
     async update(next) {
@@ -355,7 +362,7 @@ test("guest pasted-text attachment requires sign-in but ordinary text pasting re
   await f.root().onPaste(paste("Normal text"));
   assert.equal(prevented, false);
   assert.equal(f.signIn(), undefined);
-  await f.root().onPaste(paste("x".repeat(10_001)));
+  await f.root().onPaste(paste("x".repeat(40_001)));
   await f.flush();
   f.button("Inspect pending pasted text").onClick({ currentTarget: {} });
   await f.flush();
@@ -435,14 +442,14 @@ test("signed-in pasted-text attachment remains available without replacing the d
   await f.root().onPaste({
     clipboardData: {
       files: [],
-      getData: (kind) => (kind === "text/plain" ? "x".repeat(10_001) : ""),
+      getData: (kind) => (kind === "text/plain" ? "x".repeat(40_001) : ""),
     },
     preventDefault() {},
   });
   await f.flush();
   assert.deepEqual(f.quotas, []);
   assert.equal(f.attachmentChanges.at(-1)[0].name, "pasted-text.txt");
-  assert.equal(f.attachmentChanges.at(-1)[0].textContent, "x".repeat(10_001));
+  assert.equal(f.attachmentChanges.at(-1)[0].textContent, "x".repeat(40_001));
   assert.deepEqual(f.saves, []);
   assert.equal(f.input().value, "Keep my draft");
   assert.equal(f.signIn(), undefined);
@@ -717,7 +724,7 @@ test("removing a file also blocks a stale Send callback and queued file analysis
   );
   const staleSend = f.button("Send message").onClick;
   await f.click("Remove Data.csv");
-  staleSend();
+  staleSend({ detail: 0 });
   await f.flush();
   assert.deepEqual(f.submittedTools, []);
   assert.match(text(f.nodes()), /Attach a text file/);
@@ -736,7 +743,7 @@ test("stale analysis Send callbacks cannot run for a replacement account", async
   const f = fixture({ selectedTool: "data_analysis" }, { isLoaded: true, user: { id: "owner-a" } });
   const staleSend = f.button("Send message").onClick;
   await f.account({ isLoaded: true, user: { id: "owner-b" } });
-  staleSend();
+  staleSend({ detail: 0 });
   await f.flush();
   assert.deepEqual(f.submittedTools, []);
   await f.click("Send message");

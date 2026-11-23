@@ -166,6 +166,10 @@ export function ComposerVoiceDialog({
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
+  /** This voice session's turns with speaker and time; cleared when the dialog closes. */
+  const [voiceLog, setVoiceLog] = useState<{ speaker: "You" | "Kova"; text: string; at: number }[]>(
+    [],
+  );
   const [hasTranscript, setHasTranscript] = useState(false);
   const [canRetryRecording, setCanRetryRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -337,6 +341,7 @@ export function ComposerVoiceDialog({
     setSelectedVoiceId("");
     setPreferenceNotice("");
     setLastVoiceReply("");
+    setVoiceLog([]);
     if (open) billingAfterClose.current = null;
     setChecking(false);
     setError("");
@@ -545,6 +550,7 @@ export function ComposerVoiceDialog({
     const submit = current.current.onVoiceSubmit;
     if (!isCurrent(scope) || !voiceSessionActive.current || !submit) return;
     updatePhase("chat");
+    setVoiceLog((log) => [...log.slice(-49), { speaker: "You", text, at: Date.now() }]);
     const controller = beginRequest(120_000);
     let abortListener: (() => void) | undefined;
     try {
@@ -572,6 +578,10 @@ export function ComposerVoiceDialog({
       if (reply.content.length > 4000) throw new Error("voice_reply_too_long");
       finishRequest(controller);
       setLastVoiceReply(reply.content);
+      setVoiceLog((log) => [
+        ...log.slice(-49),
+        { speaker: "Kova", text: reply.content, at: Date.now() },
+      ]);
       updatePhase("speaking");
       let ended = false;
       let started = false;
@@ -1364,24 +1374,49 @@ export function ComposerVoiceDialog({
         ) : undefined
       }
       transcriptReview={
-        ready && hasTranscript && !(mode === "voice" && autoStartVoice) ? (
+        ready &&
+        ((hasTranscript && !(mode === "voice" && autoStartVoice)) ||
+          (mode === "voice" && voiceLog.length > 0)) ? (
           <>
-            <label htmlFor={transcriptId}>
-              {mode === "voice" ? "Transcript" : "Review transcript"}
-            </label>
-            <Textarea
-              id={transcriptId}
-              value={transcript}
-              onChange={(event) => setTranscript(event.target.value)}
-              disabled={busy}
-              readOnly={mode === "voice"}
-              rows={4}
-            />
-            <p>
-              {mode === "voice"
-                ? "Transcript for this voice turn. Your composer draft stays separate; review chat for send and save status."
-                : "Use in chat adds this text to your draft. It does not send a message."}
-            </p>
+            {mode === "voice" && voiceLog.length > 0 && (
+              <ol className="kova-voice-log" aria-label="Conversation transcript">
+                {voiceLog.map((turn, index) => (
+                  <li key={index} data-speaker={turn.speaker}>
+                    <span className="kova-voice-log-meta">
+                      <strong>{turn.speaker}</strong>
+                      <time dateTime={new Date(turn.at).toISOString()}>
+                        {new Date(turn.at).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </time>
+                    </span>
+                    <span>{turn.text}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {hasTranscript && !(mode === "voice" && autoStartVoice) && (
+              <>
+                <label htmlFor={transcriptId}>
+                  {mode === "voice" ? "Transcript" : "Review transcript"}
+                </label>
+                <Textarea
+                  id={transcriptId}
+                  value={transcript}
+                  onChange={(event) => setTranscript(event.target.value)}
+                  disabled={busy}
+                  readOnly={mode === "voice"}
+                  rows={4}
+                />
+                <p>
+                  {mode === "voice"
+                    ? "Transcript for this voice turn. Your composer draft stays separate; review chat for send and save status."
+                    : "Use in chat adds this text to your draft. It does not send a message."}
+                </p>
+              </>
+            )}
           </>
         ) : undefined
       }

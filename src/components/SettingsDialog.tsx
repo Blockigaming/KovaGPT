@@ -1316,12 +1316,12 @@ export function SettingsDialog({
             target.focus({ preventScroll: true });
             return document.activeElement === target;
           };
-          // A desktop menu item unmounts when Settings opens; its account
-          // trigger remains available. A closed mobile drawer instead restores
-          // its visible menu opener. Both fallbacks use the same focus guards.
+          // The sidebar can mount both account triggers. Skip the hidden one.
           if (
             !restore(previous) &&
-            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]')) &&
+            !Array.from(document.querySelectorAll<HTMLElement>('[aria-label="Account menu"]')).some(
+              restore,
+            ) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]')) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Toggle sidebar"]'))
           )
@@ -1331,9 +1331,7 @@ export function SettingsDialog({
         <DialogHeader
           className={
             loggedIn
-              ? page
-                ? "sr-only"
-                : "hidden"
+              ? "sr-only"
               : "kova-settings-page-header px-5 sm:px-7 pt-5 pb-4 border-b border-border"
           }
         >

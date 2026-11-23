@@ -103,6 +103,7 @@ const sendFixture = () => {
   f.context.summaryModule = f.context.summaryModule.then((module) => ({
     ...module,
     chatRequestUser: (_settings, _temporary, _webSearch, _owner, _tier, voice) => ({
+      goalForRequest: () => undefined,
       voice,
       user: { responseLength: "medium", customInstructions: "Use simple examples." },
     }),

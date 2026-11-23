@@ -84,20 +84,16 @@ async function focusStaysInside(page: Page, surface: Locator) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: Settings workspace keeps its closed rail and reachable close control while content scrolls`, async ({
+  test(`${theme}: Settings popup keeps its close control reachable while content scrolls`, async ({
     page,
   }, info) => {
     await coreFixture(page, theme, "free", { preserveStorageOnReload: true });
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const fullpage = page.locator(".kova-settings-page");
-    const pageColor = await page
-      .locator("body")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
-    await expect(fullpage).toHaveCSS("background-color", pageColor);
-    await expect(fullpage.locator(".kova-settings-content")).toHaveCSS(
-      "background-color",
-      "rgba(0, 0, 0, 0)",
+    const chatSettings = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(chatSettings).toBeVisible();
+    const settingsColor = await chatSettings.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
     );
     await page.goto("/images");
     await waitForKovaHydration(page);
@@ -110,14 +106,14 @@ for (const theme of ["light", "dark"] as const) {
       await openCurrentSettings(page);
     }
     await contained(page, modal);
-    const heading = modal.getByRole("heading", { level: 2 }).filter({ visible: true }).first();
+    const heading = modal.locator(".kova-settings-content-header h2");
     await expect(heading).toBeInViewport({ ratio: 1 });
     const close = modal.getByRole("button", {
       name: "Close settings",
       exact: true,
     });
     await usableClose(page, close);
-    await expect(modal).toHaveCSS("background-color", pageColor);
+    await expect(modal).toHaveCSS("background-color", settingsColor);
     const content = modal.locator(".kova-settings-content");
     await expect(content).toHaveCSS("overflow-y", "auto");
     await expect
@@ -136,7 +132,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
       await expect(page.locator(".kova-sidebar")).not.toBeInViewport();
     } else {
-      await expect(page.locator(".kova-sidebar")).toHaveCount(0);
+      await expect(page.locator(".kova-sidebar")).toHaveAttribute("aria-hidden", "true");
     }
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),

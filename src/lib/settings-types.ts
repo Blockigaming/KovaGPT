@@ -102,6 +102,13 @@ export const SETTINGS_SECTIONS = {
   family: "family",
   logout: "logout",
 } as const;
+
+export function settingsTabForSection(section: string) {
+  return Object.hasOwn(SETTINGS_SECTIONS, section)
+    ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS]
+    : "general";
+}
+
 export function settingsSectionForTab(tab?: string) {
   return Object.entries(SETTINGS_SECTIONS).find(([, value]) => value === tab)?.[0] ?? "responses";
 }

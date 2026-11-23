@@ -18,6 +18,7 @@ import type { Components, ExtraProps } from "react-markdown";
 import type { Element, Root, RootContent } from "hast";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import remarkInlineMarks from "@/lib/remark-inline-marks.mjs";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy, Download } from "lucide-react";
 import type { ResponseSource } from "@/lib/response-sources";
@@ -445,7 +446,13 @@ function MarkdownLink({ node: _node, children, href, ...props }: ComponentProps<
           </a>
         }
       >
-        <ResponseEnhanced kind="media" src={href} media={media} label={label} />
+        <ResponseEnhanced
+          kind="media"
+          src={href}
+          media={media}
+          label={label}
+          title={typeof props.title === "string" ? props.title : undefined}
+        />
       </Suspense>
     );
   }
@@ -573,7 +580,11 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
             ? url
             : defaultUrlTransform(url)
         }
-        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+        remarkPlugins={[
+          [remarkGfm, { singleTilde: false }],
+          [remarkMath, { singleDollarTextMath: false }],
+          remarkInlineMarks,
+        ]}
         rehypePlugins={[
           [separateTextOutputs, { boxLongProse }],
           [rehypeKatex, { trust: false, maxExpand: 300, maxSize: 20, strict: "ignore" }],

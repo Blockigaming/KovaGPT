@@ -46,7 +46,7 @@ export function PastedTextCard({
         title={[summary, detail].filter(Boolean).join(" · ")}
         onClick={(event) => onOpen(event.currentTarget)}
       >
-        <span className="kova-pasted-card-snippet" aria-hidden="true">
+        <span className="kova-pasted-card-snippet" dir="auto" aria-hidden="true">
           {snippet}
         </span>
       </button>

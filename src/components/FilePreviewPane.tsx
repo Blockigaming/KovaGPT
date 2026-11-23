@@ -226,6 +226,7 @@ export function FilePreviewPane({
         ) : (
           <pre
             className="kova-file-pane-code"
+            dir="ltr"
             tabIndex={0}
             aria-label={`${file.languageLabel} source of ${file.name}`}
           >

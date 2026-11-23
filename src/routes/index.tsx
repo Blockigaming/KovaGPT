@@ -32,6 +32,7 @@ import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
 import { latestFileResult, notifyResponseReady } from "@/lib/response-completion";
+import { goalForRequest } from "@/lib/chat-goal";
 import { restoreDialogFocus, scheduleDialogFocusReturn } from "@/lib/dialog-return-focus";
 import {
   beginChatEdit,
@@ -86,7 +87,7 @@ import {
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
-import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
+import { type Settings, DEFAULT_SETTINGS, settingsTabForSection } from "@/lib/settings-types";
 
 const FreeOfferButton = lazy(() =>
   import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
@@ -199,7 +200,6 @@ import {
   subscribeToConversationChanges,
   loadArchivedConversations,
   loadPendingActive,
-  savePendingActive,
   markAssistantStopped,
   newId,
   normalizeResponseSources,
@@ -228,6 +228,8 @@ type ChatRequestNotice = {
 type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): { settings?: string } =>
+    typeof search.settings === "string" ? { settings: search.settings } : {},
   component: KovaGPT,
   head: () => ({
     meta: [
@@ -525,40 +527,12 @@ function KovaGPT() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
-  const openSettings = useCallback(
-    (tab?: string) => {
-      // Keep Settings above the mobile drawer and preserve in-memory chat work.
-      if (
-        window.matchMedia(SIDEBAR_DRAWER_QUERY).matches ||
-        attachments.length ||
-        tempChat ||
-        isStreaming ||
-        result
-      ) {
-        settingsReturnFocusRef.current =
-          document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setSettingsTab(tab);
-        setSettingsOpen(true);
-        return;
-      }
-      if (principalReady) {
-        saveDraft(userKey, activeId, input);
-        if (activeId) savePendingActive(userKey, activeId);
-      }
-      void navigate({ to: "/settings/$section", params: { section: settingsSectionForTab(tab) } });
-    },
-    [
-      activeId,
-      attachments.length,
-      input,
-      isStreaming,
-      navigate,
-      principalReady,
-      result,
-      tempChat,
-      userKey,
-    ],
-  );
+  const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }, []);
   // Listen for global open-settings events (fired from UserButton profile click).
   useEffect(() => {
     const h = (e: Event) => {
@@ -615,6 +589,18 @@ function KovaGPT() {
   }, []);
   const [settingsPrincipal, setSettingsPrincipal] = useState<string | null>(null);
   const settingsReady = isLoaded && settingsPrincipal === storagePrincipal;
+  const linkedSettingsSection = Route.useSearch({ select: (search) => search.settings });
+  useEffect(() => {
+    if (!settingsReady || !linkedSettingsSection) return;
+    void navigate({
+      to: "/",
+      replace: true,
+      hash: true,
+      resetScroll: false,
+      search: (search) => ({ ...search, settings: undefined }),
+    });
+    openSettings(settingsTabForSection(linkedSettingsSection));
+  }, [linkedSettingsSection, navigate, openSettings, settingsReady]);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
   const [limitDialog, setLimitDialog] = useState<{
@@ -1057,15 +1043,16 @@ function KovaGPT() {
   // schedule a write that can overwrite a newer preference from another tab.
   useEffect(() => {
     if (!settingsReady || !settingsState.persist || typeof window === "undefined") return;
-    const generation = storageGenerationRef.current;
-    const t = setTimeout(() => {
-      if (generation !== storageGenerationRef.current) return;
-      safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
+    const storage = safeBrowserStorage("localStorage");
+    try {
+      if (!storage) throw new Error("settings_storage_unavailable");
+      storage.setItem(settingsKey(userKey), JSON.stringify(settings));
       window.dispatchEvent(
         new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
       );
-    }, 400);
-    return () => clearTimeout(t);
+    } catch {
+      toast.error("Preferences could not be saved on this device.", { id: "settings-storage" });
+    }
   }, [settings, settingsReady, settingsState.persist, userKey]);
 
   useEffect(() => {
@@ -2179,6 +2166,7 @@ function KovaGPT() {
             hostedModel: requestHostedModel,
             clientTool: activeTool,
             projectId: tempChat ? undefined : projectContext?.id,
+            goal: goalForRequest(storagePrincipal, activeId, nextConvId),
             connectorIds: tempChat ? undefined : activePluginContexts.map((plugin) => plugin.id),
             chatId: nextConvId,
             temporary: tempChat,
@@ -3113,6 +3101,11 @@ function KovaGPT() {
           signedIn={Boolean(isLoaded && isSignedIn)}
           compact={compact}
           isStreaming={isStreaming}
+          streamingMessageId={
+            isStreaming && inFlightTargetRef.current?.conversationId === active.id
+              ? inFlightTargetRef.current.assistantMessageId
+              : undefined
+          }
           navigationBlocked={Boolean(input || attachments.length || isStreaming)}
           onShare={(trigger) => {
             shareReturnFocusRef.current = trigger;
@@ -3258,6 +3251,7 @@ function KovaGPT() {
       </Suspense>
     ) : null;
 
+  const showSidebar = sidebarOpen && !(sidebarIsDrawer && settingsOpen);
   return (
     <div
       data-sidebar-ready={sidebarReady && isLoaded}
@@ -3276,7 +3270,7 @@ function KovaGPT() {
         onNew={startNewChat}
         onDelete={(id) => historyAction({ kind: "delete", id })}
         onRename={(id, title) => historyAction({ kind: "rename", id, title })}
-        open={sidebarOpen && !settingsOpen}
+        open={showSidebar}
         onToggle={() => {
           readingAnchorControllerRef.current?.capture();
           setSidebarOpen((v) => !v);
@@ -3304,7 +3298,7 @@ function KovaGPT() {
       <main
         id="main-content"
         tabIndex={-1}
-        data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
+        data-sidebar={showSidebar ? "open" : "closed"}
         className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
       >
         <div id="kova-browser-workspace" className="kova-browser-workspace-slot" />
@@ -3600,7 +3594,9 @@ function KovaGPT() {
             returnFocusTarget={settingsReturnFocusRef.current}
           />
         )}
+      </Suspense>
 
+      <Suspense fallback={null}>
         <OnboardingDialog
           onStarterSelected={(starter) => {
             newChat();

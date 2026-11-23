@@ -39,6 +39,7 @@ import {
   Folder,
   AlertCircle,
   Loader2,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { ExpandViewIcon } from "@/components/ui/ExpandViewIcon";
@@ -55,6 +56,7 @@ import {
   utf8TextBytes,
 } from "@/lib/composer-local-attachments.mjs";
 import { PastedTextCard } from "@/components/PastedTextCard";
+import { ChatGoalRow } from "@/components/ChatGoalRow";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import type { Settings } from "@/components/SettingsDialog";
 import { ComposerPdfPages } from "@/components/ComposerPdfPages";
@@ -128,6 +130,21 @@ const ComposerProjectPicker = lazy(() =>
     default: module.ComposerProjectPicker,
   })),
 );
+
+/** [principal, chatId] for the goal row, only when the composer is not editing a message. */
+function chatGoalContext(attachmentContext: string | undefined) {
+  try {
+    const parsed: unknown = JSON.parse(attachmentContext ?? "null");
+    return Array.isArray(parsed) && parsed[2] == null
+      ? {
+          principal: typeof parsed[0] === "string" ? parsed[0] : null,
+          chatId: typeof parsed[1] === "string" ? parsed[1] : null,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 // Pasted cards are message text: they never take one of the two file slots.
 function fileSlotsUsed(items: PendingAttachment[]) {
@@ -507,6 +524,9 @@ export function ChatInput({
     "keyboard",
   );
   const [utilityMenu, setUtilityMenu] = useState<"files" | "plugins" | null>(null);
+  const [goalEditing, setGoalEditing] = useState(false);
+  // The goal belongs to this chat: [principal, chatId] from the composer's chat context.
+  const goalContext = chatGoalContext(attachmentContext);
   const [resourceSection, setResourceSection] = useState<"files" | "plugins" | null>(null);
   const phoneResourceSection = isMobileLayout ? resourceSection : null;
   const addMenuRef = useRef<HTMLDivElement>(null);
@@ -1315,6 +1335,14 @@ export function ChatInput({
 
   const externalImageFiles = useRef(addFiles);
   externalImageFiles.current = addFiles;
+  // Text handed over with images (for example notes from the image canvas) appends to the draft.
+  const externalAppendText = useRef((text: string) => {
+    void text;
+  });
+  externalAppendText.current = (text: string) => {
+    const draft = composerStateRef.current.value;
+    onChange(draft.trim() ? `${draft.trimEnd()}\n\n${text}` : text);
+  };
   useEffect(() => {
     let mounted = true;
     const prepare = (event: Event) => {
@@ -1325,6 +1353,10 @@ export function ChatInput({
       if (!detail || typeof detail.accept !== "function") return;
       const context = attachmentContextRef.current;
       const scope = attachmentScopeRef.current;
+      detail.acceptText?.((text) => {
+        if (mounted && context === attachmentContextRef.current && typeof text === "string")
+          externalAppendText.current(text.slice(0, 4_000));
+      });
       detail.accept(async (file, isCurrent) => {
         const current = () =>
           mounted &&
@@ -1866,6 +1898,21 @@ export function ChatInput({
               : "Upload from your computer"}
           </small>
         </button>
+        {goalContext && (
+          <button
+            type="button"
+            aria-label="Set a goal for this chat"
+            className="kova-composer-action"
+            onClick={() => {
+              closeActions();
+              setGoalEditing(true);
+            }}
+          >
+            <Target aria-hidden="true" />
+            <span>Set a goal</span>
+            <small>Keep this chat working toward one outcome</small>
+          </button>
+        )}
         <button
           type="button"
           aria-label="Add from Library"
@@ -2403,6 +2450,14 @@ export function ChatInput({
             setTemplateFormat(null);
             window.requestAnimationFrame(() => ref.current?.focus());
           }}
+        />
+      )}
+      {goalContext && (
+        <ChatGoalRow
+          principal={goalContext.principal}
+          chatId={goalContext.chatId}
+          editing={goalEditing}
+          onEditingChange={setGoalEditing}
         />
       )}
       <div

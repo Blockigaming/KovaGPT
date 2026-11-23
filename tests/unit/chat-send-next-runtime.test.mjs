@@ -267,6 +267,7 @@ function fixture() {
     Intl,
     TypeError,
     safeLocale: () => "en-US",
+    goalForRequest: () => undefined,
     tier: "free",
     personalityToInstruction: () => "",
     loadPersonality: () => null,

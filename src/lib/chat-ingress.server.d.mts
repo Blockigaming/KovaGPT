@@ -67,6 +67,7 @@ export type NormalizedChatPayload = {
   historyOffset?: number;
   summaryProof?: { id: string; start: number; count: number; digest: string };
   personality?: string;
+  goal?: string;
   projectId?: string;
   temporary?: boolean;
   voice?: true;

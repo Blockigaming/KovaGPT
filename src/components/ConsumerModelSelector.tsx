@@ -166,18 +166,18 @@ export function ConsumerModelSelector({
           align="end"
           sideOffset={6}
           collisionPadding={12}
-          className="kova-consumer-model-menu p-1.5"
+          className="kova-consumer-model-menu border-0 p-1.5"
         >
           <h2 id={titleId} className="sr-only">
             Select model
           </h2>
-          <div className="flex items-center justify-between gap-2 px-2 pb-1">
+          <div className="flex items-center gap-0.5 pb-1">
             <button
               type="button"
               ref={modelViewToggle}
               onClick={() => setShowModels((visible) => !visible)}
               aria-expanded={showModels}
-              className={optionClass}
+              className={`${optionClass} kova-consumer-model-view-toggle`}
               disabled={locked}
             >
               {showModels ? "Back to response effort" : "Select model"}
@@ -187,7 +187,7 @@ export function ConsumerModelSelector({
               type="button"
               className="kova-effort-reset shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Reset to recommended model and Lite effort"
-              title="Reset to recommended"
+              title={`Reset to ${recommended} Lite`}
               disabled={locked}
               onClick={resetToDefault}
             >

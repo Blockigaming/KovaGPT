@@ -94,7 +94,7 @@ function Svg({
   note?: ReactNode;
 }) {
   return (
-    <div className="kova-chart-extra w-full">
+    <div dir="ltr" className="kova-chart-extra w-full">
       <svg
         viewBox={viewBox}
         className="block h-auto w-full max-h-[28rem]"
@@ -1247,7 +1247,7 @@ function ThreeD({ spec, type, colors }: Props) {
       ));
   }
   return (
-    <div className="kova-chart-extra">
+    <div dir="ltr" className="kova-chart-extra">
       <svg
         viewBox="0 0 620 340"
         className="block h-auto w-full"

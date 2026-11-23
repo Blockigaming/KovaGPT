@@ -5,6 +5,7 @@ import ts from "typescript";
 import * as credentials from "../../src/integrations/salesforce-credential.server.mjs";
 import * as tokenRequests from "../../src/integrations/oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "../../src/lib/provider-response.server.mjs";
+import * as ouraMetrics from "../../src/health/oura-metrics.mjs";
 
 function compile(file, modules, globals = {}) {
   const code = ts.transpileModule(readFileSync(file, "utf8"), {
@@ -119,7 +120,7 @@ function fixture() {
   };
   const providers = compile(
     "src/integrations/oauth-providers.server.ts",
-    {},
+    { "@/health/oura-metrics.mjs": ouraMetrics },
     { process: { env: {} } },
   );
   const modules = {

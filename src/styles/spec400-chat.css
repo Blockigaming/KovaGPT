@@ -725,11 +725,21 @@
   min-width: 0;
 }
 .spec400-conversation-pane {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   min-width: 0;
   flex-direction: column;
+}
+.spec400-conversation-pane:has(> .kova-conversation-scroll)::before {
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: clamp(12px, 4dvh, 32px);
+  background: linear-gradient(to bottom, var(--assistant-canvas, var(--background)), transparent);
+  pointer-events: none;
+  content: "";
 }
 .spec400-conversation-pane[hidden],
 .spec400-result-pane[hidden] {
@@ -787,13 +797,14 @@
   border-bottom-color: var(--foreground);
 }
 .spec400-composer-dock {
+  background: var(--assistant-canvas, var(--background));
   padding-inline: calc(max(var(--chat-gutter), var(--safe-left)) - 4px)
     calc(max(var(--chat-gutter), var(--safe-right)) - 4px);
 }
 .spec400-composer-dock > .spec400-chat-input {
   max-width: none;
   overflow-y: auto;
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable;
   padding-inline: 4px;
   padding-top: 4px;
 }

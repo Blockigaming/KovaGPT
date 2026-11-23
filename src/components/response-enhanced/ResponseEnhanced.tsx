@@ -11,6 +11,7 @@ import {
 } from "react";
 import { ArrowDown, ArrowUp, Check, Copy, Download, Search, X } from "lucide-react";
 import { highlightLines } from "@/lib/code-highlight";
+import { formatMediaTime, parseMediaTitle } from "@/lib/response-media.mjs";
 import { compareCells, rowsToDelimited, type TableModel } from "@/lib/response-table.mjs";
 // Mermaid is copied as a prebuilt asset (not bundled): it loads only when a diagram appears.
 import mermaidScriptUrl from "mermaid/dist/mermaid.min.js?url";
@@ -112,7 +113,7 @@ function CodeView({ language, text }: { language: string; text: string }) {
           <Download aria-hidden="true" /> Download
         </button>
       </div>
-      <pre tabIndex={0} aria-label={`${language} code block`}>
+      <pre tabIndex={0} dir="ltr" aria-label={`${language} code block`}>
         <code className={`language-${language}`}>
           {(lines ?? plain).map((line, index) =>
             lines ? (
@@ -229,7 +230,7 @@ function TableView({ model, children }: { model: TableModel; children: ReactNode
           </button>
         </div>
       )}
-      <div className="kova-table-scroll" role="region" aria-label="Table" tabIndex={0}>
+      <div className="kova-table-scroll" role="region" aria-label="Table" tabIndex={0} dir="auto">
         <table>
           <thead>
             <tr>
@@ -362,6 +363,7 @@ function DiagramView({ source }: { source: string }) {
       ) : svg ? (
         <div
           className="kova-diagram-canvas"
+          dir="ltr"
           role="img"
           aria-label="Diagram"
           // Mermaid's strict mode sanitizes labels and strips scripts and handlers.
@@ -380,8 +382,25 @@ function DiagramView({ source }: { source: string }) {
 /* Media: audio and video links play inline                            */
 /* ------------------------------------------------------------------ */
 
-function MediaView({ src, kind, label }: { src: string; kind: "audio" | "video"; label: string }) {
+function MediaView({
+  src,
+  kind,
+  label,
+  title,
+}: {
+  src: string;
+  kind: "audio" | "video";
+  label: string;
+  title?: string;
+}) {
   const [failed, setFailed] = useState(false);
+  const [rate, setRate] = useState(1);
+  const media = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  const details = useMemo(() => parseMediaTitle(title), [title]);
+  const rateId = useId();
+  useEffect(() => {
+    if (media.current) media.current.playbackRate = rate;
+  }, [rate]);
   if (failed)
     return (
       <span className="kova-media-error">
@@ -391,29 +410,64 @@ function MediaView({ src, kind, label }: { src: string; kind: "audio" | "video";
         </a>
       </span>
     );
-  return kind === "audio" ? (
-    <span className="kova-media" data-kind="audio">
-      <audio
-        controls
-        preload="metadata"
-        src={src}
-        aria-label={label}
-        onError={() => setFailed(true)}
-      />
-      <a href={src} target="_blank" rel="noreferrer noopener" download>
-        Download
-      </a>
-    </span>
-  ) : (
-    <span className="kova-media" data-kind="video">
-      <video
-        controls
-        playsInline
-        preload="metadata"
-        src={src}
-        aria-label={label}
-        onError={() => setFailed(true)}
-      />
+  const seek = (seconds: number) => {
+    if (!media.current) return;
+    media.current.currentTime = seconds;
+    void media.current.play().catch(() => undefined);
+  };
+  return (
+    <span className="kova-media-block">
+      <span className="kova-media" data-kind={kind}>
+        {kind === "audio" ? (
+          <audio
+            ref={media}
+            controls
+            preload="none"
+            src={src}
+            aria-label={label}
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <video
+            ref={media}
+            controls
+            playsInline
+            preload="none"
+            src={src}
+            aria-label={label}
+            crossOrigin={details.captions ? "anonymous" : undefined}
+            onError={() => setFailed(true)}
+          >
+            {details.captions && (
+              <track kind="captions" src={details.captions} srcLang="en" label="Captions" default />
+            )}
+          </video>
+        )}
+      </span>
+      <span className="kova-media-tools">
+        <label htmlFor={rateId}>Speed</label>
+        <select id={rateId} value={rate} onChange={(event) => setRate(Number(event.target.value))}>
+          {[0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => (
+            <option key={value} value={value}>
+              {value}×
+            </option>
+          ))}
+        </select>
+        <a href={src} target="_blank" rel="noreferrer noopener" download>
+          <Download aria-hidden="true" /> Download
+        </a>
+      </span>
+      {details.chapters.length > 0 && (
+        <span className="kova-media-chapters" role="list" aria-label="Chapters">
+          {details.chapters.map((chapter) => (
+            <span role="listitem" key={`${chapter.seconds}-${chapter.label}`}>
+              <button type="button" onClick={() => seek(chapter.seconds)}>
+                <time>{formatMediaTime(chapter.seconds)}</time> {chapter.label}
+              </button>
+            </span>
+          ))}
+        </span>
+      )}
     </span>
   );
 }
@@ -424,7 +478,7 @@ export type ResponseEnhancedProps =
   | { kind: "code"; language: string; text: string }
   | { kind: "table"; model: TableModel; children: ReactNode }
   | { kind: "diagram"; source: string }
-  | { kind: "media"; src: string; media: "audio" | "video"; label: string };
+  | { kind: "media"; src: string; media: "audio" | "video"; label: string; title?: string };
 
 /** One lazily loaded module for every heavier response block. */
 export default function ResponseEnhanced(props: ResponseEnhancedProps) {
@@ -436,6 +490,8 @@ export default function ResponseEnhanced(props: ResponseEnhancedProps) {
     case "diagram":
       return <DiagramView source={props.source} />;
     case "media":
-      return <MediaView src={props.src} kind={props.media} label={props.label} />;
+      return (
+        <MediaView src={props.src} kind={props.media} label={props.label} title={props.title} />
+      );
   }
 }

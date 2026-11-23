@@ -56,6 +56,7 @@ const closedSurfaces = {
   "@/components/ConsumerModelSelector": { ConsumerModelSelector: empty },
   "@/components/ComposerDrawingDialog": { ComposerDrawingDialog: empty },
   "@/components/PastedTextCard": { PastedTextCard: empty },
+  "@/components/ChatGoalRow": { ChatGoalRow: empty },
   "@/components/ComposerPluginList": {
     ComposerPluginList: empty,
     useComposerPluginConnections: () => ({}),

@@ -382,6 +382,8 @@ export function normalizeChatPayload(value) {
     multiline: true,
   });
   const projectId = optionalUuid(value.projectId, "project_id");
+  // A short goal the user set for this conversation; it steers each reply while active.
+  const goal = optionalTrimmedString(value.goal, "goal", 500, { multiline: true });
   const memoryStartIndex = value.memoryStartIndex;
   const historyOffset = value.historyOffset ?? 0;
   if (!Number.isSafeInteger(historyOffset) || historyOffset < 0 || historyOffset > 1000000)
@@ -429,6 +431,7 @@ export function normalizeChatPayload(value) {
   if (value.historyOffset !== undefined) payload.historyOffset = historyOffset;
   if (personality !== undefined) payload.personality = personality;
   if (projectId !== undefined) payload.projectId = projectId;
+  if (goal) payload.goal = goal;
   const voice = optionalBoolean(value.voice, "voice");
   if (voice === true) payload.voice = true;
   if (temporary !== undefined) payload.temporary = temporary;

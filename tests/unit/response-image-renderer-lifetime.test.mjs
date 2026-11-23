@@ -59,6 +59,10 @@ function fixture(initial = {}) {
       "./ChatImage": { ChatImage: "chat-image" },
       "./ResponseSpriteExport": { ResponseSpriteExport: "response-sprite-export" },
       "@/lib/chat-image-actions": { downloadChatImage: async () => {} },
+      "@/lib/conversation-images": {
+        chatKeyFromScope: () => null,
+        registerConversationImage: () => () => {},
+      },
     },
     { Error },
   );
@@ -76,6 +80,7 @@ function fixture(initial = {}) {
     "@/lib/response-files.mjs": responseFiles,
     "./ResponseFileCard": { ResponseFileCard: () => null },
     "@/lib/response-table.mjs": responseTable,
+    "@/lib/remark-inline-marks.mjs": { __esModule: true, default: () => () => {} },
     "./response-enhanced/ResponseEnhanced": { default: () => null },
   });
   const markdownHooks = createHookHarness();

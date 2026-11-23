@@ -292,7 +292,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-block: 8px;
   max-width: 100%;
 }
 .kova-media audio {
@@ -321,4 +320,55 @@
 }
 .kova-table-filter input::-webkit-search-cancel-button {
   display: none;
+}
+.kova-media-block {
+  display: grid;
+  gap: 6px;
+  margin-block: 8px;
+}
+.kova-media-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-media-tools select {
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+}
+.kova-media-tools a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.kova-media-tools svg {
+  width: 13px;
+  height: 13px;
+}
+.kova-media-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kova-media-chapters button {
+  display: inline-flex;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 12px;
+  cursor: pointer;
+}
+.kova-media-chapters time {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
 }

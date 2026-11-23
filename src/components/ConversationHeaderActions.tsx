@@ -1,9 +1,19 @@
+import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { CloudBrowserTakeover } from "./CloudBrowserTakeover";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
-import { MessageActivityList } from "./MessageActivityList";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import {
+  Check,
+  CircleAlert,
   FileText,
   Image,
   Share,
@@ -37,12 +47,25 @@ import type { MemorySources } from "@/lib/memory-sources.mjs";
 import { conversationSources, type ConversationBrowserSource } from "@/lib/conversation-sources";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
+import { ConversationInputRows } from "./ConversationSourcesView";
 import {
   conversationWithLiveBrowserActivity,
   getLiveBrowserActivity,
   subscribeToLiveBrowserActivity,
 } from "@/lib/message-activity-list.mjs";
 import "./conversation-header.css";
+
+const stepStatusLabels = {
+  done: "Completed",
+  running: "In progress",
+  failed: "Failed",
+  canceled: "Canceled",
+  interrupted: "Interrupted",
+  queued: "Queued",
+  paused: "Paused",
+  skipped: "Skipped",
+  partial: "Partly completed",
+};
 
 function OutputsIcon() {
   return (
@@ -88,6 +111,7 @@ export function ConversationHeaderActions({
   compact = false,
   navigationBlocked = false,
   isStreaming = false,
+  streamingMessageId,
   onShare,
   onCreateOutput,
   onAddFiles,
@@ -111,6 +135,7 @@ export function ConversationHeaderActions({
   compact?: boolean;
   navigationBlocked?: boolean;
   isStreaming?: boolean;
+  streamingMessageId?: string;
   onShare: (trigger: HTMLButtonElement | null) => void;
   onCreateOutput: (format: ChatOutputFormat) => void;
   onAddFiles: (trigger: HTMLElement | null) => void;
@@ -135,10 +160,12 @@ export function ConversationHeaderActions({
   );
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
+  const activityId = useId();
+  const [inputsCollapsed, setInputsCollapsed] = useState(false);
   const [outputsOpen, setOutputsOpen] = useState(false);
   const [outputsCollapsed, setOutputsCollapsed] = useState(false);
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
-  const [stepsCollapsed, setStepsCollapsed] = useState(false);
+  const [progressCollapsed, setProgressCollapsed] = useState(false);
   const [menu, setMenu] = useState<"outputs" | "sources" | "plugins" | null>(null);
   const [downloadError, setDownloadError] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -179,15 +206,37 @@ export function ConversationHeaderActions({
     restoreDialogFocus(returnFocusRef.current, returnUrlRef.current);
   };
   const restrictedTemporary = Boolean(conversation.temporary);
-  const steps = conversation.messages
-    .flatMap((message) => message.activities ?? [])
-    .filter((step) => step.tool !== "scheduled_task" && step.tool !== "browser_interact");
+  const steps = useMemo(() => {
+    const rows = conversation.messages.flatMap((message) =>
+      (message.activities ?? [])
+        .filter((step) => step.tool !== "scheduled_task")
+        .map((step, index) => ({
+          key: `${message.id}:${step.activityId ?? index}`,
+          label: step.label,
+          status:
+            step.status === "running" && message.id !== streamingMessageId
+              ? ("interrupted" as const)
+              : step.status,
+        })),
+    );
+    if (streamingMessageId && !rows.some((step) => step.status === "running")) {
+      rows.push({ key: streamingMessageId, label: "Generating a response", status: "running" });
+    }
+    return rows;
+  }, [conversation.messages, streamingMessageId]);
   const hasSources = Boolean(
     sourceInventory.web.length ||
     sourceInventory.memory.length ||
-    sourceInventory.attachments.length ||
-    sourceInventory.providers?.length,
+    sourceInventory.providers?.length ||
+    (signedIn && sourceInventory.browser.length),
   );
+  const openAttachment = (outputId: string) => {
+    const output = outputs.find((item) => item.id === outputId);
+    if (!output) return;
+    rememberFocus(outputsRef.current);
+    setSelectedOutput(output);
+    setOutputsOpen(false);
+  };
   const formatIcons = { docx: FileText, pptx: PanelsTopLeft, xlsx: Table2 };
   const handOff = (action: () => void, opensDialog = false) => {
     dialogOpeningRef.current = opensDialog;
@@ -256,6 +305,49 @@ export function ConversationHeaderActions({
   };
   const activityContent = (
     <>
+      <section className="kova-activity-inventory" aria-label="Progress">
+        <button
+          type="button"
+          className="kova-activity-section-toggle"
+          aria-expanded={!progressCollapsed}
+          aria-controls={`${activityId}-progress`}
+          onClick={() => setProgressCollapsed(!progressCollapsed)}
+        >
+          <span>Progress</span>
+          <ChevronDown
+            className={`kova-activity-chevron${progressCollapsed ? " is-collapsed" : ""}`}
+            aria-hidden="true"
+          />
+        </button>
+        <div id={`${activityId}-progress`} hidden={progressCollapsed} aria-live="polite">
+          {steps.length ? (
+            <ol className="kova-activity-progress">
+              {steps.map((step) => (
+                <li key={step.key} data-status={step.status}>
+                  {step.status === "done" && (
+                    <Check className="kova-activity-step-icon" aria-hidden="true" />
+                  )}
+                  {step.status !== "done" && step.status !== "running" && (
+                    <CircleAlert className="kova-activity-step-icon" aria-hidden="true" />
+                  )}
+                  <span>{step.label}</span>
+                  <span
+                    className={
+                      step.status === "done" || step.status === "running"
+                        ? "sr-only"
+                        : "kova-activity-step-status"
+                    }
+                  >
+                    {stepStatusLabels[step.status]}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="kova-activity-progress-empty">No steps recorded</p>
+          )}
+        </div>
+      </section>
       <section className="kova-activity-inventory" aria-label="Outputs">
         {renderMenu({
           open: menu === "outputs",
@@ -266,6 +358,7 @@ export function ConversationHeaderActions({
                 type="button"
                 className="kova-activity-section-toggle"
                 aria-expanded={!outputsCollapsed}
+                aria-controls={`${activityId}-outputs`}
                 onClick={() => {
                   setOutputsCollapsed(!outputsCollapsed);
                   setMenu(null);
@@ -310,8 +403,8 @@ export function ConversationHeaderActions({
             </>
           ),
         })}
-        {!outputsCollapsed &&
-          (generatedOutputs.length ? (
+        <div id={`${activityId}-outputs`} hidden={outputsCollapsed}>
+          {generatedOutputs.length ? (
             <div className="kova-output-list">
               {generatedOutputs.map((output) => (
                 <button
@@ -344,7 +437,33 @@ export function ConversationHeaderActions({
             >
               Create an output
             </button>
-          ))}
+          )}
+        </div>
+      </section>
+      <section className="kova-activity-inventory" aria-label="Inputs">
+        <button
+          type="button"
+          className="kova-activity-section-toggle"
+          aria-expanded={!inputsCollapsed}
+          aria-controls={`${activityId}-inputs`}
+          onClick={() => setInputsCollapsed(!inputsCollapsed)}
+        >
+          <span>Inputs</span>
+          <ChevronDown
+            className={`kova-activity-chevron${inputsCollapsed ? " is-collapsed" : ""}`}
+            aria-hidden="true"
+          />
+        </button>
+        <div id={`${activityId}-inputs`} hidden={inputsCollapsed}>
+          {sourceInventory.attachments.length ? (
+            <ConversationInputRows
+              attachments={sourceInventory.attachments}
+              onOpenAttachment={openAttachment}
+            />
+          ) : (
+            <p className="kova-activity-progress-empty">No files attached</p>
+          )}
+        </div>
       </section>
       <section className="kova-activity-inventory" aria-label="Sources">
         {renderMenu({
@@ -356,6 +475,7 @@ export function ConversationHeaderActions({
                 type="button"
                 className="kova-activity-section-toggle"
                 aria-expanded={!sourcesCollapsed}
+                aria-controls={`${activityId}-sources`}
                 onClick={() => {
                   setSourcesCollapsed(!sourcesCollapsed);
                   setMenu(null);
@@ -426,26 +546,32 @@ export function ConversationHeaderActions({
             </>
           ),
         })}
-        {!sourcesCollapsed &&
-          (hasSources ? (
+        <div id={`${activityId}-sources`} hidden={sourcesCollapsed}>
+          {hasSources ? (
             <ConversationSourcesPanel
-              hideBrowser
+              hideBrowser={!signedIn}
+              compactBrowser
               hideSourcesHeading
+              hideAttachments
               showActivity={false}
               conversation={conversation}
-              onOpenBrowser={() => {}}
+              browserTabCount={
+                browserPresentation?.active ? browserPresentation.tabCount : undefined
+              }
+              browserPreview={
+                browserPresentation?.active ? browserPresentation.thumbnail : undefined
+              }
+              onOpenBrowser={(activity) => {
+                rememberFocus(outputsRef.current);
+                setOutputsOpen(false);
+                setSelectedBrowser(activity);
+              }}
               onOpenMemory={(sources) => {
                 rememberFocus(outputsRef.current);
                 setOutputsOpen(false);
                 setSelectedMemory(sources);
               }}
-              onOpenAttachment={(outputId) => {
-                const output = outputs.find((item) => item.id === outputId);
-                if (!output) return;
-                rememberFocus(outputsRef.current);
-                setSelectedOutput(output);
-                setOutputsOpen(false);
-              }}
+              onOpenAttachment={openAttachment}
             />
           ) : (
             <button
@@ -456,42 +582,9 @@ export function ConversationHeaderActions({
             >
               Attach files or connect apps
             </button>
-          ))}
+          )}
+        </div>
       </section>
-      {signedIn && (
-        <ConversationSourcesPanel
-          browserOnly
-          activeBrowserOnly
-          showActivity={false}
-          conversation={conversation}
-          browserTabCount={browserPresentation?.active ? browserPresentation.tabCount : undefined}
-          browserPreview={browserPresentation?.active ? browserPresentation.thumbnail : undefined}
-          onOpenAttachment={() => {}}
-          onOpenMemory={() => {}}
-          onOpenBrowser={(activity) => {
-            rememberFocus(outputsRef.current);
-            setOutputsOpen(false);
-            setSelectedBrowser(activity);
-          }}
-        />
-      )}
-      {steps.length > 0 && (
-        <section className="kova-activity-inventory" aria-label="Steps">
-          <button
-            type="button"
-            className="kova-activity-section-toggle"
-            aria-expanded={!stepsCollapsed}
-            onClick={() => setStepsCollapsed(!stepsCollapsed)}
-          >
-            <span>Steps</span>
-            <ChevronDown
-              className={`kova-activity-chevron${stepsCollapsed ? " is-collapsed" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-          {!stepsCollapsed && <MessageActivityList activities={steps} />}
-        </section>
-      )}
     </>
   );
   return (
@@ -693,13 +786,17 @@ export function ConversationHeaderActions({
         </DialogContent>
       </Dialog>
       {selectedBrowser &&
-        (browserPresentation?.active && signedIn ? (
+        (browserPresentation?.active && signedIn && selectedBrowser.status === "active" ? (
           browserPresentation.renderDialog({
             activity: selectedBrowser,
             onClose: () => setSelectedBrowser(null),
             onCloseAutoFocus: restoreFocus,
           })
-        ) : signedIn && user?.id && selectedBrowser.browser?.previewPath ? (
+        ) : signedIn &&
+          user?.id &&
+          selectedBrowser.status === "active" &&
+          selectedBrowser.browser?.previewPath &&
+          browserActivityIsFresh(selectedBrowser.browser) ? (
           <CloudBrowserTakeover
             key={selectedBrowser.browser.sessionId}
             browser={selectedBrowser.browser}

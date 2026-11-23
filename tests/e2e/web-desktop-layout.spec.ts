@@ -1,15 +1,19 @@
 import { devices, expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openCurrentSettings } from "./current-ui";
+import { revealSidebar } from "./current-ui";
 
+// The website serves the desktop experience on every device and reflows it to
+// the real screen width. Phone-app presentation is reserved for native app
+// shells, which mark the document with data-kova-surface="app".
 for (const device of ["iPhone 13", "Pixel 7", "iPad Mini landscape"] as const) {
-  test(`${device} opens the desktop website on a touch screen`, async ({
+  test(`${device} gets the desktop website sized to its own screen`, async ({
     browser,
     baseURL,
   }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-1440x900");
-    const context = await browser.newContext({ ...devices[device], baseURL });
+    const descriptor = devices[device];
+    const context = await browser.newContext({ ...descriptor, baseURL });
     try {
       const page = await context.newPage();
       await installAuthenticatedFixture(page);
@@ -18,25 +22,48 @@ for (const device of ["iPhone 13", "Pixel 7", "iPad Mini landscape"] as const) {
       await waitForKovaHydration(page);
       await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
         "content",
-        "width=1280, viewport-fit=cover",
+        "width=device-width, initial-scale=1, viewport-fit=cover",
       );
-      expect(
-        await page.evaluate(() => matchMedia("(width >= 1280px) and (pointer: coarse)").matches),
-      ).toBe(true);
-      await expect(page.locator(".kova-desktop-topbar")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeHidden();
-      await expect(page.locator("[data-kova-core-sidebar]")).not.toHaveCSS("position", "fixed");
-      await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("data-kova-surface", "web");
+      const fit = await page.evaluate(() => ({
+        width: innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(fit.width).toBe(descriptor.viewport.width);
+      expect(fit.scrollWidth).toBeLessThanOrEqual(fit.width);
 
-      const settings = await openCurrentSettings(page);
-      await expect(settings.locator(".kova-settings-sidebar")).toBeVisible();
-      await settings.getByRole("button", { name: "Close settings", exact: true }).click();
-      await expect(settings).toBeHidden();
+      const navigation = await revealSidebar(page);
+      await navigation.getByRole("button", { name: "New chat", exact: true }).click();
+      // Desktop home composition: greeting above a centered composer.
+      const greeting = page.locator(".kova-empty-chat .kova-greeting h1");
+      const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+      await expect(greeting).toBeVisible();
+      await expect(input).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Continue working", exact: true }),
+      ).toBeHidden();
+      const [greetingBox, inputBox] = await Promise.all([
+        greeting.boundingBox(),
+        input.boundingBox(),
+      ]);
+      expect(greetingBox!.y).toBeLessThan(inputBox!.y);
+      expect(inputBox!.y).toBeLessThan(descriptor.viewport.height * 0.7);
 
-      await page.goto("/apps", { waitUntil: "domcontentloaded" });
+      const desktopShell = descriptor.viewport.width >= 1024;
+      if (desktopShell) {
+        await expect(page.locator(".kova-desktop-topbar")).toBeVisible();
+        await expect(page.locator("[data-kova-core-sidebar]")).not.toHaveCSS("position", "fixed");
+      } else {
+        await page.getByRole("button", { name: "Open menu", exact: true }).click();
+        const sidebar = page.locator("[data-kova-core-sidebar]");
+        await expect(sidebar.getByRole("link", { name: "Scheduled tasks" })).toBeInViewport();
+        await expect(sidebar.getByRole("link", { name: "Connections" })).toBeInViewport();
+        await page.keyboard.press("Escape");
+      }
+
+      await page.goto("/library", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
-      await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeHidden();
+      await expect(page.getByRole("heading", { name: "Library", exact: true })).toBeInViewport();
     } finally {
       await context.close();
     }
