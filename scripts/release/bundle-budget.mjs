@@ -86,6 +86,12 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 62_698,
       gzip: 20_651,
     }),
+    Object.freeze({
+      tree: "bd69dc4bcb6076eb8a6e6b36b0f1c900ec8dacbf",
+      source: "Node 22 local production build, PR #749 file-preview candidate",
+      raw: 61_348,
+      gzip: 20_864,
+    }),
   ]),
   apiAudioAdjustment:
     "The 2026-10-29 UI/Auth/API integration measured 20,238 home-route gzip bytes in PR #489 CI. Decisions, moderation and audio controls measured 20,253 in PR #492 CI; the combined sidebar preference repair measured 20,259 locally. The 20,400 ceiling retains less than 1% headroom over that complete build. The 62,500 raw ceiling and every shared-entry, omega and chart ceiling are unchanged.",
@@ -93,12 +99,14 @@ export const BUNDLE_BASELINE = Object.freeze({
     "PR #691 CI run 43623726051 at 8ee794ef9702f9e170cf69bcd497d45f64739876 measured the home route at 62,667 raw / 20,623 gzip bytes after the existing settings and response-follow-up release. The 62,750 raw / 20,650 gzip ceiling leaves 83 raw / 27 gzip bytes of headroom. All other budgets and bundle identification checks are unchanged.",
   richResponseAdjustment:
     "The rich response catalog measured 62,698 raw and 20,651 gzip bytes in GitHub CI. The home-route gzip ceiling of 20,675 allows 24 bytes of headroom over that build.",
+  filePreviewAdjustment:
+    "The 2026-11-23 owner-approved file-preview candidate (PR #749) measured 61,348 raw / 20,864 gzip for the initial route in a local production build; main was already 6 gzip bytes over 20,675. Its home route adds automatic file-preview opening and the background-tab response notification. The initial gzip ceiling moves to 20,875, giving 11 bytes of headroom; other ceilings are unchanged.",
   openAiModelOfferAdjustment:
     "The 2026-11-08 OpenAI model-catalog and Free-offer candidate measured 62,567 raw / 20,567 gzip for the initial route and 648,770 raw / 200,927 gzip for the Vite entry in CI. The initial ceilings move to 62,600 raw / 20,600 gzip, providing 33 gzip bytes of headroom; the main gzip ceiling remains 201,500 from the device-specific Settings CI evidence. Omega and chart ceilings remain unchanged.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_750, gzip: 20_675 }),
+  initial: Object.freeze({ raw: 62_750, gzip: 20_875 }),
   main: Object.freeze({ raw: 670_000, gzip: 201_500 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
