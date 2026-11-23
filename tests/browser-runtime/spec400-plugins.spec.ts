@@ -802,7 +802,33 @@ test("connector fields leave space for labels and header motion respects reduced
   const hero = page.locator(".kova-connection-hero");
   await expect
     .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))
-    .toBe("kova-connection-hero-drift");
+    .toBe("kova-connection-hero-drift, kova-connection-hero-fade");
+  const [start, bright, fading, end] = await hero.evaluate(async (node) => {
+    const animations = document
+      .getAnimations()
+      .filter(
+        (animation) =>
+          animation instanceof CSSAnimation &&
+          animation.animationName.startsWith("kova-connection-hero-"),
+      );
+    for (const animation of animations) animation.pause();
+    await Promise.all(animations.map((animation) => animation.ready));
+
+    return [0, 4500, 12500, 17999].map((time) => {
+      for (const animation of animations) animation.currentTime = time;
+      const style = getComputedStyle(node, "::before");
+      const position = new DOMMatrixReadOnly(style.transform);
+      return { x: position.m41, y: position.m42, opacity: Number(style.opacity) };
+    });
+  });
+  expect(start.opacity).toBe(0);
+  expect(bright.opacity).toBe(1);
+  expect(fading.opacity).toBeGreaterThan(0);
+  expect(fading.opacity).toBeLessThan(bright.opacity);
+  expect(fading.x).toBeGreaterThan(bright.x);
+  expect(fading.y).toBeGreaterThan(bright.y);
+  expect(end.opacity).toBeLessThan(0.01);
+
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect
     .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))

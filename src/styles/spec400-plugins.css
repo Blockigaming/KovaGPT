@@ -1068,11 +1068,13 @@
 }
 .kova-connection-hero::before {
   position: absolute;
-  inset: -50% -60%;
+  inset: -80% -65%;
   z-index: -1;
   background: radial-gradient(
-    ellipse 35% 60% at 30% 30%,
-    color-mix(in srgb, var(--connection-accent) 21%, transparent),
+    ellipse 32% 50% at 31% 34%,
+    color-mix(in srgb, var(--connection-accent) 20%, transparent),
+    color-mix(in srgb, var(--connection-accent) 12%, transparent) 38%,
+    color-mix(in srgb, var(--connection-accent) 4%, transparent) 75%,
     transparent
   );
   pointer-events: none;
@@ -1080,12 +1082,27 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .kova-connection-hero::before {
-    animation: kova-connection-hero-drift 14s ease-in-out infinite alternate;
+    animation:
+      kova-connection-hero-drift 18s linear infinite,
+      kova-connection-hero-fade 18s ease-in-out infinite;
   }
 }
 @keyframes kova-connection-hero-drift {
+  from {
+    transform: translate(0, 0);
+  }
   to {
-    transform: translate(23%, 12%);
+    transform: translate(24%, 30%);
+  }
+}
+@keyframes kova-connection-hero-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  24%,
+  44% {
+    opacity: 1;
   }
 }
 .kova-connection-hero-top {
