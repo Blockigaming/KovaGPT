@@ -100,13 +100,19 @@ async function loadLabels() {
     }
     return;
   }
-  const [{ LOCALIZED_LABELS }, { APP_LABELS }, { applyInterfaceTranslation }] = await Promise.all([
-    import("@/lib/localization-labels"),
-    import("@/lib/localization-app-labels"),
-    import("@/lib/dom-translator"),
-  ]);
+  const [{ LOCALIZED_LABELS }, { APP_LABELS }, { HELP_LABELS }, { applyInterfaceTranslation }] =
+    await Promise.all([
+      import("@/lib/localization-labels"),
+      import("@/lib/localization-app-labels"),
+      import("@/lib/localization-help-labels"),
+      import("@/lib/dom-translator"),
+    ]);
   if (effectiveLanguage() !== language) return;
-  labels = { ...(APP_LABELS[language] ?? {}), ...(LOCALIZED_LABELS[language] ?? {}) };
+  labels = {
+    ...(HELP_LABELS[language] ?? {}),
+    ...(APP_LABELS[language] ?? {}),
+    ...(LOCALIZED_LABELS[language] ?? {}),
+  };
   labelsFor = language;
   emit();
   // Everything rendered without t() is translated in place from the same labels.

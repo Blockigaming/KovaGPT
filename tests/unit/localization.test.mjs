@@ -27,6 +27,12 @@ const appLabelsUrl = `data:text/javascript;base64,${Buffer.from(
     "",
   ),
 ).toString("base64")}`;
+const helpLabelsUrl = `data:text/javascript;base64,${Buffer.from(
+  stripTypeScriptTypes(await readFile("src/lib/localization-help-labels.ts", "utf8")).replace(
+    /import type[^;]+;/,
+    "",
+  ),
+).toString("base64")}`;
 globalThis.translated = [];
 const translatorUrl = `data:text/javascript;base64,${Buffer.from(
   "export function applyInterfaceTranslation(labels) { globalThis.translated.push(Object.keys(labels).length); }",
@@ -47,6 +53,7 @@ const coreSource = stripTypeScriptTypes(await readFile("src/lib/localization.ts"
   .replaceAll('"@/lib/locales"', JSON.stringify(localesUrl))
   .replaceAll('"@/lib/localization-labels"', JSON.stringify(labelsUrl))
   .replaceAll('"@/lib/localization-app-labels"', JSON.stringify(appLabelsUrl))
+  .replaceAll('"@/lib/localization-help-labels"', JSON.stringify(helpLabelsUrl))
   .replaceAll('"@/lib/dom-translator"', JSON.stringify(translatorUrl));
 const coreUrl = `data:text/javascript;base64,${Buffer.from(coreSource).toString("base64")}`;
 const core = await import(coreUrl);
@@ -156,4 +163,16 @@ test("the rest of the interface has the same labels in every language", async ()
     assert.deepEqual(Object.keys(APP_LABELS[locale]).sort(), english, locale);
     for (const value of Object.values(APP_LABELS[locale])) assert.ok(value.trim(), locale);
   }
+});
+
+test("every help center question and answer is translated in every language", async () => {
+  const strip = async (path) =>
+    stripTypeScriptTypes(await readFile(path, "utf8")).replace(/import type[^;]+;/, "");
+  const { HELP_LABELS } = await import(
+    `data:text/javascript;base64,${Buffer.from(await strip("src/lib/localization-help-labels.ts")).toString("base64")}`
+  );
+  const english = Object.keys(HELP_LABELS.es).sort();
+  assert.ok(english.length > 350);
+  for (const locale of ["fr", "de", "pt-BR", "ja", "ko", "ar"])
+    assert.deepEqual(Object.keys(HELP_LABELS[locale]).sort(), english, locale);
 });

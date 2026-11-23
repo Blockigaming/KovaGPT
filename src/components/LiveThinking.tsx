@@ -24,7 +24,7 @@ export function LiveThinking({
   const seconds = Math.max(0, Math.floor((now - start) / 1000));
   const steps = activities?.length ?? 0;
   return (
-    <details className="kova-live-thinking" open={steps > 0 || undefined}>
+    <details className="kova-live-thinking">
       <summary>
         <span className="kova-live-thinking-dot" aria-hidden="true" />
         <span>{t("Thinking")}</span>

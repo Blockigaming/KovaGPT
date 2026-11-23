@@ -205,6 +205,10 @@ export function PublicHeader() {
 
 export function PublicShell({ children }: { children: ReactNode }) {
   const shellRef = useRef<HTMLDivElement>(null);
+  // Public pages load the language settings on demand so the first page stays small.
+  useEffect(() => {
+    void import("@/lib/localization").then((module) => module.startLocalization());
+  }, []);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   useEffect(() => {
