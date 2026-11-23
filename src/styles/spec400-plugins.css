@@ -1055,19 +1055,38 @@
   margin-inline-start: -12px;
 }
 .kova-connection-hero {
+  position: relative;
+  isolation: isolate;
   display: grid;
   justify-items: start;
   gap: 8px;
   padding: clamp(18px, 4cqi, 36px);
   border: 1px solid color-mix(in srgb, var(--connection-accent) 24%, var(--border));
   border-radius: 26px;
-  background:
-    radial-gradient(
-      ellipse at 4% 4%,
-      color-mix(in srgb, var(--connection-accent) 21%, transparent),
-      transparent 66%
-    ),
-    var(--card);
+  overflow: clip;
+  background: var(--card);
+}
+.kova-connection-hero::before {
+  position: absolute;
+  inset: -50% -60%;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse 35% 60% at 30% 30%,
+    color-mix(in srgb, var(--connection-accent) 21%, transparent),
+    transparent
+  );
+  pointer-events: none;
+  content: "";
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kova-connection-hero::before {
+    animation: kova-connection-hero-drift 14s ease-in-out infinite alternate;
+  }
+}
+@keyframes kova-connection-hero-drift {
+  to {
+    transform: translate(23%, 12%);
+  }
 }
 .kova-connection-hero-top {
   display: flex;
@@ -1167,7 +1186,6 @@
   align-items: flex-start;
   gap: 14px;
   padding: 18px 20px;
-  border: 1px solid color-mix(in srgb, var(--connection-accent) 25%, var(--border));
   border-radius: var(--kova-radius-panel);
   background: color-mix(in srgb, var(--connection-accent) 10%, var(--card));
 }
@@ -1208,6 +1226,9 @@
 .kova-connection-account .spec400-plugin-detail-section:first-of-type {
   padding-top: 0;
   border-top: 0;
+}
+.kova-connection-field > :is(input, select) {
+  margin-block-start: 2px;
 }
 .kova-connection-account > button {
   justify-self: start;

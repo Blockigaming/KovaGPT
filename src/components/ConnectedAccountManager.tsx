@@ -259,7 +259,7 @@ export function ConnectedAccountManager({
     <section className="spec400-plugin-detail-section" aria-label={`${flow.label} accounts`}>
       <h3>{linkedPage ? "Link a Notion page" : "Accounts"}</h3>
       {id === "ms-teams" && (
-        <div className="my-3 space-y-2">
+        <div className="my-3 space-y-4">
           <label htmlFor="teams-search-type">Teams access</label>
           <Select
             value={teamsMessages ? "messages" : "teams"}
@@ -281,7 +281,7 @@ export function ConnectedAccountManager({
         </div>
       )}
       {id === "hubspot" && (
-        <div className="my-3 space-y-2">
+        <div className="my-3 space-y-4">
           <label htmlFor="hubspot-record-type">HubSpot records</label>
           <Select
             value={hubspotContacts ? "contacts" : "companies"}
@@ -337,7 +337,7 @@ export function ConnectedAccountManager({
               }}
             >
               {KEY_CONNECTION_FIELDS[id]?.map(({ field, label, secret, optional }) => (
-                <label key={field}>
+                <label key={field} className="kova-connection-field">
                   {label}
                   <Input
                     data-credential-field={field}
@@ -352,7 +352,7 @@ export function ConnectedAccountManager({
                 </label>
               ))}
               {id === "mixpanel" && (
-                <label className="flex flex-col">
+                <label className="kova-connection-field flex flex-col">
                   Data region
                   <select
                     className="h-9 rounded-lg border border-input bg-background px-2"
@@ -371,7 +371,7 @@ export function ConnectedAccountManager({
                 </label>
               )}
               {id === "webull" && (
-                <label className="flex flex-col">
+                <label className="kova-connection-field flex flex-col">
                   OpenAPI environment
                   <select
                     className="h-9 rounded-lg border border-input bg-background px-2"
@@ -388,7 +388,7 @@ export function ConnectedAccountManager({
                   </select>
                 </label>
               )}
-              <label>
+              <label className="kova-connection-field">
                 {KEY_CREDENTIAL_LABELS[id] ?? `${flow.label} API key`}
                 <Input
                   ref={keyInput}
@@ -442,7 +442,7 @@ export function ConnectedAccountManager({
       {accounts.length > 0 && (
         <>
           {id === "salesforce" && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-4">
               <label htmlFor="salesforce-record-type">Record type</label>
               <Select
                 value={recordType}
@@ -463,7 +463,7 @@ export function ConnectedAccountManager({
             </div>
           )}
           {!linkedPage && (
-            <label className="block mt-4">
+            <label className="kova-connection-field block mt-4">
               {id === "figma"
                 ? "Figma file"
                 : id === "google-bigquery"

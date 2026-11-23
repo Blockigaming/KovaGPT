@@ -786,6 +786,29 @@ test("unavailable providers have readable details and no connection action", asy
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
+test("connector fields leave space for labels and header motion respects reduced motion", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps?plugin=custom-mcp", {
+    configuredProviders: [{ id: "custom-mcp" }],
+    accounts: [],
+  });
+
+  await expect(page.getByLabel("Approved server ID")).toHaveCSS("margin-block-start", "2px");
+  await expect(page.getByLabel("MCP bearer token")).toHaveCSS("margin-block-start", "2px");
+  await expect(page.locator(".kova-connection-example")).toHaveCSS("border-top-width", "0px");
+
+  const hero = page.locator(".kova-connection-hero");
+  await expect
+    .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))
+    .toBe("kova-connection-hero-drift");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect
+    .poll(() => hero.evaluate((node) => getComputedStyle(node, "::before").animationName))
+    .toBe("none");
+});
+
 test("Manage shows verified account scopes and confirms a disconnect with workflow impact", async ({
   page,
 }) => {
