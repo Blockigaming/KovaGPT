@@ -2119,25 +2119,21 @@ function KovaGPT() {
       let requestSucceeded = false;
       let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
-      let streamClient: typeof import("@/lib/chat-sse-client.mjs") | undefined;
+      let transport: typeof import("@/lib/chat-summary-snapshot.mjs") | undefined;
 
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
-        const [snapshot, transport] = await Promise.all([
-          import("@/lib/chat-summary-snapshot.mjs"),
-          import("@/lib/chat-sse-client.mjs"),
-        ]);
-        streamClient = transport;
-        const { chatResponseError, consumeChatSse } = transport;
+        transport = await import("@/lib/chat-summary-snapshot.mjs");
         const {
           createChatHistoryPayload,
           fetchForPrincipal,
           chatRequestUser,
           completedChatReply,
           chatRequestHeaders,
-        } = snapshot;
-        controller.signal.throwIfAborted();
+          chatResponseError,
+          consumeChatSse,
+        } = transport;
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2314,7 +2310,7 @@ function KovaGPT() {
       } catch (e: unknown) {
         if (!isCurrentRequest()) return;
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
-        const browserErrorKind = streamClient?.cloudBrowserErrorKind(e);
+        const browserErrorKind = transport?.cloudBrowserErrorKind(e);
         if (browserErrorKind || (e as Error).name === "AbortError") {
           const browserMessage =
             browserErrorKind === "browser_limit"
@@ -2725,30 +2721,15 @@ function KovaGPT() {
     const turn = await pending;
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
     if (!turn) throw new Error("voice_chat_failed");
-    if (realtime) {
-      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(turn.content));
-      if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
-      const contentSha256 = Array.from(new Uint8Array(digest), (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join("");
-      return { ...turn, contentSha256 };
-    }
-    const { awaitSavedComposerVoiceTurn } = await import("@/lib/composer-voice-turn");
+    const { finishComposerVoiceTurn } = await import("@/lib/composer-voice-turn");
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
-    return awaitSavedComposerVoiceTurn({
+    return finishComposerVoiceTurn(realtime, CHAT_HISTORY_CHANGED_EVENT, {
       turn,
       signal,
       isCurrent,
       getConversations: () => voiceConversationsRef.current,
       saveConversations: (items) => saveConversations(turn.ownerId, items),
       loadHistoryState: () => loadChatHistoryDevice(turn.ownerId),
-      subscribeHistory: (notify) => {
-        const changed = (event: Event) => {
-          if ((event as CustomEvent).detail?.ownerId === turn.ownerId) notify();
-        };
-        window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
-        return () => window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
-      },
     });
   };
 
@@ -2824,70 +2805,45 @@ function KovaGPT() {
   const visibleQuotaRejectedDrafts = principalReady
     ? quotaRejectedDrafts.filter((draft) => sameNextPromptScope(draft.scope, nextPromptScope))
     : [];
-  const quotaRejectedDraftPanel = visibleQuotaRejectedDrafts.map((draft) => (
-    <section
-      key={draft.id}
-      aria-label="Message kept after usage limit"
-      className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
-      data-testid="quota-rejected-draft"
-    >
-      <Suspense fallback={null}>
-        <QuotaRejectedDraftPreview draft={draft} />
+  const quotaRejectedDraftPanel = visibleQuotaRejectedDrafts.map((draft) => {
+    const resolveDraft = (trigger: HTMLButtonElement, restore: boolean) => {
+      if (
+        !nextPromptMountedRef.current ||
+        !quotaRejectedDraftsRef.current.includes(draft) ||
+        !sameNextPromptScope(draft.scope, nextPromptScopeRef.current) ||
+        storagePrincipalRef.current !== draft.scope.principal
+      )
+        return;
+      if (restore) {
+        if (
+          inFlightRef.current ||
+          retryTimerRef.current !== null ||
+          editingMessage ||
+          composerDraftRef.current.text ||
+          composerDraftRef.current.attachments.length ||
+          composerDraftRef.current.tool
+        )
+          return;
+        setInput(draft.text);
+        setAttachments(draft.attachments);
+        setSelectedTool(draft.tool);
+      }
+      updateQuotaRejectedDrafts(quotaRejectedDraftsRef.current.filter((item) => item !== draft));
+      scheduleNextPromptFocus(trigger, "composer", nextPromptRef.current);
+    };
+    return (
+      <Suspense key={draft.id} fallback={null}>
+        <QuotaRejectedDraftPreview
+          draft={draft}
+          restoreDisabled={Boolean(
+            input || attachments.length || selectedTool || isStreaming || editingMessage,
+          )}
+          onRestore={(event) => resolveDraft(event.currentTarget, true)}
+          onDiscard={(event) => resolveDraft(event.currentTarget, false)}
+        />
       </Suspense>
-      <Button
-        variant="outline"
-        size="sm"
-        type="button"
-        disabled={Boolean(
-          input || attachments.length || selectedTool || isStreaming || editingMessage,
-        )}
-        onClick={(event) => {
-          if (
-            !nextPromptMountedRef.current ||
-            !quotaRejectedDraftsRef.current.includes(draft) ||
-            !sameNextPromptScope(draft.scope, nextPromptScopeRef.current) ||
-            storagePrincipalRef.current !== draft.scope.principal ||
-            inFlightRef.current ||
-            retryTimerRef.current !== null ||
-            editingMessage ||
-            composerDraftRef.current.text ||
-            composerDraftRef.current.attachments.length ||
-            composerDraftRef.current.tool
-          )
-            return;
-          setInput(draft.text);
-          setAttachments(draft.attachments);
-          setSelectedTool(draft.tool);
-          updateQuotaRejectedDrafts(
-            quotaRejectedDraftsRef.current.filter((item) => item !== draft),
-          );
-          scheduleNextPromptFocus(event.currentTarget, "composer", nextPromptRef.current);
-        }}
-      >
-        Restore message
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        type="button"
-        onClick={(event) => {
-          if (
-            !nextPromptMountedRef.current ||
-            !quotaRejectedDraftsRef.current.includes(draft) ||
-            !sameNextPromptScope(draft.scope, nextPromptScopeRef.current) ||
-            storagePrincipalRef.current !== draft.scope.principal
-          )
-            return;
-          updateQuotaRejectedDrafts(
-            quotaRejectedDraftsRef.current.filter((item) => item !== draft),
-          );
-          scheduleNextPromptFocus(event.currentTarget, "composer", nextPromptRef.current);
-        }}
-      >
-        Discard kept version
-      </Button>
-    </section>
-  ));
+    );
+  });
 
   const composerPromptPanel = quotaRejectedDraftPanel.length ? (
     <>
@@ -2924,17 +2880,6 @@ function KovaGPT() {
   const renderTranscriptMessage: TranscriptMessageRenderer = (m, i, ChatMessage, onBranch) => {
     if (!active) return null;
     const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
-    const reveal =
-      composerVoiceMode === "voice" &&
-      voiceReveal?.ownerId === userKey &&
-      voiceReveal?.chatId === active.id &&
-      voiceReveal?.messageId === m.id
-        ? voiceReveal
-        : null;
-    const words = reveal ? (m.content.match(/\S+\s*/gu) ?? []) : [];
-    const rendered = reveal
-      ? { ...m, content: words.slice(0, Math.ceil(words.length * reveal.fraction)).join("") }
-      : m;
     // Find the user message that prompted this assistant reply (immediately before).
     const priorUser =
       m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
@@ -2943,8 +2888,8 @@ function KovaGPT() {
     return (
       <ChatMessage
         key={m.id}
-        message={rendered}
-        voiceRevealing={Boolean(reveal)}
+        message={m}
+        voiceReveal={composerVoiceMode === "voice" ? voiceReveal : null}
         showAdvertisement={isLastAssistant}
         chatId={active.id}
         onSaveMemory={
@@ -2987,11 +2932,10 @@ function KovaGPT() {
         userKey={userKey}
         principalResolved={isLoaded}
         streaming={
-          Boolean(reveal) ||
-          (isStreaming &&
-            isLastAssistant &&
-            inFlightTargetRef.current?.conversationId === active.id &&
-            inFlightTargetRef.current.assistantMessageId === m.id)
+          isStreaming &&
+          isLastAssistant &&
+          inFlightTargetRef.current?.conversationId === active.id &&
+          inFlightTargetRef.current.assistantMessageId === m.id
         }
         onUpdatePendingConfirm={(messageId, next) => {
           setConversations((prev) =>

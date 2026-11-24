@@ -99,14 +99,14 @@ export const BUNDLE_BASELINE = Object.freeze({
       gzip: 20_932,
     }),
     Object.freeze({
-      head: "871ecadf3411c6281e9726571d92bd6607e265c8",
-      source: "PR #763 CI production build, run 45412817355",
-      raw: 63_518,
-      gzip: 22_041,
+      head: "c174b2fae6bf5d21a1acdccd532fa91699c8f298",
+      source: "PR #762 CI production build, run 45416613044",
+      raw: 62_373,
+      gzip: 21_670,
     }),
   ]),
   composerAvailabilityAdjustment:
-    "PR #763 keeps the existing composer mounted and available while the transcript loads. Its CI build measured 63,518 raw / 22,041 gzip bytes for the home route. The narrowly adjusted 63,750 raw / 22,150 gzip ceilings leave 232 raw / 109 gzip bytes of headroom (less than 1% each). The measured increase is explicit; shared-entry, omega and chart ceilings and chunk identification are unchanged.",
+    "The immediate composer and consolidated UI correction in PR #762 measured 62,373 raw / 21,670 gzip bytes in CI after deferring the streaming transport. The initial gzip ceiling of 21,800 leaves 130 bytes (0.60%) of headroom over that measured build. The 62,750 raw limit, all other chunk ceilings, and chunk identification checks remain unchanged.",
   apiAudioAdjustment:
     "The 2026-10-29 UI/Auth/API integration measured 20,238 home-route gzip bytes in PR #489 CI. Decisions, moderation and audio controls measured 20,253 in PR #492 CI; the combined sidebar preference repair measured 20,259 locally. The 20,400 ceiling retains less than 1% headroom over that complete build. The 62,500 raw ceiling and every shared-entry, omega and chart ceiling are unchanged.",
   usageReleaseAdjustment:
@@ -124,7 +124,7 @@ export const BUNDLE_BASELINE = Object.freeze({
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 63_750, gzip: 22_150 }),
+  initial: Object.freeze({ raw: 62_750, gzip: 21_800 }),
   main: Object.freeze({ raw: 670_000, gzip: 201_500 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),

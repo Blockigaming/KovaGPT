@@ -84,9 +84,10 @@ const cancel = find(
     node.name.getText(ast) === "onCancel" &&
     node.parent.parent.tagName.getText(ast) === "NextChatPromptPanel",
 ).initializer.expression.getText(ast);
-const sendSource = arrow("send")
-  .replace('import("@/lib/chat-summary-snapshot.mjs")', "summaryModule")
-  .replace('import("@/lib/chat-sse-client.mjs"),', "streamModule,");
+const sendSource = arrow("send").replace(
+  'await import("@/lib/chat-summary-snapshot.mjs")',
+  "await summaryModule",
+);
 const noticeScopeEffect = effects.find((effect) =>
   effect.includes("requestNotice === requestNoticeRef.current"),
 );
@@ -131,7 +132,7 @@ const compiled = ts.transpileModule(
   globalThis.setSelectedTool = ${arrow("setSelectedTool")};
   globalThis.reconcileQuotaDrafts = ${quotaScopeEffect};
   globalThis.readQuotaDrafts = () => ${initializer("visibleQuotaRejectedDrafts").getText(ast)};
-  globalThis.renderQuotaDrafts = () => ${initializer("quotaRejectedDraftPanel").getText(ast)};
+  globalThis.renderQuotaDrafts = () => (${initializer("quotaRejectedDraftPanel").getText(ast)}).map((shell) => QuotaRejectedDraftPreview(shell.props.children.props));
   globalThis.readComposerPromptPanel = () => ${initializer("composerPromptPanel").getText(ast)};`,
   { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } },
 ).outputText;
@@ -274,12 +275,17 @@ function fixture() {
     createMemorySourceUpdater: () => () => {},
     normalizeResponseSources: (value) => value,
     chatRequestMessages: (prior, user) => [...prior, user],
-    chatResponseError: async (response) => response.error,
-    cloudBrowserErrorKind,
     chatBrowserDestination,
     CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
+      chatResponseError: async (response) => response.error,
+      cloudBrowserErrorKind,
+      consumeChatSse: (body, args) => {
+        const d = deferred();
+        streams.push({ ...d, args });
+        return d.promise;
+      },
       completedChatReply,
       chatRequestHeaders,
       createChatHistoryPayload: async (messages) => ({ messages }),
@@ -290,11 +296,6 @@ function fixture() {
         return d.promise;
       },
     }),
-    consumeChatSse: (body, args) => {
-      const d = deferred();
-      streams.push({ ...d, args });
-      return d.promise;
-    },
     toast: { error: (...value) => errors.push(value) },
     window: {
       setTimeout: (callback, delay) => {
@@ -306,11 +307,6 @@ function fixture() {
     USER_STOP_REASON: "user-stop",
     markAssistantStopped: (messages) => messages,
   };
-  context.streamModule = Promise.resolve({
-    chatResponseError: context.chatResponseError,
-    cloudBrowserErrorKind: context.cloudBrowserErrorKind,
-    consumeChatSse: context.consumeChatSse,
-  });
   vm.runInNewContext(compiled, context);
   const cleanup = context.startLifetime();
   function type(value, files = [], tool = null) {

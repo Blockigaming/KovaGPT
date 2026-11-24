@@ -69,11 +69,8 @@ const storedAttachmentsDefinition = attachmentSource.statements
   .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "storedMessageAttachments")
   .getText(attachmentSource)
   .replace(/^export /u, "");
-const sendSource = arrow("send")
-  .replace('import("@/lib/chat-summary-snapshot.mjs")', "summaryModule")
-  .replace('import("@/lib/chat-sse-client.mjs"),', "streamModule,");
 const compiled = js(`globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
-  globalThis.send = ${sendSource};
+  globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule")};
 globalThis.stop = ${arrow("stop")};
 globalThis.setInput = ${arrow("setInput")};
 globalThis.setAttachments = ${arrow("setAttachments")};
@@ -326,7 +323,7 @@ function bridgeFixture({ active = null } = {}) {
       state.sends.push(args);
       return state.turn;
     },
-    awaitSavedComposerVoiceTurn: async (options) => {
+    finishComposerVoiceTurn: async (_realtime, _historyEvent, options) => {
       state.waits.push(options);
       return { ...options.turn, contentSha256: "a".repeat(64) };
     },
@@ -344,7 +341,7 @@ function bridgeFixture({ active = null } = {}) {
     },
   };
   context.voiceTurnModule = Promise.resolve({
-    awaitSavedComposerVoiceTurn: context.awaitSavedComposerVoiceTurn,
+    finishComposerVoiceTurn: context.finishComposerVoiceTurn,
   });
   vm.runInNewContext(
     js(
@@ -573,7 +570,7 @@ for (const change of ["owner", "chat", "abort"]) {
         conversationId: "chat-b",
       };
     } else controller.abort();
-    loading.resolve({ awaitSavedComposerVoiceTurn: f.context.awaitSavedComposerVoiceTurn });
+    loading.resolve({ finishComposerVoiceTurn: f.context.finishComposerVoiceTurn });
     await assert.rejects(pending, (error) => error.name === "AbortError");
     assert.equal(f.state.waits.length, 0);
     assert.equal(f.state.saves.length, 0);

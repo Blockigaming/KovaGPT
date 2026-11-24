@@ -753,12 +753,12 @@ function composer(f) {
     Error,
     TypeError,
     require: (name) => {
-      if (name === "@/lib/chat-sse-client.mjs") {
-        return { consumeChatSse, chatResponseError, cloudBrowserErrorKind };
-      }
       assert.equal(name, "@/lib/chat-summary-snapshot.mjs");
       return {
         withResponsePresentation,
+        chatResponseError,
+        cloudBrowserErrorKind,
+        consumeChatSse,
         completedChatReply,
         chatRequestHeaders,
         createChatHistoryPayload: async (messages) => ({ messages }),

@@ -8,7 +8,6 @@ const directory = read("src/styles/file-directories.css");
 const projects = read("src/styles/project-directory.css");
 const theme = read("src/styles.css");
 const tokens = read("src/styles/visual-tokens.css");
-const management = read("src/styles/spec400-management.css");
 
 function rule(css, selector, media = null) {
   let found;
@@ -29,7 +28,7 @@ const projectCard = rule(
   '.kova-app-shell[data-ui="modern"] .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects .kova-project-file .kova-project-file-name h3',
 );
 
-test("workspace headings and directory labels use the SDK UI stack", () => {
+test("directory headings share the Scheduled tasks UI font", () => {
   assert.match(theme, /--font-sans:\s*var\(--font-ui\)/);
   assert.match(tokens, /--font-ui:\s*ui-sans-serif,\s*-apple-system,\s*system-ui,/);
   assert.match(tokens, /--font-reading:\s*Georgia,\s*"Times New Roman",\s*serif/);
@@ -37,11 +36,13 @@ test("workspace headings and directory labels use the SDK UI stack", () => {
   assert.equal(title["font-family"], "var(--font-ui)");
   assert.equal(projectCard["font-family"], "var(--font-ui)");
   assert.doesNotMatch(directory, /Georgia|Times New Roman|font-family:[^;]*\bserif\b/);
-  const workspaceTitles = rule(
+  const management = read("src/styles/spec400-management.css");
+  const heading = rule(
     management,
     ".kova-page :is(#library-title, #projects-title, #scheduled-tasks-title, #apps-title)",
   );
-  assert.match(workspaceTitles["font-family"], /^var\(--font-ui,/);
+  assert.match(heading["font-family"], /^var\(--font-ui,/);
+  assert.equal(heading["font-weight"], "600");
   assert.match(read("src/routes/projects.tsx"), /titleId="projects-title"/);
 });
 
