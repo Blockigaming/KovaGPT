@@ -15,10 +15,8 @@ for (const theme of ["dark", "light"] as const) {
     await expect(page.locator(".kova-topbar:visible")).toHaveCount(1);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
-    await expect(surface).toHaveCSS(
-      "background-color",
-      theme === "dark" ? "rgb(48, 48, 48)" : "rgb(255, 255, 255)",
-    );
+    const composerBackground = theme === "dark" ? "rgb(48, 48, 48)" : "rgb(255, 255, 255)";
+    await expect(surface).toHaveCSS("background-color", composerBackground);
     await expect(page.locator('[data-slot="dialog-overlay"]')).toBeVisible();
     await expect(
       surface.getByRole("heading", { name: "Personalization", exact: true }),
@@ -26,10 +24,12 @@ for (const theme of ["dark", "light"] as const) {
     await expect(surface.locator(".kova-settings-page-header")).toHaveCount(0);
     const top = (await surface.boundingBox())!.y;
     const header = surface.locator(".kova-settings-content-header");
+    await expect(header).toHaveCSS("background-color", composerBackground);
     expect((await header.boundingBox())!.y - top).toBeLessThanOrEqual(1);
     const phone = await usesCompactSettings(page);
     if (!phone) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
+      await expect(navigation).toHaveCSS("background-color", composerBackground);
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
@@ -177,7 +177,7 @@ test("a second tab can send while the first tab stays open", async ({ page }, in
   await waitForKovaHydration(second);
   await expect(second.locator(".kova-composer-tray")).toHaveCSS(
     "background-color",
-    "rgb(27, 27, 27)",
+    "rgb(33, 33, 33)",
   );
   await second.getByRole("textbox", { name: "Message KovaGPT" }).fill("Send from the second tab");
   await second.getByRole("button", { name: "Send message", exact: true }).click();
