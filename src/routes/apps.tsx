@@ -677,7 +677,7 @@ function GitHubManager({
           if (!open) setDisconnectAccount(null);
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="spec400-connection-dialog max-w-md">
           <DialogHeader>
             <DialogTitle>Disconnect @{disconnectAccount?.login ?? "GitHub account"}?</DialogTitle>
             <DialogDescription>
