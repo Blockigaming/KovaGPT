@@ -295,7 +295,11 @@ test("canonical reference styles own shell and composer contracts without retire
   const actionSelector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const compactAction = declarations(responseStyles, actionSelector);
-  const touchAction = declarations(responseStyles, actionSelector, "(width < 1024px)");
+  const touchAction = declarations(
+    responseStyles,
+    actionSelector,
+    "(width < 1024px), (pointer: coarse)",
+  );
   for (const key of ["width", "height", "min-width", "min-height"]) {
     assert.equal(compactAction[key], "28px");
     assert.equal(touchAction[key], "44px");
