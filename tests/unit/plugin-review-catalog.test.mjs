@@ -68,12 +68,17 @@ test("master directory contains the 31 requested services and seven retained ser
   assert.equal(master.USER_REQUESTED_MASTER_CONNECTORS.length, 31);
   assert.equal(master.MASTER_CONNECTORS.length, 38);
   const ids = review.MASTER_PLUGIN_REVIEW_CATALOG.map((item) => item.connector.id);
-  assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS].sort());
-  assert.equal(new Set(ids).size, 38);
+  assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS, "google-docs"].sort());
+  assert.equal(new Set(ids).size, 39);
   assert.equal(review.getPluginReview("whoop"), undefined);
   assert.equal(original.getConnector("whoop"), undefined);
   for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     assert.equal(item.connector, original.getConnector(item.connector.id));
+    if (item.connector.id === "google-docs") {
+      assert.equal(item.availability, "planned");
+      assert.deepEqual(item.permissions, []);
+      continue;
+    }
     assert.equal(item.availability, "implemented", item.connector.id);
     assert.ok(
       item.permissions.some(
@@ -167,6 +172,10 @@ test("all 38 connector marks use verified local assets with recorded provenance"
     [...master.MASTER_CONNECTOR_IDS].sort(),
   );
   for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
+    if (item.connector.id === "google-docs") {
+      assert.equal(item.brandAsset.status, "generic_placeholder");
+      continue;
+    }
     const asset = provenance.assets.find(
       (asset) =>
         asset.id === item.connector.id ||
