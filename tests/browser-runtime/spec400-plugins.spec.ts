@@ -184,7 +184,7 @@ async function boot(
   });
   await page.addScriptTag({ content: script });
   if (!url.includes("directory=") && !url.includes("plugin=")) {
-    await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
+    await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length + 1);
     await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText(
       "Checking connection…",
     );
@@ -214,26 +214,30 @@ test("approved directory keeps all providers and offers Health examples and sear
   await expect(
     page.getByText("Browse and manage the tools you use with KovaGPT.", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(MASTER_CONNECTORS.length);
+  await expect(page.locator(".spec400-plugin-logo")).toHaveCount(MASTER_CONNECTORS.length + 1);
   for (const item of MASTER_CONNECTORS) {
     await expect(page.locator(`[data-plugin-id="${item.id}"]`)).toHaveCount(1);
   }
   await expect(page.locator('[data-plugin-id="hubspot"]')).toContainText("Coming soon");
-  for (const id of ["granola", "tana"]) {
+  const plaid = page.locator('[data-plugin-id="plaid"]');
+  await expect(plaid.getByRole("button", { name: "Details Plaid" })).toBeVisible();
+  await expect(plaid.getByText("Coming soon")).toHaveCount(0);
+  for (const id of ["granola", "tana", "google-docs"]) {
     const card = page.locator(`[data-plugin-id="${id}"]`);
-    await expect(card.getByRole("button")).toHaveText("Coming soon");
+    await expect(card.getByText("Coming soon", { exact: true })).toBeVisible();
+    await expect(card.getByRole("button")).toHaveCount(0);
   }
   await expect(page.getByRole("combobox", { name: "Category", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Email", exact: true }).click();
   await expect(page.locator('[data-plugin-id="github"]')).toHaveCount(0);
   await page.getByRole("button", { name: "Email · Clear category", exact: true }).click();
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length + 1);
   await page.getByRole("textbox", { name: "Search connections" }).fill("Gmail");
   await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
   await page.getByRole("textbox", { name: "Search connections" }).fill("missing");
   await expect(page.getByRole("heading", { name: "No matching connections" })).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length + 1);
   await page.getByRole("tab", { name: /Connected/ }).click();
   await expect(page.getByRole("heading", { name: "No connections yet" })).toBeVisible();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
@@ -729,13 +733,13 @@ test("new master entries show the correct native and OAuth setup requirements", 
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Back to Connections" }).click();
   await search.fill("HubSpot");
-  await page.getByRole("button", { name: "Coming soon HubSpot", exact: true }).click();
-  await expect(page.getByRole("article")).toContainText(
-    "Connection setup is incomplete in this deployment",
-  );
+  await page.getByRole("link", { name: "HubSpot", exact: true }).click();
+  await expect(
+    page.locator(".kova-connection-hero").getByText("Coming soon", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
@@ -777,13 +781,13 @@ test("opening and leaving a connector page never starts OAuth; Connect is explic
 
 test("unavailable providers have readable details and no connection action", async ({ page }) => {
   await boot(page);
-  await page.getByRole("button", { name: "Coming soon Slack" }).click();
-  await expect(page.getByRole("article")).toContainText(
-    "Connection setup is incomplete in this deployment.",
-  );
+  await page.getByRole("link", { name: "Slack", exact: true }).click();
+  await expect(
+    page.locator(".kova-connection-hero").getByText("Coming soon", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
