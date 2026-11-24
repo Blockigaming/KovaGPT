@@ -5,11 +5,17 @@
   --settings-inset: 28px;
   --settings-card-padding: 16px 20px;
   --settings-control-width: 208px;
-  --settings-card: color-mix(in srgb, var(--foreground) 2%, var(--background));
+  --settings-surface: var(--background);
+  --settings-card: color-mix(in srgb, var(--foreground) 3%, var(--settings-surface));
   font-family: var(--font-ui);
   color: var(--foreground);
-  background: var(--background);
+  background: var(--settings-surface);
   isolation: isolate;
+}
+[role="dialog"].kova-settings-dialog {
+  --settings-surface: var(--composer-background);
+  background: var(--settings-surface);
+  box-shadow: var(--dialog-shadow);
 }
 [role="dialog"].kova-settings-dialog.is-authenticated {
   width: min(980px, calc(100vw - 48px));
@@ -40,7 +46,7 @@
   border-right: 1px solid var(--border);
   overflow: auto;
   overscroll-behavior: contain;
-  background: var(--background);
+  background: var(--settings-surface);
 }
 .kova-settings-reference .kova-settings-sidebar-top,
 .kova-settings-reference .kova-settings-section-select,
@@ -782,9 +788,11 @@
   (min-width: 768px) and (pointer: fine),
   (min-width: 1024px) {
   [role="dialog"].kova-settings-dialog.is-authenticated {
-    width: min(820px, calc(100vw - 48px));
-    height: min(640px, calc(100dvh - 48px));
-    border-radius: 20px;
+    --settings-inset: clamp(24px, 3.5vw, 40px);
+    --settings-space: 28px;
+    width: min(900px, calc(100vw - 48px));
+    height: min(660px, calc(100dvh - 48px));
+    border-radius: 24px;
   }
   .kova-settings-reference .kova-settings-sidebar {
     width: var(--kova-settings-navigation-width, 210px);
@@ -820,5 +828,48 @@
     .kova-settings-reference-row
     + .kova-settings-reference-row {
     border-top: 1px solid var(--border);
+  }
+}
+
+@media (min-width: 768px) and (min-height: 501px),
+  (min-width: 768px) and (pointer: fine),
+  (min-width: 1024px) {
+  [role="dialog"].kova-settings-dialog .kova-settings-sidebar {
+    background: color-mix(in srgb, var(--foreground) 3%, var(--settings-surface));
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-content-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    min-height: 78px;
+    margin: 0 0 20px;
+    padding: 18px 76px 18px var(--settings-inset);
+    background: var(--settings-surface);
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-content-header h2 {
+    font-size: 22px;
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-section-copy p {
+    max-width: 52ch;
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-content > [role="tabpanel"] > section,
+  [role="dialog"].kova-settings-dialog .kova-profile-settings > section {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-reference-group {
+    margin-top: 8px;
+  }
+  [role="dialog"].kova-settings-dialog :is(.kova-settings-row, .kova-settings-reference-row) {
+    min-height: 58px;
+    padding-block: 14px;
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-reference-select {
+    background: var(--settings-card);
+  }
+  [role="dialog"].kova-settings-dialog :is(.kova-settings-parent-link, .kova-settings-related) {
+    padding-inline: var(--settings-inset);
   }
 }

@@ -232,7 +232,6 @@ export function ChatInput({
   sendOnEnter,
 
   disabled = false,
-  sendDisabled = false,
   showAddMenu = true,
   saveAttachmentsToLibrary = false,
   attachments,
@@ -287,7 +286,6 @@ export function ChatInput({
 
   /** Disables text entry and submission without changing existing callers. */
   disabled?: boolean;
-  sendDisabled?: boolean;
   /** Hides and disables attachments, tools, and prompt shortcuts. */
   showAddMenu?: boolean;
   /** Only persistent, authenticated chat may automatically retain uploads. */
@@ -875,7 +873,7 @@ export function ChatInput({
   };
 
   const triggerSubmit = () => {
-    if (disabled || sendDisabled || submittingRef.current || isStreaming || pasteOffer) return;
+    if (disabled || submittingRef.current || isStreaming || pasteOffer) return;
     if (!online) return;
     if (!value.trim() && !validAttachmentInstruction) return;
     if ((attachments.length > 0 || selectedToolRef.current === "image") && !requireFileAccount())
@@ -1968,7 +1966,6 @@ export function ChatInput({
   const canSubmit =
     !pasteOffer &&
     !disabled &&
-    !sendDisabled &&
     online &&
     Boolean(value.trim() || validAttachmentInstruction) &&
     !blockedAttachmentMessage;
@@ -2665,10 +2662,8 @@ export function ChatInput({
                   title={
                     disabled
                       ? "Messaging is unavailable"
-                      : sendDisabled
-                        ? "Getting this chat ready…"
-                        : (blockedAttachmentMessage ??
-                          (!online ? "Reconnect to send" : "Send message"))
+                      : (blockedAttachmentMessage ??
+                        (!online ? "Reconnect to send" : "Send message"))
                   }
                 >
                   <ArrowUp aria-hidden="true" />
