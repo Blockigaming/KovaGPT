@@ -162,7 +162,7 @@ test("routes use principal session preferences, bounded inputs and no identity-e
     assert.match(source, /isLoaded \? userKey : undefined/);
     assert.match(source, /maxLength=\{MAX_MANAGEMENT_QUERY_LENGTH\}/);
     assert.doesNotMatch(source, /const \[query, setQuery\] = useState/);
-    // The only remaining empty-query call is Plugins' explicit Clear filters action.
-    assert.equal((source.match(/setQuery\(""\)/g) ?? []).length, route === "apps" ? 1 : 0);
+    // Clear filters resets the shared list preferences in one update.
+    assert.equal((source.match(/setQuery\(""\)/g) ?? []).length, 0);
   }
 });
