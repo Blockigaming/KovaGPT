@@ -500,20 +500,9 @@
   border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
 }
 
-/* Unavailable providers remain inspectable without implying they can connect. */
-.spec400-plugin-status[data-state="unavailable"],
-.spec400-plugin-card-action[data-coming-soon] {
-  color: #92400e;
-  background-color: #fef3c7;
-  border-radius: 999px;
-}
-.spec400-plugin-status[data-state="unavailable"] {
-  padding: 3px 10px;
-}
-.dark .spec400-plugin-status[data-state="unavailable"],
-.dark .spec400-plugin-card-action[data-coming-soon] {
-  color: #fcd34d;
-  background-color: #78350f;
+.kova-connection-coming-soon {
+  color: var(--muted-foreground);
+  font-size: 13px;
 }
 
 .spec400-plugin-filters[hidden] {
@@ -1423,4 +1412,9 @@
   .kova-connection-permissions {
     flex: 1;
   }
+}
+
+.spec400-plugin-logo[data-logo="google-docs"] {
+  background: #1a73e8;
+  color: white;
 }
