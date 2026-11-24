@@ -44,6 +44,9 @@ export async function fixture(
       // Retry one connection reset on this read-only document fetch. HTTP
       // failures still reach the browser and fail the original assertions.
       const response = await route.fetch({ maxRedirects: 0, maxRetries: 1 });
+      if (response.status() >= 300 && response.status() < 400 && response.headers().location) {
+        return route.continue();
+      }
       return route.fulfill({
         response,
         headers: loopbackPreviewHeaders(url.href, response.headers()),
