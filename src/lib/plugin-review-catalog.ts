@@ -394,6 +394,7 @@ const dedicatedConnections: Record<
 /** Complete approved directory; runtime configuration and grants remain authoritative. */
 export const MASTER_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
   ...LAUNCH_PLUGIN_REVIEW_CATALOG,
+  entry("google-docs", []),
   ...MASTER_CONNECTOR_IDS.filter(
     (id) => !LAUNCH_PLUGIN_REVIEW_CATALOG.some((item) => item.connector.id === id),
   ).map((id) => {
