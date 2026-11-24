@@ -186,12 +186,8 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/apps");
     await waitForKovaHydration(page);
     const card = page.locator('[data-plugin-id="github"]');
-    const details = card.getByRole("button", {
-      name: "Coming soon GitHub",
-      exact: true,
-    });
+    const details = card.getByRole("link", { name: "GitHub", exact: true });
     await expect(details).toBeVisible();
-    await expect(details).toHaveAttribute("data-coming-soon", "true");
     await details.click();
     await expect(page).toHaveURL(/\/apps\?plugin=github$/u);
     const connector = page.getByRole("article", { name: "GitHub", exact: true });
