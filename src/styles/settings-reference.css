@@ -5,7 +5,18 @@
   --settings-inset: 32px;
   --settings-control-width: 208px;
   --settings-surface: var(--composer-background);
-  --settings-card: color-mix(in srgb, var(--foreground) 3%, var(--settings-surface));
+  /* Keep neutral panels and controls on the same theme-aware surface. */
+  --background: var(--settings-surface);
+  --card: var(--settings-surface);
+  --popover: var(--settings-surface);
+  --surface-modal: var(--settings-surface);
+  --surface-secondary: var(--settings-surface);
+  --surface-input: var(--settings-surface);
+  --secondary: var(--settings-surface);
+  --muted: var(--settings-surface);
+  --accent: var(--settings-surface);
+  --surface-hover: var(--settings-surface);
+  --surface-selected: var(--settings-surface);
   font-family: var(--font-ui);
   color: var(--foreground);
   background: var(--settings-surface);
@@ -94,7 +105,7 @@
   padding: 0 14px 0 39px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--settings-card);
+  background: var(--settings-surface);
   color: var(--foreground);
   font: inherit;
   font-size: 14px;
@@ -141,7 +152,7 @@
   font-weight: 400;
   line-height: 20px;
   box-shadow: none;
-  transition: background-color 140ms ease;
+  transition: box-shadow 140ms ease;
 }
 .kova-settings-reference .kova-settings-nav-icon {
   display: grid;
@@ -163,11 +174,12 @@
   display: block;
 }
 .kova-settings-reference .kova-settings-nav-item:hover {
-  background: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 .kova-settings-reference .kova-settings-nav-item[aria-selected="true"] {
-  background: var(--surface-selected);
-  font-weight: 500;
+  background: var(--settings-surface);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  font-weight: 600;
 }
 .kova-settings-reference .kova-settings-no-results {
   padding: 20px 12px;
@@ -506,7 +518,7 @@
     margin-bottom: 20px;
     border: 1px solid var(--border);
     border-radius: 20px;
-    background: var(--settings-card);
+    background: var(--settings-surface);
   }
   .kova-settings-reference .kova-settings-account-avatar {
     display: grid;
@@ -559,9 +571,6 @@
     gap: 12px;
     border-radius: 12px;
     background: transparent;
-  }
-  .kova-settings-reference .kova-settings-nav-item[aria-selected="true"] {
-    background: var(--surface-selected);
   }
   .kova-settings-reference .kova-settings-nav-icon {
     width: 28px;
@@ -719,7 +728,7 @@
     border-radius: 0;
     padding: 12px 14px;
     gap: 12px;
-    background: var(--settings-card);
+    background: var(--settings-surface);
     font-size: 14px;
   }
   .kova-settings-reference .kova-settings-related button + button {
@@ -846,9 +855,6 @@
   [role="dialog"].kova-settings-dialog :is(.kova-settings-row, .kova-settings-reference-row) {
     min-height: 58px;
     padding-block: 14px;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-reference-select {
-    background: var(--settings-card);
   }
   [role="dialog"].kova-settings-dialog :is(.kova-settings-parent-link, .kova-settings-related) {
     padding-inline: var(--settings-inset);

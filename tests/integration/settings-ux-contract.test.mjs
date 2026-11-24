@@ -327,8 +327,8 @@ test("full-page Settings keeps reference-style navigation theme-aware and functi
     settingsSource,
     /className="kova-settings-reference-group kova-settings-general-options"/,
   );
-  assert.match(settingsPageStylesSource, /background: var\(--background\)/);
-  assert.match(settingsStylesSource, /background: var\(--surface-selected\)/);
+  assert.match(settingsPageStylesSource, /background: var\(--composer-background\)/);
+  assert.match(settingsStylesSource, /box-shadow: inset 0 0 0 1px var\(--border-strong\)/);
   assert.doesNotMatch(settingsPageStylesSource, /background:\s*#(?:000|fff|000000|ffffff)\b/i);
 });
 

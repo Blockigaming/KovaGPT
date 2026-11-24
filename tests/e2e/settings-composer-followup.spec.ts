@@ -30,6 +30,10 @@ for (const theme of ["dark", "light"] as const) {
     if (!phone) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       await expect(navigation).toHaveCSS("background-color", composerBackground);
+      await expect(surface.getByRole("textbox", { name: "Search settings" })).toHaveCSS(
+        "background-color",
+        composerBackground,
+      );
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
@@ -48,9 +52,13 @@ for (const theme of ["dark", "light"] as const) {
           return { position: style.position, clipPath: style.clipPath };
         }),
       ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
-      await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
-      await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
     }
+    await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
+    await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
+    await expect(surface.locator(".kova-appearance-size")).toHaveCSS(
+      "background-color",
+      composerBackground,
+    );
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
