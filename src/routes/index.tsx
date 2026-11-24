@@ -58,11 +58,7 @@ import {
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  chatResponseError,
-  cloudBrowserErrorKind,
-  consumeChatSse,
-} from "@/lib/chat-sse-client.mjs";
+import type { cloudBrowserErrorKind } from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
   Suspense,
@@ -2123,17 +2119,21 @@ function KovaGPT() {
       let requestSucceeded = false;
       let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
+      let transport: typeof import("@/lib/chat-summary-snapshot.mjs") | undefined;
 
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
+        transport = await import("@/lib/chat-summary-snapshot.mjs");
         const {
           createChatHistoryPayload,
           fetchForPrincipal,
           chatRequestUser,
           completedChatReply,
           chatRequestHeaders,
-        } = await import("@/lib/chat-summary-snapshot.mjs");
+          chatResponseError,
+          consumeChatSse,
+        } = transport;
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2310,7 +2310,7 @@ function KovaGPT() {
       } catch (e: unknown) {
         if (!isCurrentRequest()) return;
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
-        const browserErrorKind = cloudBrowserErrorKind(e);
+        const browserErrorKind = transport?.cloudBrowserErrorKind(e);
         if (browserErrorKind || (e as Error).name === "AbortError") {
           const browserMessage =
             browserErrorKind === "browser_limit"

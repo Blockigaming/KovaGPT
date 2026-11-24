@@ -275,12 +275,17 @@ function fixture() {
     createMemorySourceUpdater: () => () => {},
     normalizeResponseSources: (value) => value,
     chatRequestMessages: (prior, user) => [...prior, user],
-    chatResponseError: async (response) => response.error,
-    cloudBrowserErrorKind,
     chatBrowserDestination,
     CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
+      chatResponseError: async (response) => response.error,
+      cloudBrowserErrorKind,
+      consumeChatSse: (body, args) => {
+        const d = deferred();
+        streams.push({ ...d, args });
+        return d.promise;
+      },
       completedChatReply,
       chatRequestHeaders,
       createChatHistoryPayload: async (messages) => ({ messages }),
@@ -291,11 +296,6 @@ function fixture() {
         return d.promise;
       },
     }),
-    consumeChatSse: (body, args) => {
-      const d = deferred();
-      streams.push({ ...d, args });
-      return d.promise;
-    },
     toast: { error: (...value) => errors.push(value) },
     window: {
       setTimeout: (callback, delay) => {
