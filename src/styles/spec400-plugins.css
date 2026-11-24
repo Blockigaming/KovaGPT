@@ -1188,6 +1188,7 @@
   height: 68%;
 }
 .kova-connection-hero h1 {
+  font-family: var(--font-display, var(--font-ui));
   grid-area: 1 / 2;
   align-self: end;
   margin: 0;
@@ -1417,4 +1418,41 @@
 .spec400-plugin-logo[data-logo="google-docs"] {
   background: #1a73e8;
   color: white;
+}
+
+.kova-connection-example > div {
+  flex: 1;
+  min-width: 0;
+}
+.kova-connection-example-result {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--kova-radius-panel);
+  background: var(--surface-app);
+}
+.kova-connection-example-result > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-connection-publisher {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kova-connection-info .kova-connection-connected {
+  align-items: center;
+  gap: 4px;
+  color: #175dad;
+  background: #dcecff;
+}
+.dark .kova-connection-info .kova-connection-connected {
+  color: #9ecbff;
+  background: #19334e;
+}
+.kova-connection-connected svg {
+  width: 14px;
+  height: 14px;
 }
