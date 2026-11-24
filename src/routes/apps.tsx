@@ -980,6 +980,7 @@ function AppsPage() {
     if (detailId) {
       previousDetailsRef.current = { id: detailId, principal };
       directoryRef.current?.scrollIntoView({ block: "start" });
+      detailsHeadingRef.current?.scrollIntoView({ block: "nearest" });
       detailsHeadingRef.current?.focus({ preventScroll: true });
     } else if (previous) {
       previousDetailsRef.current = null;
