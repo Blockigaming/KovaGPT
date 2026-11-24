@@ -80,6 +80,7 @@ import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
 import type { TranscriptMessageRenderer } from "@/components/ActiveChatTranscript";
+import { HomeWelcome } from "@/components/HomeChatStarters";
 import {
   ChatInput,
   type ChatActivityComposer,
@@ -132,7 +133,6 @@ const ReviewedMemoryDialog = lazy(() =>
     default: module.ReviewedMemoryDialog,
   })),
 );
-const HomeWelcome = lazy(() => import("@/components/HomeChatStarters"));
 
 const ChatWorkspaceControls = lazy(() =>
   import("@/components/ChatWorkspaceControls").then((module) => ({
@@ -3445,51 +3445,49 @@ function KovaGPT() {
                 />
               </Suspense>
             )}
-            <Suspense fallback={<ChatLoadingIndicator transcript />}>
-              <HomeWelcome
-                home={showEmptyChat}
-                owner={userKey}
-                firstName={user?.firstName}
-                chatId={activeId}
-                conversations={isLoaded && isSignedIn ? historyConversations : []}
-                onSelect={setActiveId}
-              >
-                {active && editingMessage?.conversationId === active.id && (
-                  <div
-                    className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
-                    role="status"
+            <HomeWelcome
+              home={showEmptyChat}
+              owner={userKey}
+              firstName={user?.firstName}
+              chatId={activeId}
+              conversations={isLoaded && isSignedIn ? historyConversations : []}
+              onSelect={setActiveId}
+            >
+              {active && editingMessage?.conversationId === active.id && (
+                <div
+                  className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
+                  role="status"
+                >
+                  <span className="min-w-0 truncate">Editing a previous prompt</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      const restored = restoreChatEditDraft(
+                        editingMessage,
+                        storagePrincipal,
+                        active.id,
+                      );
+                      setEditingMessage(null);
+                      setInput(restored?.text ?? "");
+                      setAttachments(restored?.attachments ?? []);
+                      window.requestAnimationFrame(() =>
+                        document
+                          .querySelector<HTMLTextAreaElement>(
+                            'textarea[aria-label="Message KovaGPT"]',
+                          )
+                          ?.focus(),
+                      );
+                    }}
                   >
-                    <span className="min-w-0 truncate">Editing a previous prompt</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={() => {
-                        const restored = restoreChatEditDraft(
-                          editingMessage,
-                          storagePrincipal,
-                          active.id,
-                        );
-                        setEditingMessage(null);
-                        setInput(restored?.text ?? "");
-                        setAttachments(restored?.attachments ?? []);
-                        window.requestAnimationFrame(() =>
-                          document
-                            .querySelector<HTMLTextAreaElement>(
-                              'textarea[aria-label="Message KovaGPT"]',
-                            )
-                            ?.focus(),
-                        );
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-                {composer}
-              </HomeWelcome>
-            </Suspense>
+                    Cancel
+                  </Button>
+                </div>
+              )}
+              {composer}
+            </HomeWelcome>
           </div>
           {result && wideResult && (
             <Suspense fallback={<div className="spec400-pane-divider" aria-hidden="true" />}>

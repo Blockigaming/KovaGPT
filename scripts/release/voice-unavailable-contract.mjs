@@ -194,7 +194,20 @@ export function inspectConfiguredVoiceComposer(source) {
     const button = buttons[0];
     const click = attr(button, "onClick")?.initializer;
     const handler = click && ts.isJsxExpression(click) ? click.expression : undefined;
-    const call = handler && ts.isArrowFunction(handler) ? handler.body : undefined;
+    const body = handler && ts.isArrowFunction(handler) ? handler.body : undefined;
+    const branch =
+      body && ts.isBlock(body) && body.statements.length === 1 ? body.statements[0] : undefined;
+    const inlineVoice =
+      mode === "voice" &&
+      branch &&
+      ts.isIfStatement(branch) &&
+      branch.expression.getText(file).replace(/\s+/gu, "") === 'activeVoiceMode==="voice"' &&
+      ts.isExpressionStatement(branch.thenStatement) &&
+      branch.thenStatement.expression.getText(file).replace(/\s+/gu, "") ===
+        "setVoiceOpenMode(null)" &&
+      branch.elseStatement &&
+      ts.isExpressionStatement(branch.elseStatement);
+    const call = inlineVoice ? branch.elseStatement.expression : body;
     const exactOpen =
       call &&
       ts.isCallExpression(call) &&
@@ -211,34 +224,39 @@ export function inspectConfiguredVoiceComposer(source) {
         (!/^on[A-Z]/u.test(property.name.getText(file)) ||
           property.name.getText(file) === "onClick"),
     );
-    const normalizedAttribute = (name) =>
-      attr(button, name)?.initializer?.getText(file).replace(/\s+/gu, "");
-    const target = handler?.parameters?.[0]?.name.getText(file);
-    const inlineVoice =
-      mode === "voice" &&
-      inlineDictation &&
-      !attr(button, "aria-haspopup") &&
-      normalizedAttribute("aria-controls") ===
-        '{activeVoiceMode==="voice"?"kova-inline-voice":undefined}' &&
-      normalizedAttribute("aria-expanded") === '{activeVoiceMode==="voice"}' &&
-      normalizedAttribute("aria-label") === '{activeVoiceMode==="voice"?"Stopvoice":"Voice"}' &&
-      handler &&
-      ts.isArrowFunction(handler) &&
-      handler.parameters.length === 1 &&
-      call?.getText(file).replace(/\s+/gu, "") ===
-        `{if(activeVoiceMode==="voice")setVoiceOpenMode(null);elseopenVoice("voice",${target}.currentTarget);}`;
     const validSurface =
       mode === "dictate" && inlineDictation
         ? literal(button, "aria-controls") === "kova-inline-dictation" &&
           !attr(button, "aria-haspopup") &&
           attr(button, "aria-expanded")?.initializer?.getText(file).replace(/\s+/gu, "") ===
             '{activeVoiceMode==="dictate"}'
-        : literal(button, "aria-haspopup") === "dialog";
+        : inlineVoice
+          ? !attr(button, "aria-haspopup") &&
+            attr(button, "aria-controls")?.initializer?.getText(file).replace(/\s+/gu, "") ===
+              '{activeVoiceMode==="voice"?"kova-inline-voice":undefined}' &&
+            attr(button, "aria-expanded")?.initializer?.getText(file).replace(/\s+/gu, "") ===
+              '{activeVoiceMode==="voice"}'
+          : literal(button, "aria-haspopup") === "dialog";
+    const labelValue = attr(button, "aria-label")?.initializer;
+    const labelExpression =
+      labelValue && ts.isJsxExpression(labelValue) ? labelValue.expression : undefined;
+    const validLabel = inlineVoice
+      ? labelExpression &&
+        ts.isConditionalExpression(labelExpression) &&
+        labelExpression.condition.getText(file).replace(/\s+/gu, "") ===
+          'activeVoiceMode==="voice"' &&
+        ts.isStringLiteral(labelExpression.whenTrue) &&
+        labelExpression.whenTrue.text === "Stop voice" &&
+        ts.isStringLiteral(labelExpression.whenFalse) &&
+        labelExpression.whenFalse.text === label
+      : literal(button, "aria-label") === label;
     if (
       literal(button, "type") !== "button" ||
-      (!inlineVoice && (literal(button, "aria-label") !== label || !validSurface || !exactOpen)) ||
+      !validLabel ||
+      !validSurface ||
       !attr(button, "disabled") ||
-      !safeAttributes
+      !safeAttributes ||
+      !exactOpen
     )
       errors.push(`invalid explicit ${mode} dialog trigger`);
     else approved.add(button);

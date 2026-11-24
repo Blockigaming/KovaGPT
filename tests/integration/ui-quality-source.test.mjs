@@ -126,7 +126,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
   assert.match(
     composer,
-    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*!sendDisabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
+    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
   );
   const sendButton = openingTag(composer, "button", /aria-label="Send message"/);
   assert.match(sendButton, /disabled=\{!canSubmit\}/);
@@ -371,7 +371,10 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
   assert.match(starters, /<HomeChatFrame[\s\S]*?\{children\}/);
-  assert.match(homeFrame, /<div className="kova-empty-composer">\s*\{children\}/);
+  assert.match(
+    homeFrame,
+    /<div className=\{home \? "kova-empty-composer" : "spec400-composer-dock[^"]*"\}>\s*\{children\}/,
+  );
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);
