@@ -26,11 +26,20 @@ async function financeRateLimit(ownerId: string) {
   });
   if (!result.allowed) throw new Error("finance_rate_limited");
 }
-export function financeConfigured() {
+function financeReadsConfigured() {
   try {
     const key = process.env.CONNECTOR_TOKEN_ENCRYPTION_KEY;
     if (!key || Buffer.from(key, "base64").length !== 32) return false;
     plaidConfiguration();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function financeConfigured(readsConfigured = financeReadsConfigured()) {
+  if (!readsConfigured) return false;
+  try {
     financeLinkRequest("00000000-0000-4000-8000-000000000001", "US");
     return true;
   } catch {
@@ -143,7 +152,12 @@ export async function listFinanceConnections(caller: AuthedCaller) {
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) throw new Error("finance_connection_enumeration_failed");
-  return { configured: financeConfigured(), connections: data ?? [] };
+  const readsConfigured = financeReadsConfigured();
+  return {
+    configured: financeConfigured(readsConfigured),
+    readsConfigured,
+    connections: data ?? [],
+  };
 }
 
 export async function readFinanceConnection(caller: AuthedCaller, id: string) {

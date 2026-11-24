@@ -24,6 +24,7 @@ import {
 
 type FinanceStatus = {
   configured: boolean;
+  readsConfigured?: boolean;
   connections: { id: string; status: string; country: string; created_at: string }[];
 };
 const getPlaidSdk = createClientOnlyFn(async () => {
@@ -117,9 +118,9 @@ function FinanceSpendingPreview({
         </p>
         {action}
         {unavailable && (
-          <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-sm font-medium text-foreground">
-            Coming soon
-          </span>
+          <p className="text-sm text-muted-foreground" role="status">
+            Bank linking is currently unavailable.
+          </p>
         )}
       </header>
       <section aria-labelledby="finance-example-spending" className="text-foreground">
@@ -397,11 +398,13 @@ export function BankConnectionsPanel({
     },
     [reload, request, setBusy],
   );
+  const readsConfigured = status?.readsConfigured ?? status?.configured ?? false;
   useEffect(() => {
     if (
       !visible ||
       !ownerId ||
-      !status?.configured ||
+      !status ||
+      !readsConfigured ||
       busy ||
       running.current ||
       initialRead.current
@@ -416,7 +419,7 @@ export function BankConnectionsPanel({
     initialRead.current = true;
     newlyLinked.current = null;
     void manage(connection.id, "read");
-  }, [visible, ownerId, status, busy, manage]);
+  }, [visible, ownerId, status, readsConfigured, busy, manage]);
   const money = (amount: number | null, currency: string | null) => {
     if (amount === null) return "Not available";
     try {
@@ -496,7 +499,9 @@ export function BankConnectionsPanel({
               role="status"
               className="w-fit rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-700 dark:text-amber-300"
             >
-              Coming soon
+              {readsConfigured
+                ? "Linking additional banks is currently unavailable."
+                : "Bank data is currently unavailable."}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -514,7 +519,7 @@ export function BankConnectionsPanel({
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
-                  disabled={busy || !status.configured || connection.status !== "connected"}
+                  disabled={busy || !readsConfigured || connection.status !== "connected"}
                   onClick={() => void manage(connection.id, "read")}
                 >
                   Refresh balances and transactions

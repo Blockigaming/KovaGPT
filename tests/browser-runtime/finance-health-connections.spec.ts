@@ -78,7 +78,12 @@ type StateWindow = Window & {
 };
 async function boot(
   page: import("@playwright/test").Page,
-  options: { health?: boolean; configured?: boolean; connection?: boolean } = {},
+  options: {
+    health?: boolean;
+    configured?: boolean;
+    readsConfigured?: boolean;
+    connection?: boolean;
+  } = {},
 ) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith("https://kova-sensitive-fixture.test/")
@@ -89,13 +94,14 @@ async function boot(
       : route.abort(),
   );
   await page.goto("https://kova-sensitive-fixture.test/apps");
-  await page.evaluate(({ health, configured, connection }) => {
+  await page.evaluate(({ health, configured, readsConfigured, connection }) => {
     Object.assign(window, {
       owner: "00000000-0000-4000-8000-000000000001",
       operations: [],
       financeStatusRequests: 0,
       financeStatus: {
         configured: configured !== false,
+        readsConfigured: readsConfigured ?? configured !== false,
         connections: connection
           ? [{ id: "00000000-0000-4000-8000-000000000004", status: "connected" }]
           : [],
@@ -344,7 +350,7 @@ test("unconfigured finance and health stay disabled and never fetch private data
     page.getByRole("region", { name: "Spending" }).getByText("Sample data", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
+  await expect(page.getByText("Bank linking is currently unavailable.")).toBeVisible();
   await page.getByRole("button", { name: "Connect Health", exact: true }).click();
   const chooser = page.getByRole("dialog", { name: "Connect Health", exact: true });
   await expect(chooser.getByRole("button", { name: /Oura/ })).toBeDisabled();
@@ -353,6 +359,17 @@ test("unconfigured finance and health stay disabled and never fetch private data
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
 });
+test("linked banks still load when new bank linking is unavailable", async ({ page }) => {
+  await boot(page, { configured: false, readsConfigured: true, connection: true });
+  const banks = page.getByRole("region", { name: "Accounts linked" });
+  await expect(banks.getByText("Linking additional banks is currently unavailable.")).toBeVisible();
+  await expect(banks.getByRole("button", { name: "Connect a bank" })).toBeDisabled();
+  await expect(banks.getByText("Fixture checking", { exact: true }).first()).toBeVisible();
+  await expect(
+    banks.getByRole("button", { name: "Refresh balances and transactions" }),
+  ).toBeEnabled();
+});
+
 test("Oura refreshes automatically in the unified health dashboard", async ({ page }) => {
   await boot(page, { health: true });
   await expect(page.getByRole("tab", { name: "Oura", exact: true })).toHaveCount(0);
