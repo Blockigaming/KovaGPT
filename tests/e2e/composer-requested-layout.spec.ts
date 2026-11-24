@@ -392,6 +392,7 @@ test("empty chat starts Voice inline and keeps the composer visible", async ({ p
     await button.click();
     const voice = page.locator("#kova-inline-voice");
     await expect(voice.getByRole("status")).toHaveText("Starting Voice…");
+    await expect(page.locator(".kova-empty-chat")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
     await expect(page.getByRole("dialog", { name: "Voice", exact: true })).toHaveCount(0);
     await expect(page.locator("[data-chat-transcript-loading]")).toHaveCount(0);

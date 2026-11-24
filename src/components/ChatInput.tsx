@@ -299,6 +299,7 @@ export function ChatInput({
   latestAssistantText = "",
   latestAssistantReply,
   voiceMode,
+  voiceSessionContext,
   onVoiceModeChange,
   onVoiceSubmit,
 }: {
@@ -368,6 +369,7 @@ export function ChatInput({
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   /** Controlled by the chat route so opening a new voice chat survives layout changes. */
   voiceMode?: "dictate" | "voice" | null;
+  voiceSessionContext?: string;
   onVoiceModeChange?: (mode: "dictate" | "voice" | null) => void;
   /** Uses the existing chat/history path and returns only a confirmed saved reply. */
   onVoiceSubmit?: ComposerVoiceSubmit;
@@ -584,7 +586,7 @@ export function ChatInput({
       voiceModeRef.current = null;
     };
   }, []);
-  const voiceContextKey = attachmentContext ?? "composer";
+  const voiceContextKey = voiceSessionContext ?? attachmentContext ?? "composer";
   const voiceIdentityRef = useRef({
     isLoaded,
     userId: user?.id ?? null,
@@ -2421,6 +2423,7 @@ export function ChatInput({
     <div
       className="spec400-chat-input"
       data-composer-surface={surface}
+      data-voice-active={activeVoiceMode === "voice" || undefined}
       data-signed-in={isLoaded && user ? "true" : undefined}
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}

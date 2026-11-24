@@ -4,6 +4,7 @@ import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
 
 export function HomeWelcome({
+  home = true,
   owner,
   firstName,
   chatId,
@@ -11,6 +12,7 @@ export function HomeWelcome({
   onSelect,
   children,
 }: {
+  home?: boolean;
   owner: string | null;
   firstName?: string | null;
   chatId: string | null;
@@ -22,7 +24,7 @@ export function HomeWelcome({
   const homeScrollRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!owner) return;
+    if (!home || !owner) return;
     const section = homeScrollRef.current;
     if (!section) return;
     const phoneLayout = window.matchMedia(
@@ -51,15 +53,16 @@ export function HomeWelcome({
         section.removeEventListener(event, stopFollowing);
       }
     };
-  }, [owner, chatId, conversations.length]);
+  }, [home, owner, chatId, conversations.length]);
 
   return (
     <HomeChatFrame
+      home={home}
       scrollRef={homeScrollRef}
       headingId="chat-greeting"
       heading={greeting}
       recentWork={
-        conversations.length ? (
+        home && conversations.length ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
         ) : null
       }

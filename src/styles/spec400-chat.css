@@ -2090,3 +2090,27 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   width: 0.875rem;
   height: 0.875rem;
 }
+
+/* The glow extends into the conversation above the composer. */
+@media (min-height: 501px) {
+  .spec400-composer-dock > .spec400-chat-input[data-voice-active] {
+    overflow: visible;
+  }
+}
+.kova-inline-voice-glow {
+  mask-image: linear-gradient(transparent, black 75%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kova-inline-voice-glow {
+    animation: kova-voice-glow-breathe 1.8s ease-in-out infinite alternate;
+  }
+  @keyframes kova-voice-glow-breathe {
+    from {
+      scale: 0.94 0.92;
+    }
+    to {
+      scale: 1.04 1.05;
+    }
+  }
+}
