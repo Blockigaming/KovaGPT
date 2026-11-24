@@ -742,10 +742,10 @@ test("new-project invalid submit keeps focus on Name and does not call creation"
   );
 });
 
-test("empty and populated Project create entry points both establish the guarded dialog session", () => {
+test("the shared New project header action establishes the guarded dialog session", () => {
   assert.equal((source.match(/setCreateOpen\(true\)/g) || []).length, 1);
   assert.equal(
     (source.match(/onClick=\{\(event\) => openCreate\(event.currentTarget\)\}/g) || []).length,
-    2,
+    1,
   );
 });
