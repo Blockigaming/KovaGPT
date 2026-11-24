@@ -115,6 +115,18 @@ for (const theme of ["dark", "light"] as const) {
         });
         expect(fit.labelOffset).toBeLessThanOrEqual(1);
         expect(fit.clippedValues).toEqual([]);
+        if (page.viewportSize()!.width <= 390) {
+          const interfaceSize = content.getByRole("slider", {
+            name: "Interface size",
+            exact: true,
+          });
+          await interfaceSize.press("End");
+          await expect(interfaceSize).toHaveAttribute("aria-valuetext", "125%");
+          const reset = content.getByRole("button", { name: "Reset appearance", exact: true });
+          const paneBox = (await content.boundingBox())!;
+          const resetBox = (await reset.boundingBox())!;
+          expect(resetBox.x + resetBox.width).toBeLessThanOrEqual(paneBox.x + paneBox.width + 1);
+        }
       }
       if (section === "appearance" && page.viewportSize()!.width < 768) {
         const widths = await content
