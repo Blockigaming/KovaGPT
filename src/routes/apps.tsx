@@ -11,6 +11,7 @@ import {
   Check,
   Loader2,
   ShieldAlert,
+  FileText,
   PanelsTopLeft,
   AlertCircle,
   LogIn,
@@ -152,6 +153,7 @@ export const Route = createFileRoute("/apps")({
 });
 
 type ConnState =
+  | "available"
   | "local_files"
   | "native_app"
   | "idle"
@@ -235,13 +237,14 @@ function AppLogo({ id }: { id: string }) {
   const asset = getPluginReview(id)?.brandAsset.src;
   return (
     <span className="spec400-plugin-logo" data-logo={id} aria-hidden="true">
-      {asset ? <img src={asset} alt="" /> : <PanelsTopLeft />}
+      {asset ? <img src={asset} alt="" /> : id === "google-docs" ? <FileText /> : <PanelsTopLeft />}
     </span>
   );
 }
 
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   const labels: Record<ConnState, string> = {
+    available: "Available",
     local_files: "File exchange",
     native_app: "Native app required",
     idle: "Not connected",
@@ -254,6 +257,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
     syncing: "Checking connection…",
     temporarily_unavailable: "Status unavailable",
   };
+  if (!configured) return <span className="kova-connection-coming-soon">Coming soon</span>;
   const Icon =
     state === "connected"
       ? Check
@@ -265,7 +269,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
             ? ShieldAlert
             : null;
   return (
-    <span className="spec400-plugin-status" data-state={configured ? state : "unavailable"}>
+    <span className="spec400-plugin-status" data-state={state}>
       {Icon && (
         <Icon
           className={
@@ -276,7 +280,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
           aria-hidden="true"
         />
       )}
-      {configured ? labels[state] : "Coming soon"}
+      {labels[state]}
     </span>
   );
 }
@@ -296,7 +300,7 @@ function AppCard({
   const reconnect = ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state);
   const action = !configured
     ? "Coming soon"
-    : state === "local_files" || state === "native_app"
+    : state === "available" || state === "local_files" || state === "native_app"
       ? "Details"
       : state === "temporarily_unavailable"
         ? "Unavailable"
@@ -331,25 +335,20 @@ function AppCard({
       </div>
       <div className="spec400-plugin-card-footer">
         <StatusBadge state={state} configured={configured} />
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onDetails("action")}
-          aria-label={`${action} ${item.label}`}
-          className="spec400-plugin-card-action"
-          data-coming-soon={!configured || undefined}
-          data-connection-action={
-            !configured
-              ? "planned"
-              : state === "connected"
-                ? "connected"
-                : reconnect
-                  ? "reconnect"
-                  : undefined
-          }
-        >
-          {state === "connected" ? <Ellipsis aria-hidden="true" /> : action}
-        </Button>
+        {configured && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onDetails("action")}
+            aria-label={`${action} ${item.label}`}
+            className="spec400-plugin-card-action"
+            data-connection-action={
+              state === "connected" ? "connected" : reconnect ? "reconnect" : undefined
+            }
+          >
+            {state === "connected" ? <Ellipsis aria-hidden="true" /> : action}
+          </Button>
+        )}
       </div>
     </li>
   );
@@ -1441,6 +1440,7 @@ function AppsPage() {
   };
 
   const stateOf = (id: string): ConnState => {
+    if (id === "plaid") return "available";
     if (id === "excalidraw") return "local_files";
     if (NATIVE_HEALTH_IDS.has(id)) return "native_app";
     if (!isSignedIn) return "idle";
@@ -1785,324 +1785,326 @@ function AppsPage() {
                         </div>
                       </div>
                     )}
-                    <section
-                      className="kova-connection-account"
-                      aria-labelledby="connection-account-title"
-                    >
-                      <h2 id="connection-account-title">
-                        <Settings aria-hidden="true" /> Connector setup
-                      </h2>
-                      {["gmail", "google-docs"].includes(visibleSelectedApp.id) &&
-                        tierStatus === "ready" &&
-                        tier === "free" && (
-                          <p role="status" className="spec400-plugin-notice">
-                            {visibleSelectedApp.label} requires Kova Plus or Pro.
-                          </p>
-                        )}
-                      {!isSignedIn ? (
-                        <section className="spec400-plugin-detail-section">
-                          <h3>Account</h3>
-                          <p>
-                            Sign in to Kova before connecting an account. You’ll choose the provider
-                            account after selecting Connect.
-                          </p>
-                          {CONFIGURED_CONNECTORS.has(visibleSelectedApp.id) && (
-                            <SignInButton mode="modal">
-                              <Button>Sign in to connect</Button>
-                            </SignInButton>
-                          )}
-                        </section>
-                      ) : isGoogleId(visibleSelectedApp.id) ? (
-                        <section
-                          ref={googleStatusRef}
-                          className="spec400-plugin-detail-section"
-                          role="region"
-                          aria-label="Google connection status"
-                          aria-busy={visibleGoogleLoading || googleBusy}
-                          tabIndex={-1}
-                        >
-                          <h3 id="google-accounts-title">Google accounts</h3>
-                          <p>
-                            Choose the account for new Gmail, Calendar and Drive requests. Existing
-                            confirmed actions remain bound to their original account.
-                          </p>
-                          {visibleGoogleLoading || googleBusy ? (
-                            <p role="status">Updating Google accounts…</p>
-                          ) : null}
-                          {visibleGoogleStatus?.state === "temporarily_unavailable" && (
-                            <p role="status">
-                              Google account status is unavailable. Refresh to try again.
+                    {configuredOf(visibleSelectedApp.id) && (
+                      <section
+                        className="kova-connection-account"
+                        aria-labelledby="connection-account-title"
+                      >
+                        <h2 id="connection-account-title">
+                          <Settings aria-hidden="true" /> Connector setup
+                        </h2>
+                        {["gmail", "google-docs"].includes(visibleSelectedApp.id) &&
+                          tierStatus === "ready" &&
+                          tier === "free" && (
+                            <p role="status" className="spec400-plugin-notice">
+                              {visibleSelectedApp.label} requires Kova Plus or Pro.
                             </p>
                           )}
-                          {visibleGoogleStatus?.state === "reauthorization_required" && (
-                            <p role="status">
-                              Your connection record is retained, but Google authorization has
-                              expired or was revoked. Reconnect to restore access.
+                        {!isSignedIn ? (
+                          <section className="spec400-plugin-detail-section">
+                            <h3>Account</h3>
+                            <p>
+                              Sign in to Kova before connecting an account. You’ll choose the
+                              provider account after selecting Connect.
                             </p>
-                          )}
-                          {stateOf(visibleSelectedApp.id) === "permission_incomplete" && (
-                            <p role="status">
-                              Some requested permissions are missing. Reconnect and review the
-                              required access.
+                            {CONFIGURED_CONNECTORS.has(visibleSelectedApp.id) && (
+                              <SignInButton mode="modal">
+                                <Button>Sign in to connect</Button>
+                              </SignInButton>
+                            )}
+                          </section>
+                        ) : isGoogleId(visibleSelectedApp.id) ? (
+                          <section
+                            ref={googleStatusRef}
+                            className="spec400-plugin-detail-section"
+                            role="region"
+                            aria-label="Google connection status"
+                            aria-busy={visibleGoogleLoading || googleBusy}
+                            tabIndex={-1}
+                          >
+                            <h3 id="google-accounts-title">Google accounts</h3>
+                            <p>
+                              Choose the account for new Gmail, Calendar and Drive requests.
+                              Existing confirmed actions remain bound to their original account.
                             </p>
-                          )}
-                          {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
-                            <ul className="spec400-plugin-account-list">
-                              {visibleGoogleStatus!.accounts!.map((account) => {
-                                const { read, write } = googleServiceAccess(
-                                  visibleSelectedApp.id,
-                                  account,
-                                );
-                                return (
-                                  <li key={account.id}>
-                                    <div className="spec400-plugin-account-heading">
-                                      <strong>{account.email || "Google account"}</strong>
-                                      <span>
-                                        {account.id === visibleGoogleStatus?.selectedConnectionId
-                                          ? "Selected for new requests · "
-                                          : ""}
-                                        {account.connected
-                                          ? "Google authorization active"
-                                          : account.state.replaceAll("_", " ")}
-                                      </span>
-                                    </div>
-                                    {account.connected && read !== undefined && (
-                                      <p>
-                                        Read {read ? "granted" : "not granted"}
-                                        {write !== undefined &&
-                                          ` · Provider write scope ${write ? "granted" : "not granted"}`}
-                                      </p>
-                                    )}
-                                    <div className="spec400-plugin-scope-list">
-                                      <h4>Current permission scope</h4>
-                                      {account.scopes?.length ? (
-                                        <ul>
-                                          {account.scopes.map((scope) => (
-                                            <li key={scope}>{scope}</li>
-                                          ))}
-                                        </ul>
-                                      ) : (
+                            {visibleGoogleLoading || googleBusy ? (
+                              <p role="status">Updating Google accounts…</p>
+                            ) : null}
+                            {visibleGoogleStatus?.state === "temporarily_unavailable" && (
+                              <p role="status">
+                                Google account status is unavailable. Refresh to try again.
+                              </p>
+                            )}
+                            {visibleGoogleStatus?.state === "reauthorization_required" && (
+                              <p role="status">
+                                Your connection record is retained, but Google authorization has
+                                expired or was revoked. Reconnect to restore access.
+                              </p>
+                            )}
+                            {stateOf(visibleSelectedApp.id) === "permission_incomplete" && (
+                              <p role="status">
+                                Some requested permissions are missing. Reconnect and review the
+                                required access.
+                              </p>
+                            )}
+                            {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
+                              <ul className="spec400-plugin-account-list">
+                                {visibleGoogleStatus!.accounts!.map((account) => {
+                                  const { read, write } = googleServiceAccess(
+                                    visibleSelectedApp.id,
+                                    account,
+                                  );
+                                  return (
+                                    <li key={account.id}>
+                                      <div className="spec400-plugin-account-heading">
+                                        <strong>{account.email || "Google account"}</strong>
+                                        <span>
+                                          {account.id === visibleGoogleStatus?.selectedConnectionId
+                                            ? "Selected for new requests · "
+                                            : ""}
+                                          {account.connected
+                                            ? "Google authorization active"
+                                            : account.state.replaceAll("_", " ")}
+                                        </span>
+                                      </div>
+                                      {account.connected && read !== undefined && (
                                         <p>
-                                          No scopes reported. Refresh the account status before
-                                          relying on access.
+                                          Read {read ? "granted" : "not granted"}
+                                          {write !== undefined &&
+                                            ` · Provider write scope ${write ? "granted" : "not granted"}`}
                                         </p>
                                       )}
-                                    </div>
-                                    <div className="spec400-plugin-actions">
-                                      {account.connected &&
-                                        read &&
-                                        (visibleSelectedApp.id === "gmail" ||
-                                          visibleSelectedApp.id === "google-calendar" ||
-                                          visibleSelectedApp.id === "google-drive") && (
-                                          <ConnectorWriteControls
-                                            connector={visibleSelectedApp.id}
-                                            target={account.id}
-                                            label={account.email || visibleSelectedApp.label}
-                                            providerCanWrite={write === true}
-                                            authorizeWrite={() =>
-                                              void connectGoogle(
-                                                account.id,
-                                                visibleSelectedApp.id,
-                                                "read-write",
-                                              )
-                                            }
-                                          />
+                                      <div className="spec400-plugin-scope-list">
+                                        <h4>Current permission scope</h4>
+                                        {account.scopes?.length ? (
+                                          <ul>
+                                            {account.scopes.map((scope) => (
+                                              <li key={scope}>{scope}</li>
+                                            ))}
+                                          </ul>
+                                        ) : (
+                                          <p>
+                                            No scopes reported. Refresh the account status before
+                                            relying on access.
+                                          </p>
                                         )}
-                                      <Button
-                                        variant="outline"
-                                        className="spec400-plugin-use-account"
-                                        disabled={
-                                          googleBusy ||
-                                          visibleGoogleLoading ||
-                                          !account.connected ||
-                                          account.id === visibleGoogleStatus?.selectedConnectionId
-                                        }
-                                        onClick={() =>
-                                          void changeGoogleAccount("select", account.id)
-                                        }
-                                        aria-label={`Use ${account.email || "Google account"} for new requests`}
-                                      >
-                                        Use account
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        disabled={
-                                          googleBusy ||
-                                          visibleGoogleLoading ||
-                                          (visibleSelectedApp.id === "gmail" &&
-                                            (tierStatus !== "ready" || tier === "free"))
-                                        }
-                                        onClick={() =>
-                                          void connectGoogle(account.id, visibleSelectedApp.id)
-                                        }
-                                        aria-label={`Reconnect ${account.email || "Google account"}`}
-                                      >
-                                        Reconnect
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        disabled={googleBusy || visibleGoogleLoading}
-                                        onClick={(event) => {
-                                          googleDisconnectReturnRef.current = {
-                                            trigger: event.currentTarget,
-                                            url: window.location.href,
-                                            principal: principalRef.current,
-                                            generation: generationRef.current,
-                                          };
-                                          setPendingGoogleDisconnect({
-                                            id: account.id,
-                                            email: account.email || "Google account",
-                                          });
-                                        }}
-                                        aria-label={`Disconnect ${account.email || "Google account"}`}
-                                      >
-                                        Disconnect
-                                      </Button>
-                                    </div>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          ) : !visibleGoogleLoading &&
-                            visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
-                            <p>
-                              No Google accounts are connected. You’ll choose the account on
-                              Google’s sign-in screen.
-                            </p>
-                          ) : null}
-                          <div className="spec400-plugin-actions">
-                            <Button
-                              disabled={
-                                googleBusy ||
-                                visibleGoogleLoading ||
-                                (visibleSelectedApp.id === "gmail" &&
-                                  (tierStatus !== "ready" || tier === "free")) ||
-                                visibleGoogleStatus?.state === "temporarily_unavailable"
-                              }
-                              onClick={() => void handleConnect(visibleSelectedApp)}
-                            >
-                              {["reauthorize", "permission_incomplete"].includes(
-                                stateOf(visibleSelectedApp.id),
-                              )
-                                ? "Reconnect"
-                                : (visibleGoogleStatus?.accounts?.length ?? 0) > 0
-                                  ? "Connect another account"
-                                  : "Connect"}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              disabled={googleBusy || visibleGoogleLoading}
-                              onClick={refreshGoogleStatus}
-                            >
-                              Refresh status
-                            </Button>
-                            {isGoogleConnected(visibleSelectedApp.id) && (
+                                      </div>
+                                      <div className="spec400-plugin-actions">
+                                        {account.connected &&
+                                          read &&
+                                          (visibleSelectedApp.id === "gmail" ||
+                                            visibleSelectedApp.id === "google-calendar" ||
+                                            visibleSelectedApp.id === "google-drive") && (
+                                            <ConnectorWriteControls
+                                              connector={visibleSelectedApp.id}
+                                              target={account.id}
+                                              label={account.email || visibleSelectedApp.label}
+                                              providerCanWrite={write === true}
+                                              authorizeWrite={() =>
+                                                void connectGoogle(
+                                                  account.id,
+                                                  visibleSelectedApp.id,
+                                                  "read-write",
+                                                )
+                                              }
+                                            />
+                                          )}
+                                        <Button
+                                          variant="outline"
+                                          className="spec400-plugin-use-account"
+                                          disabled={
+                                            googleBusy ||
+                                            visibleGoogleLoading ||
+                                            !account.connected ||
+                                            account.id === visibleGoogleStatus?.selectedConnectionId
+                                          }
+                                          onClick={() =>
+                                            void changeGoogleAccount("select", account.id)
+                                          }
+                                          aria-label={`Use ${account.email || "Google account"} for new requests`}
+                                        >
+                                          Use account
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          disabled={
+                                            googleBusy ||
+                                            visibleGoogleLoading ||
+                                            (visibleSelectedApp.id === "gmail" &&
+                                              (tierStatus !== "ready" || tier === "free"))
+                                          }
+                                          onClick={() =>
+                                            void connectGoogle(account.id, visibleSelectedApp.id)
+                                          }
+                                          aria-label={`Reconnect ${account.email || "Google account"}`}
+                                        >
+                                          Reconnect
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          disabled={googleBusy || visibleGoogleLoading}
+                                          onClick={(event) => {
+                                            googleDisconnectReturnRef.current = {
+                                              trigger: event.currentTarget,
+                                              url: window.location.href,
+                                              principal: principalRef.current,
+                                              generation: generationRef.current,
+                                            };
+                                            setPendingGoogleDisconnect({
+                                              id: account.id,
+                                              email: account.email || "Google account",
+                                            });
+                                          }}
+                                          aria-label={`Disconnect ${account.email || "Google account"}`}
+                                        >
+                                          Disconnect
+                                        </Button>
+                                      </div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : !visibleGoogleLoading &&
+                              visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
+                              <p>
+                                No Google accounts are connected. You’ll choose the account on
+                                Google’s sign-in screen.
+                              </p>
+                            ) : null}
+                            <div className="spec400-plugin-actions">
                               <Button
-                                variant="ghost"
-                                onClick={() => handleUseInChat(visibleSelectedApp)}
+                                disabled={
+                                  googleBusy ||
+                                  visibleGoogleLoading ||
+                                  (visibleSelectedApp.id === "gmail" &&
+                                    (tierStatus !== "ready" || tier === "free")) ||
+                                  visibleGoogleStatus?.state === "temporarily_unavailable"
+                                }
+                                onClick={() => void handleConnect(visibleSelectedApp)}
                               >
-                                Use in chat
+                                {["reauthorize", "permission_incomplete"].includes(
+                                  stateOf(visibleSelectedApp.id),
+                                )
+                                  ? "Reconnect"
+                                  : (visibleGoogleStatus?.accounts?.length ?? 0) > 0
+                                    ? "Connect another account"
+                                    : "Connect"}
                               </Button>
+                              <Button
+                                variant="outline"
+                                disabled={googleBusy || visibleGoogleLoading}
+                                onClick={refreshGoogleStatus}
+                              >
+                                Refresh status
+                              </Button>
+                              {isGoogleConnected(visibleSelectedApp.id) && (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => handleUseInChat(visibleSelectedApp)}
+                                >
+                                  Use in chat
+                                </Button>
+                              )}
+                            </div>
+                          </section>
+                        ) : visibleSelectedApp.id === "github" ? (
+                          <GitHubManager
+                            key={principal ?? "unresolved"}
+                            data={visibleGithubData}
+                            loadError={githubLoadError}
+                            reload={refreshGitHub}
+                          />
+                        ) : NATIVE_HEALTH_IDS.has(visibleSelectedApp.id) ||
+                          visibleSelectedApp.id === "oura" ||
+                          visibleSelectedApp.id === "plaid" ? (
+                          <Button
+                            onClick={() => {
+                              const id = visibleSelectedApp.id;
+                              const view = id === "plaid" ? "finances" : "health";
+                              void navigate({
+                                search: {
+                                  connection_view: view,
+                                  ...(id === "oura" && { health_provider: id }),
+                                } as never,
+                              });
+                            }}
+                          >
+                            {visibleSelectedApp.id === "plaid" ? "Open Finances" : "Open Health"}
+                          </Button>
+                        ) : visibleSelectedApp.id === "excalidraw" ? (
+                          <section className="spec400-plugin-detail-section">
+                            <h3>Use Excalidraw files in chat</h3>
+                            <p>
+                              Attach a .excalidraw file to share the diagram’s text and layout
+                              summary. To export a Kova sketch, open Drawing and choose Download
+                              Excalidraw file.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <Button onClick={() => void navigate({ to: "/" })}>Open chat</Button>
+                              <ExcalidrawExportButton />
+                            </div>
+                          </section>
+                        ) : visibleSelectedApp.id === "notion" && notionKeyConfigured ? (
+                          <>
+                            {notionOAuthConfigured && (
+                              <ConnectedAccountManager
+                                key={`${principal}:notion`}
+                                id="notion"
+                                data={otherConnections.data}
+                                loading={otherConnections.loading}
+                                error={otherConnections.error}
+                                reload={otherConnections.reload}
+                              />
                             )}
-                          </div>
-                        </section>
-                      ) : visibleSelectedApp.id === "github" ? (
-                        <GitHubManager
-                          key={principal ?? "unresolved"}
-                          data={visibleGithubData}
-                          loadError={githubLoadError}
-                          reload={refreshGitHub}
-                        />
-                      ) : NATIVE_HEALTH_IDS.has(visibleSelectedApp.id) ||
-                        visibleSelectedApp.id === "oura" ||
-                        visibleSelectedApp.id === "plaid" ? (
-                        <Button
-                          onClick={() => {
-                            const id = visibleSelectedApp.id;
-                            const view = id === "plaid" ? "finances" : "health";
-                            void navigate({
-                              search: {
-                                connection_view: view,
-                                ...(id === "oura" && { health_provider: id }),
-                              } as never,
-                            });
-                          }}
-                        >
-                          {visibleSelectedApp.id === "plaid" ? "Open Finances" : "Open Health"}
-                        </Button>
-                      ) : visibleSelectedApp.id === "excalidraw" ? (
-                        <section className="spec400-plugin-detail-section">
-                          <h3>Use Excalidraw files in chat</h3>
-                          <p>
-                            Attach a .excalidraw file to share the diagram’s text and layout
-                            summary. To export a Kova sketch, open Drawing and choose Download
-                            Excalidraw file.
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            <Button onClick={() => void navigate({ to: "/" })}>Open chat</Button>
-                            <ExcalidrawExportButton />
-                          </div>
-                        </section>
-                      ) : visibleSelectedApp.id === "notion" && notionKeyConfigured ? (
-                        <>
-                          {notionOAuthConfigured && (
                             <ConnectedAccountManager
-                              key={`${principal}:notion`}
-                              id="notion"
+                              key={`${principal}:notion-private`}
+                              id="notion-private"
                               data={otherConnections.data}
                               loading={otherConnections.loading}
                               error={otherConnections.error}
                               reload={otherConnections.reload}
                             />
-                          )}
+                          </>
+                        ) : CONNECTION_FLOWS[visibleSelectedApp.id] ? (
                           <ConnectedAccountManager
-                            key={`${principal}:notion-private`}
-                            id="notion-private"
+                            key={`${principal}:${visibleSelectedApp.id}`}
+                            id={visibleSelectedApp.id}
+                            initiallySearchTeamsMessages={teamsMessagesAfterConsent}
                             data={otherConnections.data}
                             loading={otherConnections.loading}
                             error={otherConnections.error}
                             reload={otherConnections.reload}
                           />
-                        </>
-                      ) : CONNECTION_FLOWS[visibleSelectedApp.id] ? (
-                        <ConnectedAccountManager
-                          key={`${principal}:${visibleSelectedApp.id}`}
-                          id={visibleSelectedApp.id}
-                          initiallySearchTeamsMessages={teamsMessagesAfterConsent}
-                          data={otherConnections.data}
-                          loading={otherConnections.loading}
-                          error={otherConnections.error}
-                          reload={otherConnections.reload}
-                        />
-                      ) : null}
-                      <section className="spec400-plugin-detail-section">
-                        <h3>Recent activity</h3>
-                        {visibleActivity.filter((entry) =>
-                          [
-                            visibleSelectedApp.label,
-                            ...(isGoogleId(visibleSelectedApp.id) ? ["Google"] : []),
-                          ].includes(entry.app),
-                        ).length ? (
-                          <ul className="spec400-plugin-activity">
-                            {visibleActivity
-                              .filter((entry) =>
-                                [
-                                  visibleSelectedApp.label,
-                                  ...(isGoogleId(visibleSelectedApp.id) ? ["Google"] : []),
-                                ].includes(entry.app),
-                              )
-                              .slice(0, 5)
-                              .map((entry, index) => (
-                                <li key={`${entry.at}:${index}`}>
-                                  {entry.action} · {new Date(entry.at).toLocaleString()}
-                                </li>
-                              ))}
-                          </ul>
-                        ) : (
-                          <p>No recorded connection activity.</p>
-                        )}
+                        ) : null}
+                        <section className="spec400-plugin-detail-section">
+                          <h3>Recent activity</h3>
+                          {visibleActivity.filter((entry) =>
+                            [
+                              visibleSelectedApp.label,
+                              ...(isGoogleId(visibleSelectedApp.id) ? ["Google"] : []),
+                            ].includes(entry.app),
+                          ).length ? (
+                            <ul className="spec400-plugin-activity">
+                              {visibleActivity
+                                .filter((entry) =>
+                                  [
+                                    visibleSelectedApp.label,
+                                    ...(isGoogleId(visibleSelectedApp.id) ? ["Google"] : []),
+                                  ].includes(entry.app),
+                                )
+                                .slice(0, 5)
+                                .map((entry, index) => (
+                                  <li key={`${entry.at}:${index}`}>
+                                    {entry.action} · {new Date(entry.at).toLocaleString()}
+                                  </li>
+                                ))}
+                            </ul>
+                          ) : (
+                            <p>No recorded connection activity.</p>
+                          )}
+                        </section>
                       </section>
-                    </section>
+                    )}
                   </TabsContent>
                   <TabsContent value="access" forceMount className="kova-connection-tab">
                     <section
