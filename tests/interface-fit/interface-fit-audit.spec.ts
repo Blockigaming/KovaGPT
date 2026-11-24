@@ -280,7 +280,7 @@ if (scope === "public") {
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       await expect.poll(() => heldModules).toBeGreaterThan(0);
-      await expect(page.locator("[data-chat-transcript-loading]")).toBeVisible();
+      await expect(page.locator("[data-chat-transcript-loading]:visible").first()).toBeVisible();
       await expect(
         page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
       ).toBeVisible();

@@ -211,6 +211,22 @@ export function inspectConfiguredVoiceComposer(source) {
         (!/^on[A-Z]/u.test(property.name.getText(file)) ||
           property.name.getText(file) === "onClick"),
     );
+    const normalizedAttribute = (name) =>
+      attr(button, name)?.initializer?.getText(file).replace(/\s+/gu, "");
+    const target = handler?.parameters?.[0]?.name.getText(file);
+    const inlineVoice =
+      mode === "voice" &&
+      inlineDictation &&
+      !attr(button, "aria-haspopup") &&
+      normalizedAttribute("aria-controls") ===
+        '{activeVoiceMode==="voice"?"kova-inline-voice":undefined}' &&
+      normalizedAttribute("aria-expanded") === '{activeVoiceMode==="voice"}' &&
+      normalizedAttribute("aria-label") === '{activeVoiceMode==="voice"?"Stopvoice":"Voice"}' &&
+      handler &&
+      ts.isArrowFunction(handler) &&
+      handler.parameters.length === 1 &&
+      call?.getText(file).replace(/\s+/gu, "") ===
+        `{if(activeVoiceMode==="voice")setVoiceOpenMode(null);elseopenVoice("voice",${target}.currentTarget);}`;
     const validSurface =
       mode === "dictate" && inlineDictation
         ? literal(button, "aria-controls") === "kova-inline-dictation" &&
@@ -220,11 +236,9 @@ export function inspectConfiguredVoiceComposer(source) {
         : literal(button, "aria-haspopup") === "dialog";
     if (
       literal(button, "type") !== "button" ||
-      literal(button, "aria-label") !== label ||
-      !validSurface ||
+      (!inlineVoice && (literal(button, "aria-label") !== label || !validSurface || !exactOpen)) ||
       !attr(button, "disabled") ||
-      !safeAttributes ||
-      !exactOpen
+      !safeAttributes
     )
       errors.push(`invalid explicit ${mode} dialog trigger`);
     else approved.add(button);

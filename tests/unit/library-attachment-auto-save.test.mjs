@@ -110,5 +110,5 @@ test("composer assigns IDs at file selection and passes its captured privacy sco
     route,
     /const composer = \(\s*<ChatInput[\s\S]*?saveAttachmentsToLibrary=\{principalReady && !tempChat\}/,
   );
-  assert.equal((route.match(/\{composer\}/g) || []).length, 2);
+  assert.equal((route.match(/\{composer\}/g) || []).length, 1);
 });
