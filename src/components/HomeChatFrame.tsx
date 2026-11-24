@@ -39,12 +39,14 @@ export function ContinueWorking({
 }
 
 export function HomeChatFrame({
+  home = true,
   scrollRef,
   heading,
   headingId,
   recentWork,
   children,
 }: {
+  home?: boolean;
   scrollRef?: Ref<HTMLElement>;
   heading: string;
   headingId?: string;
@@ -54,24 +56,36 @@ export function HomeChatFrame({
   return (
     <section
       ref={scrollRef}
-      className="kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
-      data-ui-reference="grok.prompt-first-home"
-      aria-labelledby={headingId}
+      className={
+        home ? "kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6" : "contents"
+      }
+      data-ui-reference={home ? "grok.prompt-first-home" : undefined}
+      aria-labelledby={home ? headingId : undefined}
     >
-      <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
-        <div
-          data-ui-reference="claude.greeting"
-          className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
-        >
-          <h1
-            id={headingId}
-            className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
+      <div
+        className={
+          home
+            ? "kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10"
+            : "contents"
+        }
+      >
+        {home && (
+          <div
+            data-ui-reference="claude.greeting"
+            className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
           >
-            <span className="kova-home-greeting-text">{heading}</span>
-            <NovaLogo mark className="kova-home-welcome-logo" />
-          </h1>
+            <h1
+              id={headingId}
+              className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
+            >
+              <span className="kova-home-greeting-text">{heading}</span>
+              <NovaLogo mark className="kova-home-welcome-logo" />
+            </h1>
+          </div>
+        )}
+        <div className={home ? "kova-empty-composer" : "spec400-composer-dock relative shrink-0"}>
+          {children}
         </div>
-        <div className="kova-empty-composer">{children}</div>
         {recentWork}
       </div>
     </section>

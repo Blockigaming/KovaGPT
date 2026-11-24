@@ -1038,7 +1038,7 @@ test("no rejected or queued draft leaves the ordinary streaming composer hint av
     source,
     /const composer = \(\s*<ChatInput[\s\S]*?nextPromptPanel=\{composerPromptPanel\}/,
   );
-  assert.equal((source.match(/\{composer\}/g) ?? []).length, 2);
+  assert.equal((source.match(/\{composer\}/g) ?? []).length, 1);
 });
 
 test("kept-version previews are bounded while Restore retains exact full text and all attachment references", async () => {

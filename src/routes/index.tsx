@@ -312,6 +312,13 @@ function KovaGPT() {
     scope: NextPromptScope;
     generation: number;
     openedUrl: string;
+    composerContext?: string;
+  } | null>(null);
+  const [voiceReveal, setVoiceReveal] = useState<{
+    ownerId: string;
+    chatId: string;
+    messageId: string;
+    fraction: number;
   } | null>(null);
   const voiceConversationsRef = useRef(conversations);
   voiceConversationsRef.current = conversations;
@@ -1491,8 +1498,7 @@ function KovaGPT() {
     }
   }, [guestPromptTurns, isLoaded, isSignedIn, isStreaming, signupPromptShown]);
 
-  // Hoist the dialog mode across the empty/conversation composer switch. A
-  // voice chat gets its stable conversation before explicit microphone Start.
+  // Voice can listen on Home before the first transcript creates a chat.
   const composerVoiceEligible = Boolean(
     principalReady &&
     isSignedIn &&
@@ -1542,38 +1548,13 @@ function KovaGPT() {
       toast.error("Finish the current message before starting voice chat.");
       return;
     }
-    let scope = nextPromptScopeRef.current;
-    if (next === "voice" && !active) {
-      const id = newId();
-      const timestamp = Date.now();
-      const conversation: Conversation = {
-        id,
-        title: "New chat",
-        messages: [],
-        mode,
-        hostedModel,
-        recommendedModelSelection,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        ...(pendingWorkflowSkill ? { skill: pendingWorkflowSkill } : {}),
-      };
-      // This deliberate transition retains the exact existing typed draft and
-      // attachments. The voice transcript is submitted independently below.
-      const key = draftStorageKey(userKey, id);
-      lastLoadedDraftRef.current = key;
-      pendingDraftLoadRef.current = null;
-      attachmentDraftsRef.current.set(key, composerDraftRef.current.attachments);
-      scope = advanceNextPromptScope(scope, { ...scope, conversationId: id });
-      nextPromptScopeRef.current = scope;
-      setConversations((previous) => [conversation, ...previous]);
-      setActiveId(id);
-    }
     composerVoiceSessionRef.current = {
       mode: next,
       ownerId: userKey,
-      scope,
+      scope: nextPromptScopeRef.current,
       generation: storageGenerationRef.current,
       openedUrl: window.location.href,
+      composerContext: JSON.stringify([storagePrincipalRef.current, active?.id ?? null, null]),
     };
     setComposerVoiceMode(next);
   };
@@ -1822,7 +1803,10 @@ function KovaGPT() {
       retryHistory?: Message[],
       requestId?: string,
       queuedSend?: NextPrompt,
-      voiceRequest?: { signal: AbortSignal },
+      voiceRequest?: {
+        signal: AbortSignal;
+        onAssistant?: (chatId: string, messageId: string) => void;
+      },
       quickAnswer = false,
       requestWebSearch?: boolean,
       { preserveDraft = false } = {},
@@ -1902,6 +1886,13 @@ function KovaGPT() {
         ...nextPromptScopeRef.current,
         conversationId: nextConvId,
       });
+      if (voiceRequest && !activeId && userKey && composerVoiceSessionRef.current) {
+        composerVoiceSessionRef.current.scope = requestScope;
+        const draftKey = draftStorageKey(userKey, nextConvId);
+        lastLoadedDraftRef.current = draftKey;
+        pendingDraftLoadRef.current = null;
+        attachmentDraftsRef.current.set(draftKey, composerDraftRef.current.attachments);
+      }
       nextPromptScopeRef.current = requestScope;
       const isCurrentRetryScope = () =>
         nextPromptMountedRef.current &&
@@ -1936,6 +1927,8 @@ function KovaGPT() {
         content: "",
         ...(retryTool ? { requestedTool: retryTool } : {}),
       };
+
+      voiceRequest?.onAssistant?.(nextConvId, assistantMsg.id);
 
       // Keep the exact submitted draft in this request's mounted scope. Attachment
       // objects/payloads are retained by reference; they are never re-uploaded here.
@@ -2492,6 +2485,8 @@ function KovaGPT() {
                 ),
               );
             }
+            if (voiceRequest && err.code === "message_window_limit" && isCurrentRetryScope())
+              throw err;
           } else {
             updateAssistant(`\n\n_${detail}_`);
           }
@@ -2715,7 +2710,13 @@ function KovaGPT() {
       );
     if (!composerVoiceEligible || !isCurrent() || inFlightRef.current || nextPromptRef.current)
       throw new Error("voice_turn_cancelled");
-    const pending = send(text, [], null, 0, undefined, undefined, undefined, undefined, { signal });
+    const pending = send(text, [], null, 0, undefined, undefined, undefined, undefined, {
+      signal,
+      onAssistant: (chatId, messageId) => {
+        if (session?.ownerId)
+          setVoiceReveal({ ownerId: session.ownerId, chatId, messageId, fraction: 0 });
+      },
+    });
     requestEpoch = retryGenerationRef.current;
     const turn = await pending;
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
@@ -2919,6 +2920,17 @@ function KovaGPT() {
   const renderTranscriptMessage: TranscriptMessageRenderer = (m, i, ChatMessage, onBranch) => {
     if (!active) return null;
     const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
+    const reveal =
+      composerVoiceMode === "voice" &&
+      voiceReveal?.ownerId === userKey &&
+      voiceReveal?.chatId === active.id &&
+      voiceReveal?.messageId === m.id
+        ? voiceReveal
+        : null;
+    const words = reveal ? (m.content.match(/\S+\s*/gu) ?? []) : [];
+    const rendered = reveal
+      ? { ...m, content: words.slice(0, Math.ceil(words.length * reveal.fraction)).join("") }
+      : m;
     // Find the user message that prompted this assistant reply (immediately before).
     const priorUser =
       m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
@@ -2927,7 +2939,8 @@ function KovaGPT() {
     return (
       <ChatMessage
         key={m.id}
-        message={m}
+        message={rendered}
+        voiceRevealing={Boolean(reveal)}
         showAdvertisement={isLastAssistant}
         chatId={active.id}
         onSaveMemory={
@@ -2970,10 +2983,11 @@ function KovaGPT() {
         userKey={userKey}
         principalResolved={isLoaded}
         streaming={
-          isStreaming &&
-          isLastAssistant &&
-          inFlightTargetRef.current?.conversationId === active.id &&
-          inFlightTargetRef.current.assistantMessageId === m.id
+          Boolean(reveal) ||
+          (isStreaming &&
+            isLastAssistant &&
+            inFlightTargetRef.current?.conversationId === active.id &&
+            inFlightTargetRef.current.assistantMessageId === m.id)
         }
         onUpdatePendingConfirm={(messageId, next) => {
           setConversations((prev) =>
@@ -3144,7 +3158,7 @@ function KovaGPT() {
       </Suspense>
     ) : null;
 
-  const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
+  const showEmptyChat = !active || active.messages.length === 0;
   const composerContext = tempChat
     ? {}
     : {
@@ -3192,8 +3206,23 @@ function KovaGPT() {
       requestStatusPanel={requestStatusPanel}
       isStreaming={isStreaming}
       voiceMode={composerVoiceMode}
+      voiceSessionContext={
+        composerVoiceSessionRef.current &&
+        sameNextPromptScope(composerVoiceSessionRef.current.scope, nextPromptScope)
+          ? composerVoiceSessionRef.current.composerContext
+          : undefined
+      }
       onVoiceModeChange={changeComposerVoiceMode}
       onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
+      onVoicePlaybackProgress={(fraction) =>
+        setVoiceReveal((current) =>
+          fraction === null
+            ? null
+            : current && fraction > current.fraction
+              ? { ...current, fraction }
+              : current,
+        )
+      }
       latestAssistantText={
         active?.messages
           .filter(
@@ -3446,90 +3475,73 @@ function KovaGPT() {
             role={result && !wideResult ? "tabpanel" : "region"}
             aria-labelledby={result && !wideResult ? "conversation-tab" : undefined}
           >
-            {showEmptyChat ? (
+            {!showEmptyChat && active && (
               <Suspense fallback={<ChatLoadingIndicator transcript />}>
-                <HomeWelcome
-                  owner={userKey}
-                  firstName={user?.firstName}
-                  chatId={activeId}
-                  conversations={isLoaded && isSignedIn ? historyConversations : []}
-                  onSelect={setActiveId}
-                >
-                  {composer}
-                </HomeWelcome>
+                <ActiveChatTranscript
+                  key={transcriptScope}
+                  active={active}
+                  conversations={conversations}
+                  setActiveId={setActiveId}
+                  setConversations={setConversations}
+                  isSignedIn={Boolean(isSignedIn)}
+                  isStreaming={isStreaming}
+                  chatRulesActive={chatRulesActive}
+                  openChatWorkspace={openChatWorkspace}
+                  scrollRef={scrollRef}
+                  nearBottomRef={nearBottomRef}
+                  readingPositionsRef={readingPositionsRef}
+                  readingAnchorControllerRef={readingAnchorControllerRef}
+                  transcriptScope={transcriptScope}
+                  transcriptScopeRef={transcriptScopeRef}
+                  renderMessage={renderTranscriptMessage}
+                />
               </Suspense>
-            ) : (
-              <>
-                {composerVoiceMode === "voice" && active.messages.length === 0 ? (
-                  <div className="flex-1" aria-hidden="true" />
-                ) : (
-                  <Suspense
-                    fallback={
-                      composerVoiceMode === "voice" ? (
-                        <div className="flex-1" aria-hidden="true" />
-                      ) : (
-                        <ChatLoadingIndicator transcript />
-                      )
-                    }
-                  >
-                    <ActiveChatTranscript
-                      key={transcriptScope}
-                      active={active}
-                      conversations={conversations}
-                      setActiveId={setActiveId}
-                      setConversations={setConversations}
-                      isSignedIn={Boolean(isSignedIn)}
-                      isStreaming={isStreaming}
-                      chatRulesActive={chatRulesActive}
-                      openChatWorkspace={openChatWorkspace}
-                      scrollRef={scrollRef}
-                      nearBottomRef={nearBottomRef}
-                      readingPositionsRef={readingPositionsRef}
-                      readingAnchorControllerRef={readingAnchorControllerRef}
-                      transcriptScope={transcriptScope}
-                      transcriptScopeRef={transcriptScopeRef}
-                      renderMessage={renderTranscriptMessage}
-                    />
-                  </Suspense>
-                )}
-                <div className="spec400-composer-dock relative shrink-0">
-                  {editingMessage?.conversationId === active.id && (
-                    <div
-                      className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
-                      role="status"
-                    >
-                      <span className="min-w-0 truncate">Editing a previous prompt</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        className="text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                          const restored = restoreChatEditDraft(
-                            editingMessage,
-                            storagePrincipal,
-                            active.id,
-                          );
-                          setEditingMessage(null);
-                          setInput(restored?.text ?? "");
-                          setAttachments(restored?.attachments ?? []);
-                          window.requestAnimationFrame(() =>
-                            document
-                              .querySelector<HTMLTextAreaElement>(
-                                'textarea[aria-label="Message KovaGPT"]',
-                              )
-                              ?.focus(),
-                          );
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                  {composer}
-                </div>
-              </>
             )}
+            <Suspense fallback={<ChatLoadingIndicator transcript />}>
+              <HomeWelcome
+                home={showEmptyChat}
+                owner={userKey}
+                firstName={user?.firstName}
+                chatId={activeId}
+                conversations={isLoaded && isSignedIn ? historyConversations : []}
+                onSelect={setActiveId}
+              >
+                {active && editingMessage?.conversationId === active.id && (
+                  <div
+                    className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
+                    role="status"
+                  >
+                    <span className="min-w-0 truncate">Editing a previous prompt</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        const restored = restoreChatEditDraft(
+                          editingMessage,
+                          storagePrincipal,
+                          active.id,
+                        );
+                        setEditingMessage(null);
+                        setInput(restored?.text ?? "");
+                        setAttachments(restored?.attachments ?? []);
+                        window.requestAnimationFrame(() =>
+                          document
+                            .querySelector<HTMLTextAreaElement>(
+                              'textarea[aria-label="Message KovaGPT"]',
+                            )
+                            ?.focus(),
+                        );
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+                {composer}
+              </HomeWelcome>
+            </Suspense>
           </div>
           {result && wideResult && (
             <Suspense fallback={<div className="spec400-pane-divider" aria-hidden="true" />}>

@@ -37,6 +37,7 @@ export type ChatRequestError = Error & {
   requestId?: string;
   retryable: boolean;
   retryAfter?: number;
+  resetsAt?: string;
 };
 
 export function chatResponseError(

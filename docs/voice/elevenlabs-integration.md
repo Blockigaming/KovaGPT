@@ -108,8 +108,8 @@ budget: different configured models and output lengths incur different charges.
 
 ## Activating Live Voice
 
-With `KOVA_VOICE_REALTIME_ENABLED=true` and at least three catalog entries, the
-composer switches to the inline Live Voice panel. The browser requests a fresh
+With `KOVA_VOICE_REALTIME_ENABLED=true`, the inline composer can use realtime
+transcription even when only one reply voice is configured. The browser requests a fresh
 single-use Scribe token for each listening turn. It streams 16 kHz mono audio
 while listening, submits the committed transcript through ordinary chat, and
 reopens listening after the saved assistant reply finishes playing. The browser
