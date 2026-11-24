@@ -8,6 +8,7 @@ const directory = read("src/styles/file-directories.css");
 const projects = read("src/styles/project-directory.css");
 const theme = read("src/styles.css");
 const tokens = read("src/styles/visual-tokens.css");
+const management = read("src/styles/spec400-management.css");
 
 function rule(css, selector, media = null) {
   let found;
@@ -28,7 +29,7 @@ const projectCard = rule(
   '.kova-app-shell[data-ui="modern"] .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects .kova-project-file .kova-project-file-name h3',
 );
 
-test("directory labels use the SDK UI stack while project display type is an explicit separate role", () => {
+test("workspace headings and directory labels use the SDK UI stack", () => {
   assert.match(theme, /--font-sans:\s*var\(--font-ui\)/);
   assert.match(tokens, /--font-ui:\s*ui-sans-serif,\s*-apple-system,\s*system-ui,/);
   assert.match(tokens, /--font-reading:\s*Georgia,\s*"Times New Roman",\s*serif/);
@@ -36,12 +37,12 @@ test("directory labels use the SDK UI stack while project display type is an exp
   assert.equal(title["font-family"], "var(--font-ui)");
   assert.equal(projectCard["font-family"], "var(--font-ui)");
   assert.doesNotMatch(directory, /Georgia|Times New Roman|font-family:[^;]*\bserif\b/);
-  const projectRoute = read("src/routes/projects.tsx");
-  assert.match(projectRoute, /reference="claude\.projects\.header"\s+readingTitle/);
-  assert.match(
-    read("src/components/WorkspacePageHeader.tsx"),
-    /readingTitle\s*\?\s*\{\s*fontFamily:\s*"var\(--font-reading\)"/,
+  const workspaceTitles = rule(
+    management,
+    ".kova-page :is(#library-title, #projects-title, #scheduled-tasks-title, #apps-title)",
   );
+  assert.match(workspaceTitles["font-family"], /^var\(--font-ui,/);
+  assert.match(read("src/routes/projects.tsx"), /titleId="projects-title"/);
 });
 
 test("collection title weight and row labels have distinct, scoped typography", () => {

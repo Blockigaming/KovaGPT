@@ -1,5 +1,7 @@
+import { ServerResponse } from "node:http";
 import net from "node:net";
 import { syncBuiltinESMExports } from "node:module";
+import { loopbackPreviewHeaders } from "../helpers/loopback-preview-headers.mjs";
 
 // Test-process boundary only; never imported by production source. The local
 // preview receives no provider/database credentials and may connect only to its
@@ -32,3 +34,18 @@ globalThis.fetch = (input, init = {}) => {
   if (url.protocol !== "http:" || !hosts.has(url.hostname) || Number(url.port) !== port) deny();
   return nativeFetch(input, { ...init, redirect: "error" });
 };
+
+// The browser follows real redirects, including WebKit where intercepted
+// redirects cannot be fulfilled. Apply the HTTP preview policy at the listener
+// so the final document is covered even when the browser skips its route handler.
+if (process.env.AZURE_ENVIRONMENT === "ci" && process.env.HOST === "127.0.0.1") {
+  const previewUrl = `http://127.0.0.1:${port}`;
+  const setHeader = ServerResponse.prototype.setHeader;
+  ServerResponse.prototype.setHeader = function (name, value) {
+    if (name.toLowerCase() === "content-security-policy" && typeof value === "string") {
+      const headers = loopbackPreviewHeaders(previewUrl, { "content-security-policy": value });
+      value = headers["content-security-policy"];
+    }
+    return Reflect.apply(setHeader, this, [name, value]);
+  };
+}
