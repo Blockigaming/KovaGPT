@@ -15,6 +15,11 @@ for (const theme of ["dark", "light"] as const) {
     await expect(page.locator(".kova-topbar:visible")).toHaveCount(1);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
+    await expect(surface).toHaveCSS(
+      "background-color",
+      theme === "dark" ? "rgb(48, 48, 48)" : "rgb(255, 255, 255)",
+    );
+    await expect(page.locator('[data-slot="dialog-overlay"]')).toBeVisible();
     await expect(
       surface.getByRole("heading", { name: "Personalization", exact: true }),
     ).toBeVisible();
@@ -141,4 +146,42 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   await expect(dictation).toHaveCount(0);
   await expect(input).toHaveValue("Keep my typed draft");
   await expect(trigger).toBeFocused();
+});
+
+test("a second tab can send while the first tab stays open", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop-1440x900");
+  await fixture(page, "dark", true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        (await navigator.locks.query()).held?.some((lock) =>
+          lock.name.startsWith("kova-chat-history:"),
+        ),
+      ),
+    )
+    .toBe(true);
+
+  const second = await page.context().newPage();
+  await fixture(second, "dark", true);
+  let requests = 0;
+  await second.route("**/api/chat", (route) => {
+    requests += 1;
+    return route.fulfill({
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Reply from the second tab."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  await second.goto("/");
+  await waitForKovaHydration(second);
+  await expect(second.locator(".kova-composer-tray")).toHaveCSS(
+    "background-color",
+    "rgb(27, 27, 27)",
+  );
+  await second.getByRole("textbox", { name: "Message KovaGPT" }).fill("Send from the second tab");
+  await second.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(second.getByText("Reply from the second tab.", { exact: true })).toBeVisible();
+  expect(page.isClosed()).toBe(false);
+  expect(requests).toBe(1);
 });
