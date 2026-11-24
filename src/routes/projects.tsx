@@ -1127,11 +1127,13 @@ function ProjectsPage() {
             />
           </div>
         ) : projects.length === 0 ? (
-          <EmptyState
-            icon={FolderKanban}
-            title="No projects yet"
-            description="Create a project to keep related chats, files, and instructions together."
-          />
+          <div className="kova-projects-empty">
+            <EmptyState
+              icon={FolderKanban}
+              title="No projects yet"
+              description="Create a project to keep related chats, files, and instructions together."
+            />
+          </div>
         ) : (
           (() => {
             const q = query.trim().toLowerCase();
