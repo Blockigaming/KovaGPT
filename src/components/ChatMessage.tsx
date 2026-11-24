@@ -1029,6 +1029,10 @@ function ChatMessageInner({
                           </div>
                         ) : null,
                       )}
+                      {/* Tool steps can arrive before any words; keep the single loader until text starts. */}
+                      {waitingForFirstToken ? (
+                        <ChatLoadingIndicator label="Waiting for response" />
+                      ) : null}
                     </div>
                   ) : (
                     renderResponseSection(cleanedResponse, 0)
