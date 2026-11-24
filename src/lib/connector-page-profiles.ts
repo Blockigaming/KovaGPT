@@ -272,6 +272,16 @@ function profile(
   return { publisher, overview, example, related, authorization };
 }
 
+const exampleResults: Readonly<Record<string, string>> = {
+  gmail:
+    "Project kickoff confirmed for Tuesday at 10:00 AM. The email includes the agenda and meeting link.",
+  github:
+    "Two matching issues in the sample repository: #42 Sign-in callback loops and #57 Improve sign-in error messages.",
+  "google-docs":
+    "The brief proposes a two-week pilot. The next steps are to confirm owners and schedule a review.",
+  canva: "Spring campaign · Presentation · 8 pages. Open the design in Canva to continue editing.",
+};
+
 export function getConnectorPageProfile(id: string) {
   const review = getPluginReview(id);
   if (!review) return undefined;
@@ -288,6 +298,7 @@ export function getConnectorPageProfile(id: string) {
     ...custom,
     overview: custom?.overview ?? review.connector.description,
     related: custom?.related ?? [],
+    exampleResult: Object.hasOwn(exampleResults, id) ? exampleResults[id] : capabilities("read")[0],
     authorization:
       custom?.authorization ??
       (review.availability === "planned"
