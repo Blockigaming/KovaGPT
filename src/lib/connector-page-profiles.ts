@@ -79,6 +79,12 @@ const profiles: Readonly<Record<string, Profile>> = {
     "List the datasets in my analytics project and show their locations.",
     ["mixpanel", "vercel", "google-drive"],
   ),
+  "google-docs": profile(
+    "Google",
+    "Google Docs is coming soon. Its dedicated connector will let you work with documents from Kova.",
+    "Summarize the project brief in Google Docs.",
+    ["google-drive", "gmail", "notion"],
+  ),
   "google-drive": profile(
     "Google",
     "Find and reference files shared with your Google Drive connection. You can also review and create a folder in My Drive with write access.",
