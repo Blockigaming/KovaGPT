@@ -1485,7 +1485,7 @@ test("the waveform starts recorded ElevenLabs Voice when realtime cannot connect
   assert.match(f.text(), /Starting Voice…/);
   assert.doesNotMatch(f.text(), /Realtime connection failed|Latest saved reply|Original/);
   await f.acquire();
-  assert.match(f.text(), /Recording/);
+  assert.match(f.text(), /Listening…/);
   assert.doesNotMatch(f.text(), /Starting Voice…/);
   await f.click("Finish turn");
   const stt = await waitForRequest(f, 3);

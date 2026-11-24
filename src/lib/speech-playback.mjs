@@ -79,9 +79,41 @@ async function speechFailureCode(response, run) {
 
 // MP3 MediaSource plays while bytes arrive. Browsers without it use a bounded
 // Blob fallback; Stop cancels either path. No audio or response text is persisted.
-export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError }) {
+export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError, onLevel }) {
   const audio = new Audio();
-  audio.onplaying = onPlaying;
+  let analysisContext;
+  let animationFrame;
+  let disposed = false;
+  audio.onplaying = () => {
+    onPlaying();
+    if (!onLevel || disposed || analysisContext || typeof AudioContext === "undefined") return;
+    try {
+      const context = new AudioContext();
+      analysisContext = context;
+      void context
+        .resume()
+        .then(() => {
+          if (disposed || context.state !== "running") return;
+          const analyser = context.createAnalyser();
+          analyser.fftSize = 256;
+          // Prepare the output before redirecting the media element into Web Audio.
+          analyser.connect(context.destination);
+          context.createMediaElementSource(audio).connect(analyser);
+          const samples = new Float32Array(analyser.fftSize);
+          const sample = () => {
+            analyser.getFloatTimeDomainData(samples);
+            let energy = 0;
+            for (const value of samples) energy += value * value;
+            onLevel(Math.sqrt(energy / samples.length));
+            animationFrame = requestAnimationFrame(sample);
+          };
+          animationFrame = requestAnimationFrame(sample);
+        })
+        .catch(() => {});
+    } catch {
+      // The glow is optional. Playback also works without Web Audio.
+    }
+  };
   audio.onended = onEnded;
   audio.onerror = onError;
   let url, source, buffer;
@@ -128,6 +160,9 @@ export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError })
       }
     },
     dispose() {
+      disposed = true;
+      if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
+      if (analysisContext) void analysisContext.close().catch(() => {});
       audio.onplaying = audio.onended = audio.onerror = null;
       audio.pause();
       audio.removeAttribute("src");

@@ -49,7 +49,7 @@ export function voiceConfiguration(env, tier = "free") {
     sts: output && audioEnabled,
     // Voice conversations use STT, chat, and saved-message /api/speech output.
     // This signals only known configuration gates, never provider readiness.
-    realtime: env("KOVA_VOICE_REALTIME_ENABLED") === "true" && catalog.entries.length >= 3,
+    realtime: env("KOVA_VOICE_REALTIME_ENABLED") === "true",
     conversation: stt && output && env("KOVA_SPEECH_ENABLED") === "true" && modelPolicy.valid,
   };
 }

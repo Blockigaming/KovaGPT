@@ -2460,6 +2460,43 @@ export function ChatInput({
           onEditingChange={setGoalEditing}
         />
       )}
+      <ComposerVoiceDialog
+        open={activeVoiceMode !== null}
+        inlineDictation
+        autoStartVoice
+        mode={activeVoiceMode ?? "dictate"}
+        onOpenChange={(open) => {
+          if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)
+            setVoiceOpenMode(null);
+        }}
+        userId={isLoaded ? (user?.id ?? null) : null}
+        contextKey={voiceContextKey}
+        disabled={disabled || !online}
+        isStreaming={isStreaming}
+        latestAssistantText={latestAssistantText}
+        latestAssistantReply={latestAssistantReply}
+        conversationModelControl={
+          <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
+        }
+        onTranscript={acceptVoiceTranscript}
+        onVoiceSubmit={onVoiceSubmit ? submitVoiceTranscript : undefined}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (
+            !voiceMountedRef.current ||
+            voiceIdentityRef.current !== voiceScope ||
+            voiceCallbacksRef.current.disabled
+          )
+            return;
+          const invoker = voiceTriggerRef.current;
+          restoreDialogFocus(
+            voiceDraftAppliedRef.current || invoker?.hidden
+              ? ref.current
+              : (invoker ?? ref.current),
+            voiceReturnUrlRef.current,
+          );
+        }}
+      />
       <div
         ref={composerAnchorRef}
         className="spec400-composer"
@@ -2496,8 +2533,9 @@ export function ChatInput({
                 setSlashIndex(0);
                 updateComposerText(event.target.value, event.target.selectionStart);
               }}
-              onKeyDown={handleKey}
+              onKeyDown={activeVoiceMode === "voice" ? undefined : handleKey}
               disabled={disabled}
+              readOnly={activeVoiceMode === "voice"}
               onCompositionStart={() => {
                 composingRef.current = true;
               }}
@@ -2762,7 +2800,9 @@ export function ChatInput({
                 aria-label="Type with voice"
                 aria-controls="kova-inline-dictation"
                 aria-expanded={activeVoiceMode === "dictate"}
-                disabled={disabled || isStreaming || !isLoaded || !online}
+                disabled={
+                  disabled || isStreaming || !isLoaded || !online || activeVoiceMode === "voice"
+                }
                 title="Type with voice"
                 onClick={(event) => openVoice("dictate", event.currentTarget)}
               >
@@ -2773,30 +2813,40 @@ export function ChatInput({
                 type="button"
                 data-testid="voice-button"
                 className="spec400-send-button spec400-primary-voice"
-                hidden={hasDraft || isStreaming}
-                aria-label="Voice"
-                aria-haspopup="dialog"
+                hidden={activeVoiceMode !== "voice" && (hasDraft || isStreaming)}
+                aria-label={activeVoiceMode === "voice" ? "Stop voice" : "Voice"}
+                aria-controls={activeVoiceMode === "voice" ? "kova-inline-voice" : undefined}
                 aria-expanded={activeVoiceMode === "voice"}
                 disabled={
-                  disabled ||
-                  isStreaming ||
-                  !isLoaded ||
-                  !user ||
-                  !online ||
-                  !onVoiceSubmit ||
-                  voiceOpeningBlocked
+                  activeVoiceMode !== "voice" &&
+                  (disabled ||
+                    isStreaming ||
+                    !isLoaded ||
+                    !user ||
+                    !online ||
+                    !onVoiceSubmit ||
+                    voiceOpeningBlocked)
                 }
                 title={
-                  onVoiceSubmit
-                    ? "Start a voice conversation"
-                    : "Voice conversations require a saved chat"
+                  activeVoiceMode === "voice"
+                    ? "Stop voice"
+                    : onVoiceSubmit
+                      ? "Start a voice conversation"
+                      : "Voice conversations require a saved chat"
                 }
-                onClick={(event) => openVoice("voice", event.currentTarget)}
+                onClick={(event) => {
+                  if (activeVoiceMode === "voice") setVoiceOpenMode(null);
+                  else openVoice("voice", event.currentTarget);
+                }}
               >
-                <AudioLines aria-hidden="true" />
-                <span className="sr-only">Voice</span>
+                {activeVoiceMode === "voice" ? (
+                  <Square aria-hidden="true" />
+                ) : (
+                  <AudioLines aria-hidden="true" />
+                )}
+                {activeVoiceMode === "voice" && <span>Stop</span>}
               </button>
-              {isStreaming ? (
+              {activeVoiceMode === "voice" ? null : isStreaming ? (
                 <button
                   type="button"
                   onPointerDown={(event) => {
@@ -3079,43 +3129,6 @@ export function ChatInput({
           {blockedAttachmentMessage}
         </p>
       )}
-      <ComposerVoiceDialog
-        open={activeVoiceMode !== null}
-        inlineDictation
-        autoStartVoice
-        mode={activeVoiceMode ?? "dictate"}
-        onOpenChange={(open) => {
-          if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)
-            setVoiceOpenMode(null);
-        }}
-        userId={isLoaded ? (user?.id ?? null) : null}
-        contextKey={voiceContextKey}
-        disabled={disabled || !online}
-        isStreaming={isStreaming}
-        latestAssistantText={latestAssistantText}
-        latestAssistantReply={latestAssistantReply}
-        conversationModelControl={
-          <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
-        }
-        onTranscript={acceptVoiceTranscript}
-        onVoiceSubmit={onVoiceSubmit ? submitVoiceTranscript : undefined}
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          if (
-            !voiceMountedRef.current ||
-            voiceIdentityRef.current !== voiceScope ||
-            voiceCallbacksRef.current.disabled
-          )
-            return;
-          const invoker = voiceTriggerRef.current;
-          restoreDialogFocus(
-            voiceDraftAppliedRef.current || invoker?.hidden
-              ? ref.current
-              : (invoker ?? ref.current),
-            voiceReturnUrlRef.current,
-          );
-        }}
-      />
       {nextPromptPanel}
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent

@@ -2033,3 +2033,60 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     animation: kova-chat-loading-shimmer 1.8s ease-in-out infinite;
   }
 }
+
+.kova-inline-voice {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  padding: 0.25rem 0.875rem 0.5rem;
+  min-height: 2rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+.kova-inline-voice-picker {
+  max-width: min(15rem, 100%);
+  width: auto;
+  margin-inline-start: auto;
+}
+
+.kova-inline-voice-glow {
+  --voice-level: 0;
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: auto 4% 0;
+  height: clamp(5rem, 21vh, 12rem);
+  background:
+    radial-gradient(ellipse at 34% 100%, var(--voice-glow-a, #7974ec), transparent 65%),
+    radial-gradient(ellipse at 66% 100%, var(--voice-glow-b, #b060b0), transparent 62%),
+    radial-gradient(ellipse at 50% 100%, var(--voice-glow-c, #5966ec), transparent 74%);
+  filter: blur(1.2rem);
+  opacity: calc(0.2 + var(--voice-level) * 0.48);
+  transform-origin: center bottom;
+  transform: scaleY(calc(0.75 + var(--voice-level) * 0.32));
+  transition:
+    opacity 100ms linear,
+    transform 130ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-inline-voice-glow {
+    opacity: 0.35;
+    transform: none;
+    transition: none;
+  }
+}
+
+.spec400-composer-trailing .spec400-primary-voice[aria-expanded="true"] {
+  width: auto;
+  padding-inline: 0.625rem;
+}
+
+.spec400-composer-trailing .spec400-primary-voice[aria-expanded="true"] svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}

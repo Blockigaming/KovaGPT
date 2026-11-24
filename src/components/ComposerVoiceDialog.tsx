@@ -160,6 +160,10 @@ export function ComposerVoiceDialog({
   const transcriptId = useId();
   const voicePickerId = useId();
   const voiceHelpId = useId();
+  const voiceGlow = useRef<HTMLDivElement>(null);
+  const updateGlow = (level: number) => {
+    voiceGlow.current?.style.setProperty("--voice-level", String(Math.min(1, level * 8)));
+  };
   const [realtimeFailed, setRealtimeFailed] = useState(false);
   const [capabilities, setCapabilities] = useState<VoiceCapabilities | null>(null);
   const [checking, setChecking] = useState(false);
@@ -582,12 +586,12 @@ export function ComposerVoiceDialog({
         ...log.slice(-49),
         { speaker: "Kova", text: reply.content, at: Date.now() },
       ]);
-      updatePhase("speaking");
+      updatePhase("synthesizing");
       let ended = false;
       let started = false;
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
-        createSink: createBrowserSpeechSink,
+        createSink: (options) => createBrowserSpeechSink({ ...options, onLevel: updateGlow }),
         onEnded: (completed) => {
           if (
             !isCurrent(scope) ||
@@ -610,6 +614,7 @@ export function ComposerVoiceDialog({
         onState: (state, code) => {
           if (!isCurrent(scope) || voicePlayback.current !== playback) return;
           if (state === "loading") started = true;
+          if (state === "playing") updatePhase("speaking");
           if (state === "error") {
             const messages: Record<string, string> = {
               speech_message_not_synced:
@@ -842,6 +847,7 @@ export function ComposerVoiceDialog({
               throw new Error("Live Voice could not connect.");
             return token;
           },
+          onLevel: updateGlow,
           onListening: () => {
             startedListening = true;
             if (isCurrent(scope)) {
@@ -947,7 +953,9 @@ export function ComposerVoiceDialog({
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
-            if (gate.sample(Math.sqrt(total / samples.length), Date.now())) stopRecording();
+            const level = Math.sqrt(total / samples.length);
+            updateGlow(level);
+            if (gate.sample(level, Date.now())) stopRecording();
           }, 100);
           silenceMonitor.current = { context, source, interval, gate };
           setHandsFreeListening(true);
@@ -1237,6 +1245,75 @@ export function ComposerVoiceDialog({
     capabilities?.realtime &&
     !realtimeFailed &&
     canListenInRealtime();
+
+  if (mode === "voice" && autoStartVoice) {
+    if (!open) return null;
+    const liveStatus =
+      error ||
+      (startingVoice
+        ? "Starting Voice…"
+        : phase === "recording"
+          ? "Listening…"
+          : phase === "speaking"
+            ? "Kova is speaking…"
+            : busy
+              ? "Kova is responding…"
+              : ready
+                ? "Voice paused"
+                : "Voice is unavailable right now.");
+    return (
+      <div id="kova-inline-voice" className="kova-inline-voice" data-phase={phase}>
+        {(phase === "recording" || phase === "speaking") && (
+          <div
+            ref={voiceGlow}
+            style={glowStyle}
+            className="kova-inline-voice-glow"
+            aria-hidden="true"
+          />
+        )}
+        <span role="status">{liveStatus}</span>
+        {ready && phase === "recording" && !realtimeListening && (
+          <Button type="button" size="sm" variant="ghost" onClick={stopRecording}>
+            Finish turn
+          </Button>
+        )}
+        {ready && !busy && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => void startRecording()}>
+            Resume
+          </Button>
+        )}
+        {!checking && !capabilities && error && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              voiceStartScope.current = null;
+              setCapabilityAttempt((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        )}
+        {ready && capabilities.voices.filter((voice) => voice.available).length > 1 && (
+          <Select value={selectedVoiceId} onValueChange={changeVoice} disabled={busy}>
+            <SelectTrigger aria-label="Reply voice" className="kova-inline-voice-picker">
+              <SelectValue placeholder="Reply voice" />
+            </SelectTrigger>
+            <SelectContent className="max-h-64">
+              {capabilities.voices
+                .filter((voice) => voice.available)
+                .map((voice) => (
+                  <SelectItem key={voice.id} value={voice.id}>
+                    {voice.label}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    );
+  }
 
   return (
     <VoiceView
