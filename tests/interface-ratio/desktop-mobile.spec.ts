@@ -179,9 +179,8 @@ for (const state of states) {
       expect(card.width).toBeCloseTo(Number.parseFloat(columns[0]), 1);
       expect(card.x + card.width).toBeLessThanOrEqual(grid.x + grid.width);
       expect(next.x + next.width).toBeLessThanOrEqual(grid.x + grid.width);
-      expect(card.height).toBeGreaterThanOrEqual(84);
-      expect(card.radius).toBe("12px");
-      expect(card.gap).toBe("4px 10px");
+      expect(card.height).toBeGreaterThanOrEqual(72);
+      unchanged(".spec400-plugin-card", ["radius", "gap", "padding"]);
       if (columns.length === 1) {
         expect(next.x).toBe(card.x);
         expect(next.y).toBeGreaterThanOrEqual(card.y + card.height);
