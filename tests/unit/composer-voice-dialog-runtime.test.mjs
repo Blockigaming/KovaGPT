@@ -449,7 +449,11 @@ function fixture(initial = {}, options = {}) {
     }
   }
   function control(label) {
-    const found = nodes(tree).find((node) => node.type === "button" && text(node).trim() === label);
+    const found = nodes(tree).find(
+      (node) =>
+        node.type === "button" &&
+        (node.props["aria-label"] === label || text(node).trim() === label),
+    );
     assert.ok(found, `Missing button ${label}; visible: ${text(tree)}`);
     return found.props;
   }
@@ -1395,6 +1399,27 @@ async function voiceTurn(f) {
   assert.equal(f.voiceSubmissions.length, 1);
   return { acquired, submission: f.voiceSubmissions[0] };
 }
+test("chat window limit asks the default ElevenLabs voice to speak the reset time", async () => {
+  const f = fixture({ mode: "voice" });
+  const { submission } = await voiceTurn(f);
+  submission.reject({
+    code: "message_window_limit",
+    resetsAt: new Date(Date.now() + 82.5 * 60_000).toISOString(),
+  });
+  await f.flush();
+  const tts = f.requests.at(-1);
+  assert.equal(tts.url, "/api/voice");
+  assert.deepEqual(JSON.parse(tts.init.body), {
+    action: "tts",
+    text: "Whoops! You've hit your usage limit, although we can talk again in 1 hour and 23 minutes.",
+  });
+  tts.resolve(Response.json({}, { status: 503 }));
+  await f.flush();
+  assert.match(f.text(), /1 hour and 23 minutes/);
+  assert.equal(f.microphoneRequests.length, 1);
+  f.unmount();
+});
+
 async function voiceReply(f) {
   const turn = await voiceTurn(f);
   turn.submission.resolve(savedVoiceReply());

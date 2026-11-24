@@ -300,6 +300,7 @@ export function ComposerVoiceDialog({
 
   const releasePlayback = useCallback(() => {
     if (player.current) {
+      player.current.onended = player.current.onerror = null;
       player.current.pause();
       player.current.removeAttribute("src");
       player.current.load();
@@ -707,6 +708,64 @@ export function ComposerVoiceDialog({
       );
     } catch (cause) {
       if (!isCurrent(scope)) return;
+      const limit = cause as { code?: string; resetsAt?: string } | null;
+      if (limit?.code === "message_window_limit" && typeof limit.resetsAt === "string") {
+        const remaining = Math.ceil((Date.parse(limit.resetsAt) - Date.now()) / 60_000);
+        if (Number.isFinite(remaining) && remaining > 0 && remaining <= 7 * 24 * 60) {
+          const hours = Math.floor(remaining / 60);
+          const minutes = remaining % 60;
+          const duration = [
+            hours ? `${hours} ${hours === 1 ? "hour" : "hours"}` : "",
+            minutes ? `${minutes} ${minutes === 1 ? "minute" : "minutes"}` : "",
+          ]
+            .filter(Boolean)
+            .join(" and ");
+          const notice = `Whoops! You've hit your usage limit, although we can talk again in ${duration}.`;
+          finishRequest(controller);
+          current.current.onVoicePlaybackProgress?.(null);
+          setError(notice);
+          updatePhase("synthesizing");
+          const noticeRequest = beginRequest(20_000);
+          try {
+            const response = await authFetch("/api/voice", {
+              method: "POST",
+              signal: noticeRequest.signal,
+              headers: {
+                "Content-Type": "application/json",
+                "X-Kova-Voice-Owner": scope.userId,
+              },
+              // The server picks the plan's default ElevenLabs voice.
+              body: JSON.stringify({ action: "tts", text: notice }),
+            });
+            if (!response.ok) throw new Error("voice_notice_unavailable");
+            const audio = await response.blob();
+            if (!isCurrent(scope) || noticeRequest.signal.aborted) return;
+            const output = new Audio();
+            player.current = output;
+            objectUrl.current = URL.createObjectURL(audio);
+            output.src = objectUrl.current;
+            const finishNotice = () => {
+              if (!isCurrent(scope) || player.current !== output) return;
+              releasePlayback();
+              voiceSessionActive.current = false;
+              updatePhase("idle");
+            };
+            output.onended = output.onerror = finishNotice;
+            await output.play();
+            if (!isCurrent(scope) || player.current !== output) return;
+            updatePhase("speaking");
+          } catch {
+            if (isCurrent(scope)) {
+              releasePlayback();
+              voiceSessionActive.current = false;
+              updatePhase("idle");
+            }
+          } finally {
+            finishRequest(noticeRequest);
+          }
+          return;
+        }
+      }
       const code = cause instanceof Error ? cause.message : "";
       failOperation(
         controller.signal.aborted
@@ -1313,10 +1372,24 @@ export function ComposerVoiceDialog({
             aria-hidden="true"
           />
         )}
-        <span role="status">{liveStatus}</span>
+        <span
+          role="status"
+          className={
+            !error && (phase === "recording" || phase === "speaking") ? "sr-only" : undefined
+          }
+        >
+          {liveStatus}
+        </span>
         {ready && phase === "recording" && !realtimeListening && (
-          <Button type="button" size="sm" variant="ghost" onClick={stopRecording}>
-            Finish turn
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Finish turn"
+            title="Finish turn"
+            onClick={stopRecording}
+          >
+            <ArrowUp aria-hidden="true" />
           </Button>
         )}
         {ready && !busy && (

@@ -2485,6 +2485,8 @@ function KovaGPT() {
                 ),
               );
             }
+            if (voiceRequest && err.code === "message_window_limit" && isCurrentRetryScope())
+              throw err;
           } else {
             updateAssistant(`\n\n_${detail}_`);
           }
