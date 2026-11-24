@@ -86,7 +86,7 @@ test("response actions use 28px desktop density and 44px touch targets inside a 
   const selector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const desktop = ruleFor(responseCss, selector);
-  const touch = ruleFor(responseCss, selector, "(width < 1024px)");
+  const touch = ruleFor(responseCss, selector, "(width < 1024px), (pointer: coarse)");
   for (const property of ["width", "height", "min-width", "min-height", "flex-basis"]) {
     assert.equal(declaration(desktop, property).value, "28px");
     assert.equal(declaration(touch, property).value, "44px");
