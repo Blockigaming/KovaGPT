@@ -23,7 +23,9 @@ const localesUrl = `data:text/javascript;base64,${Buffer.from(
 ).toString("base64")}`;
 const appLabelsByLocale = {};
 for (const locale of ["es", "fr", "de", "pt-BR", "ja", "ko", "ar"])
-  appLabelsByLocale[locale] = JSON.parse(await readFile(`src/lib/app-labels/${locale}.json`, "utf8"));
+  appLabelsByLocale[locale] = JSON.parse(
+    await readFile(`src/lib/app-labels/${locale}.json`, "utf8"),
+  );
 const appLabelsUrl = `data:text/javascript;base64,${Buffer.from(
   `const all = ${JSON.stringify(appLabelsByLocale)}; export async function loadAppLabels(locale) { return all[locale] ?? {}; }`,
 ).toString("base64")}`;

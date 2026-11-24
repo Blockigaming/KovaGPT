@@ -422,7 +422,9 @@ button.kova-response-work-time[aria-expanded="true"] .kova-response-work-chevron
 }
 
 /* Monochrome dark marks would vanish on the dark background, so they flip to white there. */
-:is(.dark, [data-theme="dark"]) :is(.kova-activity-logo, .kova-step-group-icon) img:is([data-brand="github"], [data-brand="linear"]) {
+:is(.dark, [data-theme="dark"])
+  :is(.kova-activity-logo, .kova-step-group-icon)
+  img:is([data-brand="github"], [data-brand="linear"]) {
   filter: invert(1);
 }
 /* Logos are not chat images: drop the framed-image fill, border, radius and shadow. */
