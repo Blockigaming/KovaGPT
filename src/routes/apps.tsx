@@ -980,8 +980,13 @@ function AppsPage() {
     if (detailId) {
       previousDetailsRef.current = { id: detailId, principal };
       directoryRef.current?.scrollIntoView({ block: "start" });
-      detailsHeadingRef.current?.scrollIntoView({ block: "nearest" });
       detailsHeadingRef.current?.focus({ preventScroll: true });
+      // The router restores scroll after this effect on some viewports; settle once more.
+      const frame = requestAnimationFrame(() => {
+        directoryRef.current?.scrollIntoView({ block: "start" });
+        detailsHeadingRef.current?.scrollIntoView({ block: "nearest" });
+      });
+      return () => cancelAnimationFrame(frame);
     } else if (previous) {
       previousDetailsRef.current = null;
       if (previous.principal !== principal || connectionGroup) return;

@@ -14,7 +14,11 @@ test("workspace discovery routes expose one deliberate main landmark contract", 
   for (const [name, source] of Object.entries(routes)) {
     assert.match(source, /<main[\s\S]{0,220}id="main-content"/, name);
     assert.match(source, /tabIndex=\{-1\}/, name);
-    assert.match(source, /aria-labelledby=(?:"|\{[^}]*"?)(?:projects|library|apps|images)-title/, name);
+    assert.match(
+      source,
+      /aria-labelledby=(?:"|\{[^}]*"?)(?:projects|library|apps|images)-title/,
+      name,
+    );
   }
 });
 
