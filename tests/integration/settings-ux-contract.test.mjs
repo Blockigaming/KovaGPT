@@ -196,7 +196,7 @@ test("Settings selects and Library filters expose stable accessible names", asyn
 });
 
 test("signed-in settings uses searchable navigation and a purpose-built mobile drill-in", () => {
-  assert.match(settingsSource, /placeholder="Search settings"/);
+  assert.match(settingsSource, /placeholder=(?:"Search settings"|\{t\("Search settings"\)\})/);
   assert.match(settingsSource, /No settings found/);
   assert.match(settingsSource, /const filteredGroups = normalizedQuery/);
   assert.match(settingsSource, /const queryTerms = settingsQuery/);

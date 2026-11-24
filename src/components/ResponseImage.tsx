@@ -1,4 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { chatKeyFromScope, registerConversationImage } from "@/lib/conversation-images";
+
+const ImageCanvasView = lazy(() =>
+  import("./ImageCanvasView").then((module) => ({ default: module.ImageCanvasView })),
+);
 import { Bookmark, Download, Check } from "lucide-react";
 import { ExpandViewIcon } from "./ui/ExpandViewIcon";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
@@ -20,6 +25,9 @@ export function ResponseImage({
   const [full, setFull] = useState(false);
   const [spriteOpen, setSpriteOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
+  const [canvas, setCanvas] = useState(false);
+  const chat = imageActions ? chatKeyFromScope(imageActions.scope) : null;
+  useEffect(() => (chat ? registerConversationImage(chat, src, alt) : undefined), [chat, src, alt]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -143,7 +151,10 @@ export function ResponseImage({
           open
           onOpenChange={(open) => {
             setFull(open);
-            if (!open) setZoomed(false);
+            if (!open) {
+              setZoomed(false);
+              setCanvas(false);
+            }
           }}
         >
           <DialogContent
@@ -157,33 +168,51 @@ export function ResponseImage({
             }}
           >
             <DialogTitle>{alt}</DialogTitle>
-            <button
-              type="button"
-              className="kova-image-zoom"
-              aria-pressed={zoomed}
-              onClick={() => setZoomed((value) => !value)}
-            >
-              Zoom image
-            </button>
-            <div
-              className="kova-image-view-scroll"
-              data-zoomed={zoomed}
-              role="region"
-              aria-label="Image preview"
-              tabIndex={zoomed ? 0 : undefined}
-            >
-              <ChatImage
-                src={src}
-                alt={alt}
-                actions={imageActions}
-                enablePreview={false}
-                imageClassName="max-h-[70dvh] w-auto max-w-full object-contain"
-                onHide={() => {
-                  setZoomed(false);
-                  setFull(false);
-                }}
-              />
-            </div>
+            {chat && (
+              <div className="kova-image-view-tabs" role="group" aria-label="Image view">
+                <button type="button" aria-pressed={!canvas} onClick={() => setCanvas(false)}>
+                  Focused
+                </button>
+                <button type="button" aria-pressed={canvas} onClick={() => setCanvas(true)}>
+                  All images
+                </button>
+              </div>
+            )}
+            {canvas && chat ? (
+              <Suspense fallback={<p role="status">Loading images…</p>}>
+                <ImageCanvasView chat={chat} current={src} />
+              </Suspense>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="kova-image-zoom"
+                  aria-pressed={zoomed}
+                  onClick={() => setZoomed((value) => !value)}
+                >
+                  Zoom image
+                </button>
+                <div
+                  className="kova-image-view-scroll"
+                  data-zoomed={zoomed}
+                  role="region"
+                  aria-label="Image preview"
+                  tabIndex={zoomed ? 0 : undefined}
+                >
+                  <ChatImage
+                    src={src}
+                    alt={alt}
+                    actions={imageActions}
+                    enablePreview={false}
+                    imageClassName="max-h-[70dvh] w-auto max-w-full object-contain"
+                    onHide={() => {
+                      setZoomed(false);
+                      setFull(false);
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       )}

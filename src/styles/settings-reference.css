@@ -790,13 +790,16 @@
   [role="dialog"].kova-settings-dialog.is-authenticated {
     --settings-inset: clamp(24px, 3.5vw, 40px);
     --settings-space: 28px;
-    width: min(900px, calc(100vw - 48px));
-    height: min(660px, calc(100dvh - 48px));
+    /* The same 40px gap from the window edge on every side, capped for very large screens. */
+    width: min(1600px, calc(100vw - 80px));
+    max-width: none;
+    max-height: none;
+    height: min(820px, calc(100dvh - 80px));
     border-radius: 24px;
   }
   .kova-settings-reference .kova-settings-sidebar {
-    width: var(--kova-settings-navigation-width, 210px);
-    padding: 16px 12px;
+    width: var(--kova-settings-navigation-width, 272px);
+    padding: 20px 14px;
   }
   .kova-settings-reference .kova-settings-navigation-heading {
     min-height: 36px;

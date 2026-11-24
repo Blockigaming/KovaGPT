@@ -6,6 +6,42 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+// Mermaid ships as its prebuilt file (bundling it exhausts build memory). It is served
+// at a fixed versioned path and loaded only when a reply contains a diagram.
+const MERMAID_ASSET = "assets/vendor/mermaid-12.3.0.min.js";
+function mermaidAsset() {
+  const file = createRequire(import.meta.url).resolve("mermaid/dist/mermaid.min.js");
+  return {
+    name: "kova-mermaid-asset",
+    configureServer(server: {
+      middlewares: {
+        use: (
+          fn: (
+            req: { url?: string },
+            res: { setHeader: (k: string, v: string) => void; end: (b: Buffer) => void },
+            next: () => void,
+          ) => void,
+        ) => void;
+      };
+    }) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split("?")[0] !== `/${MERMAID_ASSET}`) return next();
+        res.setHeader("Content-Type", "text/javascript; charset=utf-8");
+        res.end(readFileSync(file));
+      });
+    },
+    generateBundle(this: {
+      environment?: { name: string };
+      emitFile: (asset: { type: "asset"; fileName: string; source: Buffer }) => void;
+    }) {
+      if (this.environment && this.environment.name !== "client") return;
+      this.emitFile({ type: "asset", fileName: MERMAID_ASSET, source: readFileSync(file) });
+    },
+  };
+}
 
 const useNodeBrowserPreview = process.env.KOVA_BROWSER_PREVIEW === "node";
 const buildSha = process.env.KOVA_BUILD_SHA || process.env.GITHUB_SHA || "unknown";
@@ -24,6 +60,7 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.VITE_KOVA_APP_VERSION": JSON.stringify(appVersion),
     },
     plugins: [
+      mermaidAsset(),
       tailwindcss(),
       tsconfigPaths({ projects: ["./tsconfig.json"] }),
       // TanStack resolves this entry relative to the default src directory.

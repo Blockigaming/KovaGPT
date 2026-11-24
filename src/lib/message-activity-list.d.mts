@@ -25,3 +25,8 @@ export function conversationWithLiveBrowserActivity<T extends Conversation | nul
   principal: string | null,
   now?: number,
 ): T;
+export function timeMessageActivities(
+  previous?: readonly Activity[],
+  next?: readonly Activity[],
+  now?: number,
+): Activity[];

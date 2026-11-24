@@ -737,6 +737,7 @@ function composer(f) {
     createMemorySourceUpdater: () => no,
     normalizeResponseSources: () => [],
     safeLocale: () => "en-US",
+    goalForRequest: () => undefined,
     tier: "free",
     personalityToInstruction: () => "",
     loadPersonality: no,

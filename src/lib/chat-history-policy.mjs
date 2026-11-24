@@ -30,7 +30,8 @@ const MODES = new Set([
 const object = (v) => v && typeof v === "object" && !Array.isArray(v);
 const text = (v, max) => typeof v === "string" && v.length <= max;
 const time = (v) => Number.isSafeInteger(v) && v >= 0 && v <= 8_640_000_000_000_000;
-const TERMINAL_ACTIVITY_STATUSES = new Set(["done", "failed", "canceled"]);
+const TERMINAL_ACTIVITY_STATUSES = new Set(["done", "failed", "canceled", "skipped", "partial"]);
+const activityNumber = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
 const COMPOSER_TOOL_IDS = new Set([
   "web_search",
   "image",
@@ -85,6 +86,7 @@ function attachment(value) {
     if (value.kind === "text_file") {
       if (!text(value.content, 262144)) throw new Error("chat_history_invalid");
       result.content = value.content;
+      if (value.pasted === true) result.pasted = true;
     } else result.libraryItemId = chatHistoryUuid(value.libraryItemId);
     if (value.fileType != null) {
       if (!text(value.fileType, 100)) throw new Error("chat_history_invalid");
@@ -238,7 +240,7 @@ export function normalizeChatHistory(value, ownerId) {
               text(v.label, 200),
           )
           .slice(0, 30)
-          .map(({ tool, label, status, taskReceipt, taskFailure }) => {
+          .map(({ tool, label, status, taskReceipt, taskFailure, ...extra }) => {
             const receipt =
               tool === "scheduled_task" && status === "done"
                 ? normalizeTaskCreatedReceipt(taskReceipt)
@@ -251,6 +253,13 @@ export function normalizeChatHistory(value, ownerId) {
               tool,
               label,
               status,
+              ...(text(extra.activityId, 160) ? { activityId: extra.activityId } : {}),
+              ...(text(extra.detail, 200) ? { detail: extra.detail } : {}),
+              ...(activityNumber(extra.count, 1e9) ? { count: extra.count } : {}),
+              ...(activityNumber(extra.total, 1e9) ? { total: extra.total } : {}),
+              ...(text(extra.parentId, 160) ? { parentId: extra.parentId } : {}),
+              ...(activityNumber(extra.durationMs, 864e5) ? { durationMs: extra.durationMs } : {}),
+              ...(activityNumber(extra.at, 1e7) ? { at: extra.at } : {}),
               ...(receipt ? { taskReceipt: receipt } : {}),
               ...(failure ? { taskFailure: failure } : {}),
             };

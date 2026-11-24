@@ -61,6 +61,10 @@ const stepStatusLabels = {
   failed: "Failed",
   canceled: "Canceled",
   interrupted: "Interrupted",
+  queued: "Queued",
+  paused: "Paused",
+  skipped: "Skipped",
+  partial: "Partly completed",
 };
 
 function OutputsIcon() {

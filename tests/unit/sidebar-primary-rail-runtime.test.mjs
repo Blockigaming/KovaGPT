@@ -61,6 +61,7 @@ function all(tree) {
 function fixture(options = {}) {
   const calls = [];
   const deps = {
+    t: (text) => text,
     React,
     SIDEBAR_SHORTCUTS,
     SIDEBAR_ITEMS,

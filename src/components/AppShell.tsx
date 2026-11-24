@@ -1,4 +1,5 @@
 import { permanentlyDeleteChat } from "@/lib/permanent-chat-delete";
+import { t } from "@/lib/localization";
 import { toast } from "sonner";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -61,7 +62,7 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const pageTitle =
+  const pageTitle = t(
     (
       {
         library: "Library",
@@ -79,7 +80,8 @@ export function AppShell({
         billing: "Subscriptions",
         help: "Help",
       } as Record<string, string>
-    )[pathname.split("/")[1]] ?? "KovaGPT";
+    )[pathname.split("/")[1]] ?? "KovaGPT",
+  );
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const storagePrincipal = chatStoragePrincipal(userKey);

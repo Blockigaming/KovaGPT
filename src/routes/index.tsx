@@ -31,6 +31,8 @@ import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
+import { latestFileResult, notifyResponseReady } from "@/lib/response-completion";
+import { goalForRequest } from "@/lib/chat-goal";
 import { restoreDialogFocus, scheduleDialogFocusReturn } from "@/lib/dialog-return-focus";
 import {
   beginChatEdit,
@@ -764,6 +766,8 @@ function KovaGPT() {
   const resizeAttachmentPane = (next: number) =>
     setAttachmentPaneRatio(Math.max(0.3, Math.min(0.7, next)));
   const wideResult = workspaceWidth >= 1000;
+  const wideResultRef = useRef(wideResult);
+  wideResultRef.current = wideResult;
   const setLayoutRatio = (next: number) => {
     const usableWidth = Math.max(workspaceWidth - 12, 840);
     const minimum = 420 / usableWidth;
@@ -1268,17 +1272,26 @@ function KovaGPT() {
     }
     const pending = pendingCanvasRef.current;
     pendingCanvasRef.current = null;
+    if (pending && typeof document !== "undefined" && document.hidden)
+      notifyResponseReady(pending.messageId);
     if (
       !principalReady ||
       !pending ||
       pending.scope !== scope ||
       latest?.id !== pending.messageId ||
       latest.role !== "assistant" ||
-      latest.generationStatus ||
-      resultRef.current ||
-      resultDraftsRef.current.has(scope)
+      latest.generationStatus
     )
       return;
+    // A file the reply just made opens in the side preview, replacing an earlier file
+    // preview but never another kind of result. Narrow layouts keep the tap-to-open card.
+    const fileResult = latestFileResult(latest);
+    if (fileResult) {
+      if (wideResultRef.current && (!resultRef.current || resultRef.current.file))
+        openResultRef.current(fileResult);
+      return;
+    }
+    if (resultRef.current || resultDraftsRef.current.has(scope)) return;
     const parts = splitGenerativeContent(latest.content);
     const index = parts.findIndex((part) => part.kind === "widget");
     const part = parts[index];
@@ -2158,6 +2171,7 @@ function KovaGPT() {
             hostedModel: requestHostedModel,
             clientTool: activeTool,
             projectId: tempChat ? undefined : projectContext?.id,
+            goal: goalForRequest(storagePrincipal, activeId, nextConvId),
             connectorIds: tempChat ? undefined : activePluginContexts.map((plugin) => plugin.id),
             chatId: nextConvId,
             temporary: tempChat,
@@ -2235,9 +2249,13 @@ function KovaGPT() {
                 nextConvId,
                 assistantMsg.id,
               );
+              // Remember how much reply text had arrived, so the step shows between paragraphs.
+              const at = assembledReply.length;
               updateAssistantMessage((message) => ({
                 ...message,
-                activities: appendActivity(message.activities),
+                activities: appendActivity(message.activities).map((activity) =>
+                  activity.at === undefined ? { ...activity, at } : activity,
+                ),
               }));
             }
             if (delta?.kind === "tool_confirm" && delta?.action_id) {
