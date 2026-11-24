@@ -40,12 +40,33 @@ globalThis.fetch = (input, init = {}) => {
 // so the final document is covered even when the browser skips its route handler.
 if (process.env.AZURE_ENVIRONMENT === "ci" && process.env.HOST === "127.0.0.1") {
   const previewUrl = `http://127.0.0.1:${port}`;
+  const previewHeader = (name, value) => {
+    if (name.toLowerCase() !== "content-security-policy" || typeof value !== "string") {
+      return value;
+    }
+    return loopbackPreviewHeaders(previewUrl, { "content-security-policy": value })[
+      "content-security-policy"
+    ];
+  };
   const setHeader = ServerResponse.prototype.setHeader;
   ServerResponse.prototype.setHeader = function (name, value) {
-    if (name.toLowerCase() === "content-security-policy" && typeof value === "string") {
-      const headers = loopbackPreviewHeaders(previewUrl, { "content-security-policy": value });
-      value = headers["content-security-policy"];
+    return Reflect.apply(setHeader, this, [name, previewHeader(name, value)]);
+  };
+  // Nitro can pass a complete header collection directly to writeHead rather
+  // than calling setHeader. Cover both Node response paths, including redirects.
+  const writeHead = ServerResponse.prototype.writeHead;
+  ServerResponse.prototype.writeHead = function (statusCode, ...args) {
+    const index = typeof args[0] === "string" ? 1 : 0;
+    const headers = args[index];
+    if (Array.isArray(headers)) {
+      args[index] = headers.map((value, i) =>
+        i % 2 === 1 ? previewHeader(String(headers[i - 1]), value) : value,
+      );
+    } else if (headers && typeof headers === "object") {
+      args[index] = Object.fromEntries(
+        Object.entries(headers).map(([name, value]) => [name, previewHeader(name, value)]),
+      );
     }
-    return Reflect.apply(setHeader, this, [name, value]);
+    return Reflect.apply(writeHead, this, [statusCode, ...args]);
   };
 }
