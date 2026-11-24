@@ -323,7 +323,7 @@ function bridgeFixture({ active = null } = {}) {
       state.sends.push(args);
       return state.turn;
     },
-    awaitSavedComposerVoiceTurn: async (options) => {
+    finishComposerVoiceTurn: async (_realtime, _historyEvent, options) => {
       state.waits.push(options);
       return { ...options.turn, contentSha256: "a".repeat(64) };
     },
@@ -341,7 +341,7 @@ function bridgeFixture({ active = null } = {}) {
     },
   };
   context.voiceTurnModule = Promise.resolve({
-    awaitSavedComposerVoiceTurn: context.awaitSavedComposerVoiceTurn,
+    finishComposerVoiceTurn: context.finishComposerVoiceTurn,
   });
   vm.runInNewContext(
     js(
@@ -570,7 +570,7 @@ for (const change of ["owner", "chat", "abort"]) {
         conversationId: "chat-b",
       };
     } else controller.abort();
-    loading.resolve({ awaitSavedComposerVoiceTurn: f.context.awaitSavedComposerVoiceTurn });
+    loading.resolve({ finishComposerVoiceTurn: f.context.finishComposerVoiceTurn });
     await assert.rejects(pending, (error) => error.name === "AbortError");
     assert.equal(f.state.waits.length, 0);
     assert.equal(f.state.saves.length, 0);

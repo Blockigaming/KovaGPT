@@ -132,7 +132,7 @@ const compiled = ts.transpileModule(
   globalThis.setSelectedTool = ${arrow("setSelectedTool")};
   globalThis.reconcileQuotaDrafts = ${quotaScopeEffect};
   globalThis.readQuotaDrafts = () => ${initializer("visibleQuotaRejectedDrafts").getText(ast)};
-  globalThis.renderQuotaDrafts = () => ${initializer("quotaRejectedDraftPanel").getText(ast)};
+  globalThis.renderQuotaDrafts = () => (${initializer("quotaRejectedDraftPanel").getText(ast)}).map((shell) => QuotaRejectedDraftPreview(shell.props.children.props));
   globalThis.readComposerPromptPanel = () => ${initializer("composerPromptPanel").getText(ast)};`,
   { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } },
 ).outputText;
