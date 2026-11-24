@@ -737,7 +737,7 @@ export function ComposerVoiceDialog({
               // The server picks the plan's default ElevenLabs voice.
               body: JSON.stringify({ action: "tts", text: notice }),
             });
-            if (!response.ok) throw new Error("voice_notice_unavailable");
+            if (!response.ok) throw new Error("voice_notice_unavailable", { cause });
             const audio = await response.blob();
             if (!isCurrent(scope) || noticeRequest.signal.aborted) return;
             const output = new Audio();
