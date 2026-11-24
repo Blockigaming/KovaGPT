@@ -1,6 +1,6 @@
 .kova-localization {
   margin-top: 28px;
-  padding: 16px clamp(12px, 4cqi, 22px) 8px;
+  padding-block: 16px 8px;
   border-radius: var(--kova-radius-card);
   background: var(--surface-secondary);
 }
@@ -9,11 +9,7 @@
   font-weight: 600;
 }
 .kova-localization .kova-preference-row {
-  flex-wrap: wrap; /* text expansion: long translated labels wrap instead of clipping */
   padding: 12px 0;
-}
-.kova-localization [role="combobox"] {
-  min-width: min(220px, 100%);
 }
 .kova-localization-note {
   margin-top: 4px;
@@ -22,13 +18,14 @@
 }
 .kova-localization-preview {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
   gap: 6px 16px;
   margin: 12px 0 8px;
   font-size: 0.875rem;
 }
 .kova-localization-preview dt {
   color: var(--muted-foreground);
+  overflow-wrap: anywhere;
 }
 .kova-localization-preview dd {
   margin: 0;

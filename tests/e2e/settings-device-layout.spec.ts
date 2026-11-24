@@ -91,6 +91,31 @@ for (const theme of ["dark", "light"] as const) {
           }),
         );
       expect(issues, section).toEqual([]);
+      if (section === "appearance") {
+        const font = content.getByRole("combobox", { name: "Interface font", exact: true });
+        await expect(font).toContainText("System");
+        const fit = await content.evaluate((pane) => {
+          const left = (selector: string) =>
+            pane.querySelector(selector)!.getBoundingClientRect().left;
+          const clippedValues = [
+            ...pane.querySelectorAll(".kova-preference-row [role='combobox'] > span"),
+          ]
+            .filter(
+              (value) =>
+                value.getBoundingClientRect().width && value.scrollWidth > value.clientWidth + 1,
+            )
+            .map((value) => value.textContent);
+          return {
+            labelOffset: Math.abs(
+              left(".kova-preference-slider-label") -
+                left(".kova-preference-list .kova-preference-row"),
+            ),
+            clippedValues,
+          };
+        });
+        expect(fit.labelOffset).toBeLessThanOrEqual(1);
+        expect(fit.clippedValues).toEqual([]);
+      }
       if (section === "appearance" && page.viewportSize()!.width < 768) {
         const widths = await content
           .locator('.kova-preference-row [role="combobox"]')
@@ -138,6 +163,11 @@ test("every Settings destination loads from its route without clipping", async (
     await expect(
       page.locator('.kova-settings-content > [role="tabpanel"][data-state="active"]'),
     ).toBeVisible({ timeout: 15_000 });
+    const pane = page.locator(".kova-settings-content");
+    expect(
+      await pane.evaluate((node) => node.scrollWidth - node.clientWidth),
+      section,
+    ).toBeLessThanOrEqual(1);
     const heading = page.locator(".kova-settings-content-header h2");
     await expect(heading).toBeVisible();
     const box = (await heading.boundingBox())!;
