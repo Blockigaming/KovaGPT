@@ -200,15 +200,19 @@
 }
 
 @media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
-  .kova-appearance-settings .kova-preference-row:has([role="combobox"]) {
+  .kova-settings-dialog .kova-appearance-settings .kova-preference-row:has(> [role="combobox"]) {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     justify-content: stretch;
     align-items: stretch;
     gap: 12px;
   }
-  .kova-appearance-settings .kova-preference-row [role="combobox"] {
+  .kova-settings-dialog .kova-appearance-settings .kova-preference-row > [role="combobox"] {
+    grid-column: 1 / -1;
+    justify-self: stretch;
     width: 100%;
+    min-width: 0;
+    max-width: none;
     min-height: 48px;
   }
 }

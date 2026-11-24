@@ -64,13 +64,23 @@ test("short replies fit content, icons are compact, selection is native and menu
   await screenshot(page, "response");
 });
 
-test("dedicated settings excludes workspace navigation and supports desktop drag or mobile back", async ({
+test("modal Settings isolates workspace navigation and supports desktop drag or mobile back", async ({
   page,
 }) => {
   await setup(page);
   await page.goto("/settings/responses");
   await waitForKovaHydration(page);
-  await expect(page.locator(".kova-sidebar, .kova-sidebar-rail")).toHaveCount(0);
+  const modal = page.getByRole("dialog", { name: "Settings", exact: true });
+  await expect(modal).toBeVisible();
+  // The modal keeps the dimmed workspace mounted but removes it from the accessibility tree.
+  await expect(modal.locator(".kova-sidebar, .kova-sidebar-rail")).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.locator(".kova-sidebar, .kova-sidebar-rail").evaluateAll((nodes) =>
+        nodes.every((node) => Boolean(node.closest('[aria-hidden="true"], [inert], [hidden]'))),
+      ),
+    )
+    .toBe(true);
   const navigation = page.getByRole("complementary", { name: "Settings navigation" });
   const phone = await usesCompactSettings(page);
   if (!phone) {
