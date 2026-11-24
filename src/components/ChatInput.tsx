@@ -302,6 +302,7 @@ export function ChatInput({
   voiceSessionContext,
   onVoiceModeChange,
   onVoiceSubmit,
+  onVoicePlaybackProgress,
 }: {
   activityComposerRef?: Ref<ChatActivityComposer>;
   value: string;
@@ -373,6 +374,7 @@ export function ChatInput({
   onVoiceModeChange?: (mode: "dictate" | "voice" | null) => void;
   /** Uses the existing chat/history path and returns only a confirmed saved reply. */
   onVoiceSubmit?: ComposerVoiceSubmit;
+  onVoicePlaybackProgress?: (fraction: number | null) => void;
   responseSettings?: Pick<Settings, "responseLength" | "responseFormat" | "responseTone">;
   onResponseSettingsChange?: (
     change: Partial<Pick<Settings, "responseLength" | "responseFormat" | "responseTone">>,
@@ -629,6 +631,7 @@ export function ChatInput({
   const voiceReturnUrlRef = useRef<string | undefined>(undefined);
   const voiceDraftAppliedRef = useRef(false);
   const setVoiceOpenMode = (next: "dictate" | "voice" | null) => {
+    if (voiceModeRef.current === "voice" && next !== "voice") onVoicePlaybackProgress?.(null);
     voiceModeRef.current = next;
     setLocalVoiceMode(next);
     voiceCallbacksRef.current.onVoiceModeChange?.(next);
@@ -2483,6 +2486,7 @@ export function ChatInput({
         }
         onTranscript={acceptVoiceTranscript}
         onVoiceSubmit={onVoiceSubmit ? submitVoiceTranscript : undefined}
+        onVoicePlaybackProgress={onVoicePlaybackProgress}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (

@@ -129,6 +129,7 @@ function cleanAssistantText(text: string): string {
 function ChatMessageInner({
   message,
   streaming,
+  voiceRevealing,
   onFollowUp,
   interactiveDisabledReason,
   onDraftPrompt,
@@ -153,6 +154,7 @@ function ChatMessageInner({
   message: Message;
   showAdvertisement?: boolean;
   streaming?: boolean;
+  voiceRevealing?: boolean;
   /** Request start time survives chat navigation while the response remains active. */
   /** Executes an explicit editor improvement request. */
   onFollowUp?: (prompt: string) => boolean | void;
@@ -967,6 +969,7 @@ function ChatMessageInner({
               ref={bodyRef}
               className="prose-chat"
               data-waiting-for-response={waitingForFirstToken || undefined}
+              data-voice-reveal={voiceRevealing && !waitingForFirstToken ? true : undefined}
             >
               {message.pendingImage && !message.content ? (
                 <ChatLoadingIndicator label="Generating image" />
@@ -1051,9 +1054,10 @@ function ChatMessageInner({
                   return markdown;
                 })()
               )}
-              {streaming && message.content && replySegments?.at(-1)?.kind !== "group" && (
-                <span className="cursor-blink" />
-              )}
+              {streaming &&
+                !voiceRevealing &&
+                message.content &&
+                replySegments?.at(-1)?.kind !== "group" && <span className="cursor-blink" />}
             </div>
             {!streaming && message.generationStatus === "stopped" && (
               <div

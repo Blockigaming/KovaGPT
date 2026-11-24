@@ -79,7 +79,14 @@ async function speechFailureCode(response, run) {
 
 // MP3 MediaSource plays while bytes arrive. Browsers without it use a bounded
 // Blob fallback; Stop cancels either path. No audio or response text is persisted.
-export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError, onLevel }) {
+export function createBrowserSpeechSink({
+  signal,
+  onPlaying,
+  onEnded,
+  onError,
+  onLevel,
+  onProgress,
+}) {
   const audio = new Audio();
   let analysisContext;
   let animationFrame;
@@ -114,6 +121,7 @@ export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError, o
       // The glow is optional. Playback also works without Web Audio.
     }
   };
+  if (onProgress) audio.ontimeupdate = () => onProgress(audio.currentTime, audio.duration);
   audio.onended = onEnded;
   audio.onerror = onError;
   let url, source, buffer;
@@ -163,7 +171,7 @@ export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError, o
       disposed = true;
       if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
       if (analysisContext) void analysisContext.close().catch(() => {});
-      audio.onplaying = audio.onended = audio.onerror = null;
+      audio.onplaying = audio.onended = audio.onerror = audio.ontimeupdate = null;
       audio.pause();
       audio.removeAttribute("src");
       audio.load();

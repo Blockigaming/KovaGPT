@@ -2058,26 +2058,23 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   position: absolute;
   z-index: -1;
   pointer-events: none;
-  inset: auto 4% 0;
-  height: clamp(5rem, 21vh, 12rem);
+  inset: auto 2% -0.75rem;
+  height: clamp(8rem, 29dvh, 17rem);
   background:
-    radial-gradient(ellipse at 34% 100%, var(--voice-glow-a, #7974ec), transparent 65%),
-    radial-gradient(ellipse at 66% 100%, var(--voice-glow-b, #b060b0), transparent 62%),
-    radial-gradient(ellipse at 50% 100%, var(--voice-glow-c, #5966ec), transparent 74%);
-  filter: blur(1.2rem);
-  opacity: calc(0.2 + var(--voice-level) * 0.48);
+    radial-gradient(ellipse 37% 50% at 32% 84%, var(--voice-glow-a, #7974ec), transparent 100%),
+    radial-gradient(ellipse 37% 47% at 67% 84%, var(--voice-glow-b, #b060b0), transparent 100%),
+    radial-gradient(ellipse 49% 38% at 50% 89%, var(--voice-glow-c, #5966ec), transparent 100%);
+  filter: blur(clamp(1.1rem, 3vw, 2.5rem));
+  opacity: calc(0.13 + var(--voice-level) * 0.55);
   transform-origin: center bottom;
-  transform: scaleY(calc(0.75 + var(--voice-level) * 0.32));
-  transition:
-    opacity 100ms linear,
-    transform 130ms ease-out;
+  transform: scale(calc(0.89 + var(--voice-level) * 0.11), calc(0.61 + var(--voice-level) * 0.46));
+  mask-image: radial-gradient(ellipse 51% 83% at 50% 83%, black 22%, transparent 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .kova-inline-voice-glow {
     opacity: 0.35;
     transform: none;
-    transition: none;
   }
 }
 
@@ -2097,20 +2094,19 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     overflow: visible;
   }
 }
-.kova-inline-voice-glow {
-  mask-image: linear-gradient(transparent, black 75%);
-}
 
 @media (prefers-reduced-motion: no-preference) {
-  .kova-inline-voice-glow {
-    animation: kova-voice-glow-breathe 1.8s ease-in-out infinite alternate;
+  .prose-chat[data-voice-reveal] {
+    animation: kova-voice-text-appear 240ms ease-out both;
   }
-  @keyframes kova-voice-glow-breathe {
+  @keyframes kova-voice-text-appear {
     from {
-      scale: 0.94 0.92;
+      opacity: 0;
+      translate: 0 0.12rem;
     }
     to {
-      scale: 1.04 1.05;
+      opacity: 1;
+      translate: 0 0;
     }
   }
 }

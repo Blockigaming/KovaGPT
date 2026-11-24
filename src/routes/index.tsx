@@ -314,6 +314,12 @@ function KovaGPT() {
     openedUrl: string;
     composerContext?: string;
   } | null>(null);
+  const [voiceReveal, setVoiceReveal] = useState<{
+    ownerId: string;
+    chatId: string;
+    messageId: string;
+    fraction: number;
+  } | null>(null);
   const voiceConversationsRef = useRef(conversations);
   voiceConversationsRef.current = conversations;
   const stopComposerVoiceRequestRef = useRef<() => void>(() => undefined);
@@ -1797,7 +1803,10 @@ function KovaGPT() {
       retryHistory?: Message[],
       requestId?: string,
       queuedSend?: NextPrompt,
-      voiceRequest?: { signal: AbortSignal },
+      voiceRequest?: {
+        signal: AbortSignal;
+        onAssistant?: (chatId: string, messageId: string) => void;
+      },
       quickAnswer = false,
       requestWebSearch?: boolean,
       { preserveDraft = false } = {},
@@ -1918,6 +1927,8 @@ function KovaGPT() {
         content: "",
         ...(retryTool ? { requestedTool: retryTool } : {}),
       };
+
+      voiceRequest?.onAssistant?.(nextConvId, assistantMsg.id);
 
       // Keep the exact submitted draft in this request's mounted scope. Attachment
       // objects/payloads are retained by reference; they are never re-uploaded here.
@@ -2697,7 +2708,13 @@ function KovaGPT() {
       );
     if (!composerVoiceEligible || !isCurrent() || inFlightRef.current || nextPromptRef.current)
       throw new Error("voice_turn_cancelled");
-    const pending = send(text, [], null, 0, undefined, undefined, undefined, undefined, { signal });
+    const pending = send(text, [], null, 0, undefined, undefined, undefined, undefined, {
+      signal,
+      onAssistant: (chatId, messageId) => {
+        if (session?.ownerId)
+          setVoiceReveal({ ownerId: session.ownerId, chatId, messageId, fraction: 0 });
+      },
+    });
     requestEpoch = retryGenerationRef.current;
     const turn = await pending;
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
@@ -2901,6 +2918,17 @@ function KovaGPT() {
   const renderTranscriptMessage: TranscriptMessageRenderer = (m, i, ChatMessage, onBranch) => {
     if (!active) return null;
     const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
+    const reveal =
+      composerVoiceMode === "voice" &&
+      voiceReveal?.ownerId === userKey &&
+      voiceReveal?.chatId === active.id &&
+      voiceReveal?.messageId === m.id
+        ? voiceReveal
+        : null;
+    const words = reveal ? (m.content.match(/\S+\s*/gu) ?? []) : [];
+    const rendered = reveal
+      ? { ...m, content: words.slice(0, Math.ceil(words.length * reveal.fraction)).join("") }
+      : m;
     // Find the user message that prompted this assistant reply (immediately before).
     const priorUser =
       m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
@@ -2909,7 +2937,8 @@ function KovaGPT() {
     return (
       <ChatMessage
         key={m.id}
-        message={m}
+        message={rendered}
+        voiceRevealing={Boolean(reveal)}
         showAdvertisement={isLastAssistant}
         chatId={active.id}
         onSaveMemory={
@@ -2952,10 +2981,11 @@ function KovaGPT() {
         userKey={userKey}
         principalResolved={isLoaded}
         streaming={
-          isStreaming &&
-          isLastAssistant &&
-          inFlightTargetRef.current?.conversationId === active.id &&
-          inFlightTargetRef.current.assistantMessageId === m.id
+          Boolean(reveal) ||
+          (isStreaming &&
+            isLastAssistant &&
+            inFlightTargetRef.current?.conversationId === active.id &&
+            inFlightTargetRef.current.assistantMessageId === m.id)
         }
         onUpdatePendingConfirm={(messageId, next) => {
           setConversations((prev) =>
@@ -3182,6 +3212,15 @@ function KovaGPT() {
       }
       onVoiceModeChange={changeComposerVoiceMode}
       onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
+      onVoicePlaybackProgress={(fraction) =>
+        setVoiceReveal((current) =>
+          fraction === null
+            ? null
+            : current && fraction > current.fraction
+              ? { ...current, fraction }
+              : current,
+        )
+      }
       latestAssistantText={
         active?.messages
           .filter(

@@ -89,6 +89,7 @@ export interface ComposerVoiceDialogProps {
   inlineDictation?: boolean;
   autoStartVoice?: boolean;
   onVoiceSubmit?: ComposerVoiceSubmit;
+  onVoicePlaybackProgress?: (fraction: number | null) => void;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   isStreaming: boolean;
@@ -151,6 +152,7 @@ export function ComposerVoiceDialog({
   inlineDictation = false,
   autoStartVoice = false,
   onVoiceSubmit,
+  onVoicePlaybackProgress,
   latestAssistantText = "",
   latestAssistantReply,
   isStreaming,
@@ -161,13 +163,36 @@ export function ComposerVoiceDialog({
   const voicePickerId = useId();
   const voiceHelpId = useId();
   const voiceGlow = useRef<HTMLDivElement>(null);
+  const glowTarget = useRef(0);
   const updateGlow = (level: number) => {
-    voiceGlow.current?.style.setProperty("--voice-level", String(Math.min(1, level * 8)));
+    glowTarget.current = 1 - Math.exp(-9 * Math.max(0, level - 0.002));
   };
+
   const [realtimeFailed, setRealtimeFailed] = useState(false);
   const [capabilities, setCapabilities] = useState<VoiceCapabilities | null>(null);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
+  useLayoutEffect(() => {
+    const glow = voiceGlow.current;
+    if (!glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let smoothed = 0;
+    let previous = performance.now();
+    let frame: number;
+    const animate = (now: number) => {
+      const elapsed = Math.max(0, Math.min(64, now - previous));
+      previous = now;
+      const target = glowTarget.current;
+      const response = target > smoothed ? 85 : 250;
+      smoothed += (target - smoothed) * (1 - Math.exp(-elapsed / response));
+      glow.style.setProperty("--voice-level", smoothed.toFixed(3));
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(frame);
+      glowTarget.current = 0;
+    };
+  }, [open, phase]);
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
   /** This voice session's turns with speaker and time; cleared when the dialog closes. */
@@ -202,6 +227,7 @@ export function ComposerVoiceDialog({
     latestAssistantReply,
     mode,
     onVoiceSubmit,
+    onVoicePlaybackProgress,
     onOpenChange,
   });
   current.current = {
@@ -214,6 +240,7 @@ export function ComposerVoiceDialog({
     latestAssistantReply,
     mode,
     onVoiceSubmit,
+    onVoicePlaybackProgress,
     onOpenChange,
   };
   const streamingBlocked = mode !== "voice" && isStreaming;
@@ -286,6 +313,7 @@ export function ComposerVoiceDialog({
     // resources. A late getUserMedia result must immediately stop its own tracks.
     generation.current += 1;
     voiceSessionActive.current = false;
+    if (current.current.mode === "voice") current.current.onVoicePlaybackProgress?.(null);
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
     activePlayback?.stop();
@@ -589,9 +617,21 @@ export function ComposerVoiceDialog({
       updatePhase("synthesizing");
       let ended = false;
       let started = false;
+      const wordCount = reply.content.trim().split(/\s+/u).length;
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
-        createSink: (options) => createBrowserSpeechSink({ ...options, onLevel: updateGlow }),
+        createSink: (options) =>
+          createBrowserSpeechSink({
+            ...options,
+            onLevel: updateGlow,
+            onProgress: (elapsed, duration) => {
+              if (!isCurrent(scope) || voicePlayback.current !== playback) return;
+              // MP3 streams may initially report an infinite duration. Start
+              // with a speech-rate estimate and refine it as metadata arrives.
+              const total = Number.isFinite(duration) && duration > 0 ? duration : wordCount / 2.7;
+              current.current.onVoicePlaybackProgress?.(Math.min(0.99, (elapsed + 0.18) / total));
+            },
+          }),
         onEnded: (completed) => {
           if (
             !isCurrent(scope) ||
@@ -604,6 +644,7 @@ export function ComposerVoiceDialog({
           )
             return;
           ended = true;
+          current.current.onVoicePlaybackProgress?.(null);
           voicePlayback.current = null;
           updatePhase("idle");
           // Only the shared manager's current natural-ended receipt advances
@@ -639,6 +680,7 @@ export function ComposerVoiceDialog({
             void Promise.resolve().then(() => {
               if (!isCurrent(scope) || voicePlayback.current !== playback || ended) return;
               voicePlayback.current = null;
+              current.current.onVoicePlaybackProgress?.(null);
               voiceSessionActive.current = false;
               updatePhase("idle");
             });
