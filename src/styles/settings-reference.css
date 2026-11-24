@@ -151,6 +151,7 @@
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
+  white-space: normal;
   box-shadow: none;
   transition: box-shadow 140ms ease;
 }
@@ -169,6 +170,7 @@
 }
 .kova-settings-reference .kova-settings-nav-copy {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .kova-settings-reference .kova-settings-nav-copy > span {
   display: block;
@@ -208,6 +210,7 @@
 .kova-settings-reference .kova-settings-section-copy {
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .kova-settings-reference .kova-settings-content-header h2 {
   margin: 0;
@@ -795,6 +798,7 @@
   }
   .kova-settings-reference .kova-settings-sidebar {
     width: var(--kova-settings-navigation-width, 272px);
+    max-width: 42%;
     padding: 20px 14px;
   }
   .kova-settings-reference .kova-settings-navigation-heading {
