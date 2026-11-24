@@ -230,6 +230,7 @@ export function AppearanceSettings({
       <div className="flex flex-wrap items-center gap-3 mt-5">
         <Button
           variant="ghost"
+          className="h-auto min-w-0 max-w-full gap-2 whitespace-normal"
           onClick={() => {
             setInterfaceSizeDraft(null);
             setNavigationWidthDraft(null);
@@ -239,8 +240,8 @@ export function AppearanceSettings({
             setNotice("Appearance reset to defaults.");
           }}
         >
-          <RotateCcw aria-hidden="true" className="h-4 w-4 mr-2" />
-          Reset appearance
+          <RotateCcw aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 [overflow-wrap:anywhere]">Reset appearance</span>
         </Button>
         <p role="status" className="text-sm text-muted-foreground">
           {notice}
