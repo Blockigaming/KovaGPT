@@ -98,7 +98,15 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 61_408,
       gzip: 20_932,
     }),
+    Object.freeze({
+      head: "871ecadf3411c6281e9726571d92bd6607e265c8",
+      source: "PR #763 CI production build, run 45412817355",
+      raw: 63_518,
+      gzip: 22_041,
+    }),
   ]),
+  composerAvailabilityAdjustment:
+    "PR #763 keeps the existing composer mounted and available while the transcript loads. Its CI build measured 63,518 raw / 22,041 gzip bytes for the home route. The narrowly adjusted 63,750 raw / 22,150 gzip ceilings leave 232 raw / 109 gzip bytes of headroom (less than 1% each). The measured increase is explicit; shared-entry, omega and chart ceilings and chunk identification are unchanged.",
   apiAudioAdjustment:
     "The 2026-10-29 UI/Auth/API integration measured 20,238 home-route gzip bytes in PR #489 CI. Decisions, moderation and audio controls measured 20,253 in PR #492 CI; the combined sidebar preference repair measured 20,259 locally. The 20,400 ceiling retains less than 1% headroom over that complete build. The 62,500 raw ceiling and every shared-entry, omega and chart ceiling are unchanged.",
   usageReleaseAdjustment:
@@ -116,7 +124,7 @@ export const BUNDLE_BASELINE = Object.freeze({
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_750, gzip: 20_950 }),
+  initial: Object.freeze({ raw: 63_750, gzip: 22_150 }),
   main: Object.freeze({ raw: 670_000, gzip: 201_500 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
