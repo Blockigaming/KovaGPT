@@ -386,7 +386,8 @@ test("data controls avoid internal migration language", () => {
 
 test("theme changes cannot interpolate the Settings surface colors", () => {
   const { declarations, rule } = styleRule(settingsStylesSource, ".kova-settings-reference");
-  assert.equal(declarations.background, "var(--background)");
+  assert.equal(declarations["--settings-surface"], "var(--composer-background)");
+  assert.equal(declarations.background, "var(--settings-surface)");
   assert.equal(declarations.color, "var(--foreground)");
   assert.ok(
     !declarations["transition-property"] ||
@@ -397,10 +398,7 @@ test("theme changes cannot interpolate the Settings surface colors", () => {
     /transition-property:[^;]*(?:all|background|color|border)/,
     "Settings theme colors must switch atomically instead of interpolating",
   );
-  assert.match(
-    settingsSource,
-    /kova-settings-dialog kova-settings-reference[^`]*bg-\[var\(--surface-modal\)\]/,
-  );
+  assert.match(settingsSource, /kova-settings-dialog kova-settings-reference/);
   assert.doesNotMatch(stylesSource, /\.kova-settings-dialog\s*\{/);
 });
 
@@ -427,7 +425,7 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     "1",
   );
   assert.equal(page["max-height"], "none");
-  assert.equal(page.background, "var(--background)");
+  assert.equal(page.background, "var(--settings-surface)");
   for (const selector of [
     '[role="dialog"].kova-settings-dialog',
     '[role="dialog"].kova-settings-dialog.is-authenticated',
