@@ -2078,16 +2078,6 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   }
 }
 
-.spec400-composer-trailing .spec400-primary-voice[aria-expanded="true"] {
-  width: auto;
-  padding-inline: 0.625rem;
-}
-
-.spec400-composer-trailing .spec400-primary-voice[aria-expanded="true"] svg {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
 /* The glow extends into the conversation above the composer. */
 @media (min-height: 501px) {
   .spec400-composer-dock > .spec400-chat-input[data-voice-active] {
