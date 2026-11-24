@@ -1782,6 +1782,12 @@ function AppsPage() {
                         <div>
                           <h2>Try asking Kova</h2>
                           <p>“{selectedProfile.example}”</p>
+                          {selectedProfile.exampleResult && (
+                            <div className="kova-connection-example-result">
+                              <span>Illustrative result</span>
+                              <div>{selectedProfile.exampleResult}</div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -2133,7 +2139,10 @@ function AppsPage() {
                         </div>
                       )}
                       {selectedProfile.availability === "planned" && (
-                        <p>{selectedProfile.availabilityNote}</p>
+                        <p>
+                          {selectedProfile.availabilityNote ??
+                            "Permissions become available when this connector launches."}
+                        </p>
                       )}
                       {isGoogleId(visibleSelectedApp.id) && (
                         <p>Review the permissions on Google’s consent screen before approving.</p>
@@ -2153,7 +2162,14 @@ function AppsPage() {
                     {selectedProfile.publisher && (
                       <div>
                         <dt>Developer</dt>
-                        <dd>{selectedProfile.publisher}</dd>
+                        <dd className="kova-connection-publisher">
+                          {selectedProfile.publisher}
+                          {stateOf(visibleSelectedApp.id) === "connected" && (
+                            <span className="kova-connection-connected">
+                              <Check aria-hidden="true" /> Connected
+                            </span>
+                          )}
+                        </dd>
                       </div>
                     )}
                     {selectedProfile.read.length > 0 && (
