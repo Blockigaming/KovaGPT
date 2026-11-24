@@ -5,7 +5,7 @@
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: var(--background);
+  background: var(--composer-background);
 }
 .kova-settings-route.kova-secondary-page {
   --page-max: none;
