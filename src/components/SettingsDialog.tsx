@@ -1265,7 +1265,7 @@ export function SettingsDialog({
         closeLabel="Close settings"
         data-ui-reference="chatgpt.settings"
         data-settings-open={open ? "true" : undefined}
-        className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
+        className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} border border-border overflow-hidden flex flex-col gap-0 p-0`}
         onOpenAutoFocus={() => {
           // Capture once per opening, before the dialog moves focus. Navigating
           // Settings sections must not replace the original external invoker.
@@ -1471,7 +1471,6 @@ export function SettingsDialog({
                         </span>
                         <span className="kova-settings-nav-copy">
                           <span>{t(label)}</span>
-                          {v !== "logout" && <small>{t(SETTINGS_DESCRIPTIONS[v])}</small>}
                         </span>
                         <span className="kova-settings-nav-chevron" aria-hidden="true">
                           ›

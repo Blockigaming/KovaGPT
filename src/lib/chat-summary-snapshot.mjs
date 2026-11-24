@@ -331,7 +331,14 @@ export async function fetchForPrincipal(principal, input, init = {}, dependencie
 export async function createChatHistoryPayload(messages, memoryStartIndex = 0, options = {}) {
   const historyOffset = Math.max(0, messages.length - 100);
   const payload = { messages: messages.slice(historyOffset), historyOffset, memoryStartIndex };
-  if (options.temporary || !options.memoryEnabled || !options.principal || !options.chatId)
+  // A proof needs at least four messages before the twelve-message recent window.
+  if (
+    messages.length - memoryStartIndex < 16 ||
+    options.temporary ||
+    !options.memoryEnabled ||
+    !options.principal ||
+    !options.chatId
+  )
     return payload;
   try {
     const session = await sessionFor(options.principal, options);
