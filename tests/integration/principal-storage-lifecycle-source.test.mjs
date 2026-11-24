@@ -17,7 +17,7 @@ const legacyProviderStart = clerkSource.indexOf("function SupabaseClerkProvider(
 assert.ok(legacyProviderStart >= 0);
 const legacyHydration = sourceSection(
   "async function hydrateSession()",
-  "\n    hydrateSession();",
+  "const callbackStart",
   legacyProviderStart,
 );
 

@@ -188,7 +188,7 @@ test("active chat shares scoped header actions and keeps secondary controls reac
   );
 });
 
-test("compact composer groups actions and preserves message editing and markdown", () => {
+test("compact composer groups actions and preserves message editing and markdown", async () => {
   assert.match(
     chatInput,
     /placeholder=\{placeholder \?\? (?:"Work with KovaGPT"|t\("Work with KovaGPT"\))\}/,
@@ -213,7 +213,10 @@ test("compact composer groups actions and preserves message editing and markdown
   assert.match(composer, /onToolSelect=\{setSelectedTool\}/);
   assert.match(composer, /surface=\{showEmptyChat \? "empty" : "conversation"\}/);
   assert.match(route, /\{composer\}\s*<\/HomeWelcome>/);
-  assert.match(route, /className="spec400-composer-dock[^"]*">[\s\S]*?\{composer\}\s*<\/div>/);
+  assert.match(
+    await readFile("src/components/HomeChatFrame.tsx", "utf8"),
+    /home \? "kova-empty-composer" : "spec400-composer-dock[^"]*"\}\>\s*\{children\}/,
+  );
   assert.match(
     chatInput,
     /disabled=\{!canSubmit\}\s+onClick=\{\(event\) => \{\s*if \(event\.detail > 0 && sendHoldConsumed\.current\) return;\s*triggerSubmit\(\);/,
