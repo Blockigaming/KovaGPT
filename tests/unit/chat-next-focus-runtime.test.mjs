@@ -166,10 +166,7 @@ test("replacement focus intent cancels the older frame and background state chan
   assert.equal(f.focused[0].name, "Message KovaGPT");
   assert.equal((source.match(/scheduleNextPromptFocus\(/g) ?? []).length, 2);
   assert.match(source, /scheduleNextPromptFocus\(event\?\.currentTarget, "composer", null\)/);
-  assert.match(
-    source,
-    /scheduleNextPromptFocus\(trigger, "composer", nextPromptRef\.current\)/,
-  );
+  assert.match(source, /scheduleNextPromptFocus\(trigger, "composer", nextPromptRef\.current\)/);
   assert.match(source, /onRestore=\{\(event\) => resolveDraft\(event\.currentTarget, true\)\}/);
   assert.match(source, /onDiscard=\{\(event\) => resolveDraft\(event\.currentTarget, false\)\}/);
   const composer = readFileSync("src/components/ChatInput.tsx", "utf8");
