@@ -30,7 +30,7 @@ test("phone chrome uses safe areas, practical touch targets, and a dedicated clo
   assert.match(sidebar, /aria-label="Close sidebar"/);
   assert.match(
     responseStyles,
-    /@media \(width < 1024px\)\s*\{\s*:is\(\.kova-assistant, \.kova-project-chat\)\s*\.kova-message-actions\.kova-response-action-bar\s*button\.kova-message-icon-action\s*\{[^}]*min-width: 44px;[^}]*min-height: 44px/,
+    /@media \(width < 1024px\), \(pointer: coarse\)\s*\{\s*:is\(\.kova-assistant, \.kova-project-chat\)\s*\.kova-message-actions\.kova-response-action-bar\s*button\.kova-message-icon-action\s*\{[^}]*min-width: 44px;[^}]*min-height: 44px/,
   );
 });
 

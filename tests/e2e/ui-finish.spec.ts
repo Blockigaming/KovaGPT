@@ -293,8 +293,11 @@ test("appearance changes save and survive a reload", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.reload();
   await waitForKovaHydration(page);
-  await expect(page.getByRole("combobox", { name: "Density", exact: true })).toHaveText("Compact");
   await expect(page.locator("html")).not.toHaveClass(/dark/);
+  // A Settings deep link is consumed on open; reopening the modal must read the saved preference.
+  await page.goto("/settings/appearance");
+  await waitForKovaHydration(page);
+  await expect(page.getByRole("combobox", { name: "Density", exact: true })).toHaveText("Compact");
   await page.getByRole("button", { name: "Reset appearance", exact: true }).click();
   await expect(page.getByText("Appearance reset to defaults.", { exact: true })).toBeVisible();
 });

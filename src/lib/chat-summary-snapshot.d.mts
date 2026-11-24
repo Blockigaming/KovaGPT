@@ -78,6 +78,7 @@ export function chatRequestProfile(
 ): Record<string, unknown>;
 
 export { withResponsePresentation } from "./spec400-response-preferences.mjs";
+export { chatResponseError, cloudBrowserErrorKind, consumeChatSse } from "./chat-sse-client.mjs";
 
 export function chatRequestUser(
   settings: import("../components/SettingsDialog").Settings,
