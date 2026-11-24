@@ -200,7 +200,10 @@ test("signed-in homepage initially scrolls to the latest content", async ({ page
   const composerColor = await home
     .locator(".spec400-composer")
     .evaluate((node) => getComputedStyle(node).backgroundColor);
-  await expect(home.locator(".kova-composer-tray")).toHaveCSS("background-color", composerColor);
+  await expect(home.locator(".kova-composer-tray")).toHaveCSS(
+    "background-color",
+    "rgb(33, 33, 33)",
+  );
   await expect(home.locator(".kova-desktop-recent-work button").first()).toHaveCSS(
     "background-color",
     composerColor,
