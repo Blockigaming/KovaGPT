@@ -71,7 +71,7 @@ const storedAttachmentsDefinition = attachmentSource.statements
   .replace(/^export /u, "");
 const sendSource = arrow("send")
   .replace('import("@/lib/chat-summary-snapshot.mjs")', "summaryModule")
-  .replace('import("@/lib/chat-sse-client.mjs")', "streamModule");
+  .replace('import("@/lib/chat-sse-client.mjs"),', "streamModule,");
 const compiled = js(`globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
   globalThis.send = ${sendSource};
 globalThis.stop = ${arrow("stop")};
