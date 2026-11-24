@@ -755,7 +755,7 @@
 .kova-directory-rows .spec400-plugin-card-heading h3 {
   margin: 0;
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 22px;
 }
 .kova-directory-rows .spec400-plugin-card-heading a {
@@ -818,7 +818,7 @@
 .kova-directory-workspace h2,
 .kova-directory-build h2 {
   font-size: 16px;
-  font-weight: 620;
+  font-weight: 600;
 }
 .kova-directory-section-head {
   display: flex;
@@ -887,7 +887,7 @@
 }
 .kova-directory-workspace h1 {
   font-size: clamp(24px, 4vw, 34px);
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.2;
 }
@@ -1197,7 +1197,7 @@
   font-size: clamp(27px, 3.5cqi, 36px);
   letter-spacing: -0.035em;
   line-height: 1.1;
-  font-weight: 680;
+  font-weight: 600;
 }
 .kova-connection-hero p {
   grid-area: 2 / 2;
@@ -1382,7 +1382,7 @@
 }
 .kova-connection-permissions h3 {
   font-size: 14px;
-  font-weight: 620;
+  font-weight: 600;
 }
 .kova-connection-related {
   padding-top: 20px;
@@ -1394,7 +1394,7 @@
 .kova-connection-layout h2,
 .kova-connection-related h2 {
   font-size: 17px;
-  font-weight: 640;
+  font-weight: 600;
 }
 .kova-connection-example > div > h2 {
   color: var(--connection-accent-text);
