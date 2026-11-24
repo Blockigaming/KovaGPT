@@ -58,11 +58,7 @@ import {
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  chatResponseError,
-  cloudBrowserErrorKind,
-  consumeChatSse,
-} from "@/lib/chat-sse-client.mjs";
+import type { cloudBrowserErrorKind } from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
   Suspense,
@@ -2123,17 +2119,25 @@ function KovaGPT() {
       let requestSucceeded = false;
       let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
+      let streamClient: typeof import("@/lib/chat-sse-client.mjs") | undefined;
 
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
+        const [snapshot, transport] = await Promise.all([
+          import("@/lib/chat-summary-snapshot.mjs"),
+          import("@/lib/chat-sse-client.mjs"),
+        ]);
+        streamClient = transport;
+        const { chatResponseError, consumeChatSse } = transport;
         const {
           createChatHistoryPayload,
           fetchForPrincipal,
           chatRequestUser,
           completedChatReply,
           chatRequestHeaders,
-        } = await import("@/lib/chat-summary-snapshot.mjs");
+        } = snapshot;
+        controller.signal.throwIfAborted();
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2310,7 +2314,7 @@ function KovaGPT() {
       } catch (e: unknown) {
         if (!isCurrentRequest()) return;
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
-        const browserErrorKind = cloudBrowserErrorKind(e);
+        const browserErrorKind = streamClient?.cloudBrowserErrorKind(e);
         if (browserErrorKind || (e as Error).name === "AbortError") {
           const browserMessage =
             browserErrorKind === "browser_limit"

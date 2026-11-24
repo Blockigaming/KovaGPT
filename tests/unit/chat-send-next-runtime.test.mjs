@@ -84,10 +84,9 @@ const cancel = find(
     node.name.getText(ast) === "onCancel" &&
     node.parent.parent.tagName.getText(ast) === "NextChatPromptPanel",
 ).initializer.expression.getText(ast);
-const sendSource = arrow("send").replace(
-  'await import("@/lib/chat-summary-snapshot.mjs")',
-  "await summaryModule",
-);
+const sendSource = arrow("send")
+  .replace('import("@/lib/chat-summary-snapshot.mjs")', "summaryModule")
+  .replace('import("@/lib/chat-sse-client.mjs")', "streamModule");
 const noticeScopeEffect = effects.find((effect) =>
   effect.includes("requestNotice === requestNoticeRef.current"),
 );
@@ -307,6 +306,11 @@ function fixture() {
     USER_STOP_REASON: "user-stop",
     markAssistantStopped: (messages) => messages,
   };
+  context.streamModule = Promise.resolve({
+    chatResponseError: context.chatResponseError,
+    cloudBrowserErrorKind: context.cloudBrowserErrorKind,
+    consumeChatSse: context.consumeChatSse,
+  });
   vm.runInNewContext(compiled, context);
   const cleanup = context.startLifetime();
   function type(value, files = [], tool = null) {

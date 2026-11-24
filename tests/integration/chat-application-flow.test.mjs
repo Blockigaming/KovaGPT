@@ -753,6 +753,9 @@ function composer(f) {
     Error,
     TypeError,
     require: (name) => {
+      if (name === "@/lib/chat-sse-client.mjs") {
+        return { consumeChatSse, chatResponseError, cloudBrowserErrorKind };
+      }
       assert.equal(name, "@/lib/chat-summary-snapshot.mjs");
       return {
         withResponsePresentation,

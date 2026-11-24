@@ -69,8 +69,11 @@ const storedAttachmentsDefinition = attachmentSource.statements
   .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "storedMessageAttachments")
   .getText(attachmentSource)
   .replace(/^export /u, "");
+const sendSource = arrow("send")
+  .replace('import("@/lib/chat-summary-snapshot.mjs")', "summaryModule")
+  .replace('import("@/lib/chat-sse-client.mjs")', "streamModule");
 const compiled = js(`globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
-  globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule")};
+  globalThis.send = ${sendSource};
 globalThis.stop = ${arrow("stop")};
 globalThis.setInput = ${arrow("setInput")};
 globalThis.setAttachments = ${arrow("setAttachments")};
