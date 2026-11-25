@@ -42,7 +42,7 @@ export default function DesktopChatToolbar({
   onToggleTemporaryChat: (trigger: HTMLButtonElement | null) => void;
 }) {
   return (
-    <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
+    <header className="kova-topbar kova-desktop-topbar relative hidden h-[48px] items-center gap-1 px-4 lg:flex">
       <div
         hidden={sidebarOpen || Boolean(isSignedIn)}
         className="flex items-center gap-1 mr-2 shrink-0"
