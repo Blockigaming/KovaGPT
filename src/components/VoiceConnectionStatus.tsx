@@ -65,7 +65,7 @@ export function VoiceConnectionStatus() {
       if (!active()) return;
       if (!response.ok || typeof value.stt !== "boolean" || typeof value.conversation !== "boolean")
         throw new Error("Voice status couldn't be checked. Try again.");
-      const voices = readVoiceChoices(value.voices).filter((voice) => voice.available);
+      const voices = readVoiceChoices(value.voices);
       setResult({
         owner,
         stt: value.stt,
@@ -84,7 +84,11 @@ export function VoiceConnectionStatus() {
     void check();
   }, [check]);
   const changeVoice = (voiceId: string) => {
-    if (!owner || result?.owner !== owner || !result.voices.some((voice) => voice.id === voiceId))
+    if (
+      !owner ||
+      result?.owner !== owner ||
+      !result.voices.some((voice) => voice.id === voiceId && voice.available)
+    )
       return;
     const key = principalScopedStorageKey(VOICE_PREFERENCE_KEY, owner);
     const storage = safeBrowserStorage("localStorage");
@@ -205,11 +209,14 @@ export function VoiceConnectionStatus() {
             onChange={(event) => changeVoice(event.target.value)}
           >
             {result.voices.map((voice) => (
-              <option key={voice.id} value={voice.id}>
-                {voice.label}
+              <option key={voice.id} value={voice.id} disabled={!voice.available}>
+                {voice.available ? voice.label : `${voice.label} (upgrade to unlock)`}
               </option>
             ))}
           </select>
+          <span className="block text-xs text-muted-foreground">
+            Voices available depend on your plan. Voice replies count toward your daily voice limit.
+          </span>
         </label>
       ) : null}
       {error ? (

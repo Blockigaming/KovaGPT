@@ -27,3 +27,5 @@ export function selectCatalogVoice(
 ):
   | { error: string; status: number }
   | { providerVoiceId: string; modelId: TtsModelId; catalogId: string };
+export const VOICE_IDS_BY_PLAN: Readonly<Record<"free" | "plus" | "pro", readonly string[] | null>>;
+export function planIncludesVoice(tier: string, catalogId: string): boolean;

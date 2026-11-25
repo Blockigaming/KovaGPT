@@ -147,3 +147,25 @@ test("voice readiness report contains no credential or provider voice ID and cla
   assert.equal(report.liveProviderVerified, false);
   assert.doesNotMatch(JSON.stringify(report), /private-test/);
 });
+test("Settings is where the reply voice is chosen: locked voices are listed but cannot be selected", async () => {
+  const f = fixture("voice");
+  f.requests[0].resolve({
+    ok: true,
+    json: async () => ({
+      stt: true,
+      conversation: true,
+      defaultVoiceId: "jessica",
+      voices: [
+        { id: "jarnathan", label: "Jarnathan", available: false },
+        { id: "jessica", label: "Jessica", available: true },
+        { id: "lauren", label: "Lauren", available: false },
+      ],
+    }),
+  });
+  await settle();
+  f.render();
+  assert.match(f.view(), /Reply voice/);
+  assert.match(f.view(), /Jarnathan \(upgrade to unlock\)/);
+  assert.match(f.view(), /Lauren \(upgrade to unlock\)/);
+  assert.doesNotMatch(f.view(), /Jessica \(upgrade to unlock\)/);
+});

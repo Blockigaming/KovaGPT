@@ -90,6 +90,7 @@ export function createSpeechHandler({
   modelPolicy,
   fetchImpl = fetch,
   admit,
+  quota,
 }) {
   return async (request) => {
     const cancellation = new AbortController();
@@ -248,6 +249,15 @@ export function createSpeechHandler({
         }
       }
       await wait(revalidate(auth, deadline.signal));
+      // Every catalog voice and model spends the caller's plan-based daily voice
+      // allowance before any provider work. No voice is exempt.
+      if (quota) {
+        const denied = await wait(quota(auth, deadline.signal));
+        if (denied) {
+          finish();
+          return denied;
+        }
+      }
       if (admit) {
         const admission = await wait(
           admit({
