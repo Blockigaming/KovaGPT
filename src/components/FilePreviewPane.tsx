@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { t } from "@/lib/localization";
 import {
   Check,
@@ -23,6 +23,12 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import "./response-file-pane.css";
+
+const GeneratedPdfPreview = lazy(() =>
+  import("./generative-ui/GeneratedPdfPreview").then((module) => ({
+    default: module.GeneratedPdfPreview,
+  })),
+);
 
 type View = "preview" | "code";
 
@@ -216,6 +222,17 @@ export function FilePreviewPane({
             referrerPolicy="no-referrer"
             srcDoc={previewDoc}
           />
+        ) : view === "preview" && file.language === "pdf" ? (
+          <div className="kova-file-pane-document">
+            <Suspense fallback={<p role="status">Preparing PDF preview…</p>}>
+              <GeneratedPdfPreview
+                key={JSON.stringify([file.name, file.content])}
+                title={file.name.replace(/\.pdf$/iu, "")}
+                content={file.content}
+                blankLetter
+              />
+            </Suspense>
+          </div>
         ) : view === "preview" && file.language === "markdown" && renderMarkdown ? (
           <div className="kova-file-pane-document prose-chat" tabIndex={0}>
             {renderMarkdown?.(file.content)}
