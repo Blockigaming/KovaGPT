@@ -7,11 +7,11 @@
 - Reuse the production backend; keep provider secrets on the server. Mobile and web conversations, projects, settings and entitlements must remain account-scoped.
 - Privacy, terms, support, account deletion and safe sign-in remain available. No external purchase calls to action until storefront-specific review is completed. Existing web purchases and iOS purchase restoration must be reconciled on the backend without duplicate charging.
 
-## Implementation in this stacked draft
-- Based on the unmerged native implementation from closed PR #744, at 70b58e3764132bf0acac4ff5e355d8625c9a2a14. This is not a release branch or a production deployment.
+## Implementation in this isolated draft
+- Based on the unmerged native implementation from closed PR #744, at 70b58e3764132bf0acac4ff5e355d8625c9a2a14. Ported as an isolated preview onto main at c3b158aa248c3d7b43b7a1d9913867dd0a206d90. This is not a production deployment.
 - The Swift navigation delegate and shared client outlet prevent the defined website-only paths from rendering inside the iOS app. Direct navigation is canceled; client-side navigation offers a return-to-chat action. Browser and Android behavior are unchanged by the new route gate.
 - The route classification is an initial list, not a complete audit or an authorization mechanism. Audit all actual routes, hide website-only navigation links in native mode, and test direct, redirect and client-side navigation before release.
-- Reconcile the native target and required backend/web dependencies against current main without merging the unrelated desktop changes wholesale.
+- The native target is ported without unrelated desktop or Android changes. Native Google handoff and voice bridge consumers are not yet integrated into main-based code; these are separate release gates.
 
 ## Release gates (not yet accepted)
 1. Clean iOS target integration against current main; current SDK, device signing and a real iPhone/iPad build.
