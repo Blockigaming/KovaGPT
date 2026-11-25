@@ -165,3 +165,15 @@ test("HTML previews always start with a no-network policy before the file's mark
   assert.doesNotMatch(svg, /<script>/);
   assert.match(svg, /script-src 'none'/);
 });
+
+test("named PDF fences are document outputs, including an empty blank page", () => {
+  const [file] = extractResponseFiles('~~~pdf filename="blank_letter.pdf"\n~~~');
+  assert.equal(file.name, "blank_letter.pdf");
+  assert.equal(file.language, "pdf");
+  assert.equal(file.languageLabel, "PDF");
+  assert.equal(file.category, "Document");
+  assert.equal(file.mime, "application/pdf");
+  assert.equal(file.content, "");
+  assert.equal(file.complete, true);
+  assert.equal(extractResponseFiles('~~~pdf filename="unfinished.pdf"\ntext')[0].complete, false);
+});
