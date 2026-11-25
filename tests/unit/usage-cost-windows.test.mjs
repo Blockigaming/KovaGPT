@@ -120,13 +120,20 @@ test("hourly quota rollover preserves weekly usage", async () => {
 test("Free uses reserved cost rather than message count alone", async () => {
   const db = await fixture();
   try {
-    assert.equal((await request(db, "free", 0.09)).decision, "acquired");
-    assert.equal((await request(db, "free", 0.02)).decision, "five_hour_cost");
     const usageSql = "select * from public.kova_plan_cost_progress($1,'free')";
+    // Without a private policy the five-hour allowance is max($0.10, month
+    // allowance / remaining five-hour slots), so it grows late in the month.
+    // Size the requests from the live allowance instead of assuming $0.10.
+    const before = await db.query(usageSql, [owner]);
+    const allowance = Number(before.rows[0].five_hour_allowance);
+    assert.ok(allowance >= 0.1);
+    const first = Math.floor((allowance - 0.01) * 10000) / 10000;
+    assert.equal((await request(db, "free", first)).decision, "acquired");
+    assert.equal((await request(db, "free", 0.02)).decision, "five_hour_cost");
     const progress = await db.query(usageSql, [owner]);
     const { rows } = progress;
     assert.equal(Number(rows[0].monthly_allowance), 3);
-    assert.ok(Number(rows[0].five_hour_used) >= 0.09);
+    assert.ok(Number(rows[0].five_hour_used) >= first);
     assert.ok(Number(rows[0].five_hour_allowance) >= 0.1);
   } finally {
     await db.close();
