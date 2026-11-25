@@ -298,7 +298,9 @@ function FormBody({
             aria-label={choiceOnly ? action.label : undefined}
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
-            className={choiceOnly ? choiceClass : "h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"}
+            className={
+              choiceOnly ? choiceClass : "h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+            }
             onPointerDown={preserveActionFocus}
             onClick={() => !locked && onSubmit({ action: action.id, values: valuesRef.current })}
           >

@@ -437,5 +437,8 @@ test("response map pans and zooms around a selected location without external ti
 });
 
 test("custom answer is sent as user text rather than a model action", () => {
-  assert.equal(interactive.formatSubmission(nextSteps, { other: "  My own answer  " }), "Choose your next step\nSelected: Other\nMy own answer");
+  assert.equal(
+    interactive.formatSubmission(nextSteps, { other: "  My own answer  " }),
+    "Choose your next step\nSelected: Other\nMy own answer",
+  );
 });

@@ -545,15 +545,21 @@ test("application route → actual repaired adapter → incremental client compl
 
 test("chat completion waits for the previous generation reservation to settle", async () => {
   let release;
-  const finalizeGate = new Promise((resolve) => { release = resolve; });
+  const finalizeGate = new Promise((resolve) => {
+    release = resolve;
+  });
   const f = fixture({ finalizeGate });
   const response = await f.post();
   assert.equal(response.status, 200);
   let visible = "";
   let completed = false;
   const consuming = consumeChatSse(response.body, {
-    onEvent: (event) => { visible += event.choices?.[0]?.delta?.content ?? ""; },
-  }).then(() => { completed = true; });
+    onEvent: (event) => {
+      visible += event.choices?.[0]?.delta?.content ?? "";
+    },
+  }).then(() => {
+    completed = true;
+  });
   try {
     await waitFor(() => visible === "Visible ", "first content arrives before completion");
     f.finish();

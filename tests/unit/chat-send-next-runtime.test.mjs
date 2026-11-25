@@ -474,7 +474,10 @@ test("transient failure keeps partial output and a newer draft until one explici
   await settle();
   assert.equal(f.context.requestNotice, null);
   assert.equal(f.requests.length, 2);
-  assert.equal(f.requests[1].args.headers["Idempotency-Key"], `${firstRequestId}:${f.context.conversations[0].messages[1].id}`);
+  assert.equal(
+    f.requests[1].args.headers["Idempotency-Key"],
+    `${firstRequestId}:${f.context.conversations[0].messages[1].id}`,
+  );
   assert.deepEqual(JSON.parse(f.requests[1].args.body), originalPayload);
   const resentTurn = f.context.conversations[0].messages;
   assert.equal(
@@ -606,7 +609,10 @@ test("manual Retry is single use, reuses the original ID and rejects an A to B t
   f.timers[0]();
   await settle();
   assert.equal(f.requests.length, 2);
-  assert.equal(f.requests[1].args.headers["Idempotency-Key"], `${requestId}:${f.context.conversations[0].messages[1].id}`);
+  assert.equal(
+    f.requests[1].args.headers["Idempotency-Key"],
+    `${requestId}:${f.context.conversations[0].messages[1].id}`,
+  );
   await f.fail(Object.assign(new Error("Temporary error"), { status: 503, retryable: true }));
   const currentAction = f.errors.at(-1)[1].action;
   const original = f.context.nextPromptScopeRef.current;
