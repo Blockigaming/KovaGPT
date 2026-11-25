@@ -301,3 +301,21 @@ test("the pinned real SDK returns recovery metadata bound to its stored PKCE ver
     }
   }
 });
+
+test("retired recovery tokens cannot authorize a Supabase password reset", async () => {
+  const token = "t".repeat(43);
+  for (const suffix of [`?token=${token}`, `#token=${token}`, `?code=reset-code#token=${token}`]) {
+    const f = fixture({
+      mode: "supabase",
+      href: "https://kova.test/reset-password" + suffix,
+      redirectType: "recovery",
+    });
+    await assert.rejects(
+      f.oauth.completeOAuthSessionFromUrl("reset", undefined, { recoveryOnly: true }),
+      /password_recovery_proof_required/u,
+    );
+    assert.equal(f.location().search, "");
+    assert.equal(f.location().hash, "");
+    assert.ok(!f.calls.some(([name]) => ["setSession", "exchangeCodeForSession"].includes(name)));
+  }
+});
