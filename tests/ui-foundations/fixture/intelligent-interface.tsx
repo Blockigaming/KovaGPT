@@ -14,6 +14,8 @@ const block = validateInteractiveBlock({
       style: "primary",
     },
     { id: "compare", label: "Compare the options", style: "secondary" },
+    { id: "cost", label: "Estimate costs", style: "secondary" },
+    { id: "risks", label: "Review the risks", style: "secondary" },
   ],
 })!;
 
