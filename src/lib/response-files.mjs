@@ -172,7 +172,8 @@ export function describeFile(name, fenceLanguage, content, complete = true) {
     languageLabel,
     category: writing ? "Document" : "Code",
     preview,
-    mime: language === "pdf" ? "application/pdf" : (MIME[language] ?? "text/plain") + ";charset=utf-8",
+    mime:
+      language === "pdf" ? "application/pdf" : (MIME[language] ?? "text/plain") + ";charset=utf-8",
     content,
     complete,
     lines: content ? content.split("\n").length : 0,
