@@ -1,4 +1,5 @@
 import { settingsSearchMatches, VOICE_SETTINGS_SEARCH_TERMS } from "@/lib/settings-search.mjs";
+import { effectiveDirection, t, useLocalization } from "@/lib/localization";
 import { EmailChangeForm } from "@/components/EmailChangeForm";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
@@ -11,6 +12,7 @@ import "@/styles/settings-reference.css";
 import "@/styles/settings-page-layout.css";
 import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
+import { LocalizationSettings } from "@/components/LocalizationSettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
@@ -319,30 +321,6 @@ function SettingsPageContent({ children, className }: ComponentProps<typeof Dial
   );
 }
 
-// The modal mirrors its section into /settings/<section> so the address can be
-// shared, reloaded and reopened (the /settings route opens this modal again).
-// The router is not told: the page underneath stays mounted. This records the
-// page's own address so close restores it and "same page" guards compare
-// against it rather than against the mirrored one.
-const settingsUrlMirror: { base: string | null } = { base: null };
-function stableHref() {
-  if (typeof window === "undefined") return "";
-  return settingsUrlMirror.base ?? window.location.href;
-}
-function writeAddressQuietly(url: string) {
-  // The router patches history.replaceState to observe navigations; the native
-  // method changes only the address bar.
-  History.prototype.replaceState.call(window.history, window.history.state, "", url);
-}
-function restoreSettingsUrl() {
-  const base = settingsUrlMirror.base;
-  settingsUrlMirror.base = null;
-  if (base === null || typeof window === "undefined") return;
-  // A navigation started from inside Settings owns the address; leave it.
-  if (!window.location.pathname.startsWith("/settings/")) return;
-  writeAddressQuietly(base);
-}
-
 export function SettingsDialog({
   open,
   onOpenChange,
@@ -365,6 +343,7 @@ export function SettingsDialog({
   page?: boolean;
   onSectionChange?: (section: string) => void;
 }) {
+  useLocalization();
   const Surface = page ? SettingsPageContent : DialogContent;
   const currentSectionHeadingId = useId();
   const pageUtilities = useContext(WorkspacePageUtilities);
@@ -385,16 +364,6 @@ export function SettingsDialog({
   const { tier } = useTier();
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
   const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
-  useEffect(() => {
-    if (page || !open || typeof window === "undefined") return;
-    settingsUrlMirror.base ??= window.location.href;
-    const target = `/settings/${settingsSectionForTab(tab)}`;
-    if (window.location.pathname !== target) writeAddressQuietly(target);
-  }, [open, page, tab]);
-  useEffect(() => {
-    if (!page && !open) restoreSettingsUrl();
-  }, [open, page]);
-  useEffect(() => () => (page ? undefined : restoreSettingsUrl()), [page]);
   const [settingsQuery, setSettingsQuery] = useState("");
   const [mobileHome, setMobileHome] = useState(!initialTab);
   const [usage, setUsage] = useState<PlanUsageDto | null>(null);
@@ -437,7 +406,7 @@ export function SettingsDialog({
     [],
   );
   const usageRetryEpoch = billingScopeRef.current.epoch;
-  const usageRetryUrl = stableHref();
+  const usageRetryUrl = typeof window === "undefined" ? "" : window.location.href;
   const retryUsage = (event: React.MouseEvent<HTMLButtonElement>) => {
     const scope = billingScopeRef.current;
     const trigger = event.currentTarget;
@@ -446,7 +415,7 @@ export function SettingsDialog({
       scope.tab !== "usage" ||
       !scope.loggedIn ||
       currentAuthUserKeyRef.current !== userKey ||
-      usageRetryUrl !== stableHref() ||
+      usageRetryUrl !== window.location.href ||
       !trigger.isConnected ||
       trigger.closest('[inert], [aria-hidden="true"], [hidden]')
     )
@@ -1297,7 +1266,7 @@ export function SettingsDialog({
         closeLabel="Close settings"
         data-ui-reference="chatgpt.settings"
         data-settings-open={open ? "true" : undefined}
-        className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
+        className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} border border-border overflow-hidden flex flex-col gap-0 p-0`}
         onOpenAutoFocus={() => {
           // Capture once per opening, before the dialog moves focus. Navigating
           // Settings sections must not replace the original external invoker.
@@ -1305,7 +1274,7 @@ export function SettingsDialog({
             returnFocusTarget ??
             (document.activeElement instanceof HTMLElement ? document.activeElement : null);
           returnFocusContextRef.current = {
-            url: stableHref(),
+            url: window.location.href,
             ownerId: currentAuthUserKeyRef.current,
           };
         }}
@@ -1317,7 +1286,7 @@ export function SettingsDialog({
           returnFocusContextRef.current = null;
           if (
             !context ||
-            context.url !== stableHref() ||
+            context.url !== window.location.href ||
             context.ownerId !== currentAuthUserKeyRef.current
           )
             return;
@@ -1351,12 +1320,12 @@ export function SettingsDialog({
             target.focus({ preventScroll: true });
             return document.activeElement === target;
           };
-          // A desktop menu item unmounts when Settings opens; its account
-          // trigger remains available. A closed mobile drawer instead restores
-          // its visible menu opener. Both fallbacks use the same focus guards.
+          // The sidebar can mount both account triggers. Skip the hidden one.
           if (
             !restore(previous) &&
-            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]')) &&
+            !Array.from(document.querySelectorAll<HTMLElement>('[aria-label="Account menu"]')).some(
+              restore,
+            ) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]')) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Toggle sidebar"]'))
           )
@@ -1366,9 +1335,7 @@ export function SettingsDialog({
         <DialogHeader
           className={
             loggedIn
-              ? page
-                ? "sr-only"
-                : "hidden"
+              ? "sr-only"
               : "kova-settings-page-header px-5 sm:px-7 pt-5 pb-4 border-b border-border"
           }
         >
@@ -1376,11 +1343,11 @@ export function SettingsDialog({
             <div>
               {page ? (
                 <h1 className="kova-settings-main-title text-xl font-semibold tracking-tight font-display">
-                  Settings
+                  {t("Settings")}
                 </h1>
               ) : (
                 <DialogTitle className="kova-settings-main-title text-xl font-semibold tracking-tight font-display">
-                  Settings
+                  {t("Settings")}
                 </DialogTitle>
               )}
               <p className="text-xs text-muted-foreground mt-1">
@@ -1427,6 +1394,7 @@ export function SettingsDialog({
             value={tab}
             onValueChange={selectTab}
             orientation="vertical"
+            dir={effectiveDirection()}
             activationMode="manual"
             className="flex-1 overflow-hidden flex flex-col md:flex-row"
           >
@@ -1458,7 +1426,7 @@ export function SettingsDialog({
                 {pageBack}
                 <div className="kova-settings-nav-title">
                   <h2 ref={navigationHeadingRef} tabIndex={-1}>
-                    Settings
+                    {t("Settings")}
                   </h2>
                 </div>
                 {page ? <div className="kova-settings-navigation-close">{pageClose}</div> : null}
@@ -1476,18 +1444,18 @@ export function SettingsDialog({
               </div>
               <label className="kova-settings-search">
                 <Search aria-hidden="true" />
-                <span className="sr-only">Search settings</span>
+                <span className="sr-only">{t("Search settings")}</span>
                 <input
                   ref={settingsSearchRef}
                   value={settingsQuery}
                   onChange={(event) => setSettingsQuery(event.target.value)}
-                  placeholder="Search settings"
+                  placeholder={t("Search settings")}
                 />
               </label>
               <TabsList className="kova-settings-nav" aria-orientation="vertical">
                 {filteredGroups.map((group) => (
                   <section key={group.title} aria-label={group.title}>
-                    <p className="kova-settings-nav-group">{group.title}</p>
+                    <p className="kova-settings-nav-group">{t(group.title)}</p>
                     {group.tabs.map(({ v, icon: Icon, label }) => (
                       <TabsTrigger
                         key={v}
@@ -1503,8 +1471,7 @@ export function SettingsDialog({
                           <Icon aria-hidden="true" />
                         </span>
                         <span className="kova-settings-nav-copy">
-                          <span>{label}</span>
-                          {v !== "logout" && <small>{SETTINGS_DESCRIPTIONS[v]}</small>}
+                          <span>{t(label)}</span>
                         </span>
                         <span className="kova-settings-nav-chevron" aria-hidden="true">
                           ›
@@ -2316,6 +2283,7 @@ export function SettingsDialog({
               {/* APPEARANCE */}
               <TabsContent aria-labelledby={currentSectionHeadingId} value="appearance">
                 <AppearanceSettings settings={settings} onChange={onChange} />
+                <LocalizationSettings />
               </TabsContent>
 
               {/* NOTIFICATIONS */}

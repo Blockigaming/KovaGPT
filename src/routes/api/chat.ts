@@ -188,6 +188,10 @@ const ADAPTIVE_INSTRUCTION = "";
 const UNRESTRICTED_INSTRUCTION = "";
 const ACCURACY_INSTRUCTION = "";
 const CHART_INSTRUCTION = "";
+// Files appear in chat as a card that opens a side preview, so a file needs its name.
+const FILE_OUTPUT_INSTRUCTION = `
+
+When the user asks you to make, create, build or write a file (a web page, game, script, stylesheet, config, component, data file or similar), put the complete file in one fenced code block whose opening line has the language and a quoted filename, for example: \`\`\`html filename="game.html". Use a short, descriptive lowercase filename with the right extension. A self-contained web page or game goes in a single .html file with its CSS and JavaScript inline and no external network requests. Keep the explanation around the file brief, and do not repeat the file's contents outside the block. Ordinary short code examples that are not files need no filename.`;
 const COMPACT_CHART_INSTRUCTION = `
 
 When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
@@ -195,7 +199,11 @@ const FINAL_CHART_INSTRUCTION = `
 
 Use double-dollar TeX for inline equations and put double-dollar delimiters on separate lines for display equations. Leave ordinary currency as plain text.
 
-When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, horizontal-bar, stacked-bar, line, step, area, stacked-area, pie, donut, scatter, radar, heatmap, histogram, percent-stacked-bar, funnel, candlestick, bubble, treemap, sankey, waterfall and range. Waterfall rows are signed changes in order; range rows need numeric low and high. Sankey uses data rows with source and target labels and positive numeric value, with no directed cycles. Bubble charts need a numeric xKey, one y series in keys, and a nonnegative sizeKey (default size). For treemaps, the first numeric series represents the size of each category. Use individual numeric observations for a histogram, nonnegative series for percentages and funnels, and named open/high/low/close values for each candle. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
+When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, horizontal-bar, stacked-bar, line, step, area, stacked-area, pie, donut, scatter, radar, heatmap, histogram, percent-stacked-bar, funnel, candlestick, bubble, treemap, sankey, waterfall and range. Waterfall rows are signed changes in order; range rows need numeric low and high. Sankey uses data rows with source and target labels and positive numeric value, with no directed cycles. Bubble charts need a numeric xKey, one y series in keys, and a nonnegative sizeKey (default size). For treemaps, the first numeric series represents the size of each category. Use individual numeric observations for a histogram, nonnegative series for percentages and funnels, and named open/high/low/close values for each candle. More types: grouped-bar, diverging-bar, dot, lollipop, slope (two keys), bump, streamgraph, sparkline, small-multiples, polar-area, connected-scatter, function and combo (first key bars, rest lines) use xKey and keys; strip, box, violin, density and ridgeline use keys as columns of raw observations; calendar-heatmap uses an xKey of YYYY-MM-DD dates; sunburst and icicle use an xKey of "A/B/C" paths with a positive value key; alluvial and chord use source/target/value rows; gantt rows need start and end (numbers or YYYY-MM-DD); timeline rows need a date; ohlc and volume use open/high/low/close (plus volume); error-bars need an error value; confidence-band and interval need low and high; contour, surface and mesh need a full x/y/z grid; scatter-3d needs x/y/z; vector-field needs x/y/dx/dy; choropleth uses an xKey of country or US state names with a value key; point-map, route-map (in order) and density-map need lat and lon. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
+// The file-output protocol is only sent when the turn plausibly asks for a file, so
+// ordinary Free turns keep their token headroom.
+const FILE_OUTPUT_REQUEST =
+  /\b(?:files?|web ?pages?|websites?|web ?sites?|landing page|games?|apps?|scripts?|html|css|javascript|typescript|python|components?|config|program|code|svg|readme)\b/i;
 const RICH_RESPONSE_REQUEST =
   /\b(?:charts?|plots?|graphs?|heatmaps?|radar|candlesticks?|sankey|waterfalls?|treemaps?|histograms?|diagrams?|flowcharts?|maps?|quizz(?:es)?|quiz|flashcards?|simulations?|memory game|sticker packs?|patterns?|narration|read aloud|interactive|file bundle|zip archive|latex|equations?)\b/i;
 const CREATOR_INSTRUCTION = "";
@@ -684,6 +692,7 @@ export const Route = createFileRoute("/api/chat")({
               locale,
               chatId,
               personality,
+              goal,
               projectId,
               temporary,
               temporaryContext,
@@ -772,6 +781,11 @@ export const Route = createFileRoute("/api/chat")({
 
             const lastUser = [...messages].reverse().find((m) => m.role === "user");
             const currentAttachments = lastUser?.attachments ?? [];
+            // Pasted cards are message text within the typed-message limit (validated at
+            // ingress), so they never need sign-in, an upload slot or the daily allowance.
+            const uploadedAttachments = currentAttachments.filter(
+              (attachment) => !(attachment.kind === "text_file" && attachment.pasted),
+            );
             const explicitHostedTool =
               clientTool === "data_analysis" || clientTool === "file_analysis";
             if (explicitHostedTool) {
@@ -920,7 +934,7 @@ export const Route = createFileRoute("/api/chat")({
             }
 
             // Uploads require sign-in even when a custom client skips the UI guard.
-            if (!auth && currentAttachments.length > 0) {
+            if (!auth && uploadedAttachments.length > 0) {
               return Response.json(
                 {
                   error: "Sign in to upload files and images.",
@@ -1106,7 +1120,7 @@ export const Route = createFileRoute("/api/chat")({
             // Quotas apply to files submitted in this turn, not attachments in
             // older conversation history. This also keeps edit/regenerate from
             // being charged for unrelated files in prior turns.
-            const totalAttachments = currentAttachments.length;
+            const totalAttachments = uploadedAttachments.length;
             // Guest uploads were rejected before provider work above.
             // Signed-in uploads also retain per-request and per-day caps.
             if (!isOwner && totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
@@ -1142,7 +1156,7 @@ export const Route = createFileRoute("/api/chat")({
               const uploadAllowed = await preflight.run("upload_quota", (signal) =>
                 reserveUploads(
                   auth,
-                  currentAttachments,
+                  uploadedAttachments,
                   DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
                   signal,
                 ),
@@ -1179,6 +1193,11 @@ export const Route = createFileRoute("/api/chat")({
                       parts.push({
                         type: "image_url",
                         image_url: { url: att.dataUrl },
+                      });
+                    } else if (att.kind === "text_file" && att.pasted) {
+                      parts.push({
+                        type: "text",
+                        text: `[Pasted text]\n--- BEGIN PASTED TEXT ---\n${att.content}\n--- END PASTED TEXT ---`,
                       });
                     } else if (att.kind === "text_file") {
                       parts.push({
@@ -1677,6 +1696,7 @@ export const Route = createFileRoute("/api/chat")({
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
                     "\nUse Markdown bold sparingly for important terms and key results in written answers.\n" +
+                    (FILE_OUTPUT_REQUEST.test(lastText) ? FILE_OUTPUT_INSTRUCTION : "") +
                     (useRichResponseCatalog ? FINAL_CHART_INSTRUCTION : COMPACT_CHART_INSTRUCTION) +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
@@ -1690,6 +1710,9 @@ export const Route = createFileRoute("/api/chat")({
                     CREATOR_INSTRUCTION +
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
+                    (goal
+                      ? `\n\n--- Conversation goal set by the user ---\n${goal}\n--- End goal ---\nWork toward this goal in each reply. When it looks complete, say so plainly and suggest what is left, if anything.`
+                      : "") +
                     voiceStyle +
                     memoryBlock +
                     (conversationSummary?.block ?? "") +
@@ -2216,6 +2239,8 @@ export const Route = createFileRoute("/api/chat")({
               tool: string;
               label: string;
               status?: "done" | "failed";
+              count?: number;
+              durationMs?: number;
             }> = [];
             if (webSources.length) {
               const activity = createToolActivityEvent(
@@ -2223,7 +2248,11 @@ export const Route = createFileRoute("/api/chat")({
                 `Searched ${webSources.length} ${webSources.length === 1 ? "source" : "sources"}`,
                 "complete",
               );
-              activityEvents.push({ tool: activity.type, label: activity.label });
+              activityEvents.push({
+                tool: activity.type,
+                label: activity.label,
+                count: webSources.length,
+              });
             }
 
             const settleDisconnectedConnector = async () => {
@@ -2427,6 +2456,10 @@ export const Route = createFileRoute("/api/chat")({
                                 tool: a.tool,
                                 label: a.label,
                                 status: a.status ?? "done",
+                                ...(a.count !== undefined ? { count: a.count } : {}),
+                                ...(a.durationMs !== undefined
+                                  ? { duration_ms: a.durationMs }
+                                  : {}),
                               }),
                             ),
                           );
@@ -2573,6 +2606,7 @@ export const Route = createFileRoute("/api/chat")({
                         };
                       }
                     }
+                    const toolStartedAt = Date.now();
                     try {
                       const out = connectedContext?.tools.some(
                         (tool) => tool.function.name === tc.function.name,
@@ -2594,6 +2628,7 @@ export const Route = createFileRoute("/api/chat")({
                         label: activityLabel,
                         status:
                           out && typeof out === "object" && "error" in out ? "failed" : "done",
+                        durationMs: Date.now() - toolStartedAt,
                       });
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
@@ -2603,6 +2638,7 @@ export const Route = createFileRoute("/api/chat")({
                         tool: tc.function.name,
                         label: activityLabel,
                         status: "failed",
+                        durationMs: Date.now() - toolStartedAt,
                       });
                       return {
                         role: "tool",
@@ -2830,6 +2866,8 @@ export const Route = createFileRoute("/api/chat")({
                             tool: a.tool,
                             label: a.label,
                             status: a.status ?? "done",
+                            ...(a.count !== undefined ? { count: a.count } : {}),
+                            ...(a.durationMs !== undefined ? { duration_ms: a.durationMs } : {}),
                           }),
                         ),
                       );
@@ -3052,6 +3090,8 @@ export const Route = createFileRoute("/api/chat")({
                         tool: a.tool,
                         label: a.label,
                         status: a.status ?? "done",
+                        ...(a.count !== undefined ? { count: a.count } : {}),
+                        ...(a.durationMs !== undefined ? { duration_ms: a.durationMs } : {}),
                       }),
                     ),
                   );

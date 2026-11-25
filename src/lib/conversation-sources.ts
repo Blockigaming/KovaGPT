@@ -113,6 +113,10 @@ const BROWSER_STATUSES: Record<Activity["status"], ConversationBrowserSource["st
   done: "completed",
   failed: "failed",
   canceled: "canceled",
+  queued: "active",
+  paused: "active",
+  skipped: "canceled",
+  partial: "completed",
 };
 
 function displayText(value: string, fallback: string) {

@@ -1,0 +1,22 @@
+/* Spec §75: code, identifiers, math and logos keep their own direction in right-to-left layouts. */
+[dir="rtl"] :is(pre, code, kbd, samp, .katex, .kova-logo, [data-kova-identifier]) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+/* Script-specific font fallback so Arabic, Japanese and Korean shape correctly. */
+:lang(ar) body {
+  font-family: var(--font-sans, system-ui), "Noto Sans Arabic", "Geeza Pro", Tahoma, sans-serif;
+}
+:lang(ja) body {
+  font-family:
+    var(--font-sans, system-ui), "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+}
+:lang(ko) body {
+  font-family:
+    var(--font-sans, system-ui), "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+/* Dialog close buttons sit on the reading-start side's opposite edge in right-to-left pages. */
+[dir="rtl"] [role="dialog"] > [data-kova-dialog-close] {
+  right: auto;
+  left: 20px;
+}

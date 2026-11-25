@@ -295,6 +295,8 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
   error.retryable =
     typeof payload.retryable === "boolean" ? payload.retryable : defaultRetryable(response.status);
   const retryAfter = response.headers.get("retry-after");
+  if (error.code === "message_window_limit" && typeof payload.resetsAt === "string")
+    error.resetsAt = payload.resetsAt;
   error.retryAfter = retryAfter && /^\d+$/u.test(retryAfter) ? Number(retryAfter) : undefined;
   return error;
 }

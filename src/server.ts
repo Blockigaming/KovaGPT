@@ -28,7 +28,7 @@ const CONTENT_SECURITY_POLICY = [
   "connect-src 'self' wss://api.elevenlabs.io https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://link.com https://*.link.com https://tiles.openfreemap.org https://server.arcgisonline.com https://s3.amazonaws.com https://production.plaid.com",
   "frame-src https://checkout.stripe.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com https://cdn.plaid.com",
   "worker-src 'self' blob:",
-  "media-src 'self' blob:",
+  "media-src 'self' blob: https:",
   "upgrade-insecure-requests",
 ].join("; ");
 

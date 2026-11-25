@@ -117,6 +117,9 @@ function fixture(
     ),
     "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/components/PastedTextCard": { PastedTextCard: "PastedTextCard" },
+    "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
+    "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
@@ -360,7 +363,7 @@ test("guest pasted-text attachment requires sign-in but ordinary text pasting re
   await f.root().onPaste(paste("Normal text"));
   assert.equal(prevented, false);
   assert.equal(f.signIn(), undefined);
-  await f.root().onPaste(paste("x".repeat(10_001)));
+  await f.root().onPaste(paste("x".repeat(40_001)));
   await f.flush();
   f.button("Inspect pending pasted text").onClick({ currentTarget: {} });
   await f.flush();
@@ -440,14 +443,14 @@ test("signed-in pasted-text attachment remains available without replacing the d
   await f.root().onPaste({
     clipboardData: {
       files: [],
-      getData: (kind) => (kind === "text/plain" ? "x".repeat(10_001) : ""),
+      getData: (kind) => (kind === "text/plain" ? "x".repeat(40_001) : ""),
     },
     preventDefault() {},
   });
   await f.flush();
   assert.deepEqual(f.quotas, []);
   assert.equal(f.attachmentChanges.at(-1)[0].name, "pasted-text.txt");
-  assert.equal(f.attachmentChanges.at(-1)[0].textContent, "x".repeat(10_001));
+  assert.equal(f.attachmentChanges.at(-1)[0].textContent, "x".repeat(40_001));
   assert.deepEqual(f.saves, []);
   assert.equal(f.input().value, "Keep my draft");
   assert.equal(f.signIn(), undefined);

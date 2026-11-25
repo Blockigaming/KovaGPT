@@ -511,3 +511,12 @@ test("Live Voice mints only a scoped token and reserves daily usage for Free and
     assert.deepEqual(calls, tier === "pro" ? ["rate", "provider"] : ["rate", "quota", "provider"]);
   }
 });
+
+test("realtime Scribe is available with the single configured voice on every plan", () => {
+  const getEnv = (name) => (name === "KOVA_VOICE_REALTIME_ENABLED" ? "true" : env[name]);
+  for (const tier of ["free", "plus", "pro"]) {
+    const config = publicVoiceConfiguration(voiceConfiguration(getEnv, tier));
+    assert.equal(config.realtime, true);
+    assert.equal(config.voices.filter((voice) => voice.available).length, 1);
+  }
+});

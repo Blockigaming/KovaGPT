@@ -98,10 +98,16 @@ test("the primary Voice action restores focus and typing changes only the primar
   await expect(voice).toBeVisible();
   await expect(voice).toBeEnabled();
   await voice.click();
-  const dialog = page.getByRole("dialog", { name: "Voice", exact: true });
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
+  const inlineVoice = page.locator("#kova-inline-voice");
+  await expect(inlineVoice).toBeVisible();
+  await expect(voice).toHaveAccessibleName("Stop voice");
+  await expect(voice).toHaveAttribute("aria-expanded", "true");
+  await expect(voice).toHaveAttribute("aria-controls", "kova-inline-voice");
+  await voice.focus();
+  await page.keyboard.press("Enter");
+  await expect(inlineVoice).toBeHidden();
+  await expect(voice).toHaveAccessibleName("Voice");
+  await expect(voice).toHaveAttribute("aria-expanded", "false");
   await expect(voice).toBeFocused();
 
   await input.fill("Keep this editable draft");

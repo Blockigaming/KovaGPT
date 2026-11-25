@@ -102,7 +102,13 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
     await page.keyboard.press("Home");
     await expect(menu.getByRole("button", { name: /^Add photos & files/ })).toBeFocused();
     await page.keyboard.press("End");
+    // The chat goal lives in its own section after the attachment actions.
+    await expect(
+      menu.getByRole("button", { name: "Set a goal for this chat", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowUp");
     await expect(menu.getByRole("button", { name: "Drawing", exact: true })).toBeFocused();
+    await page.keyboard.press("End");
     await page.keyboard.press("ArrowDown");
     await expect(menu.getByRole("button", { name: /^Add photos & files/ })).toBeFocused();
     await expectViewportBounds();

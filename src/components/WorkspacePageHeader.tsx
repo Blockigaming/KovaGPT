@@ -10,7 +10,6 @@ export function WorkspacePageHeader({
   meta,
   titleId,
   reference = "chatgpt.page.header",
-  readingTitle = false,
 }: {
   icon?: LucideIcon;
   title: string;
@@ -19,7 +18,6 @@ export function WorkspacePageHeader({
   meta?: ReactNode;
   titleId?: string;
   reference?: string;
-  readingTitle?: boolean;
 }) {
   const utilities = useContext(WorkspacePageUtilities);
   return (
@@ -34,13 +32,7 @@ export function WorkspacePageHeader({
           </span>
         ) : null}
         <div className="min-w-0">
-          <h1
-            id={titleId}
-            className="kova-page-title"
-            style={
-              readingTitle ? { fontFamily: "var(--font-reading)", fontWeight: 400 } : undefined
-            }
-          >
+          <h1 id={titleId} className="kova-page-title">
             {title}
           </h1>
           <p className="kova-page-description">{description}</p>

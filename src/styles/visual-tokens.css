@@ -134,6 +134,7 @@
   --kova-reading-width: 768px;
   --kova-composer-width: 768px;
   --composer-background: #ffffff;
+  --composer-tray-background: var(--composer-background);
   --composer-border: #0000000f;
   --kova-control-sm: 32px;
   --kova-control-md: 36px;
@@ -238,6 +239,7 @@
   --border-strong: #ffffff40;
   --user-bubble: #303030;
   --composer-background: #303030;
+  --composer-tray-background: #212121;
   --composer-border: #ffffff0f;
   --menu-shadow: 0 8px 24px #00000033;
   --dialog-shadow: 0 16px 48px #0000004d;

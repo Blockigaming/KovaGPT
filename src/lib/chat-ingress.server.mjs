@@ -11,6 +11,7 @@ export const CHAT_MAX_MESSAGE_CHARS = 32 * 1024;
 export const CHAT_MAX_ATTACHMENTS_PER_MESSAGE = 2;
 export const CHAT_MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 export const CHAT_MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
+export const CHAT_MAX_PASTED_TEXT_PER_MESSAGE = 4;
 export const CHAT_MAX_ANON_BUCKETS = 4096;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -237,6 +238,12 @@ function normalizeAttachment(value) {
     const size = optionalFiniteSize(value.size, "attachment_size", CHAT_MAX_TEXT_ATTACHMENT_CHARS);
     if (fileType !== undefined) result.fileType = fileType;
     if (size !== undefined) result.size = size;
+    // A pasted card is message text: it is only exempt from upload rules while it
+    // stays within the typed-message limit. Larger pastes remain ordinary uploads.
+    if (value.pasted === true && value.content.length <= CHAT_MAX_MESSAGE_CHARS)
+      result.pasted = true;
+    else if (value.pasted !== undefined && value.pasted !== false && value.pasted !== true)
+      invalid("invalid_text_attachment", "Invalid text file attachment.");
     return result;
   }
 
@@ -271,10 +278,20 @@ function normalizeMessage(value) {
   const message = { role: value.role, content: value.content };
   if (value.attachments !== undefined && value.attachments !== null) {
     if (!Array.isArray(value.attachments)) invalid("invalid_attachments");
-    if (value.attachments.length > CHAT_MAX_ATTACHMENTS_PER_MESSAGE) {
+    const pasted = value.attachments.filter(
+      (attachment) => isRecord(attachment) && attachment.pasted === true,
+    ).length;
+    // Pasted cards are message text and have their own small cap; files keep theirs.
+    if (value.attachments.length - pasted > CHAT_MAX_ATTACHMENTS_PER_MESSAGE) {
       invalid(
         "too_many_attachments",
         `A message can include at most ${CHAT_MAX_ATTACHMENTS_PER_MESSAGE} attachments.`,
+      );
+    }
+    if (pasted > CHAT_MAX_PASTED_TEXT_PER_MESSAGE) {
+      invalid(
+        "too_many_pasted_texts",
+        `A message can include at most ${CHAT_MAX_PASTED_TEXT_PER_MESSAGE} pasted texts.`,
       );
     }
     message.attachments = value.attachments.map(normalizeAttachment);
@@ -365,6 +382,8 @@ export function normalizeChatPayload(value) {
     multiline: true,
   });
   const projectId = optionalUuid(value.projectId, "project_id");
+  // A short goal the user set for this conversation; it steers each reply while active.
+  const goal = optionalTrimmedString(value.goal, "goal", 500, { multiline: true });
   const memoryStartIndex = value.memoryStartIndex;
   const historyOffset = value.historyOffset ?? 0;
   if (!Number.isSafeInteger(historyOffset) || historyOffset < 0 || historyOffset > 1000000)
@@ -412,6 +431,7 @@ export function normalizeChatPayload(value) {
   if (value.historyOffset !== undefined) payload.historyOffset = historyOffset;
   if (personality !== undefined) payload.personality = personality;
   if (projectId !== undefined) payload.projectId = projectId;
+  if (goal) payload.goal = goal;
   const voice = optionalBoolean(value.voice, "voice");
   if (voice === true) payload.voice = true;
   if (temporary !== undefined) payload.temporary = temporary;

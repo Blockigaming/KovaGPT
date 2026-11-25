@@ -1,6 +1,7 @@
 import { devices, expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { revealSidebar } from "./current-ui";
 
 // The website serves the desktop experience on every device and reflows it to
 // the real screen width. Phone-app presentation is reserved for native app
@@ -31,11 +32,16 @@ for (const device of ["iPhone 13", "Pixel 7", "iPad Mini landscape"] as const) {
       expect(fit.width).toBe(descriptor.viewport.width);
       expect(fit.scrollWidth).toBeLessThanOrEqual(fit.width);
 
+      const navigation = await revealSidebar(page);
+      await navigation.getByRole("button", { name: "New chat", exact: true }).click();
       // Desktop home composition: greeting above a centered composer.
       const greeting = page.locator(".kova-empty-chat .kova-greeting h1");
       const input = page.getByRole("textbox", { name: "Message KovaGPT" });
       await expect(greeting).toBeVisible();
       await expect(input).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Continue working", exact: true }),
+      ).toBeHidden();
       const [greetingBox, inputBox] = await Promise.all([
         greeting.boundingBox(),
         input.boundingBox(),

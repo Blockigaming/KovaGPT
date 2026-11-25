@@ -393,7 +393,7 @@ test("slash commands are selectable by keyboard and show the account model menu"
   await expect(page.getByRole("button", { name: /remove study/i })).toBeVisible();
 });
 
-test("empty chat opens the Voice screen directly while connecting", async ({ page }) => {
+test("empty chat starts Voice inline and keeps the composer visible", async ({ page }) => {
   await start(page);
   let release: () => void = () => {};
   const connecting = new Promise<void>((resolve) => {
@@ -411,11 +411,14 @@ test("empty chat opens the Voice screen directly while connecting", async ({ pag
     const button = page.getByTestId("voice-button");
     await expect(button).toBeEnabled();
     await button.click();
-    const voice = page.getByRole("dialog", { name: "Voice", exact: true });
-    await expect(voice.getByRole("heading", { name: "Starting Voice…" })).toBeVisible();
+    const voice = page.locator("#kova-inline-voice");
+    await expect(voice.getByRole("status")).toHaveText("Starting Voice…");
+    await expect(page.locator(".kova-empty-chat")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Voice", exact: true })).toHaveCount(0);
     await expect(page.locator("[data-chat-transcript-loading]")).toHaveCount(0);
     await expect(page.getByText("Original", { exact: true })).toHaveCount(0);
-    await voice.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("button", { name: "Stop voice", exact: true }).click();
     await expect(voice).toHaveCount(0);
     await expect(button).toBeFocused();
   } finally {

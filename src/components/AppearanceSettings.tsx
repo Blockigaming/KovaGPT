@@ -88,14 +88,26 @@ export function AppearanceSettings({
         ["high", "Increased"],
       ],
     },
+    {
+      key: "interfaceFont",
+      label: "Interface font",
+      hint: "The font used for menus and controls.",
+      options: [
+        ["system", "System"],
+        ["serif", "Serif"],
+        ["mono", "Monospace"],
+      ],
+    },
   ] as const;
   return (
     <div className="kova-appearance-settings" data-ui-reference="chatgpt.settings.appearance">
       <section className="kova-appearance-size" aria-labelledby="appearance-layout-heading">
         <h3 id="appearance-layout-heading">Layout size</h3>
         <div className="kova-preference-row kova-preference-slider">
-          <div>Interface size</div>
-          <output>{interfaceSizeDraft ?? values.interfaceSize}%</output>
+          <div className="kova-preference-slider-label">
+            <span>Interface size</span>
+            <output>{interfaceSizeDraft ?? values.interfaceSize}%</output>
+          </div>
           <Slider
             thumbProps={{
               "aria-label": "Interface size",
@@ -117,8 +129,10 @@ export function AppearanceSettings({
           </div>
         </div>
         <div className="kova-preference-row kova-preference-slider kova-desktop-navigation-preference">
-          <div>Settings sidebar width</div>
-          <output>{navigationWidthDraft ?? values.settingsNavigationWidth}px</output>
+          <div className="kova-preference-slider-label">
+            <span>Settings sidebar width</span>
+            <output>{navigationWidthDraft ?? values.settingsNavigationWidth}px</output>
+          </div>
           <Slider
             thumbProps={{
               "aria-label": "Settings sidebar width",
@@ -171,21 +185,6 @@ export function AppearanceSettings({
             </Select>
           </div>
         ))}
-      </div>
-      <div className="kova-preference-list">
-        <label className="kova-preference-row">
-          Interface font
-          <select
-            value={values.interfaceFont}
-            onChange={(event) =>
-              change({ interfaceFont: event.target.value as Settings["interfaceFont"] })
-            }
-          >
-            <option value="system">System</option>
-            <option value="serif">Serif</option>
-            <option value="mono">Monospace</option>
-          </select>
-        </label>
         {[
           ["background", "Background"],
           ["foreground", "Text"],
@@ -197,7 +196,7 @@ export function AppearanceSettings({
           ["accent", "Selected items"],
         ].map(([key, label]) => (
           <label className="kova-preference-row" key={key}>
-            {label}
+            <span>{label}</span>
             <input
               type="color"
               value={values.interfaceColors[key] || "#808080"}
@@ -210,7 +209,7 @@ export function AppearanceSettings({
           </label>
         ))}
         <label className="kova-preference-row">
-          Accent color
+          <span>Accent color</span>
           <input
             type="color"
             value={values.interfaceAccent || "#669cf0"}
@@ -231,6 +230,7 @@ export function AppearanceSettings({
       <div className="flex flex-wrap items-center gap-3 mt-5">
         <Button
           variant="ghost"
+          className="h-auto min-w-0 max-w-full gap-2 whitespace-normal"
           onClick={() => {
             setInterfaceSizeDraft(null);
             setNavigationWidthDraft(null);
@@ -240,8 +240,8 @@ export function AppearanceSettings({
             setNotice("Appearance reset to defaults.");
           }}
         >
-          <RotateCcw aria-hidden="true" className="h-4 w-4 mr-2" />
-          Reset appearance
+          <RotateCcw aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 [overflow-wrap:anywhere]">Reset appearance</span>
         </Button>
         <p role="status" className="text-sm text-muted-foreground">
           {notice}

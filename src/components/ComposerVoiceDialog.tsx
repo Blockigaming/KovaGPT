@@ -89,6 +89,7 @@ export interface ComposerVoiceDialogProps {
   inlineDictation?: boolean;
   autoStartVoice?: boolean;
   onVoiceSubmit?: ComposerVoiceSubmit;
+  onVoicePlaybackProgress?: (fraction: number | null) => void;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   isStreaming: boolean;
@@ -151,6 +152,7 @@ export function ComposerVoiceDialog({
   inlineDictation = false,
   autoStartVoice = false,
   onVoiceSubmit,
+  onVoicePlaybackProgress,
   latestAssistantText = "",
   latestAssistantReply,
   isStreaming,
@@ -160,12 +162,43 @@ export function ComposerVoiceDialog({
   const transcriptId = useId();
   const voicePickerId = useId();
   const voiceHelpId = useId();
+  const voiceGlow = useRef<HTMLDivElement>(null);
+  const glowTarget = useRef(0);
+  const updateGlow = (level: number) => {
+    glowTarget.current = 1 - Math.exp(-9 * Math.max(0, level - 0.002));
+  };
+
   const [realtimeFailed, setRealtimeFailed] = useState(false);
   const [capabilities, setCapabilities] = useState<VoiceCapabilities | null>(null);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
+  useLayoutEffect(() => {
+    const glow = voiceGlow.current;
+    if (!glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let smoothed = 0;
+    let previous = performance.now();
+    let frame: number;
+    const animate = (now: number) => {
+      const elapsed = Math.max(0, Math.min(64, now - previous));
+      previous = now;
+      const target = glowTarget.current;
+      const response = target > smoothed ? 85 : 250;
+      smoothed += (target - smoothed) * (1 - Math.exp(-elapsed / response));
+      glow.style.setProperty("--voice-level", smoothed.toFixed(3));
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(frame);
+      glowTarget.current = 0;
+    };
+  }, [open, phase]);
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
+  /** This voice session's turns with speaker and time; cleared when the dialog closes. */
+  const [voiceLog, setVoiceLog] = useState<{ speaker: "You" | "Kova"; text: string; at: number }[]>(
+    [],
+  );
   const [hasTranscript, setHasTranscript] = useState(false);
   const [canRetryRecording, setCanRetryRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -194,6 +227,7 @@ export function ComposerVoiceDialog({
     latestAssistantReply,
     mode,
     onVoiceSubmit,
+    onVoicePlaybackProgress,
     onOpenChange,
   });
   current.current = {
@@ -206,6 +240,7 @@ export function ComposerVoiceDialog({
     latestAssistantReply,
     mode,
     onVoiceSubmit,
+    onVoicePlaybackProgress,
     onOpenChange,
   };
   const streamingBlocked = mode !== "voice" && isStreaming;
@@ -265,6 +300,7 @@ export function ComposerVoiceDialog({
 
   const releasePlayback = useCallback(() => {
     if (player.current) {
+      player.current.onended = player.current.onerror = null;
       player.current.pause();
       player.current.removeAttribute("src");
       player.current.load();
@@ -278,6 +314,7 @@ export function ComposerVoiceDialog({
     // resources. A late getUserMedia result must immediately stop its own tracks.
     generation.current += 1;
     voiceSessionActive.current = false;
+    if (current.current.mode === "voice") current.current.onVoicePlaybackProgress?.(null);
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
     activePlayback?.stop();
@@ -337,6 +374,7 @@ export function ComposerVoiceDialog({
     setSelectedVoiceId("");
     setPreferenceNotice("");
     setLastVoiceReply("");
+    setVoiceLog([]);
     if (open) billingAfterClose.current = null;
     setChecking(false);
     setError("");
@@ -545,6 +583,7 @@ export function ComposerVoiceDialog({
     const submit = current.current.onVoiceSubmit;
     if (!isCurrent(scope) || !voiceSessionActive.current || !submit) return;
     updatePhase("chat");
+    setVoiceLog((log) => [...log.slice(-49), { speaker: "You", text, at: Date.now() }]);
     const controller = beginRequest(120_000);
     let abortListener: (() => void) | undefined;
     try {
@@ -572,12 +611,28 @@ export function ComposerVoiceDialog({
       if (reply.content.length > 4000) throw new Error("voice_reply_too_long");
       finishRequest(controller);
       setLastVoiceReply(reply.content);
-      updatePhase("speaking");
+      setVoiceLog((log) => [
+        ...log.slice(-49),
+        { speaker: "Kova", text: reply.content, at: Date.now() },
+      ]);
+      updatePhase("synthesizing");
       let ended = false;
       let started = false;
+      const wordCount = reply.content.trim().split(/\s+/u).length;
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
-        createSink: createBrowserSpeechSink,
+        createSink: (options) =>
+          createBrowserSpeechSink({
+            ...options,
+            onLevel: updateGlow,
+            onProgress: (elapsed, duration) => {
+              if (!isCurrent(scope) || voicePlayback.current !== playback) return;
+              // MP3 streams may initially report an infinite duration. Start
+              // with a speech-rate estimate and refine it as metadata arrives.
+              const total = Number.isFinite(duration) && duration > 0 ? duration : wordCount / 2.7;
+              current.current.onVoicePlaybackProgress?.(Math.min(0.99, (elapsed + 0.18) / total));
+            },
+          }),
         onEnded: (completed) => {
           if (
             !isCurrent(scope) ||
@@ -590,6 +645,7 @@ export function ComposerVoiceDialog({
           )
             return;
           ended = true;
+          current.current.onVoicePlaybackProgress?.(null);
           voicePlayback.current = null;
           updatePhase("idle");
           // Only the shared manager's current natural-ended receipt advances
@@ -600,6 +656,7 @@ export function ComposerVoiceDialog({
         onState: (state, code) => {
           if (!isCurrent(scope) || voicePlayback.current !== playback) return;
           if (state === "loading") started = true;
+          if (state === "playing") updatePhase("speaking");
           if (state === "error") {
             const messages: Record<string, string> = {
               speech_message_not_synced:
@@ -624,6 +681,7 @@ export function ComposerVoiceDialog({
             void Promise.resolve().then(() => {
               if (!isCurrent(scope) || voicePlayback.current !== playback || ended) return;
               voicePlayback.current = null;
+              current.current.onVoicePlaybackProgress?.(null);
               voiceSessionActive.current = false;
               updatePhase("idle");
             });
@@ -650,6 +708,64 @@ export function ComposerVoiceDialog({
       );
     } catch (cause) {
       if (!isCurrent(scope)) return;
+      const limit = cause as { code?: string; resetsAt?: string } | null;
+      if (limit?.code === "message_window_limit" && typeof limit.resetsAt === "string") {
+        const remaining = Math.ceil((Date.parse(limit.resetsAt) - Date.now()) / 60_000);
+        if (Number.isFinite(remaining) && remaining > 0 && remaining <= 7 * 24 * 60) {
+          const hours = Math.floor(remaining / 60);
+          const minutes = remaining % 60;
+          const duration = [
+            hours ? `${hours} ${hours === 1 ? "hour" : "hours"}` : "",
+            minutes ? `${minutes} ${minutes === 1 ? "minute" : "minutes"}` : "",
+          ]
+            .filter(Boolean)
+            .join(" and ");
+          const notice = `Whoops! You've hit your usage limit, although we can talk again in ${duration}.`;
+          finishRequest(controller);
+          current.current.onVoicePlaybackProgress?.(null);
+          setError(notice);
+          updatePhase("synthesizing");
+          const noticeRequest = beginRequest(20_000);
+          try {
+            const response = await authFetch("/api/voice", {
+              method: "POST",
+              signal: noticeRequest.signal,
+              headers: {
+                "Content-Type": "application/json",
+                "X-Kova-Voice-Owner": scope.userId,
+              },
+              // The server picks the plan's default ElevenLabs voice.
+              body: JSON.stringify({ action: "tts", text: notice }),
+            });
+            if (!response.ok) throw new Error("voice_notice_unavailable", { cause });
+            const audio = await response.blob();
+            if (!isCurrent(scope) || noticeRequest.signal.aborted) return;
+            const output = new Audio();
+            player.current = output;
+            objectUrl.current = URL.createObjectURL(audio);
+            output.src = objectUrl.current;
+            const finishNotice = () => {
+              if (!isCurrent(scope) || player.current !== output) return;
+              releasePlayback();
+              voiceSessionActive.current = false;
+              updatePhase("idle");
+            };
+            output.onended = output.onerror = finishNotice;
+            await output.play();
+            if (!isCurrent(scope) || player.current !== output) return;
+            updatePhase("speaking");
+          } catch {
+            if (isCurrent(scope)) {
+              releasePlayback();
+              voiceSessionActive.current = false;
+              updatePhase("idle");
+            }
+          } finally {
+            finishRequest(noticeRequest);
+          }
+          return;
+        }
+      }
       const code = cause instanceof Error ? cause.message : "";
       failOperation(
         controller.signal.aborted
@@ -832,6 +948,7 @@ export function ComposerVoiceDialog({
               throw new Error("Live Voice could not connect.");
             return token;
           },
+          onLevel: updateGlow,
           onListening: () => {
             startedListening = true;
             if (isCurrent(scope)) {
@@ -937,7 +1054,9 @@ export function ComposerVoiceDialog({
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
-            if (gate.sample(Math.sqrt(total / samples.length), Date.now())) stopRecording();
+            const level = Math.sqrt(total / samples.length);
+            updateGlow(level);
+            if (gate.sample(level, Date.now())) stopRecording();
           }, 100);
           silenceMonitor.current = { context, source, interval, gate };
           setHandsFreeListening(true);
@@ -1228,6 +1347,89 @@ export function ComposerVoiceDialog({
     !realtimeFailed &&
     canListenInRealtime();
 
+  if (mode === "voice" && autoStartVoice) {
+    if (!open) return null;
+    const liveStatus =
+      error ||
+      (startingVoice
+        ? "Starting Voice…"
+        : phase === "recording"
+          ? "Listening…"
+          : phase === "speaking"
+            ? "Kova is speaking…"
+            : busy
+              ? "Kova is responding…"
+              : ready
+                ? "Voice paused"
+                : "Voice is unavailable right now.");
+    return (
+      <div id="kova-inline-voice" className="kova-inline-voice" data-phase={phase}>
+        {(phase === "recording" || phase === "speaking") && (
+          <div
+            ref={voiceGlow}
+            style={glowStyle}
+            className="kova-inline-voice-glow"
+            aria-hidden="true"
+          />
+        )}
+        <span
+          role="status"
+          className={
+            !error && (phase === "recording" || phase === "speaking") ? "sr-only" : undefined
+          }
+        >
+          {liveStatus}
+        </span>
+        {ready && phase === "recording" && !realtimeListening && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Finish turn"
+            title="Finish turn"
+            onClick={stopRecording}
+          >
+            <ArrowUp aria-hidden="true" />
+          </Button>
+        )}
+        {ready && !busy && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => void startRecording()}>
+            Resume
+          </Button>
+        )}
+        {!checking && !capabilities && error && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              voiceStartScope.current = null;
+              setCapabilityAttempt((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        )}
+        {ready && capabilities.voices.filter((voice) => voice.available).length > 1 && (
+          <Select value={selectedVoiceId} onValueChange={changeVoice} disabled={busy}>
+            <SelectTrigger aria-label="Reply voice" className="kova-inline-voice-picker">
+              <SelectValue placeholder="Reply voice" />
+            </SelectTrigger>
+            <SelectContent className="max-h-64">
+              {capabilities.voices
+                .filter((voice) => voice.available)
+                .map((voice) => (
+                  <SelectItem key={voice.id} value={voice.id}>
+                    {voice.label}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    );
+  }
+
   return (
     <VoiceView
       open={open}
@@ -1364,24 +1566,49 @@ export function ComposerVoiceDialog({
         ) : undefined
       }
       transcriptReview={
-        ready && hasTranscript && !(mode === "voice" && autoStartVoice) ? (
+        ready &&
+        ((hasTranscript && !(mode === "voice" && autoStartVoice)) ||
+          (mode === "voice" && voiceLog.length > 0)) ? (
           <>
-            <label htmlFor={transcriptId}>
-              {mode === "voice" ? "Transcript" : "Review transcript"}
-            </label>
-            <Textarea
-              id={transcriptId}
-              value={transcript}
-              onChange={(event) => setTranscript(event.target.value)}
-              disabled={busy}
-              readOnly={mode === "voice"}
-              rows={4}
-            />
-            <p>
-              {mode === "voice"
-                ? "Transcript for this voice turn. Your composer draft stays separate; review chat for send and save status."
-                : "Use in chat adds this text to your draft. It does not send a message."}
-            </p>
+            {mode === "voice" && voiceLog.length > 0 && (
+              <ol className="kova-voice-log" aria-label="Conversation transcript">
+                {voiceLog.map((turn, index) => (
+                  <li key={index} data-speaker={turn.speaker}>
+                    <span className="kova-voice-log-meta">
+                      <strong>{turn.speaker}</strong>
+                      <time dateTime={new Date(turn.at).toISOString()}>
+                        {new Date(turn.at).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </time>
+                    </span>
+                    <span>{turn.text}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {hasTranscript && !(mode === "voice" && autoStartVoice) && (
+              <>
+                <label htmlFor={transcriptId}>
+                  {mode === "voice" ? "Transcript" : "Review transcript"}
+                </label>
+                <Textarea
+                  id={transcriptId}
+                  value={transcript}
+                  onChange={(event) => setTranscript(event.target.value)}
+                  disabled={busy}
+                  readOnly={mode === "voice"}
+                  rows={4}
+                />
+                <p>
+                  {mode === "voice"
+                    ? "Transcript for this voice turn. Your composer draft stays separate; review chat for send and save status."
+                    : "Use in chat adds this text to your draft. It does not send a message."}
+                </p>
+              </>
+            )}
           </>
         ) : undefined
       }

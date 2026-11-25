@@ -108,8 +108,7 @@ for (const theme of ["dark", "light"] as const) {
     );
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    // Settings opens as a modal over chat; its panel carries the selected theme.
-    const panel = page.locator(".kova-settings-dialog");
+    const panel = page.locator('.kova-settings-dialog[role="dialog"]');
     await expect(panel).toBeVisible();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
     const phone = await usesCompactSettings(page);
@@ -119,7 +118,9 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toHaveCount(0);
     }
     await expect(page.getByRole("combobox", { name: "Preferred response length" })).toBeVisible();
-    await expect(panel).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(
+      page.locator('[data-slot="dialog-overlay"]').filter({ visible: true }).last(),
+    ).toBeVisible();
     if (!phone) {
       const nav = page.getByRole("complementary", { name: "Settings navigation" });
       await expect(nav).toBeVisible();
@@ -127,14 +128,14 @@ for (const theme of ["dark", "light"] as const) {
         const box = node.getBoundingClientRect();
         return { width: box.width, border: getComputedStyle(node).borderRightWidth };
       });
-      expect(geometry.width).toBeGreaterThanOrEqual(200);
+      expect(geometry.width).toBeGreaterThanOrEqual(240);
       expect(geometry.border).toBe("1px");
       await nav.getByRole("tab", { name: "Appearance", exact: true }).click();
     } else {
       await page.getByRole("button", { name: "Back to settings" }).click();
       await page.getByRole("tab", { name: "Appearance", exact: true }).click();
     }
-    await expect(page).toHaveURL(/\/settings\/appearance$/);
+    await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
     await panel.screenshot({
       path: info.outputPath(`settings-reference-${theme}.png`),

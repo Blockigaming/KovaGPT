@@ -152,7 +152,7 @@ test("actual API named-choice guard rejects locked, unconfigured and unsupported
         assert.equal((await response.json()).code, "kova_model_not_entitled");
       }
     }
-  const selected = CONSUMER_MODELS[0];
+  const selected = consumerModel("kova-argon-4.6");
   const wrongRole = check(selected, "pro", () => "kova-xenon-5", []);
   assert.equal(wrongRole.status, 503);
   assert.equal((await wrongRole.json()).code, "kova_model_runtime_unverified");

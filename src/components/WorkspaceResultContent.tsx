@@ -2,17 +2,25 @@ import { lazy, type RefObject, type SetStateAction } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import type { GenerativeWidget } from "@/lib/generative-ui.mjs";
+import type { ResponseFile } from "@/lib/response-files.mjs";
 import { Button } from "@/components/ui/button";
 
 export type WorkspaceResultDescriptor = ResultDescriptor & {
   widget?: GenerativeWidget;
   canvasSourceKey?: string;
+  /** A named file from a reply: shown in the Preview/Code file pane. */
+  file?: ResponseFile;
+  /** Markdown renderer handed over by the chat that opened the file. */
+  renderMarkdown?: (text: string) => import("react").ReactNode;
 };
 
 const GenerativeCanvas = lazy(() =>
   import("@/components/generative-ui/GenerativeCanvas").then((module) => ({
     default: module.GenerativeCanvas,
   })),
+);
+const FilePreviewPane = lazy(() =>
+  import("@/components/FilePreviewPane").then((module) => ({ default: module.FilePreviewPane })),
 );
 const ArtifactEditor = lazy(() =>
   import("@/components/ArtifactEditor").then((module) => ({ default: module.ArtifactEditor })),
@@ -52,6 +60,14 @@ export function WorkspaceResultContent({
   setInput,
   setResultTab,
 }: WorkspaceResultContentProps) {
+  if (result.file)
+    return (
+      <FilePreviewPane
+        file={result.file}
+        onClose={closeResult}
+        renderMarkdown={result.renderMarkdown}
+      />
+    );
   return (
     <>
       {wideResult && (

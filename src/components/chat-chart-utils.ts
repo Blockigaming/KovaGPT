@@ -1,4 +1,11 @@
 import { responseFences } from "../lib/response-fences.mjs";
+import {
+  calendarCells,
+  chordLayout,
+  gridFromRows,
+  numbersOf,
+  pathHierarchy,
+} from "../lib/chart-extra-math.mjs";
 
 export const CHART_TYPES = [
   "bar",
@@ -23,7 +30,134 @@ export const CHART_TYPES = [
   "waterfall",
   "range",
 ] as const;
-export type ChartType = (typeof CHART_TYPES)[number];
+/** Extended families, each with its own data shape; they render in ChatChartExtra. */
+export const EXTRA_CHART_TYPES = [
+  "grouped-bar",
+  "diverging-bar",
+  "dot",
+  "lollipop",
+  "strip",
+  "slope",
+  "bump",
+  "streamgraph",
+  "sparkline",
+  "small-multiples",
+  "polar-area",
+  "connected-scatter",
+  "density",
+  "box",
+  "violin",
+  "ridgeline",
+  "calendar-heatmap",
+  "sunburst",
+  "icicle",
+  "alluvial",
+  "chord",
+  "timeline",
+  "gantt",
+  "ohlc",
+  "volume",
+  "error-bars",
+  "confidence-band",
+  "interval",
+  "function",
+  "contour",
+  "surface",
+  "mesh",
+  "scatter-3d",
+  "vector-field",
+  "choropleth",
+  "point-map",
+  "route-map",
+  "density-map",
+  "combo",
+] as const;
+export type ExtraChartType = (typeof EXTRA_CHART_TYPES)[number];
+export type ChartType = (typeof CHART_TYPES)[number] | ExtraChartType;
+export const isExtraChartType = (type: string): type is ExtraChartType =>
+  (EXTRA_CHART_TYPES as readonly string[]).includes(type);
+
+const num = (value: unknown) => typeof value === "number" && Number.isFinite(value);
+
+/** Does the data fit the extended type's shape? Mirrors what ChatChartExtra needs. */
+export function extraChartFits(spec: ChartSpec): boolean {
+  const xKey = spec.xKey ?? "name";
+  const keys = spec.keys?.length
+    ? spec.keys
+    : [...new Set(spec.data.flatMap((row) => Object.keys(row)))].filter(
+        (key) => key !== xKey && spec.data.some((row) => num(row[key])),
+      );
+  const rows = spec.data;
+  const all = (fields: string[]) => rows.every((row) => fields.every((field) => num(row[field])));
+  switch (spec.type) {
+    case "strip":
+    case "box":
+    case "violin":
+    case "density":
+    case "ridgeline":
+      return keys.length > 0 && keys.some((key) => numbersOf(rows, key).length >= 2);
+    case "slope":
+      return keys.length >= 2 && rows.every((row) => num(row[keys[0]]) && num(row[keys[1]]));
+    case "connected-scatter":
+    case "function":
+      return rows.every((row) => num(row[xKey])) && keys.length > 0;
+    case "polar-area":
+      return !!keys[0] && rows.every((row) => !num(row[keys[0]]) || (row[keys[0]] as number) >= 0);
+    case "calendar-heatmap":
+      return !!keys[0] && !!calendarCells(rows, xKey, keys[0]);
+    case "sunburst":
+    case "icicle":
+      return !!keys[0] && !!pathHierarchy(rows, xKey, keys[0]);
+    case "alluvial":
+      return !!sankeyData({ ...spec, type: "sankey" });
+    case "chord":
+      return !!chordLayout(rows);
+    case "timeline":
+      return rows.every(
+        (row) => num(row.date) || /^\d{4}-\d{2}-\d{2}/.test(String(row.date ?? row.start ?? "")),
+      );
+    case "gantt":
+      return rows.every(
+        (row) =>
+          (num(row.start) && num(row.end) && (row.end as number) >= (row.start as number)) ||
+          (/^\d{4}-\d{2}-\d{2}/.test(String(row.start)) &&
+            /^\d{4}-\d{2}-\d{2}/.test(String(row.end)) &&
+            String(row.end) >= String(row.start)),
+      );
+    case "ohlc":
+    case "volume":
+      return !!candlestickRows({ ...spec, type: "candlestick" });
+    case "error-bars":
+      return !!keys[0] && rows.every((row) => num(row.error) || Array.isArray(row.error));
+    case "confidence-band":
+    case "interval":
+      return rows.every(
+        (row) => all(["low", "high"]) && (row.high as number) >= (row.low as number),
+      );
+    case "contour":
+    case "surface":
+    case "mesh":
+      return !!gridFromRows(rows);
+    case "scatter-3d":
+      return all(["x", "y", "z"]);
+    case "vector-field":
+      return all(["x", "y", "dx", "dy"]);
+    case "choropleth":
+      return !!keys[0] && rows.every((row) => typeof row[xKey] === "string");
+    case "point-map":
+    case "route-map":
+    case "density-map":
+      return rows.every(
+        (row) =>
+          num(row.lat) &&
+          num(row.lon ?? row.lng) &&
+          Math.abs(row.lat as number) <= 90 &&
+          Math.abs((row.lon ?? row.lng) as number) <= 180,
+      );
+    default:
+      return keys.length > 0;
+  }
+}
 
 export type ChartSpec = {
   type: ChartType;
@@ -165,7 +299,10 @@ export function parseChartSpec(raw: string): ChartSpec | null {
     if (!value || typeof value !== "object") return null;
     const object = value as Partial<ChartSpec>;
     if (
-      !CHART_TYPES.includes(object.type as ChartType) ||
+      !(
+        (CHART_TYPES as readonly string[]).includes(object.type as string) ||
+        isExtraChartType(String(object.type))
+      ) ||
       !Array.isArray(object.data) ||
       object.data.length === 0 ||
       object.data.length > 500 ||
@@ -200,6 +337,9 @@ export function parseChartSpec(raw: string): ChartSpec | null {
     const spec = object as ChartSpec;
     if (spec.type === "candlestick" && !candlestickRows(spec)) return null;
     if (spec.type === "sankey" && !sankeyData(spec)) return null;
+    // Data that doesn't match its requested family still draws: it falls back to the
+    // closest general chart (bar when there are numbers, otherwise the data table).
+    if (isExtraChartType(spec.type) && !extraChartFits(spec)) return { ...spec, type: "bar" };
     if (["waterfall", "range"].includes(spec.type) && !rangeChartRows(spec, spec.keys?.[0]))
       return null;
     return spec;

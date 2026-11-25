@@ -67,6 +67,8 @@ export type Attachment =
       content: string;
       fileType?: string | null;
       size?: number | null;
+      /** Pasted message text shown as a card; not a file upload. */
+      pasted?: boolean;
     }
   | {
       kind: "library_file";
@@ -94,6 +96,7 @@ export function storedMessageAttachments(items: PendingAttachment[]): Attachment
             content: a.textContent ?? "",
             fileType: a.fileType ?? null,
             size: a.size ?? null,
+            ...(a.pasted ? { pasted: true } : {}),
           }
         : { kind: "image" as const, dataUrl: a.dataUrl },
   );
@@ -117,6 +120,7 @@ export function pendingMessageAttachments(items: Message["attachments"]): Pendin
             size: attachment.size ?? undefined,
             fileType: attachment.fileType,
             textContent: attachment.content,
+            ...(attachment.pasted ? { pasted: true, localPaste: true } : {}),
             status: COMPLETE,
           }
         : {
@@ -141,9 +145,30 @@ export type Activity = {
   error?: string;
   tool: string;
   label: string;
-  status: "done" | "running" | "failed" | "canceled";
+  status: "done" | "running" | "failed" | "canceled" | "queued" | "paused" | "skipped" | "partial";
+  /** Secondary label: the target, file, query or short result of the operation. */
+  detail?: string;
+  /** Items processed so far, with an optional total for measurable progress. */
+  count?: number;
+  total?: number;
+  /** Parent operation, so sub-steps nest beneath it. */
+  parentId?: string;
+  /** Client-observed start and measured duration of a live operation. */
+  startedAt?: number;
+  durationMs?: number;
+  /** Reply characters received when this step began, so it shows between those paragraphs. */
+  at?: number;
 };
-const ACTIVITY_STATUSES = new Set<Activity["status"]>(["done", "running", "failed", "canceled"]);
+const ACTIVITY_STATUSES = new Set<Activity["status"]>([
+  "done",
+  "running",
+  "failed",
+  "canceled",
+  "queued",
+  "paused",
+  "skipped",
+  "partial",
+]);
 function isActivity(value: unknown): value is Activity {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Partial<Activity>;

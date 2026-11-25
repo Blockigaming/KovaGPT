@@ -126,7 +126,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
   assert.match(
     composer,
-    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*!sendDisabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
+    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
   );
   const sendButton = openingTag(composer, "button", /aria-label="Send message"/);
   assert.match(sendButton, /disabled=\{!canSubmit\}/);
@@ -295,7 +295,11 @@ test("canonical reference styles own shell and composer contracts without retire
   const actionSelector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const compactAction = declarations(responseStyles, actionSelector);
-  const touchAction = declarations(responseStyles, actionSelector, "(width < 1024px)");
+  const touchAction = declarations(
+    responseStyles,
+    actionSelector,
+    "(width < 1024px), (pointer: coarse)",
+  );
   for (const key of ["width", "height", "min-width", "min-height"]) {
     assert.equal(compactAction[key], "28px");
     assert.equal(touchAction[key], "44px");
@@ -371,7 +375,10 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
   assert.match(starters, /<HomeChatFrame[\s\S]*?\{children\}/);
-  assert.match(homeFrame, /<div className="kova-empty-composer">\s*\{children\}/);
+  assert.match(
+    homeFrame,
+    /<div className=\{home \? "kova-empty-composer" : "spec400-composer-dock[^"]*"\}>\s*\{children\}/,
+  );
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);

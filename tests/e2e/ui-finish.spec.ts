@@ -293,6 +293,12 @@ test("appearance changes save and survive a reload", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.reload();
   await waitForKovaHydration(page);
+  // Settings deep links are consumed when opening the modal. A full reload
+  // restores the workspace, so reopen the section to inspect saved preferences.
+  await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await page.goto("/settings/appearance");
+  await waitForKovaHydration(page);
   await expect(page.getByRole("combobox", { name: "Density", exact: true })).toHaveText("Compact");
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.getByRole("button", { name: "Reset appearance", exact: true }).click();
@@ -308,7 +314,19 @@ test("the conversation checklist collects sources, outputs and real browser meta
       const key = `nova-gpt-conversations-v3:user:${owner}`;
       const chats = JSON.parse(localStorage.getItem(key)!);
       const chat = chats.find((row: { id: string }) => row.id === chatA);
-      chat.messages[1].content = "Fixture output:\n```js\nconsole.log('review');\n```";
+      chat.title = "YouTube research · example";
+      chat.messages[0].content =
+        "Use YouTube to plan a short video edit. Use my notes and draft two outputs.";
+      chat.messages[0].attachments = [
+        { kind: "text_file", name: "Video brief.txt", content: "Make a short editing tutorial." },
+        {
+          kind: "text_file",
+          name: "Shot list.txt",
+          content: "Opening shot, screen capture, final cut.",
+        },
+      ];
+      chat.messages[1].content =
+        "I prepared an editing checklist and a shot schedule.\n\n```kova-docx\n# Editing checklist\nTrim the opening and add captions.\n```\n\n```kova-xlsx\n# Shot schedule\n| Shot | Duration |\n| --- | --- |\n| Intro | 5 seconds |\n```";
       chat.messages[1].sources = [
         { title: "Example reference", url: "https://example.com/reference", domain: "example.com" },
       ];
@@ -317,12 +335,12 @@ test("the conversation checklist collects sources, outputs and real browser meta
         sources: [{ kind: "chat_memory", id: "11111111-1111-4111-8111-111111111111" }],
       };
       chat.messages[1].activities = [
-        "github_read",
-        "supabase_query",
-        "firecrawl_scrape",
-        "library_search",
-        "read_file",
-      ].map((tool) => ({ tool, label: tool, status: "done" }));
+        ["github_read", "Checked the project repository"],
+        ["supabase_query", "Looked up the project record"],
+        ["firecrawl_scrape", "Read the reference page"],
+        ["library_search", "Found the editing template"],
+        ["read_file", "Reviewed the video brief"],
+      ].map(([tool, label]) => ({ tool, label, status: "done" }));
       localStorage.setItem(key, JSON.stringify(chats));
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input, init) => {
@@ -335,17 +353,17 @@ test("the conversation checklist collects sources, outputs and real browser meta
               const delta = {
                 kind: "activity",
                 tool: "browser_interact",
-                label: "Fixture browser session",
+                label: "Browsing YouTube",
                 status: "running",
                 browser: {
                   sessionId: "d840146b-ab21-4a1a-8c68-9621ea1e11f2",
-                  tabCount: 5,
+                  tabCount: 1,
                   observedAt: Date.now(),
-                  url: "https://example.com/reference",
+                  url: "https://www.youtube.com/",
                   previewPath: "/api/browser/preview/d840146b-ab21-4a1a-8c68-9621ea1e11f2",
                 },
               };
-              const frame = `data: ${JSON.stringify({ choices: [{ delta }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: { content: "Fixture browser session active." } }] })}\n\n`;
+              const frame = `data: ${JSON.stringify({ choices: [{ delta }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: { content: "YouTube is open in Cloud Browser. This chat uses sample files and outputs." } }] })}\n\n`;
               controller.enqueue(new TextEncoder().encode(frame));
               init?.signal?.addEventListener(
                 "abort",
@@ -382,26 +400,80 @@ test("the conversation checklist collects sources, outputs and real browser meta
     }
     return route.fulfill({
       contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240"><rect width="400" height="240" fill="#e9edf4"/><text x="35" y="125" fill="#243246" font-size="24">Fixture browser preview</text></svg>',
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240">
+        <rect width="400" height="240" fill="#0f0f0f"/>
+        <rect x="16" y="17" width="35" height="24" rx="7" fill="#ff0033"/>
+        <path fill="#fff" d="M30 23l12 6-12 6z"/>
+        <text x="58" y="36" fill="#fff" font-family="sans-serif" font-size="22" font-weight="bold">YouTube</text>
+        <rect x="172" y="17" width="211" height="24" rx="12" fill="#282828"/>
+        <text x="185" y="33" fill="#aaa" font-family="sans-serif" font-size="12">Search</text>
+        <rect x="16" y="61" width="171" height="83" rx="8" fill="#35476f"/>
+        <rect x="202" y="61" width="181" height="83" rx="8" fill="#812c49"/>
+        <path d="M85 83l31 19-31 20zM277 83l31 19-31 20z" fill="#fff"/>
+        <text x="16" y="164" fill="#fff" font-family="sans-serif" font-size="14">Editing basics</text>
+        <text x="202" y="164" fill="#fff" font-family="sans-serif" font-size="14">Short-form video tips</text>
+        <path d="M16 188h171v37H16zM202 188h181v37H202z" fill="#272727"/>
+      </svg>`,
     });
   });
   await page.goto("/");
   await waitForKovaHydration(page);
   await page
     .getByRole("textbox", { name: "Message KovaGPT", exact: true })
-    .fill("Review the browser activity fixture");
+    .fill("Open YouTube in Cloud Browser.");
   await page.getByTestId("send-button").click();
-  await expect(page.getByText("Fixture browser session active.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("YouTube is open in Cloud Browser. This chat uses sample files and outputs.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   const previewRequest = page.waitForRequest(
     "**/api/browser/preview/d840146b-ab21-4a1a-8c68-9621ea1e11f2",
   );
   await page.getByRole("button", { name: "Activity", exact: true }).click();
   expect((await previewRequest).headers()["x-kova-owner"]).toBe(owner);
   const panel = page.locator(".kova-conversation-outputs");
-  await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toHaveAttribute(
-    "aria-expanded",
-    "true",
+  const [outputs, inputs, sources] = ["Outputs", "Inputs", "Sources"].map((name) =>
+    panel.getByRole("region", { name, exact: true }),
   );
+  const sections = [
+    {
+      name: "Outputs",
+      region: outputs,
+      row: outputs.getByRole("button", { name: /Editing checklist/ }),
+    },
+    {
+      name: "Inputs",
+      region: inputs,
+      row: inputs.getByRole("button", { name: /Video brief.txt/ }),
+    },
+    {
+      name: "Sources",
+      region: sources,
+      row: sources.getByRole("button", { name: /Open browser activity/ }),
+    },
+  ];
+  for (const { name, region, row } of sections) {
+    const toggle = region.getByRole("button", { name, exact: true });
+    const arrow = toggle.locator(".kova-activity-chevron");
+    if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+      await toggle.hover();
+    }
+    await expect(arrow).toHaveCSS("opacity", "1");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const controlledId = await toggle.getAttribute("aria-controls");
+    await expect(region.locator(`[id="${controlledId}"]`)).toBeVisible();
+    await arrow.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(row).toBeHidden();
+    for (const other of sections.filter((entry) => entry.name !== name)) {
+      await expect(other.row).toBeVisible();
+    }
+    await expect(arrow).toHaveCSS("opacity", "1");
+    await toggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(row).toBeVisible();
+  }
   for (const name of [
     "GitHub",
     "Supabase",
@@ -412,20 +484,54 @@ test("the conversation checklist collects sources, outputs and real browser meta
     "Memory",
   ])
     await expect(panel.getByText(name, { exact: true })).toBeVisible();
-  const browser = panel.getByRole("region", { name: "Cloud browser", exact: true });
+  const browser = panel
+    .getByRole("region", { name: "Sources", exact: true })
+    .getByRole("group", { name: "Cloud browser", exact: true });
   await expect(browser).toContainText("Active");
-  await expect(browser).toContainText("example.com");
+  await expect(browser).toContainText("www.youtube.com");
+  await expect(browser).toContainText("1 tab");
+  await expect(panel.getByRole("button", { name: /Editing checklist/ })).toBeVisible();
+  await expect(panel.getByRole("button", { name: /Shot schedule/ })).toBeVisible();
+  await expect(inputs.getByText("Video brief.txt", { exact: true })).toBeVisible();
+  await expect(inputs.getByText("Shot list.txt", { exact: true })).toBeVisible();
+  await expect(sources.getByText("Shot list.txt", { exact: true })).toHaveCount(0);
   const preview = browser.getByRole("img", { name: "Current cloud browser preview" });
   await expect(preview).toBeVisible();
   await expect(preview).toHaveAttribute("src", /^blob:/);
   await expect
     .poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBe(400);
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await panel.getByText("Browsing YouTube", { exact: true }).click();
+    await sources.getByRole("button", { name: "Sources", exact: true }).hover();
+  }
   await page.screenshot({
     path: `artifacts/ui-finish-${test.info().project.name}-checklist.png`,
     fullPage: true,
   });
-  await browser.getByRole("button", { name: "Open browser activity" }).click();
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ width: viewport.width, height: 470 });
+  const scrollBody = await panel.evaluateHandle((element) => {
+    for (let parent: HTMLElement | null = element; parent; parent = parent.parentElement) {
+      if (getComputedStyle(parent).overflowY === "auto") return parent;
+    }
+    throw new Error("Activity has no scroll container");
+  });
+  await expect
+    .poll(() => scrollBody.evaluate((body) => body.scrollHeight - body.clientHeight))
+    .toBeGreaterThan(0);
+  await scrollBody.evaluate((body) => (body.scrollTop = 0));
+  const scrollBounds = await scrollBody.asElement().boundingBox();
+  expect(scrollBounds).not.toBeNull();
+  await page.mouse.move(
+    scrollBounds!.x + scrollBounds!.width / 2,
+    scrollBounds!.y + scrollBounds!.height / 2,
+  );
+  await page.mouse.wheel(0, 1000);
+  await expect.poll(() => scrollBody.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
+  await expect(panel.getByText("Memory", { exact: true })).toBeInViewport();
+  await page.setViewportSize(viewport);
+  await browser.getByRole("button", { name: /Open browser activity/ }).click();
   const workspace = page.getByRole("dialog", { name: "Cloud browser", exact: true });
   await expect(workspace.getByRole("img", { name: "Current cloud browser preview" })).toBeVisible();
   const bounds = await workspace.boundingBox();

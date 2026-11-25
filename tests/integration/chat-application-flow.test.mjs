@@ -737,6 +737,7 @@ function composer(f) {
     createMemorySourceUpdater: () => no,
     normalizeResponseSources: () => [],
     safeLocale: () => "en-US",
+    goalForRequest: () => undefined,
     tier: "free",
     personalityToInstruction: () => "",
     loadPersonality: no,
@@ -755,6 +756,9 @@ function composer(f) {
       assert.equal(name, "@/lib/chat-summary-snapshot.mjs");
       return {
         withResponsePresentation,
+        chatResponseError,
+        cloudBrowserErrorKind,
+        consumeChatSse,
         completedChatReply,
         chatRequestHeaders,
         createChatHistoryPayload: async (messages) => ({ messages }),

@@ -130,8 +130,11 @@ export function kovaAttachmentsAllowed(context, messages) {
   return (
     !context ||
     context.config.tools.includes("files") ||
+    // Pasted cards are message text, so a Kova without file access still accepts them.
     !messages.some(
-      (message) => Array.isArray(message.attachments) && message.attachments.length > 0,
+      (message) =>
+        Array.isArray(message.attachments) &&
+        message.attachments.some((attachment) => attachment?.pasted !== true),
     )
   );
 }

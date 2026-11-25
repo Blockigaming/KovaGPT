@@ -1,4 +1,5 @@
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
+import { startLocalization, t, useLocalization } from "@/lib/localization";
 import { readChatDeleteIntents, subscribeChatDeleteIntents } from "@/lib/chat-delete-undo";
 import { resumePendingChatDeletions } from "@/lib/permanent-chat-delete";
 import {
@@ -184,6 +185,8 @@ export function Sidebar({
   mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
 }) {
+  useLocalization();
+  useEffect(startLocalization, []);
   const { user, isSignedIn, isLoaded } = useUser();
   const unreadReplyIds = useChatReplyActivity(
     trackBackgroundReplies && isLoaded && isSignedIn ? user?.id : undefined,
@@ -960,54 +963,60 @@ export function Sidebar({
       <Icon />
     </span>
   );
-  const navLink = (to: string, label: string, Icon: SidebarGlyph, badge?: string) => (
-    <Link
-      key={to}
-      to={to.split("?")[0] as never}
-      search={
-        to.includes("?")
-          ? (Object.fromEntries(new URLSearchParams(to.split("?")[1])) as never)
-          : undefined
-      }
-      className={navRow(isOn(to))}
-      aria-current={isOn(to) ? "page" : undefined}
-      aria-label={collapsed ? label : undefined}
-      title={collapsed ? label : undefined}
-      onClick={(event) => {
-        if (
-          event.defaultPrevented ||
-          event.button !== 0 ||
-          event.metaKey ||
-          event.ctrlKey ||
-          event.shiftKey ||
-          event.altKey
-        )
-          return;
-        closeAfterMobileNavigation(to);
-      }}
-    >
-      {icon(Icon)}
-      <span className="kova-sidebar-label">{label}</span>
-      {badge ? <span className="kova-sidebar-badge">{badge}</span> : null}
-    </Link>
-  );
-  const railLink = (to: string, label: string, Icon: SidebarGlyph) => (
-    <RailTooltip key={to} label={label}>
+  const navLink = (to: string, english: string, Icon: SidebarGlyph, badge?: string) => {
+    const label = t(english);
+    return (
       <Link
+        key={to}
         to={to.split("?")[0] as never}
         search={
           to.includes("?")
             ? (Object.fromEntries(new URLSearchParams(to.split("?")[1])) as never)
             : undefined
         }
-        className="kova-rail-button relative"
-        aria-label={label}
+        className={navRow(isOn(to))}
         aria-current={isOn(to) ? "page" : undefined}
+        aria-label={collapsed ? label : undefined}
+        title={collapsed ? label : undefined}
+        onClick={(event) => {
+          if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          )
+            return;
+          closeAfterMobileNavigation(to);
+        }}
       >
-        <Icon aria-hidden="true" />
+        {icon(Icon)}
+        <span className="kova-sidebar-label">{label}</span>
+        {badge ? <span className="kova-sidebar-badge">{badge}</span> : null}
       </Link>
-    </RailTooltip>
-  );
+    );
+  };
+  const railLink = (to: string, english: string, Icon: SidebarGlyph) => {
+    const label = t(english);
+    return (
+      <RailTooltip key={to} label={label}>
+        <Link
+          to={to.split("?")[0] as never}
+          search={
+            to.includes("?")
+              ? (Object.fromEntries(new URLSearchParams(to.split("?")[1])) as never)
+              : undefined
+          }
+          className="kova-rail-button relative"
+          aria-label={label}
+          aria-current={isOn(to) ? "page" : undefined}
+        >
+          <Icon aria-hidden="true" />
+        </Link>
+      </RailTooltip>
+    );
+  };
 
   const query = localSearchOpen ? searchQuery.trim() : "";
   const savedConversations = signedIn
@@ -1542,7 +1551,7 @@ export function Sidebar({
           <fieldset className="kova-sidebar-layout-controls">
             <legend>Layout & appearance</legend>
             <label>
-              Search chats
+              {t("Search chats")}
               <select
                 aria-label="Search position"
                 value={layout.searchPosition}
@@ -1585,7 +1594,7 @@ export function Sidebar({
               Use theme color
             </button>
             <label className="kova-sidebar-shortcut-choice">
-              <span>New chat</span>
+              <span>{t("New chat")}</span>
               <Switch
                 aria-label="Show New chat"
                 checked={layout.newChat}
@@ -1593,7 +1602,7 @@ export function Sidebar({
               />
             </label>
             <label className="kova-sidebar-shortcut-choice">
-              <span>Recent chats</span>
+              <span>{t("Recent chats")}</span>
               <Switch
                 aria-label="Show recent chats"
                 checked={layout.recentChats}
@@ -1972,7 +1981,7 @@ export function Sidebar({
                   aria-label="New chat"
                 >
                   {icon(NewChatGlyph)}
-                  <span>New chat</span>
+                  <span>{t("New chat")}</span>
                 </button>
               ) : null}
               {layout.searchPosition === "navigation" ? (
@@ -1987,7 +1996,7 @@ export function Sidebar({
                   <span className="kova-sidebar-icon" aria-hidden="true">
                     <SearchGlyph />
                   </span>
-                  <span>Search</span>
+                  <span>{t("Search")}</span>
                 </button>
               ) : null}
               <div className="kova-sidebar-destinations">
@@ -2010,7 +2019,7 @@ export function Sidebar({
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
-                  <span>More</span>
+                  <span>{t("More")}</span>
                 </summary>
                 {mapsReleaseApproved && railShortcuts.includes("maps")
                   ? navLink("/maps", "Maps", Map)
@@ -2061,7 +2070,7 @@ export function Sidebar({
                     tabIndex={-1}
                     className={pinned.length > 0 ? "kova-recents-heading" : undefined}
                   >
-                    Recent chats
+                    {t("Recent chats")}
                   </h2>
                   {recents.slice(0, 8).map(chatRow)}
                 </div>
@@ -2078,7 +2087,7 @@ export function Sidebar({
                     }
                   }}
                 >
-                  View all chats
+                  {t("View all chats")}
                 </button>
               ) : null}
               {savedConversations.length === 0 ? (
@@ -2086,7 +2095,7 @@ export function Sidebar({
                   {!isLoaded
                     ? "Loading chats…"
                     : signedIn
-                      ? "No saved chats yet."
+                      ? t("No saved chats yet.")
                       : "Log in to view saved chats."}
                 </p>
               ) : null}
@@ -2143,7 +2152,7 @@ export function Sidebar({
                     }}
                   >
                     {icon(SettingsGlyph)}
-                    <span>Settings</span>
+                    <span>{t("Settings")}</span>
                   </button>
                 </nav>
                 {!hideGuestLogin ? (
@@ -2270,7 +2279,7 @@ export function Sidebar({
         >
           <div className="flex min-h-0 max-h-[inherit] flex-col p-5">
             <div className="flex shrink-0 items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Search chats</h2>
+              <h2 className="text-lg font-semibold">{t("Search chats")}</h2>
               <button
                 type="button"
                 aria-label="Close chat search"

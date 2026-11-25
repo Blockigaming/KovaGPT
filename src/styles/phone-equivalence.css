@@ -640,7 +640,8 @@
   }
 }
 
-@media (width < 1024px) {
+/* Touch-first browsers keep the desktop layout viewport, so width alone is insufficient. */
+@media (width < 1024px), (pointer: coarse) and (hover: none) {
   .kova-desktop-recent-work {
     display: none;
   }

@@ -58,14 +58,14 @@ test("legacy gate remains after the Models-v2 fail-closed gate and before all co
   assert.match(source, /if \(missingProvider\) return missingProvider;/);
 });
 
-test("guest attachments are denied before custom context, provider or quota work", async () => {
-  const guestStart = source.indexOf("            if (!auth && currentAttachments.length > 0)");
+test("guest uploads are denied before custom context, provider or quota work; pasted text is not an upload", async () => {
+  const guestStart = source.indexOf("            if (!auth && uploadedAttachments.length > 0)");
   const guestEnd = source.indexOf(
     "            // Reject an explicitly locked Free mode",
     guestStart,
   );
   assert.ok(guestStart > 0 && guestEnd > guestStart && guestEnd < start);
-  const gate = new Function("auth", "currentAttachments", source.slice(guestStart, guestEnd));
+  const gate = new Function("auth", "uploadedAttachments", source.slice(guestStart, guestEnd));
   for (const attachments of [[{ type: "file" }], [{ type: "image" }]]) {
     const response = gate(null, attachments);
     assert.equal(response.status, 401);
@@ -73,6 +73,23 @@ test("guest attachments are denied before custom context, provider or quota work
   }
   assert.equal(gate(null, []), undefined);
   assert.equal(gate({}, [{ type: "file" }]), undefined);
+  // Pasted cards are filtered out of uploads before the guest gate runs.
+  const filterStart = source.indexOf(
+    "            const uploadedAttachments = currentAttachments.filter(",
+  );
+  assert.ok(filterStart > 0 && filterStart < guestStart);
+  const filterEnd = source.indexOf(");", filterStart) + 2;
+  const uploads = new Function(
+    "currentAttachments",
+    source.slice(filterStart, filterEnd) + "\nreturn uploadedAttachments;",
+  );
+  assert.deepEqual(
+    uploads([
+      { kind: "text_file", name: "pasted-text.txt", content: "x", pasted: true },
+      { kind: "text_file", name: "notes.txt", content: "y" },
+    ]).map((item) => item.name),
+    ["notes.txt"],
+  );
 });
 
 test("Plus permits through Max and rejects Ultra before provider work", async () => {
