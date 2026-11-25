@@ -572,6 +572,7 @@ function ChatMessageInner({
       <ResponseMarkdown
         key={k}
         onOpenFile={onOpenResult ? openFile : undefined}
+        fileInterrupted={!streaming && Boolean(message.generationStatus)}
         sources={message.sources}
         onSourceClick={openSource}
         onSaveImage={saveResponseImage}
