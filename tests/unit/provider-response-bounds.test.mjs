@@ -287,3 +287,34 @@ test("SSE wrapper returns before the upstream stream completes", async () => {
 
   assert.match(text, /\[DONE\]/);
 });
+
+test("terminal provider SSE does not wait for stalled transport cancellation", async () => {
+  let cancellationStarted = false;
+  let release;
+  const source = new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+      },
+      cancel() {
+        cancellationStarted = true;
+        return new Promise((resolve) => {
+          release = resolve;
+        });
+      },
+    }),
+    { headers: SSE_HEADERS },
+  );
+  const bounded = await createBoundedProviderSseStream(source, 64);
+  let timer;
+  try {
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("terminal frame blocked by cancellation")), 1000);
+    });
+    assert.equal(await Promise.race([new Response(bounded).text(), timeout]), "data: [DONE]\n\n");
+    assert.equal(cancellationStarted, true);
+  } finally {
+    clearTimeout(timer);
+    release?.();
+  }
+});

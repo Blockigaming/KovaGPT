@@ -187,10 +187,13 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
   await expect
     .poll(() => pane.evaluate((node) => getComputedStyle(node, "::before").backgroundImage))
     .toContain("linear-gradient");
-  await expect(dock).toHaveCSS("background-image", "none");
+  await expect
+    .poll(() => dock.evaluate((node) => getComputedStyle(node).backgroundImage))
+    .toContain("linear-gradient");
   const transcriptBounds = (await transcript.boundingBox())!;
   const dockBounds = (await dock.boundingBox())!;
-  expect(transcriptBounds.y + transcriptBounds.height).toBeCloseTo(dockBounds.y, 0);
+  const overlap = page.viewportSize()!.height > 500 ? 16 : 0;
+  expect(transcriptBounds.y + transcriptBounds.height - dockBounds.y).toBeCloseTo(overlap, 0);
   await header.getByRole("button", { name: "Activity", exact: true }).click();
   const activity = page.locator(".kova-conversation-outputs");
   await expect(activity.getByRole("button", { name: "Outputs", exact: true })).toHaveAttribute(

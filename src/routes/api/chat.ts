@@ -3134,7 +3134,21 @@ export const Route = createFileRoute("/api/chat")({
                       if (frame !== sseDone()) controller.enqueue(value);
                     }
                   }
-                  await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
+                  // Keep the transport open while usage settles, but do not release
+                  // DONE until accounting has finished.
+                  const accountingKeepalive = setInterval(() => {
+                    if (request.signal.aborted) return;
+                    try {
+                      controller.enqueue(enc.encode(": accounting\n\n"));
+                    } catch {
+                      // The reader may already have disconnected.
+                    }
+                  }, 10_000);
+                  try {
+                    await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
+                  } finally {
+                    clearInterval(accountingKeepalive);
+                  }
                   if (!request.signal.aborted) controller.enqueue(enc.encode(sseDone()));
                 } catch (error) {
                   const providerTimedOut = isProviderTimeoutError(error);
