@@ -1375,7 +1375,9 @@ export function ComposerVoiceDialog({
         <span
           role="status"
           className={
-            !error && (phase === "recording" || phase === "speaking") ? "sr-only" : undefined
+            !error && (startingVoice || phase === "recording" || phase === "speaking")
+              ? "sr-only"
+              : undefined
           }
         >
           {liveStatus}
@@ -1409,22 +1411,6 @@ export function ComposerVoiceDialog({
           >
             Try again
           </Button>
-        )}
-        {ready && capabilities.voices.filter((voice) => voice.available).length > 1 && (
-          <Select value={selectedVoiceId} onValueChange={changeVoice} disabled={busy}>
-            <SelectTrigger aria-label="Reply voice" className="kova-inline-voice-picker">
-              <SelectValue placeholder="Reply voice" />
-            </SelectTrigger>
-            <SelectContent className="max-h-64">
-              {capabilities.voices
-                .filter((voice) => voice.available)
-                .map((voice) => (
-                  <SelectItem key={voice.id} value={voice.id}>
-                    {voice.label}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
         )}
       </div>
     );

@@ -1,0 +1,132 @@
+/* Mobile web: same phone layout the app shell uses.
+   - Greeting + logo centered, composer docked at the bottom.
+   - Compact action row: add + model chip on the left, mic + voice/send on the right.
+   - Popups open in the middle of the screen instead of anchoring to their trigger.
+   - Header icon buttons keep their highlight inside the button (no offset box). */
+@media (width < 768px) {
+  /* ---- Home: logo + greeting centered, composer pinned to the bottom ---- */
+  .kova-assistant section.kova-empty-chat {
+    padding-block: 0;
+  }
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+    flex: 1 0 auto;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 100%;
+    padding-block: 0 !important;
+  }
+  .kova-assistant .kova-empty-chat-content .kova-greeting {
+    margin-block: auto;
+    align-items: center;
+  }
+  .kova-assistant .kova-empty-chat .kova-greeting h1 {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 14px;
+    max-width: none;
+    text-align: center;
+  }
+  .kova-greeting .kova-home-greeting-text {
+    display: block;
+  }
+  .kova-greeting .kova-home-welcome-logo {
+    display: block;
+    width: clamp(40px, 12vw, 56px);
+    height: auto;
+    opacity: 1;
+  }
+  .kova-assistant .kova-empty-composer {
+    position: sticky;
+    z-index: 2;
+    inset-block-end: 0;
+    margin-block-start: auto;
+    padding-block: 8px max(8px, var(--safe-bottom));
+    background: var(--background);
+  }
+  .kova-assistant .kova-empty-chat-content > .spec400-recent-work {
+    display: none;
+  }
+
+  /* ---- Composer action row ---- */
+  .kova-assistant .spec400-composer {
+    --composer-text-inset: 8px;
+    --composer-action-inset: 8px;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-toolbar {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-trailing {
+    display: contents !important;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-tools {
+    order: 0;
+    flex: none;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-trailing > :not(.spec400-composer-speech-actions) {
+    order: 1;
+    flex: 0 1 auto;
+    min-width: 0;
+    justify-self: auto;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-speech-actions {
+    order: 2;
+    flex: none;
+    margin-inline-start: auto;
+  }
+
+  /* ---- Header icon buttons: highlight stays centered on the icon ---- */
+  .kova-mobile-home-actions > * {
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 9999px;
+  }
+  .kova-mobile-home-actions > * > svg {
+    translate: none !important;
+  }
+
+  /* ---- Popups open centered ---- */
+  [data-radix-popper-content-wrapper]:has(
+      > :is(
+          [data-slot="popover-content"],
+          [data-slot="dropdown-menu-content"],
+          [data-slot="select-content"],
+          [role="menu"],
+          [role="listbox"]
+        )
+    ) {
+    position: fixed !important;
+    inset: 0 !important;
+    transform: none !important;
+    margin: auto !important;
+    width: max-content !important;
+    height: max-content !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 2rem) !important;
+    max-height: calc(100dvh - 2rem) !important;
+  }
+  [data-radix-popper-content-wrapper] > :is(
+      [data-slot="popover-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="select-content"],
+      [role="menu"],
+      [role="listbox"]
+    ) {
+    box-shadow:
+      0 0 0 100vmax rgb(0 0 0 / 0.4),
+      var(--shadow-floating);
+  }
+
+  /* Voice dialog: centered card, not a full-height bottom sheet */
+  [role="dialog"].kova-voice-dialog,
+  [role="dialog"].kova-voice-dialog:not([data-voice-availability="ready"]) {
+    top: 50%;
+    bottom: auto;
+    width: calc(100% - 2rem);
+    height: auto;
+    max-height: calc(100dvh - 2rem) !important;
+    border-bottom: 1px solid var(--border);
+  }
+}

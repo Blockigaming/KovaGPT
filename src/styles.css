@@ -19,6 +19,7 @@
 @import "./styles/app-finish.css";
 @import "./styles/phone-layout.css";
 @import "./styles/phone-equivalence.css";
+@import "./styles/mobile-web-fixes.css";
 
 @custom-variant dark (&:is(.dark *));
 

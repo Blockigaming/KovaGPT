@@ -37,7 +37,7 @@ const sheetVariants = cva(
       side: {
         top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
         bottom:
-          "inset-x-0 bottom-0 rounded-t-[var(--kova-radius-panel)] border-t pb-[max(1.5rem,var(--safe-bottom))] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          "left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-[450px] -translate-x-1/2 -translate-y-1/2 rounded-[var(--kova-radius-panel)] border max-h-[calc(100dvh-2rem)] data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         left: "inset-y-0 left-0 h-full w-[min(88vw,22rem)] border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
         right:
           "inset-y-0 right-0 h-full w-[min(88vw,22rem)] border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
