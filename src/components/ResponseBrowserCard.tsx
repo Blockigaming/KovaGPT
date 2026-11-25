@@ -25,6 +25,7 @@ export function ResponseBrowserCard({
 
   useEffect(() => {
     if (!browser) return;
+    setNow(Date.now());
     const expires = browser.expiresAt ?? browser.observedAt + 300_000;
     const timer = window.setTimeout(() => setNow(Date.now()), Math.max(0, expires - Date.now()));
     return () => window.clearTimeout(timer);
