@@ -724,8 +724,10 @@ test("new master entries show the correct native and OAuth setup requirements", 
     await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
     await expect(page.locator(`[data-plugin-id="${id}"]`)).toBeVisible();
   }
-  await page.getByRole("button", { name: "Details Apple Health", exact: true }).click();
-  await expect(page.getByRole("article")).toContainText("Native app required");
+  await page.getByRole("link", { name: "Apple Health", exact: true }).click();
+  await expect(
+    page.locator(".kova-connection-hero").getByText("Coming soon", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("article")).toContainText("signed iPhone app");
   await expect(page.getByRole("article")).toContainText("separate device permissions");
   await expect(
