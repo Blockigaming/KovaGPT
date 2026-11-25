@@ -43,6 +43,7 @@ test("directory headings share the Scheduled tasks UI font", () => {
   );
   assert.match(heading["font-family"], /^var\(--font-ui,/);
   assert.equal(heading["font-weight"], "600");
+  assert.match(read("src/routes/projects.tsx"), /titleId="projects-title"/);
 });
 
 test("collection title weight and row labels have distinct, scoped typography", () => {
