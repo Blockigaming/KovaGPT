@@ -21,7 +21,14 @@ for (const width of [320, 768, 1440]) {
     expect(choices).toHaveLength(5);
     let previousBottom = 0;
     for (const [index, choice] of choices.entries()) {
-      await expect(choice).toHaveAttribute("data-choice-letter", `${String.fromCharCode(65 + index)}.`);
+      const letter = String.fromCharCode(65 + index);
+      await expect(choice).toHaveAttribute("data-choice-letter", letter);
+      const circle = choice.locator("[data-choice-circle]");
+      await expect(circle).toHaveText(letter);
+      const circleBounds = (await circle.boundingBox())!;
+      expect(circleBounds.width).toBeCloseTo(circleBounds.height, 0);
+      expect(circleBounds.width).toBeGreaterThanOrEqual(24);
+      expect(await circle.evaluate((element) => parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThanOrEqual(circleBounds.width / 2);
       const bounds = (await choice.boundingBox())!;
       expect(bounds.y).toBeGreaterThanOrEqual(previousBottom);
       previousBottom = bounds.y + bounds.height;
