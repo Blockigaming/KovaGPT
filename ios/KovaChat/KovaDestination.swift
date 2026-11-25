@@ -25,6 +25,25 @@ enum KovaDestination: String, CaseIterable {
         self = destination
     }
 
+
+    /// Website-only destinations are never rendered by the iOS assistant shell.
+    /// Keep this narrow: account, help, legal and workspace routes remain available.
+    static func isWebsiteOnly(_ url: URL?) -> Bool {
+        guard isTrusted(url), let url else { return false }
+        let path = url.path.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let exact: Set<String> = [
+            "pricing", "subscribe", "download", "changelog", "chatgpt-alternative",
+            "ai-image-generator", "ai-humanizer", "humanize-ai-text",
+            "study-assistant", "research-assistant"
+        ]
+        let sections: Set<String> = [
+            "business", "global-affairs", "news", "blog", "careers", "advertising",
+            "features", "enterprise", "developers", "partners"
+        ]
+        return exact.contains(path) || sections.contains(String(path.split(separator: "/").first ?? ""))
+            || (path.split(separator: "/").count == 2 && path.hasSuffix("/home"))
+    }
+
     static func isTrusted(_ url: URL?) -> Bool {
         guard let url else { return false }
         return url.scheme == "https" && url.host == "kovagpt.com" &&
