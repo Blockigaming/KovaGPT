@@ -114,3 +114,32 @@ test("dual-mode logout cannot reveal a dormant legacy session or cached Kova tok
     /purgeOwnerlessStateFor\(principal\?\.accountId \?\? null\);\s+setKovaSessionActive/u,
   );
 });
+
+test("production cannot re-enable retired owned authority via stale runtime configuration", () => {
+  for (const target of [
+    { AZURE_ENVIRONMENT: "production" },
+    { CONTAINER_APP_NAME: "kovagpt-prod-web" },
+  ]) {
+    for (const mode of ["supabase", "dual", "kova"]) {
+      const effective = resolveKovaAuthMode({ ...target, KOVA_AUTH_MODE: mode });
+      assert.equal(effective, "supabase");
+      const request = new Request("https://kovagpt.com", {
+        headers: {
+          authorization: "Bearer hosted-token",
+          cookie: `${KOVA_SESSION_COOKIE}=${token}`,
+        },
+      });
+      assert.equal(selectAuthCredential(request, effective).provider, "supabase");
+    }
+  }
+});
+
+test("disabled owned cookies are not parsed by hosted auth", () => {
+  const request = new Request("https://kovagpt.com", {
+    headers: {
+      authorization: "Bearer hosted-token",
+      cookie: `${KOVA_SESSION_COOKIE}=${"x".repeat(9000)}`,
+    },
+  });
+  assert.equal(selectAuthCredential(request, "supabase").provider, "supabase");
+});
