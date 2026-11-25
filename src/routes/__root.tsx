@@ -403,7 +403,9 @@ function DestinationOutlet() {
         <section className="kova-state-panel" aria-labelledby="ios-workspace-title">
           <h1 id="ios-workspace-title">This page is available on the web</h1>
           <p>Return to your KovaGPT assistant workspace.</p>
-          <Link to="/" className="kova-state-primary">Return to chat</Link>
+          <Link to="/" className="kova-state-primary">
+            Return to chat
+          </Link>
         </section>
       </main>
     );
