@@ -934,7 +934,14 @@ function SupabaseClerkProvider({
     // Resolving the initial public session must preserve the SSR subtree.
     // isLoaded still gates all principal access; per-account keys discard
     // private child state immediately when a validated account is cleared.
-    <Ctx.Provider key={session?.user.id ?? "guest"} value={value}>
+    <Ctx.Provider
+      key={
+        typeof window !== "undefined" && window.location.pathname === "/reset-password"
+          ? "hosted-password-recovery"
+          : (session?.user.id ?? "guest")
+      }
+      value={value}
+    >
       <div
         style={{ display: !isLoaded || authorityUnresolved ? "none" : "contents" }}
         inert={!isLoaded || authorityUnresolved || undefined}
