@@ -676,10 +676,24 @@ for (const surface of ["empty", "conversation"] as const) {
         .toBeLessThan(0.5);
     }
 
-    await websites
-      .nth(1)
-      .getByRole("button", { name: /^Remove linked page from message/ })
-      .click();
+    const removeLink = tray
+      .locator('[data-link-preview-url="https://github.com/review"]')
+      .getByRole("button", { name: /^Remove linked page from message/ });
+    if (phone) {
+      await input.focus();
+      await expect(input).toBeFocused();
+      await removeLink.scrollIntoViewIfNeeded();
+      const bounds = (await removeLink.boundingBox())!;
+      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      await page.mouse.down();
+      try {
+        await expect(input).toBeFocused();
+      } finally {
+        await page.mouse.up();
+      }
+    } else {
+      await removeLink.click();
+    }
     await expect(websites).toHaveCount(14);
     await expect(tray.locator('[data-link-preview-url="https://github.com/review"]')).toHaveCount(
       0,
