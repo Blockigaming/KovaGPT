@@ -204,7 +204,7 @@ export const CONNECTION_FLOWS = {
   },
   "outlook-calendar": {
     provider: "microsoft",
-    scopes: ["Calendars.ReadBasic"],
+    scopes: ["Calendars.Read"],
     tool: "outlook_calendar_search",
     label: "Outlook Calendar",
     description:
@@ -290,8 +290,7 @@ export function hasConnectionScopes(scopes, required) {
           granted.has("Files.ReadWrite.All"))) ||
       (scope === "Files.ReadWrite" && granted.has("Files.ReadWrite.All")) ||
       (scope === "Mail.Read" && granted.has("Mail.ReadWrite")) ||
-      (scope === "Calendars.ReadBasic" &&
-        (granted.has("Calendars.Read") || granted.has("Calendars.ReadWrite"))),
+      (scope === "Calendars.Read" && granted.has("Calendars.ReadWrite")),
   );
 }
 

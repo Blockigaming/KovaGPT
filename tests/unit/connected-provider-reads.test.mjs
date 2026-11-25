@@ -94,22 +94,28 @@ test("a Microsoft account is usable only for the service scopes it actually has"
   assert.equal(hasConnectionScopes(["Files.Read"], ["Sites.Read.All"]), false);
 });
 
-test("calendar reads accept only an actual basic-or-broader calendar grant on the selected Microsoft account", () => {
+test("calendar reads accept only an actual full-read-or-broader calendar grant on the selected Microsoft account", () => {
   const account = { provider_id: "microsoft", status: "connected", token_expires_at: null };
-  for (const scope of ["Calendars.ReadBasic", "Calendars.Read", "Calendars.ReadWrite"])
+  for (const scope of ["Calendars.Read", "Calendars.ReadWrite"])
     for (const prefix of ["", "https://graph.microsoft.com/"])
       assert.equal(
         canReadConnection({ ...account, granted_scopes: [prefix + scope] }, "outlook-calendar"),
         true,
       );
-  for (const scopes of [[], ["Mail.Read"], ["Files.Read.All"], ["Calendars.Read.Shared"]])
+  for (const scopes of [
+    [],
+    ["Mail.Read"],
+    ["Files.Read.All"],
+    ["Calendars.Read.Shared"],
+    ["Calendars.ReadBasic"],
+  ])
     assert.equal(
       canReadConnection({ ...account, granted_scopes: scopes }, "outlook-calendar"),
       false,
     );
   assert.equal(
     canReadConnection(
-      { ...account, provider_id: "github", granted_scopes: ["Calendars.ReadBasic"] },
+      { ...account, provider_id: "github", granted_scopes: ["Calendars.Read"] },
       "outlook-calendar",
     ),
     false,

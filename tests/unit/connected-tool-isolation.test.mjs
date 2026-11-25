@@ -208,7 +208,7 @@ function fixture() {
 
 test("calendar tools bind to the selected Microsoft account and discard results after scope removal", async () => {
   const f = fixture();
-  f.state.row.granted_scopes = ["Calendars.ReadBasic"];
+  f.state.row.granted_scopes = ["Calendars.Read"];
   const context = await f.getConnectedToolContext("owner-a");
   assert.deepEqual(
     context.tools.map((tool) => tool.function.name),

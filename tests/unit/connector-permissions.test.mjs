@@ -663,7 +663,7 @@ test("Outlook Calendar creates only a reviewed personal event using a transactio
     start: "2026-11-24T14:00:00Z",
     end: "2026-11-24T14:30:00Z",
   };
-  const readOnly = fixture("Calendars.ReadBasic", true);
+  const readOnly = fixture("Calendars.Read", true);
   assert.match((await readOnly.handlers.createOutlookEvent(payload)).error, /permission/u);
   assert.equal(readOnly.requests.length, 0);
   const { handlers, requests } = fixture("Calendars.ReadWrite", true);

@@ -123,8 +123,6 @@ const WORKING_IDS = new Set<string>([
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
 const NATIVE_HEALTH_IDS = new Set(["apple-health", "android-health-connect"]);
-// Live reads not yet verified on staging; shown as Coming soon until they are.
-const UNVERIFIED_IDS = new Set(["outlook-calendar"]);
 const PLUGIN_CATEGORIES = [
   ...new Set(MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector.category)),
 ].sort();
@@ -1489,9 +1487,7 @@ function AppsPage() {
   const configuredOf = (id: string) => {
     if (id === "github") return visibleGithubData?.configured !== false;
     if (id === "notion") return notionKeyConfigured || notionOAuthConfigured;
-    // Native health apps need a signed device build that has not been verified yet.
-    if (NATIVE_HEALTH_IDS.has(id)) return false;
-    if (UNVERIFIED_IDS.has(id)) return false;
+    if (NATIVE_HEALTH_IDS.has(id)) return true;
     if (id === "oura")
       return (
         otherConnections.data?.configuredProviders.some((provider) => provider.id === id) === true
@@ -2265,12 +2261,11 @@ function AppsPage() {
                         <dt>Developer</dt>
                         <dd className="kova-connection-publisher">
                           {selectedProfile.publisher}
-                          {configuredOf(visibleSelectedApp.id) &&
-                            !UNVERIFIED_IDS.has(visibleSelectedApp.id) && (
-                              <span className="kova-connection-verified">
-                                <CircleCheck aria-hidden="true" /> Verified
-                              </span>
-                            )}
+                          {configuredOf(visibleSelectedApp.id) && (
+                            <span className="kova-connection-verified">
+                              <CircleCheck aria-hidden="true" /> Verified
+                            </span>
+                          )}
                           {stateOf(visibleSelectedApp.id) === "connected" && (
                             <span className="kova-connection-connected">
                               <Check aria-hidden="true" /> Connected

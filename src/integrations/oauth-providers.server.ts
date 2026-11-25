@@ -250,7 +250,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
       "Mail.Read",
       "Mail.ReadWrite",
       "Mail.Send",
-      "Calendars.ReadBasic",
+      "Calendars.Read",
       "Calendars.ReadWrite",
       "Team.ReadBasic.All",
       "Chat.Read",
