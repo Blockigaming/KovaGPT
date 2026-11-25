@@ -411,3 +411,77 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeLessThanOrEqual(1);
   });
 }
+
+test("mobile browser handoff fits its response and opens a contained workspace", async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 1024, "mobile and tablet browser handoff");
+  await fixture(page, "dark", true, false, "plus");
+  await page.route("**/api/chat", (route) => {
+    const observedAt = Date.now();
+    const sessionId = "99999999-9999-4999-8999-999999999999";
+    const frame = (delta: object) => `data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`;
+    const body =
+      frame({
+        kind: "activity",
+        activity_id: "ratio-browser-session",
+        tool: "browser_interact",
+        label: "Opened a browser session",
+        status: "running",
+        browser: {
+          sessionId,
+          tabCount: 1,
+          observedAt,
+          expiresAt: observedAt + 300000,
+          hostname: `${"long-hostname-".repeat(4)}example.test`,
+          previewPath: `/api/browser/preview/${sessionId}`,
+        },
+      }) +
+      frame({ content: "The website needs your input." }) +
+      "data: [DONE]\n\n";
+    return route.fulfill({ status: 200, contentType: "text/event-stream", body });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT", exact: true }).fill("Open browser");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  const card = page.locator(".kova-response-browser-card");
+  await expect(card).toBeVisible();
+  await expect(card.getByText("Open browser", { exact: true })).toBeVisible();
+  const geometry = await card.evaluate((element) => {
+    const root = element.getBoundingClientRect();
+    return {
+      left: root.left,
+      right: root.right,
+      viewport: document.documentElement.clientWidth,
+      overflow: element.scrollWidth - element.clientWidth,
+      children: Array.from(element.children).map((child) => {
+        const box = child.getBoundingClientRect();
+        return {
+          left: box.left - root.left,
+          right: root.right - box.right,
+          top: box.top - root.top,
+          bottom: root.bottom - box.bottom,
+        };
+      }),
+    };
+  });
+  expect(geometry.left).toBeGreaterThanOrEqual(0);
+  expect(geometry.right).toBeLessThanOrEqual(geometry.viewport + 1);
+  expect(geometry.overflow).toBeLessThanOrEqual(1);
+  for (const child of geometry.children) {
+    for (const distance of Object.values(child)) expect(distance).toBeGreaterThanOrEqual(-1);
+  }
+  await card.click();
+  const dialog = page.getByRole("dialog", { name: "Cloud browser", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Take over", exact: true })).toBeVisible();
+  const close = dialog.getByRole("button", { name: "Close browser workspace", exact: true });
+  await expectReachable(close, 0, viewport.height);
+  const box = (await dialog.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(-1);
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+  await close.click();
+  await expect(dialog).toBeHidden();
+  await expect(card).toBeFocused();
+});
