@@ -578,7 +578,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 600;
 }
 .spec400-recent-work {
