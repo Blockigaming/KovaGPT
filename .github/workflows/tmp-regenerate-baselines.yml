@@ -58,7 +58,6 @@ jobs:
           npx --no-install playwright test --config test-results/q.cfg.ts --project=phone-390x844 --update-snapshots || true
       - name: Dump changed snapshots
         run: |
-          git status --short
-          for f in $(git status --short | awk '{print $2}' | grep '\.png$'); do
+          for f in tests/e2e/auth-visual-regression.spec.ts-snapshots/guest-auth-dialog-phone-390x844-linux.png tests/e2e/ui-quality.spec.ts-snapshots/account-entry-light-phone-390x844-linux.png tests/e2e/ui-quality.spec.ts-snapshots/account-entry-dark-phone-390x844-linux.png; do
             echo "=====BEGIN $f"; base64 -w 200 "$f"; echo "=====END $f"
           done
