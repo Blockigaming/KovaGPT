@@ -291,7 +291,7 @@ const TAB_GROUPS: TabGroup[] = [
     title: "Connections",
     hint: "Apps and people you share KovaGPT with",
     tabs: [
-      { v: "linked", label: "Connections", icon: Link2 },
+      { v: "linked", label: "Apps", icon: Link2 },
       { v: "family", label: "Family Center", icon: Users },
     ],
   },
@@ -1915,7 +1915,7 @@ export function SettingsDialog({
                       <h3 className="text-sm font-semibold">Connections</h3>
                       <p className="text-xs text-muted-foreground">
                         Open a connection to see its status, change permissions, reconnect, or
-                        disconnect. Status is verified from the server-backed Connections page.
+                        disconnect. Status is verified from the server-backed Apps page.
                       </p>
                     </div>
                     <ul className="grid gap-2">
@@ -1948,7 +1948,7 @@ export function SettingsDialog({
                     </ul>
                     <Button asChild variant="outline" className="rounded-full">
                       <Link to="/apps" onClick={closeForNavigation}>
-                        Browse all connections
+                        Manage apps and permissions
                       </Link>
                     </Button>
                   </section>
