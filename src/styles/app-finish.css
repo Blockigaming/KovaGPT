@@ -1566,8 +1566,9 @@
 :root.dark {
   --kova-default-reading-accent: #7cc4ff;
 }
-.kova-response-emphasis {
+.prose-chat strong.kova-response-emphasis {
   color: var(--kova-reading-accent);
+  font-weight: inherit;
 }
 @media (max-width: 1023px), (max-height: 679px) {
   .spec400-recent-work li:nth-child(n + 3) {
