@@ -25,9 +25,9 @@ const ghcr = readFileSync(
 function selectedBrowserInputs() {
   return Object.fromEntries(
     names.map((name) => {
-      const entry = jobEnvironment.match(new RegExp(`^      ${name}: '([^']*)'$`, "mu"));
+      const entry = jobEnvironment.match(new RegExp(`^      ${name}: "([^"]*)"$`, "mu"));
       assert.ok(entry, `${name} must be a pinned literal`);
-      const other = ghcr.match(new RegExp(`^      ${name}: '([^']*)'$`, "mu"));
+      const other = ghcr.match(new RegExp(`^      ${name}: "([^"]*)"$`, "mu"));
       assert.ok(other, `${name} must also be pinned in the GHCR workflow`);
       assert.equal(other[1], entry[1]);
       return [name, entry[1]];
@@ -104,18 +104,28 @@ test("stale repository variables cannot change the commit-pinned production buil
         VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid",
       });
       assert.deepEqual(browser, hosted);
-      assert.equal(request.sourceLocation, `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`);
+      assert.equal(
+        request.sourceLocation,
+        `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`,
+      );
       assert.ok(request.arguments.every(({ isSecret }) => isSecret === false));
     }
 });
 
 test("server bindings cannot change pinned browser authority", () => {
   for (const inputMode of ["plan", "narrow-openai"]) {
-    assert.deepEqual(forwarded(inputMode, {}, {
-      KOVA_AUTH_MODE: "kova",
-      KOVA_AUTH_ORIGIN: "https://server-auth.example.invalid",
-      KOVA_GOOGLE_AUTH_ENABLED: "true",
-    }).browser, hosted);
+    assert.deepEqual(
+      forwarded(
+        inputMode,
+        {},
+        {
+          KOVA_AUTH_MODE: "kova",
+          KOVA_AUTH_ORIGIN: "https://server-auth.example.invalid",
+          KOVA_GOOGLE_AUTH_ENABLED: "true",
+        },
+      ).browser,
+      hosted,
+    );
   }
 });
 
