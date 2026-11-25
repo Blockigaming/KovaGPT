@@ -203,7 +203,7 @@ When a chart would help, emit a complete fenced kova-chart JSON block using this
 // The file-output protocol is only sent when the turn plausibly asks for a file, so
 // ordinary Free turns keep their token headroom.
 const FILE_OUTPUT_REQUEST =
-  /\b(?:files?|web ?pages?|websites?|web ?sites?|landing page|games?|apps?|scripts?|html|css|javascript|typescript|python|components?|config|program|code|svg|readme)\b/i;
+  /\b(?:files?|web ?pages?|websites?|web ?sites?|landing page|games?|apps?|scripts?|html|css|javascript|typescript|python|components?|config|program|code|svg|pdf|readme)\b/i;
 const RICH_RESPONSE_REQUEST =
   /\b(?:charts?|plots?|graphs?|heatmaps?|radar|candlesticks?|sankey|waterfalls?|treemaps?|histograms?|diagrams?|flowcharts?|maps?|quizz(?:es)?|quiz|flashcards?|simulations?|memory game|sticker packs?|patterns?|narration|read aloud|interactive|file bundle|zip archive|latex|equations?)\b/i;
 const CREATOR_INSTRUCTION = "";
