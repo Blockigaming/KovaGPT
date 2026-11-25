@@ -48,6 +48,19 @@ export function ConsumerModelSelector({
   const { isLoaded, isSignedIn } = useUser();
   const [open, setOpen] = useState(false);
   const [showModels, setShowModels] = useState(false);
+  // On phones the popup sits directly above the chat bar: measure the bar's
+  // top edge when it opens; the stylesheet positions the popup from that value.
+  useEffect(() => {
+    if (!open) return;
+    const composer = Array.from(document.querySelectorAll<HTMLElement>(".spec400-composer")).find(
+      (element) => element.getClientRects().length > 0,
+    );
+    if (composer)
+      document.documentElement.style.setProperty(
+        "--kova-composer-top",
+        `${Math.round(composer.getBoundingClientRect().top)}px`,
+      );
+  }, [open]);
   const [dragPosition, setDragPosition] = useState<number | null>(null);
   const drag = useRef<{ pointerId: number; bounds: DOMRect; recommended: boolean } | null>(null);
   const thumbRail = useRef<HTMLDivElement>(null);
