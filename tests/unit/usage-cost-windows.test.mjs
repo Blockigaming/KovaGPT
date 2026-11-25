@@ -121,10 +121,14 @@ test("Free uses reserved cost rather than message count alone", async () => {
   const db = await fixture();
   try {
     assert.equal((await request(db, "free", 0.09)).decision, "acquired");
-    assert.equal((await request(db, "free", 0.02)).decision, "five_hour_cost");
+    // The five-hour allowance grows late in the month (monthly budget divided by
+    // the remaining slots), so size the second request from the live allowance
+    // instead of assuming a fixed 0.02 overshoots it.
     const usageSql = "select * from public.kova_plan_cost_progress($1,'free')";
     const progress = await db.query(usageSql, [owner]);
     const { rows } = progress;
+    const overshoot = Number(rows[0].five_hour_allowance) - Number(rows[0].five_hour_used) + 0.01;
+    assert.notEqual((await request(db, "free", overshoot)).decision, "acquired");
     assert.equal(Number(rows[0].monthly_allowance), 3);
     assert.ok(Number(rows[0].five_hour_used) >= 0.09);
     assert.ok(Number(rows[0].five_hour_allowance) >= 0.1);
