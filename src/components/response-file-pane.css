@@ -189,7 +189,25 @@
 }
 @media (max-width: 520px) {
   .kova-file-pane-header {
+    flex-wrap: wrap;
     padding-inline-start: 12px;
+  }
+  .kova-file-pane-name {
+    flex: 1 1 calc(100% - 40px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .kova-file-pane-tools {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .kova-file-pane-toggle button,
+  .kova-file-pane-icon-button,
+  .kova-file-pane-copy-main,
+  .kova-file-pane-copy-more {
+    min-width: 44px;
+    min-height: 44px;
   }
   .kova-file-pane-copy-main {
     padding: 0 10px;
