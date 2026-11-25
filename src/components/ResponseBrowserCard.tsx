@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Globe } from "lucide-react";
 import type { Activity } from "@/lib/chat-store";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
+import "./response-files.css";
 
 const CloudBrowserTakeover = lazy(() =>
   import("./CloudBrowserTakeover").then((module) => ({ default: module.CloudBrowserTakeover })),
@@ -38,17 +39,17 @@ export function ResponseBrowserCard({
       <button
         ref={trigger}
         type="button"
-        className="flex w-full max-w-md items-center gap-3 rounded-xl border border-border p-3 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="kova-response-browser-card"
         onClick={() => setOpen(true)}
       >
         <Globe className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <span className="min-w-0 flex-1">
+        <span className="kova-response-browser-details">
           <span className="block text-sm font-medium">Cloud Browser</span>
-          <span className="block truncate text-xs text-muted-foreground">
+          <span className="block break-all text-xs text-muted-foreground">
             {browser.hostname ?? "Active browser session"}
           </span>
         </span>
-        <span className="shrink-0 text-sm font-medium">Open browser</span>
+        <span className="kova-response-browser-action">Open browser</span>
       </button>
       {open && (
         <Suspense fallback={<p role="status">Opening browser…</p>}>
