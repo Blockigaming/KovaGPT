@@ -2139,7 +2139,7 @@ export const Route = createFileRoute("/api/chat")({
                         : "Too many generation requests are running. Please try again shortly.",
                     code: acquisition.rejection,
                     category: quota ? "quota_exceeded" : duplicate ? "bad_request" : "rate_limit",
-                    retryable: !quota,
+                    retryable: !quota && !duplicate,
                     requestId,
                   },
                   {

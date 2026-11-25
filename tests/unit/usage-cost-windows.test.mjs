@@ -121,13 +121,38 @@ test("Free uses reserved cost rather than message count alone", async () => {
   const db = await fixture();
   try {
     assert.equal((await request(db, "free", 0.09)).decision, "acquired");
-    assert.equal((await request(db, "free", 0.02)).decision, "five_hour_cost");
     const usageSql = "select * from public.kova_plan_cost_progress($1,'free')";
-    const progress = await db.query(usageSql, [owner]);
-    const { rows } = progress;
-    assert.equal(Number(rows[0].monthly_allowance), 3);
-    assert.ok(Number(rows[0].five_hour_used) >= 0.09);
-    assert.ok(Number(rows[0].five_hour_allowance) >= 0.1);
+    const { rows } = await db.query(usageSql, [owner]);
+    const progress = rows[0];
+    assert.equal(Number(progress.monthly_allowance), 3);
+    assert.equal(Number(progress.five_hour_used), 0.09);
+    assert.ok(Number(progress.five_hour_allowance) >= 0.1);
+    // The legacy pacing policy grows the allowance as the month ends.
+    // Cross the actual tightest window, not a hard-coded ten-cent floor.
+    const windows = [
+      ["monthly_cost", Number(progress.monthly_allowance) - Number(progress.month_used)],
+      ["weekly_cost", Number(progress.weekly_allowance) - Number(progress.weekly_used)],
+      ["five_hour_cost", Number(progress.five_hour_allowance) - Number(progress.five_hour_used)],
+    ];
+    const remaining = Math.min(...windows.map(([, headroom]) => headroom));
+    const overBudget = Math.ceil(remaining * 100) / 100 + 0.01;
+    const expected = windows.find(([, headroom]) => overBudget > headroom)[0];
+    assert.equal((await request(db, "free", overBudget)).decision, expected);
+    const after = (await db.query(usageSql, [owner])).rows[0];
+    assert.equal(Number(after.month_used), Number(progress.month_used));
+  } finally {
+    await db.close();
+  }
+});
+
+test("legacy Free pacing uses the floor early in the month and expands late in the month", async () => {
+  const db = await fixture();
+  try {
+    const query = "select * from public.kova_plan_cost_progress($1,'free',$2::timestamptz)";
+    const early = (await db.query(query, [owner, "2027-01-01T12:00:00Z"])).rows[0];
+    const late = (await db.query(query, [owner, "2027-01-31T23:00:00Z"])).rows[0];
+    assert.equal(Number(early.five_hour_allowance), 0.1);
+    assert.equal(Number(late.five_hour_allowance), 3);
   } finally {
     await db.close();
   }
