@@ -19,3 +19,13 @@ for unsafe in [
 ] {
     precondition(KovaDestination(shortcutURL: URL(string: unsafe)!) == nil)
 }
+
+ 
+// iOS is an assistant, not a browser for Kova's marketing site.
+for path in ["/pricing", "/subscribe", "/download", "/changelog", "/features/chat", "/business/learn", "/en/home"] {
+    precondition(KovaDestination.isWebsiteOnly(URL(string: "https://kovagpt.com" + path)), "Expected website-only: " + path)
+}
+for path in ["/", "/projects", "/library", "/images", "/apps", "/scheduled-tasks", "/login", "/signup", "/privacy", "/terms", "/help", "/api/auth/google/exchange"] {
+    precondition(!KovaDestination.isWebsiteOnly(URL(string: "https://kovagpt.com" + path)), "Expected workspace or account: " + path)
+}
+precondition(!KovaDestination.isWebsiteOnly(URL(string: "https://untrusted.example/pricing")))

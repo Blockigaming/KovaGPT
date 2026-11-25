@@ -51,3 +51,24 @@ export function nativeDictationHandler(): NativeDictationHandler | undefined {
   };
   return native.webkit?.messageHandlers?.kovaDictation;
 }
+
+ 
+// Keep the iOS assistant out of public marketing and browser checkout routes.
+// Mirrors the native boundary in KovaDestination.swift; it is not an auth check.
+const IOS_WEBSITE_ONLY_PATHS = new Set([
+  "pricing", "subscribe", "download", "changelog", "chatgpt-alternative",
+  "ai-image-generator", "ai-humanizer", "humanize-ai-text",
+  "study-assistant", "research-assistant",
+]);
+const IOS_WEBSITE_ONLY_SECTIONS = new Set([
+  "business", "global-affairs", "news", "blog", "careers", "advertising",
+  "features", "enterprise", "developers", "partners",
+]);
+
+export function isIOSWebsiteOnlyPath(pathname: string): boolean {
+  const normalized = pathname.toLowerCase().replace(/^\/+|\/+$/g, "");
+  const parts = normalized.split("/").filter(Boolean);
+  return IOS_WEBSITE_ONLY_PATHS.has(normalized) ||
+    IOS_WEBSITE_ONLY_SECTIONS.has(parts[0] ?? "") ||
+    (parts.length === 2 && parts[1] === "home");
+}

@@ -490,6 +490,10 @@ struct KovaChatWebView: UIViewRepresentable {
             guard action.targetFrame?.isMainFrame != false else { decisionHandler(.allow); return }
             guard let url = action.request.url else { decisionHandler(.cancel); return }
             if KovaDestination.isTrusted(url) {
+                if KovaDestination.isWebsiteOnly(url) {
+                    decisionHandler(.cancel)
+                    return
+                }
                 if url.path == "/api/auth/google/start",
                    let challenge = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                     .queryItems?.first(where: { $0.name == "native_challenge" })?.value,
@@ -519,7 +523,8 @@ struct KovaChatWebView: UIViewRepresentable {
         func webView(_ web: WKWebView, decidePolicyFor response: WKNavigationResponse,
                      decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
             guard response.isForMainFrame else { decisionHandler(.allow); return }
-            decisionHandler(KovaDestination.isTrusted(response.response.url) ? .allow : .cancel)
+            let url = response.response.url
+            decisionHandler(KovaDestination.isTrusted(url) && !KovaDestination.isWebsiteOnly(url) ? .allow : .cancel)
         }
 
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
