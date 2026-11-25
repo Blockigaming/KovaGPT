@@ -947,6 +947,8 @@ test("connector title links, deep links and browser history restore the director
   await expect(link).toBeFocused();
   await page.goForward();
   await expect(page.getByRole("article", { name: "Canva" })).toBeVisible();
+  // Release the first document before a cold deep-link load; WebKit can crash on a reboot over a live page.
+  await page.goto("about:blank");
   await boot(page, emptyGoogle, "https://kova-plugins.test/apps?plugin=github");
   await expect(page.getByRole("article", { name: "GitHub" })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
