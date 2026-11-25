@@ -130,8 +130,11 @@ function ResetPassword() {
     setSubmitNotice(null);
     setLoading(true);
     submitting.current = true;
-    const failureMessage =
+    let failureMessage =
       "Your password could not be updated. Request a new reset link and try again.";
+    let preserveDraft = false;
+    let updatePending = false;
+    let updateConfirmed = false;
     try {
       const boundary = legacyContext.current;
       if (!boundary) throw new Error("recovery_session_unavailable");
@@ -141,10 +144,23 @@ function ResetPassword() {
       boundary.context.assertCurrent();
       if (current.error || current.data.session?.user.id !== boundary.userId)
         throw new Error("recovery_session_changed");
+      updatePending = true;
       const { error: updateErr } = await boundary.context.auth.updateUser({ password });
+      updatePending = false;
+      if (updateErr) {
+        if (updateErr.status === 429) {
+          preserveDraft = true;
+          failureMessage = "Wait before retrying your password update.";
+        } else if (!updateErr.status || updateErr.status >= 500 || updateErr.status === 408) {
+          preserveDraft = true;
+          failureMessage =
+            "Your password update may have completed. Try signing in with your new password.";
+        }
+        throw updateErr;
+      }
+      updateConfirmed = true;
       boundary.context.assertCurrent();
       if (!mounted.current) return;
-      if (updateErr) throw updateErr;
       const { error: signOutError } = await boundary.context.auth.signOut({
         scope: "others",
       });
@@ -160,6 +176,14 @@ function ResetPassword() {
       }
       navigate({ to: "/" });
     } catch {
+      if (updatePending) {
+        preserveDraft = true;
+        failureMessage =
+          "Your password update may have completed. Try signing in with your new password.";
+      } else if (updateConfirmed) {
+        clearPasswordRecoveryFlow();
+        failureMessage = "Password updated, but session cleanup could not be confirmed.";
+      }
       console.error("[KovaAuth] Password update unconfirmed", {
         code: "kova_password_update_unconfirmed",
       });
@@ -168,9 +192,13 @@ function ResetPassword() {
         toast.error(failureMessage);
       }
     } finally {
-      setPassword("");
-      setConfirm("");
-      setLoading(false);
+      if (mounted.current) {
+        if (!preserveDraft) {
+          setPassword("");
+          setConfirm("");
+        }
+        setLoading(false);
+      }
       submitting.current = false;
     }
   };
