@@ -107,15 +107,26 @@ for (const theme of ["light", "dark"] as const) {
       await expect(menu).toBeVisible();
       // The entry animation scales the painted bounds while the CSS width is
       // already correct. Compare the settled menu, not an intermediate frame.
+      const composer = page.locator(".spec400-composer:visible").first();
+      const composerBox = (await composer.boundingBox())!;
+      // Phones dock the popup above the chat bar at the chat bar's width.
+      const narrow = viewport.width < 768;
+      const expectedWidth = narrow ? composerBox.width : Math.min(282, viewport.width - 24);
       await expect
         .poll(async () => (await menu.boundingBox())?.width)
-        .toBeCloseTo(Math.min(282, viewport.width - 24), 0);
+        .toBeCloseTo(expectedWidth, 0);
       const box = (await menu.boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
       expect(box.y).toBeGreaterThanOrEqual(0);
       expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
-      if (phone) {
+      if (narrow) {
+        const composerRadius = await composer.evaluate(
+          (el) => getComputedStyle(el).borderTopLeftRadius,
+        );
+        await expect(menu).toHaveCSS("border-radius", composerRadius);
+        expect(box.y + box.height).toBeLessThanOrEqual(composerBox.y + 1);
+      } else if (phone) {
         await expect(menu).toHaveCSS("border-radius", "18px");
         expect(box.width).toBeCloseTo(Math.min(282, viewport.width - 24), 0);
       }
