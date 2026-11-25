@@ -40,7 +40,11 @@ export function HomeWelcome({
     const frame = window.requestAnimationFrame(followLatest);
     // Composer measurement and font loading can change the initial content height.
     // Follow those changes until the user starts navigating the welcome surface.
-    const observer = new ResizeObserver(followLatest);
+    let observerFrame = 0;
+    const observer = new ResizeObserver(() => {
+      window.cancelAnimationFrame(observerFrame);
+      observerFrame = window.requestAnimationFrame(followLatest);
+    });
     observer.observe(section);
     if (section.firstElementChild) observer.observe(section.firstElementChild);
     for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
@@ -48,6 +52,7 @@ export function HomeWelcome({
     }
     return () => {
       window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(observerFrame);
       observer.disconnect();
       for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
         section.removeEventListener(event, stopFollowing);

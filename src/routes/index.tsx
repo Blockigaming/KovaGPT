@@ -779,12 +779,21 @@ function KovaGPT() {
   useEffect(() => {
     const element = workspaceRef.current;
     if (!element) return;
-    const observer = new ResizeObserver(() => setWorkspaceWidth(element.clientWidth));
+    // Defer the state update so observer callbacks never change layout in the
+    // same frame (avoids "ResizeObserver loop completed with undelivered notifications").
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => setWorkspaceWidth(element.clientWidth));
+    });
     observer.observe(element);
     setWorkspaceWidth(element.clientWidth);
     const saved = Number(safeBrowserStorage("localStorage")?.getItem("kova-result-pane-ratio"));
     if (Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8) setPaneRatio(saved);
-    return () => observer.disconnect();
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, []);
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem("kova-result-pane-ratio", String(paneRatio));
