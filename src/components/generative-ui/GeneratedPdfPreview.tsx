@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { LibraryPdfPreview } from "@/lib/library-document-preview";
 
-export function GeneratedPdfPreview({ title, content }: { title: string; content: string }) {
+export function GeneratedPdfPreview({
+  title,
+  content,
+  blankLetter = false,
+}: {
+  title: string;
+  content: string;
+  blankLetter?: boolean;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [session, setSession] = useState<LibraryPdfPreview>();
   const [page, setPage] = useState(1);
@@ -19,6 +27,12 @@ export function GeneratedPdfPreview({ title, content }: { title: string; content
         ]);
         if (scope.signal.aborted) return;
         active = await loadPdfPreview(async () => {
+          if (blankLetter && !content.trim()) {
+            const { createBlankLetterPdf } = await import("@/lib/writing-export/pdf");
+            return new Blob([new Uint8Array(await createBlankLetterPdf())], {
+              type: "application/pdf",
+            });
+          }
           const { bytes, type } = await createDocumentFile("pdf", title, content);
           return new Blob([bytes as BlobPart], { type });
         }, scope.signal);
@@ -33,7 +47,7 @@ export function GeneratedPdfPreview({ title, content }: { title: string; content
       scope.abort();
       active?.destroy();
     };
-  }, [title, content]);
+  }, [title, content, blankLetter]);
 
   useEffect(() => {
     const target = canvas.current;
