@@ -434,3 +434,7 @@ test("response map pans and zooms around a selected location without external ti
   await f.click("World view");
   assert.equal(f.find("svg").props.viewBox, "0 0 720 360");
 });
+
+test("custom answer is sent as user text rather than a model action", () => {
+  assert.equal(interactive.formatSubmission(nextSteps, { other: "  My own answer  " }), "Choose your next step\nSelected: Other\nMy own answer");
+});
