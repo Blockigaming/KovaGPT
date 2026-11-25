@@ -8,14 +8,11 @@
   border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
   border-radius: 14px;
   background: color-mix(in oklab, var(--background) 82%, var(--muted));
-  transition:
-    border-color 140ms ease,
-    background-color 140ms ease;
+  transition: background-color 140ms ease;
 }
 .kova-file-card:hover:not([data-state="writing"]),
 .kova-file-card[data-active] {
-  border-color: color-mix(in oklab, var(--foreground) 24%, var(--border));
-  background: color-mix(in oklab, var(--background) 70%, var(--muted));
+  background: var(--accent);
 }
 .kova-file-card-open {
   display: flex;
