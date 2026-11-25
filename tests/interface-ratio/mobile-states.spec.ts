@@ -522,3 +522,46 @@ test("a browser request without a URL keeps its address form within the chat", a
   expect(box.height).toBeGreaterThanOrEqual(44);
   expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
 });
+
+test("a generated blank PDF renders its real page without distorting the mobile preview", async ({
+  page,
+}) => {
+  await fixture(page, "dark", true, true, "plus", {
+    savedMessages: [
+      {
+        id: "ratio-blank-pdf",
+        role: "assistant",
+        content: 'Your file is ready.\n\n~~~pdf filename="blank-letter.pdf"\n~~~',
+      },
+    ],
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const card = page.locator('.kova-file-card[data-state="ready"]');
+  await expect(card).toBeVisible();
+  await card.locator(".kova-file-card-open").click();
+  const pane = page.locator(".kova-file-pane");
+  await expect(pane).toBeVisible();
+  await expect(pane.getByText("Page 1 of 1", { exact: true })).toBeVisible();
+  const canvas = pane.locator("canvas");
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
+  const dimensions = await canvas.evaluate((element) => {
+    const bitmap = element as HTMLCanvasElement;
+    const rect = bitmap.getBoundingClientRect();
+    return {
+      bitmapRatio: bitmap.width / bitmap.height,
+      displayedRatio: rect.width / rect.height,
+      left: rect.left,
+      right: rect.right,
+      viewport: document.documentElement.clientWidth,
+    };
+  });
+  expect(dimensions.bitmapRatio).toBeCloseTo(612 / 792, 2);
+  expect(dimensions.displayedRatio).toBeCloseTo(dimensions.bitmapRatio, 2);
+  expect(dimensions.left).toBeGreaterThanOrEqual(-1);
+  expect(dimensions.right).toBeLessThanOrEqual(dimensions.viewport + 1);
+  const close = pane.getByRole("button", { name: "Close preview", exact: true });
+  await expectReachable(close, 0, page.viewportSize()!.height);
+  await close.click();
+  await expect(pane).toBeHidden();
+});
