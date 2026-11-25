@@ -583,7 +583,15 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
       activeFileName,
       fileInterrupted,
     }),
-    [sources, onSourceClick, onSaveImage, imageActions, onOpenFile, activeFileName, fileInterrupted],
+    [
+      sources,
+      onSourceClick,
+      onSaveImage,
+      imageActions,
+      onOpenFile,
+      activeFileName,
+      fileInterrupted,
+    ],
   );
   return (
     <MarkdownActionsContext.Provider value={actions}>
