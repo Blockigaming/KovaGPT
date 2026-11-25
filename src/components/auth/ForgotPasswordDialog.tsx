@@ -13,7 +13,6 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Mail } from "lucide-react";
-import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-browser";
 
 export function ForgotPasswordDialog({
   open,
@@ -64,17 +63,10 @@ export function ForgotPasswordDialog({
     submittingRef.current = true;
     setLoading(true);
     try {
-      if (browserKovaAuthEnabled()) {
-        const response = await kovaPublicAuthJson("/api/auth/recovery/request", {
-          email: normalizedEmail,
-        });
-        if (!response.ok) throw new Error(`Kova recovery request failed (${response.status})`);
-      } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
       if (operationRef.current !== operation) return;
       setSent(true);
       toast.success("If an account exists for this email, you’ll receive recovery instructions.");
