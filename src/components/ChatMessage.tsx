@@ -1,6 +1,5 @@
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { ActivityGroup } from "./ActivityGroup";
-import { ResponseBrowserCard } from "./ResponseBrowserCard";
 import { segmentReply } from "@/lib/activity-groups.mjs";
 import { LiveThinking } from "./LiveThinking";
 import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
@@ -94,6 +93,11 @@ import {
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 
+const ResponseBrowserCard = lazy(() =>
+  import("./ResponseBrowserCard").then(({ ResponseBrowserCard }) => ({
+    default: ResponseBrowserCard,
+  })),
+);
 const MemorySourcesDialog = lazy(() =>
   import("./MemorySourcesDialog").then(({ MemorySourcesDialog }) => ({
     default: MemorySourcesDialog,
@@ -1076,15 +1080,22 @@ function ChatMessageInner({
                 message.content &&
                 replySegments?.at(-1)?.kind !== "group" && <span className="cursor-blink" />}
             </div>
-            {isSignedIn && principalResolved && userKey && (
-              <ResponseBrowserCard
-                key={`${userKey}:${message.id}`}
-                activities={message.activities}
-                ownerId={userKey}
-                chatId={chatId}
-                messageId={message.id}
-              />
-            )}
+            {isSignedIn &&
+              principalResolved &&
+              userKey &&
+              message.activities?.some(
+                (row) => row.tool === "browser_interact" || row.tool === "browser_open_request",
+              ) && (
+                <Suspense fallback={null}>
+                  <ResponseBrowserCard
+                    key={`${userKey}:${message.id}`}
+                    activities={message.activities}
+                    ownerId={userKey}
+                    chatId={chatId}
+                    messageId={message.id}
+                  />
+                </Suspense>
+              )}
             {!streaming && message.generationStatus === "stopped" && (
               <div
                 className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"
