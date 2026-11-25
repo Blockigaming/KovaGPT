@@ -547,9 +547,7 @@ const markdownComponents: Components = {
       </ResponseEnhanced>
     </Suspense>
   ),
-  strong: ({ children }) => (
-    <strong className="kova-response-emphasis">{children}</strong>
-  ),
+  strong: ({ children }) => <strong className="kova-response-emphasis">{children}</strong>,
   a: MarkdownLink,
   img: MarkdownImage,
   span: MarkdownSpan,
