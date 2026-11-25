@@ -91,11 +91,16 @@ function ResetPassword() {
         markPasswordRecoveryFlow(session.user.id);
         finish(true);
       } catch {
+        if (cancelled) return;
         clearPasswordRecoveryFlow();
         finish(false);
       }
     };
-    void check();
+    // Defer consumption of the one-time URL until synchronous React effect
+    // replay has cancelled the first mount. A cancelled effect must not scrub it.
+    void Promise.resolve().then(() => {
+      if (!cancelled) return check();
+    });
     const t = window.setTimeout(() => {
       if (settled) return;
       finish(false);
