@@ -779,12 +779,28 @@ function KovaGPT() {
   useEffect(() => {
     const element = workspaceRef.current;
     if (!element) return;
-    const observer = new ResizeObserver(() => setWorkspaceWidth(element.clientWidth));
+    let resizeFrame: number | null = null;
+    let measuredWidth = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (resizeFrame !== null || element.clientWidth === measuredWidth) return;
+      // A workspace width update can change descendant layout. Defer the React
+      // update until the next frame, outside ResizeObserver notification delivery.
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        const width = element.clientWidth;
+        if (width === measuredWidth) return;
+        measuredWidth = width;
+        setWorkspaceWidth(width);
+      });
+    });
     observer.observe(element);
-    setWorkspaceWidth(element.clientWidth);
+    setWorkspaceWidth(measuredWidth);
     const saved = Number(safeBrowserStorage("localStorage")?.getItem("kova-result-pane-ratio"));
     if (Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8) setPaneRatio(saved);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+    };
   }, []);
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem("kova-result-pane-ratio", String(paneRatio));
@@ -2150,7 +2166,11 @@ function KovaGPT() {
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: chatRequestHeaders(userMsg.id, assistantMsg.id, voiceRequest),
+          headers: chatRequestHeaders(
+            requestId ? `${userMsg.id}:${assistantMsg.id}` : userMsg.id,
+            assistantMsg.id,
+            voiceRequest,
+          ),
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,

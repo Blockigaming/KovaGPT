@@ -207,6 +207,7 @@ export function createTranscriptReadingAnchorController(
   let anchor =
     options.initialAnchor ?? captureTranscriptReadingAnchor(element, options.isFollowingBottom());
   let captureFrame: number | null = null;
+  let compensationFrame: number | null = null;
   let intentFrame: number | null = null;
   let knownTop = element.scrollTop;
   let userIntentPending = false;
@@ -249,6 +250,15 @@ export function createTranscriptReadingAnchorController(
     knownTop = result.top;
     if (result.clamped || result.reason === "message-removed") capture();
   };
+  const queueCompensation = () => {
+    if (!current() || captureFrame !== null || controlGestureActive || compensationFrame !== null)
+      return;
+    compensationFrame =
+      window?.requestAnimationFrame(() => {
+        compensationFrame = null;
+        compensate();
+      }) ?? null;
+  };
   const layoutChanged = () => {
     for (const [target, previous] of sizes) {
       const rect = target.getBoundingClientRect();
@@ -263,7 +273,12 @@ export function createTranscriptReadingAnchorController(
     // pre-reflow passage rather than capturing the already shifted viewport.
     // Other changed scroll positions remain real navigation, including momentum.
     const maximum = Math.max(0, element.scrollHeight - element.clientHeight);
-    if (!userIntentPending && !gestureActive && knownTop > maximum && layoutChanged()) {
+    if (
+      !userIntentPending &&
+      !gestureActive &&
+      knownTop > maximum &&
+      (layoutChanged() || compensationFrame !== null)
+    ) {
       compensate();
       return;
     }
@@ -318,7 +333,8 @@ export function createTranscriptReadingAnchorController(
             changed = true;
           sizes.set(entry.target, [rect.width, rect.height]);
         }
-        if (changed) compensate();
+        // Scroll and style writes must not occur during ResizeObserver delivery.
+        if (changed) queueCompensation();
       })
     : null;
   const observe = (target: HTMLElement) => {
@@ -383,6 +399,8 @@ export function createTranscriptReadingAnchorController(
       disposed = true;
       cancelCapture();
       cancelIntent();
+      if (compensationFrame !== null) window?.cancelAnimationFrame(compensationFrame);
+      compensationFrame = null;
       observer?.disconnect();
       mutations?.disconnect();
       sizes.clear();

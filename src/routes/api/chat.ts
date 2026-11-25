@@ -2133,7 +2133,7 @@ export const Route = createFileRoute("/api/chat")({
                 return Response.json(
                   {
                     error: duplicate
-                      ? "This generation request is already running."
+                      ? "This generation was already submitted. Check the conversation before retrying; the previous attempt may have completed."
                       : quota
                         ? "Your generation allowance has been reached. Try again when it resets."
                         : "Too many generation requests are running. Please try again shortly.",
@@ -3122,17 +3122,20 @@ export const Route = createFileRoute("/api/chat")({
                       controller.enqueue(
                         enc.encode(sseEvent({ kind: "voice_model_receipt", receipt })),
                       );
-                    controller.enqueue(enc.encode(sseDone()));
                   } else {
                     upstreamReader = boundedUpstreamBody.getReader();
                     while (true) {
                       const { done, value } = await upstreamReader.read();
                       if (done) break;
-                      usageBuffer += new TextDecoder().decode(value, { stream: true });
-                      controller.enqueue(value);
+                      // The bounded SSE reader emits a canonical DONE frame as a
+                      // separate chunk. Do not expose it before accounting settles.
+                      const frame = new TextDecoder().decode(value);
+                      usageBuffer += frame;
+                      if (frame !== sseDone()) controller.enqueue(value);
                     }
                   }
                   await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
+                  if (!request.signal.aborted) controller.enqueue(enc.encode(sseDone()));
                 } catch (error) {
                   const providerTimedOut = isProviderTimeoutError(error);
                   const providerFailureCode = providerTimedOut
