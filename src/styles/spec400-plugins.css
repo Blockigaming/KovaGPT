@@ -1456,3 +1456,77 @@
   width: 14px;
   height: 14px;
 }
+
+/* Connector page: Kova-rounded actions, meta line and "See it in action" gallery. */
+.kova-connection-hero .kova-connection-meta {
+  grid-area: 3 / 2;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+.kova-connection-hero .kova-connection-header-actions {
+  grid-area: 4 / 2;
+}
+.kova-connection-header-actions button,
+.kova-connection-header-actions .kova-connection-primary,
+.kova-connection-back,
+.spec400-plugin-card-action,
+.spec400-plugin-card-action[data-connection-action] {
+  border-radius: 999px;
+}
+.kova-connection-header-actions .kova-connection-primary {
+  min-height: 44px;
+  padding-inline: 24px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+}
+.kova-connection-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  font-family: var(--font-ui);
+}
+.kova-connection-gallery figure {
+  margin: 0;
+  display: flex;
+  min-height: 190px;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--card, var(--background));
+  padding: 18px;
+}
+.kova-connection-gallery figure > :first-child {
+  flex: 1;
+  margin: 0;
+}
+.kova-connection-gallery img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  object-fit: cover;
+}
+.kova-connection-gallery ul {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.kova-connection-gallery li,
+.kova-connection-panel-ask {
+  border-radius: 14px;
+  background: var(--muted);
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.kova-connection-gallery p {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.kova-connection-gallery figcaption {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}

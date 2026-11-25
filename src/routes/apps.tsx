@@ -39,7 +39,7 @@ import {
   disconnectGitHub,
   type GitHubManagement,
 } from "@/lib/github.functions";
-import { authFetch } from "@/lib/auth-fetch";
+import { authFetch, fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
 import { ConnectorWriteControls } from "@/components/ConnectorWriteControls";
@@ -55,6 +55,7 @@ import {
   CONNECTION_FLOWS,
   canReadConnection,
   connectionAccounts,
+  connectionAuthorizationUrl,
   hasConnectionScopes,
 } from "@/integrations/connection-flows.mjs";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
@@ -290,11 +291,13 @@ function AppCard({
   state,
   configured,
   onDetails,
+  onConnect,
 }: {
   item: ConnectorItem;
   state: ConnState;
   configured: boolean;
   onDetails: (source: "title" | "action") => void;
+  onConnect?: () => void;
 }) {
   const pending = state === "connecting" || state === "syncing";
   const reconnect = ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state);
@@ -339,7 +342,11 @@ function AppCard({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onDetails("action")}
+            onClick={() =>
+              onConnect && (action === "Connect" || action === "Reconnect")
+                ? onConnect()
+                : onDetails("action")
+            }
             aria-label={`${action} ${item.label}`}
             className="spec400-plugin-card-action"
             data-connection-action={
@@ -1334,6 +1341,55 @@ function AppsPage() {
     toast.error(`${item.label} is not available in this deployment.`);
   };
 
+  const cardConnectBusyRef = useRef(false);
+  const canConnectFromCard = (id: string) => {
+    if (!isSignedIn || !userKey) return false;
+    if (id === "gmail") return tierStatus === "ready" && tier !== "free";
+    if (isGoogleId(id) || id === "github") return true;
+    const flow = CONNECTION_FLOWS[id];
+    return Boolean(
+      flow && flow.authentication !== "api-key" && id !== "notion" && id !== "notion-private",
+    );
+  };
+  // Starts the provider's own sign-in straight from the directory card.
+  const startCardConnect = async (item: ConnectorItem) => {
+    if (cardConnectBusyRef.current || !userKey) return;
+    cardConnectBusyRef.current = true;
+    try {
+      if (isGoogleId(item.id)) {
+        await handleConnect(item);
+        return;
+      }
+      if (item.id === "github") {
+        const response = await authFetch("/api/github/auth");
+        const result = (await response.json().catch(() => null)) as { url?: unknown } | null;
+        const authorizationUrl = parseGitHubAuthorizationUrl(result?.url);
+        if (!response.ok || !authorizationUrl) throw new Error("github_authorization_unavailable");
+        window.location.assign(authorizationUrl);
+        return;
+      }
+      const flow = CONNECTION_FLOWS[item.id];
+      if (!flow) throw new Error("connection_unavailable");
+      const response = await fetchWithTimeoutAuthenticated("/api/integrations/oauth/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Kova-Owner": userKey },
+        body: JSON.stringify({
+          provider: flow.provider,
+          optionalScopes: flow.scopes,
+          returnPath: `/apps?connection_view=${item.id}`,
+        }),
+      });
+      const body = await response.json();
+      const url = connectionAuthorizationUrl(flow.provider, body.url);
+      if (!response.ok || !url) throw new Error("connection_start_failed");
+      window.location.assign(url);
+    } catch {
+      toast.error(`Could not start the ${item.label} connection. Try again.`);
+    } finally {
+      cardConnectBusyRef.current = false;
+    }
+  };
+
   const isGoogleConnected = (id: string): boolean => {
     if (!visibleGoogleStatus?.connected) return false;
     if (id === "google") return true;
@@ -1666,6 +1722,7 @@ function AppsPage() {
             detailTriggerRef.current = { id: item.id, source, principal };
             void navigate({ search: { plugin: item.id } as never });
           }}
+          onConnect={canConnectFromCard(item.id) ? () => void startCardConnect(item) : undefined}
         />
       ))}
     </ul>
@@ -1745,6 +1802,24 @@ function AppsPage() {
                     state={stateOf(visibleSelectedApp.id)}
                     configured={configuredOf(visibleSelectedApp.id)}
                   />
+                  {configuredOf(visibleSelectedApp.id) &&
+                    canConnectFromCard(visibleSelectedApp.id) &&
+                    stateOf(visibleSelectedApp.id) !== "connected" && (
+                      <Button
+                        type="button"
+                        className="kova-connection-primary"
+                        disabled={["connecting", "syncing"].includes(
+                          stateOf(visibleSelectedApp.id),
+                        )}
+                        onClick={() => void startCardConnect(visibleSelectedApp)}
+                      >
+                        {["expired", "reauthorize", "permission_incomplete", "failed"].includes(
+                          stateOf(visibleSelectedApp.id),
+                        )
+                          ? "Reconnect"
+                          : "Connect"}
+                      </Button>
+                    )}
                   <Button
                     type="button"
                     variant="outline"
@@ -1772,7 +1847,40 @@ function AppsPage() {
                 {visibleSelectedApp.label}
               </h1>
               <p>{visibleSelectedApp.description}</p>
+              <p className="kova-connection-meta">
+                By {selectedProfile.publisher ?? visibleSelectedApp.label} ·{" "}
+                {visibleSelectedApp.category}
+              </p>
             </header>
+            <section className="kova-connection-gallery" aria-label="See it in action">
+              {selectedProfile.gallery ? (
+                selectedProfile.gallery.map((image) => (
+                  <figure key={image.src}>
+                    <img src={image.src} alt={image.alt} loading="lazy" />
+                    <figcaption>{image.caption}</figcaption>
+                  </figure>
+                ))
+              ) : (
+                <>
+                  <figure>
+                    <div className="kova-connection-panel-ask">{selectedProfile.example}</div>
+                    <figcaption>You ask</figcaption>
+                  </figure>
+                  <figure>
+                    <ul>
+                      {selectedProfile.read.slice(0, 3).map((label) => (
+                        <li key={label}>{label}</li>
+                      ))}
+                    </ul>
+                    <figcaption>Kova reads</figcaption>
+                  </figure>
+                  <figure>
+                    <p>{selectedProfile.exampleResult}</p>
+                    <figcaption>Illustrative result</figcaption>
+                  </figure>
+                </>
+              )}
+            </section>
             <Tabs defaultValue="overview" className="kova-connection-tabs">
               <TabsList className="kova-connection-tablist" aria-label="Connection information">
                 <TabsTrigger value="overview">Overview</TabsTrigger>

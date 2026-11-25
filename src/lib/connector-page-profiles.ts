@@ -7,6 +7,7 @@ type Profile = {
   example: string;
   related: readonly string[];
   authorization?: string;
+  gallery?: readonly { src: string; alt: string; caption: string }[];
 };
 
 // Editorial copy is display-only. The catalog and account managers own capabilities and grants.
@@ -282,6 +283,26 @@ const exampleResults: Readonly<Record<string, string>> = {
   canva: "Spring campaign · Presentation · 8 pages. Open the design in Canva to continue editing.",
 };
 
+const galleries: Readonly<Record<string, NonNullable<Profile["gallery"]>>> = {
+  canva: [
+    {
+      src: "/connectors/canva-presentation.svg",
+      alt: "Illustration of a presentation slide",
+      caption: "Presentations",
+    },
+    {
+      src: "/connectors/canva-social.svg",
+      alt: "Illustration of a social post",
+      caption: "Social posts",
+    },
+    {
+      src: "/connectors/canva-poster.svg",
+      alt: "Illustration of an event poster",
+      caption: "Posters",
+    },
+  ],
+};
+
 export function getConnectorPageProfile(id: string) {
   const review = getPluginReview(id);
   if (!review) return undefined;
@@ -296,6 +317,7 @@ export function getConnectorPageProfile(id: string) {
   ];
   return {
     ...custom,
+    gallery: Object.hasOwn(galleries, id) ? galleries[id] : undefined,
     overview: custom?.overview ?? review.connector.description,
     related: custom?.related ?? [],
     exampleResult: Object.hasOwn(exampleResults, id) ? exampleResults[id] : capabilities("read")[0],
