@@ -2133,13 +2133,13 @@ export const Route = createFileRoute("/api/chat")({
                 return Response.json(
                   {
                     error: duplicate
-                      ? "This generation request is already running."
+                      ? "This generation was already submitted. Check the conversation before retrying; the previous attempt may have completed."
                       : quota
                         ? "Your generation allowance has been reached. Try again when it resets."
                         : "Too many generation requests are running. Please try again shortly.",
                     code: acquisition.rejection,
                     category: quota ? "quota_exceeded" : duplicate ? "bad_request" : "rate_limit",
-                    retryable: !quota && !duplicate,
+                    retryable: !quota,
                     requestId,
                   },
                   {
