@@ -23,7 +23,7 @@ test("Temporary Chat is reachable and truthfully selected from the mobile top ba
     read("src/components/DesktopChatToolbar.tsx"),
   ]);
 
-  assert.match(topBar, /MessageCircleOff/);
+  assert.match(topBar, /TemporaryChatIcon/);
   assert.match(topBar, /isSignedIn && !chatStarted && onTemporaryChatChange/);
   assert.match(topBar, /onTemporaryChatChange\(!temporaryChat, event.currentTarget\)/);
   assert.match(topBar, /aria-pressed=\{temporaryChat\}/);
