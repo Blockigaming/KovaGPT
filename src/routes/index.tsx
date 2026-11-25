@@ -2150,7 +2150,11 @@ function KovaGPT() {
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: chatRequestHeaders(userMsg.id, assistantMsg.id, voiceRequest),
+          headers: chatRequestHeaders(
+            requestId ? `${userMsg.id}:${assistantMsg.id}` : userMsg.id,
+            assistantMsg.id,
+            voiceRequest,
+          ),
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,
