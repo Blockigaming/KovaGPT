@@ -63,10 +63,12 @@ function harness(db, auth = pub) {
   });
   return { ...h, providerCalls, auth };
 }
-async function journey(h) {
+async function journey(h, nativeChallenge) {
+  const start = new URL(`${pub}/api/auth/google/start?return_to=%2Fprojects%2Ffixture`);
+  if (nativeChallenge) start.searchParams.set("native_challenge", nativeChallenge);
   let response = await h.handleKovaGoogleStart(
-    new Request(`${pub}/api/auth/google/start?return_to=%2Fprojects%2Ffixture`, {
-      headers: { "sec-fetch-site": "same-origin" },
+    new Request(start, {
+      headers: { "sec-fetch-site": nativeChallenge ? "none" : "same-origin" },
     }),
   );
   const browser = cookie(response, "__Host-kova_oauth_browser");
@@ -89,7 +91,14 @@ async function journey(h) {
   );
   assert.equal(callback.status, 303);
   const exchange = new URL(callback.headers.get("location"));
-  assert.equal(exchange.pathname, "/api/auth/google/exchange", JSON.stringify(h.logs));
+  if (nativeChallenge) {
+    assert.equal(exchange.protocol, "kovagpt-native:");
+    assert.equal(exchange.host, "google");
+    assert.equal(exchange.pathname, "/exchange");
+    assert.equal(exchange.searchParams.has("native_challenge"), false);
+  } else {
+    assert.equal(exchange.pathname, "/api/auth/google/exchange", JSON.stringify(h.logs));
+  }
   assert.ok(exchange.searchParams.get("binding"));
   return { browser, exchange };
 }
@@ -273,4 +282,25 @@ test("an old unbound OAuth state is refused before Google token exchange and acc
   );
   assert.match(response.headers.get("location"), /google_exchange_failed/);
   assert.equal(h.calls.length, 1);
+});
+
+test("native Google handoff requires the initiating app's verifier and cannot replay", async () => {
+  const db = await authDatabase();
+  try {
+    const h = harness(db, "https://auth.kova.test");
+    const verifier = randomBytes(32).toString("hex");
+    const challenge = createHash("sha256").update(verifier).digest("hex");
+    const { browser, exchange: callback } = await journey(h, challenge);
+    const url = new URL(`/api/auth/google/exchange${callback.search}`, pub);
+    denied(await exchange(h, url, browser));
+    denied(await exchange(h, url, `__Host-kova_native_google=${challenge}`));
+    const cookies = `__Host-kova_native_google=${verifier}`;
+    const success = await exchange(h, url, cookies);
+    assert.equal(success.headers.get("location"), `${pub}/projects/fixture`);
+    assert.ok(cookie(success, "__Host-kova_session"));
+    assert.equal(cookie(success, "__Host-kova_native_google"), "__Host-kova_native_google=");
+    denied(await exchange(h, url, cookies));
+  } finally {
+    await db.close();
+  }
 });
