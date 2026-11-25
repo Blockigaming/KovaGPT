@@ -1,5 +1,6 @@
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { ActivityGroup } from "./ActivityGroup";
+import { ResponseBrowserCard } from "./ResponseBrowserCard";
 import { segmentReply } from "@/lib/activity-groups.mjs";
 import { LiveThinking } from "./LiveThinking";
 import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
@@ -1074,6 +1075,13 @@ function ChatMessageInner({
                 message.content &&
                 replySegments?.at(-1)?.kind !== "group" && <span className="cursor-blink" />}
             </div>
+            {isSignedIn && principalResolved && userKey && (
+              <ResponseBrowserCard
+                key={`${userKey}:${message.id}`}
+                activities={message.activities}
+                ownerId={userKey}
+              />
+            )}
             {!streaming && message.generationStatus === "stopped" && (
               <div
                 className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"
