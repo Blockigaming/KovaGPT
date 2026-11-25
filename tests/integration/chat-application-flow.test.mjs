@@ -563,7 +563,7 @@ test("chat completion waits for the previous generation reservation to settle", 
   try {
     await waitFor(() => visible === "Visible ", "first content arrives before completion");
     f.finish();
-    await waitFor(() => visible === "Visible completion.", "final content arrives during settlement");
+    await waitFor(() => visible === "Visible completion.", "final content arrives before DONE");
     await new Promise((resolve) => setTimeout(resolve, 25));
     assert.equal(completed, false, "DONE must wait for accounting");
     assert.equal(f.finalizations.length, 0);
