@@ -1,7 +1,8 @@
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { useEffect, useRef, useState } from "react";
-import { Check, MessageCircleOff, ShieldCheck, BookOpen } from "lucide-react";
+import { Check, ShieldCheck, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TemporaryChatIcon } from "./TemporaryChatIcon";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { TemporaryChatContext } from "@/lib/chat-store";
@@ -41,7 +42,7 @@ export function TemporaryChatStartDialog({
       >
         <div className="flex items-start gap-3">
           <div className="rounded-xl bg-muted p-2.5">
-            <MessageCircleOff className="h-5 w-5" aria-hidden="true" />
+            <TemporaryChatIcon className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <DialogTitle>Start a temporary chat</DialogTitle>
@@ -205,7 +206,7 @@ export function TemporaryChatToggle({
         enabled ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
       }`}
     >
-      <MessageCircleOff className="w-5 h-5" aria-hidden="true" />
+      <TemporaryChatIcon className="w-5 h-5" aria-hidden="true" />
       {confirmed && (
         <span className="absolute inset-0 flex items-center justify-center">
           <Check className="w-4 h-4 text-primary drop-shadow" />
