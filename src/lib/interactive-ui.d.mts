@@ -126,7 +126,12 @@ export type InteractiveBlock =
   | SpeechBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
-export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };
+export type InteractiveSubmission = {
+  values?: FormValues;
+  action?: string;
+  selected?: string[];
+  other?: string;
+};
 export type InteractivePart =
   { kind: "text"; text: string } | { kind: "interactive"; block: InteractiveBlock; index: number };
 export const FIELD_KINDS: InteractiveFieldKind[];

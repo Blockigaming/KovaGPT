@@ -56,7 +56,7 @@ test("Intelligent Interface next-step buttons send one readable next message", a
   const f = fixture((message) => messages.push(message));
   await f.flush();
   assert.ok(f.text().includes("Intelligent Interface"));
-  const button = f.find("button", (node) => node.props.children === "Build my launch plan");
+  const button = f.find("button", (node) => node.props["aria-label"] === "Build my launch plan");
   // Two clicks before React commits must not submit the same answer twice.
   button.props.onClick();
   button.props.onClick();
@@ -80,8 +80,9 @@ test("read-only answers cannot submit and a rejected callback does not mark the 
     if (calls === 1) throw new Error("fixture-rejection");
   });
   await rejected.flush();
-  assert.throws(() => rejected.find("button").props.onClick(), /fixture-rejection/);
+  rejected.find("button").props.onClick();
   await rejected.flush();
+  assert.match(rejected.text(), /Your response was not sent/);
   assert.equal(rejected.find("section").props["data-interactive-state"], "open");
   await rejected.click("Build my launch plan");
   assert.equal(calls, 2);
@@ -433,4 +434,11 @@ test("response map pans and zooms around a selected location without external ti
   assert.equal(f.find("image").props.href, "/bundled/world.svg");
   await f.click("World view");
   assert.equal(f.find("svg").props.viewBox, "0 0 720 360");
+});
+
+test("custom answer is sent as user text rather than a model action", () => {
+  assert.equal(
+    interactive.formatSubmission(nextSteps, { other: "  My own answer  " }),
+    "Choose your next step\nSelected: Other\nMy own answer",
+  );
 });
