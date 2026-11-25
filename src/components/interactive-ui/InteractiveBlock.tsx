@@ -166,6 +166,7 @@ export function InteractiveBlock({
             locked={locked}
             initial={submitted?.values ?? stored.draft?.values}
             submittedAction={submitted?.action}
+            submittedOther={submitted?.other}
             onDraft={(values) => saveDraft({ values })}
             onSubmit={submit}
           />
@@ -201,6 +202,7 @@ function FormBody({
   locked,
   initial,
   submittedAction,
+  submittedOther,
   onDraft,
   onSubmit,
 }: {
@@ -208,6 +210,7 @@ function FormBody({
   locked: boolean;
   initial?: FormValues;
   submittedAction?: string;
+  submittedOther?: string;
   onDraft: (values: FormValues) => void;
   onSubmit: (s: InteractiveSubmission) => void;
 }) {
@@ -250,6 +253,10 @@ function FormBody({
     onSubmit({ values: clean });
   };
   const hasFields = block.fields.length > 0;
+  const [otherOpen, setOtherOpen] = useState(Boolean(submittedOther));
+  const [other, setOther] = useState(submittedOther ?? "");
+  const choiceOnly = !hasFields && block.actions.length > 0;
+  const choiceClass = "h-auto min-h-11 w-full justify-start gap-3 rounded-lg border border-border bg-transparent px-3 py-2.5 text-left font-normal whitespace-normal [overflow-wrap:anywhere] before:shrink-0 before:font-semibold before:content-[attr(data-choice-letter)] sm:min-h-10";
 
   return (
     <form noValidate onSubmit={handleSubmit} className="space-y-4">
@@ -264,7 +271,7 @@ function FormBody({
           onChange={(v) => set(field.id, v)}
         />
       ))}
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className={choiceOnly ? "grid grid-cols-1 gap-2 pt-1" : "flex flex-wrap gap-2 pt-1"}>
         {hasFields && (
           <Button
             type="submit"
@@ -275,20 +282,59 @@ function FormBody({
             {block.submitLabel ?? "Submit"}
           </Button>
         )}
-        {block.actions.map((action) => (
+        {block.actions.map((action, index) => (
           <Button
             key={action.id}
             type="button"
-            variant={action.style === "primary" ? "default" : "outline"}
+            variant={choiceOnly ? "outline" : action.style === "primary" ? "default" : "outline"}
+            data-choice-letter={choiceOnly ? `${String.fromCharCode(65 + index)}.` : undefined}
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
-            className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+            className={choiceOnly ? choiceClass : "h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"}
             onPointerDown={preserveActionFocus}
             onClick={() => !locked && onSubmit({ action: action.id, values: valuesRef.current })}
           >
             {action.label}
           </Button>
         ))}
+        {choiceOnly && (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              data-choice-letter={`${String.fromCharCode(65 + block.actions.length)}.`}
+              className={choiceClass}
+              aria-expanded={otherOpen}
+              aria-pressed={Boolean(submittedOther) || undefined}
+              disabled={locked}
+              onClick={() => setOtherOpen((open) => !open)}
+            >
+              Other
+            </Button>
+            {otherOpen && (
+              <div className="min-w-0 space-y-2">
+                <Label htmlFor={`${formId}-other`}>Your answer</Label>
+                <Textarea
+                  id={`${formId}-other`}
+                  value={submittedOther ?? other}
+                  maxLength={4000}
+                  disabled={locked}
+                  placeholder="Type your own answer"
+                  onChange={(event) => setOther(event.target.value)}
+                />
+                {!locked && (
+                  <Button
+                    type="button"
+                    disabled={!other.trim()}
+                    onClick={() => onSubmit({ other: other.trim() })}
+                  >
+                    Submit answer
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </form>
   );
