@@ -217,12 +217,15 @@ test.describe("short desktop model picker", () => {
     const thumb = picker.locator('[data-slot="effort-thumb"]');
     await trigger.press("Space");
     await expect(picker).toBeVisible();
-    // Phones dock the popup above the chat bar at the chat bar's width.
-    const composerWidth = await page
-      .locator(".spec400-composer:visible")
-      .first()
-      .evaluate((el) => `${el.getBoundingClientRect().width}px`);
-    await expect(picker).toHaveCSS("width", composerWidth);
+    // Phones dock the popup above the chat bar at its width; wider windows keep 282px.
+    const expectedWidth = await page.evaluate(() => {
+      if (window.innerWidth >= 768) return "282px";
+      const composer = Array.from(document.querySelectorAll(".spec400-composer")).find(
+        (el) => el.getClientRects().length > 0,
+      );
+      return `${composer?.getBoundingClientRect().width}px`;
+    });
+    await expect(picker).toHaveCSS("width", expectedWidth);
     await expect(picker).toBeInViewport({ ratio: 1 });
     await expect
       .poll(async () => {
