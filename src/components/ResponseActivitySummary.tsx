@@ -20,8 +20,8 @@ function activityPhrase(activities: Activity[]) {
 }
 
 /**
- * One collapsed line summarising a reply's work ("Searched the web, created a file ›").
- * Expanding it shows every step and every file the reply made.
+ * One expandable line summarising a reply's work ("Searched the web, created a file ›").
+ * Initially expanded, it shows every step and every file the reply made.
  */
 export function ResponseActivitySummary({
   activities,
@@ -30,7 +30,7 @@ export function ResponseActivitySummary({
   activities?: Activity[];
   files: ResponseFile[];
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const panelId = useId();
   const rows = activities?.filter((activity) => activity.tool !== "scheduled_task") ?? [];
   const created = summarizeCreatedFiles(files);
