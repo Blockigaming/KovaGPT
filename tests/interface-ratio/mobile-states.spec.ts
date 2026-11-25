@@ -348,7 +348,9 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const ready = page.locator('.kova-assistant-message .kova-file-card[data-state="ready"]');
-    const failed = page.locator('.kova-assistant-message .kova-file-card[data-state="interrupted"]');
+    const failed = page.locator(
+      '.kova-assistant-message .kova-file-card[data-state="interrupted"]',
+    );
     await expect(ready).toBeVisible();
     await expect(failed).toContainText("Generation interrupted. Retry the response.");
     await expect(failed.getByRole("button")).toBeDisabled();
@@ -412,7 +414,9 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
-test("mobile browser handoff fits its response and opens a contained workspace", async ({ page }) => {
+test("mobile browser handoff fits its response and opens a contained workspace", async ({
+  page,
+}) => {
   const viewport = page.viewportSize()!;
   test.skip(viewport.width >= 1024, "mobile and tablet browser handoff");
   await fixture(page, "dark", true, false, "plus");
@@ -484,4 +488,39 @@ test("mobile browser handoff fits its response and opens a contained workspace",
   await close.click();
   await expect(dialog).toBeHidden();
   await expect(card).toBeFocused();
+});
+
+test("a browser request without a URL keeps its address form within the chat", async ({ page }) => {
+  await fixture(page, "dark", true, false, "plus");
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      status: 400,
+      json: {
+        error: "Include one public HTTPS link for Cloud Browser to open.",
+        code: "cloud_browser_url_required",
+        stage: "cloud_browser",
+        retryable: false,
+      },
+    }),
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT", exact: true }).fill("Open cloud browser");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  const form = page.locator(".kova-browser-destination-form");
+  await expect(form).toBeVisible();
+  const input = form.getByRole("textbox", { name: "Website address" });
+  const button = form.getByRole("button", { name: "Open browser", exact: true });
+  await expect(button).toBeDisabled();
+  await input.fill("https://example.com");
+  await expect(button).toBeEnabled();
+  const dimensions = await form.evaluate((element) => ({
+    overflow: element.scrollWidth - element.clientWidth,
+    pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  }));
+  expect(dimensions.overflow).toBeLessThanOrEqual(1);
+  expect(dimensions.pageOverflow).toBeLessThanOrEqual(1);
+  const box = (await button.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
 });
