@@ -756,7 +756,7 @@ test("opening and leaving a connector page never starts OAuth; Connect is explic
   page,
 }) => {
   await boot(page, undefined, undefined, undefined, "plus");
-  const trigger = page.getByRole("button", { name: "Connect Gmail", exact: true });
+  const trigger = page.getByRole("link", { name: "Gmail", exact: true });
   await trigger.click();
   await expect(page).toHaveURL(/\/apps\?plugin=gmail$/u);
   await expect(page.getByRole("heading", { level: 1, name: "Gmail" })).toBeFocused();
@@ -1159,16 +1159,16 @@ test("Salesforce management sends the selected record type with the owner-bound 
   ]);
 });
 
-test("opening a configured provider never starts OAuth until Connect is clicked", async ({
-  page,
-}) => {
+test("the card Connect button starts the provider sign-in directly", async ({ page }) => {
   await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
     configuredProviders: [{ id: "microsoft" }],
     accounts: [],
   });
-  await page.getByRole("button", { name: "Connect Outlook", exact: true }).click();
+  await page.getByRole("link", { name: "Outlook", exact: true }).click();
+  await expect(page).toHaveURL(/\/apps\?plugin=outlook$/u);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
-  await page.getByRole("article").getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByRole("button", { name: "Back to Connections" }).click();
+  await page.getByRole("button", { name: "Connect Outlook", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as FixtureWindow).operations.length)).toBe(1);
   const operation = (await page.evaluate(() => (window as FixtureWindow).operations))[0];
   expect(operation[1]).toBe("/api/integrations/oauth/start");

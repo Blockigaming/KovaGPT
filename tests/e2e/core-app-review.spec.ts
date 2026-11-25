@@ -160,7 +160,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
     page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
   await page.getByPlaceholder("Search connections").fill("Gmail");
-  await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
+  await page.getByRole("link", { name: "Gmail", exact: true }).click();
   const plugin = page.getByRole("article", { name: "Gmail", exact: true });
   await expect(plugin.getByRole("tab", { name: "Permissions" })).toBeVisible();
   await capture(page, info, "plugins-details");

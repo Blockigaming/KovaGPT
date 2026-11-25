@@ -466,15 +466,17 @@ export function BankConnectionsPanel({
     }
   };
   const hasConnections = Boolean(ownerId && status?.connections.length);
+  // Any in-progress state (opening Plaid, saving, reading) shows the spinner inside the button.
+  const showSpinner = linking || busy;
   const linkButton = (
     <Button
       onClick={() => void connect()}
       disabled={busy || !status?.configured}
-      aria-busy={linking}
-      aria-label={linking ? "Connecting a bank" : undefined}
+      aria-busy={showSpinner}
+      aria-label={showSpinner ? "Connecting a bank" : undefined}
       className="min-w-[132px] bg-white text-neutral-950 hover:bg-neutral-100 disabled:opacity-100"
     >
-      {linking ? (
+      {showSpinner ? (
         <span
           aria-hidden="true"
           className="size-4 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
