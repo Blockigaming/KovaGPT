@@ -107,9 +107,10 @@ export function InteractiveBlock({
         setSubmitError(true);
         return;
       }
-    } catch (error) {
+    } catch {
       submittedRef.current = false;
-      throw error;
+      setSubmitError(true);
+      return;
     }
     setSubmitError(false);
     persist({ submission });
@@ -167,7 +168,8 @@ export function InteractiveBlock({
             initial={submitted?.values ?? stored.draft?.values}
             submittedAction={submitted?.action}
             submittedOther={submitted?.other}
-            onDraft={(values) => saveDraft({ values })}
+            initialOther={stored.draft?.other}
+            onDraft={saveDraft}
             onSubmit={submit}
           />
         ) : (
@@ -203,6 +205,7 @@ function FormBody({
   initial,
   submittedAction,
   submittedOther,
+  initialOther,
   onDraft,
   onSubmit,
 }: {
@@ -211,7 +214,8 @@ function FormBody({
   initial?: FormValues;
   submittedAction?: string;
   submittedOther?: string;
-  onDraft: (values: FormValues) => void;
+  initialOther?: string;
+  onDraft: (draft: InteractiveSubmission) => void;
   onSubmit: (s: InteractiveSubmission) => void;
 }) {
   const formId = useId();
@@ -232,7 +236,7 @@ function FormBody({
     valuesRef.current = next;
     setValues((current) => ({ ...current, [id]: value }));
     if (errors[id]) setErrors(({ [id]: _drop, ...rest }) => rest);
-    onDraft(next);
+    onDraft({ values: next });
   };
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -253,10 +257,13 @@ function FormBody({
     onSubmit({ values: clean });
   };
   const hasFields = block.fields.length > 0;
-  const [otherOpen, setOtherOpen] = useState(Boolean(submittedOther));
-  const [other, setOther] = useState(submittedOther ?? "");
+  const [otherOpen, setOtherOpen] = useState(Boolean(submittedOther ?? initialOther));
+  const [other, setOther] = useState(submittedOther ?? initialOther ?? "");
   const choiceOnly = !hasFields && block.actions.length > 0;
-  const choiceClass = "h-auto min-h-11 w-full justify-start gap-3 rounded-lg border border-border bg-transparent px-3 py-2.5 text-left font-normal whitespace-normal [overflow-wrap:anywhere] before:shrink-0 before:font-semibold before:content-[attr(data-choice-letter)] sm:min-h-10";
+  const choiceClass =
+    "h-auto min-h-11 min-w-0 w-full justify-start gap-3 rounded-xl border border-border bg-transparent px-3 py-2.5 text-left font-normal whitespace-normal [overflow-wrap:anywhere] aria-pressed:bg-accent aria-pressed:opacity-100 sm:min-h-10";
+  const letterClass =
+    "flex size-7 shrink-0 items-center justify-center rounded-full border border-muted-foreground/60 text-xs font-semibold leading-none";
 
   return (
     <form noValidate onSubmit={handleSubmit} className="space-y-4">
@@ -287,14 +294,24 @@ function FormBody({
             key={action.id}
             type="button"
             variant={choiceOnly ? "outline" : action.style === "primary" ? "default" : "outline"}
-            data-choice-letter={choiceOnly ? `${String.fromCharCode(65 + index)}.` : undefined}
+            data-choice-letter={choiceOnly ? String.fromCharCode(65 + index) : undefined}
+            aria-label={choiceOnly ? action.label : undefined}
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
             className={choiceOnly ? choiceClass : "h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"}
             onPointerDown={preserveActionFocus}
             onClick={() => !locked && onSubmit({ action: action.id, values: valuesRef.current })}
           >
-            {action.label}
+            {choiceOnly ? (
+              <>
+                <span aria-hidden="true" data-choice-circle className={letterClass}>
+                  {String.fromCharCode(65 + index)}
+                </span>
+                <span className="min-w-0 flex-1">{action.label}</span>
+              </>
+            ) : (
+              action.label
+            )}
           </Button>
         ))}
         {choiceOnly && (
@@ -302,14 +319,18 @@ function FormBody({
             <Button
               type="button"
               variant="outline"
-              data-choice-letter={`${String.fromCharCode(65 + block.actions.length)}.`}
+              data-choice-letter={String.fromCharCode(65 + block.actions.length)}
+              aria-label="Other"
               className={choiceClass}
               aria-expanded={otherOpen}
               aria-pressed={Boolean(submittedOther) || undefined}
               disabled={locked}
               onClick={() => setOtherOpen((open) => !open)}
             >
-              Other
+              <span aria-hidden="true" data-choice-circle className={letterClass}>
+                {String.fromCharCode(65 + block.actions.length)}
+              </span>
+              <span className="min-w-0 flex-1">Other</span>
             </Button>
             {otherOpen && (
               <div className="min-w-0 space-y-2">
@@ -320,7 +341,10 @@ function FormBody({
                   maxLength={4000}
                   disabled={locked}
                   placeholder="Type your own answer"
-                  onChange={(event) => setOther(event.target.value)}
+                  onChange={(event) => {
+                    setOther(event.target.value);
+                    onDraft({ other: event.target.value });
+                  }}
                 />
                 {!locked && (
                   <Button
