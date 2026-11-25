@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { PanelLeft, MessageCircleOff, Sliders, SquarePen } from "lucide-react";
+import { TemporaryChatIcon } from "./TemporaryChatIcon";
+import { PanelLeft, Sliders, SquarePen } from "lucide-react";
 import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import type { ModeId, Tier } from "@/lib/modes";
 
@@ -154,7 +155,7 @@ export function MobileTopBar({
                     : "text-foreground hover:bg-accent/70 active:bg-accent"
                 }`}
               >
-                <MessageCircleOff className="h-5 w-5" aria-hidden="true" />
+                <TemporaryChatIcon className="h-5 w-5" aria-hidden="true" />
               </Button>
             ) : null}
 
