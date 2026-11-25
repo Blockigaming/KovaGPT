@@ -66,9 +66,9 @@ async function fixture(privatePolicy, costClock) {
         month_used numeric, monthly_allowance numeric,
         weekly_used numeric, weekly_allowance numeric,
         five_hour_used numeric, five_hour_allowance numeric
-      ) language sql stable security definer set search_path=public,pg_temp as $
+      ) language sql stable security definer set search_path=public,pg_temp as $fixture_clock$
         select * from public.fixture_cost_progress_at(_user_id,_plan,'${costClock}'::timestamptz)
-      $;
+      $fixture_clock$;
       revoke all on function public.kova_plan_cost_progress(uuid,text,timestamptz)
         from public,anon,authenticated;
       grant execute on function public.kova_plan_cost_progress(uuid,text,timestamptz)
