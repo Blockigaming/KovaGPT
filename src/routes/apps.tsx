@@ -30,7 +30,7 @@ import {
   Code2,
   Image,
   Settings,
-  BadgeCheck,
+  CircleCheck,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -2263,7 +2263,7 @@ function AppsPage() {
                           {selectedProfile.publisher}
                           {configuredOf(visibleSelectedApp.id) && (
                             <span className="kova-connection-verified">
-                              <BadgeCheck aria-hidden="true" /> Verified
+                              <CircleCheck aria-hidden="true" /> Verified
                             </span>
                           )}
                           {stateOf(visibleSelectedApp.id) === "connected" && (
