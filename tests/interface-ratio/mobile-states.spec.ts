@@ -503,7 +503,9 @@ test("a browser request without a URL keeps its address form within the chat", a
   );
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page\n    .getByRole("textbox", { name: "Message KovaGPT", exact: true })\n    .fill("Open cloud browser");
+  await page
+    .getByRole("textbox", { name: "Message KovaGPT", exact: true })
+    .fill("Open cloud browser");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   const form = page.locator(".kova-browser-destination-form");
   await expect(form).toBeVisible();
