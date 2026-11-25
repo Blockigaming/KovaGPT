@@ -7,7 +7,7 @@ import { chatUsageWindows, legacyFiveHourWindow } from "../../src/lib/plan-usage
 const owner = "11111111-1111-4111-8111-111111111111";
 const sqlPath = "supabase/migrations/20261109145000_kova_hourly_windows_monthly_cost_safety.sql";
 
-async function fixture(privatePolicy) {
+async function fixture(privatePolicy, costClock) {
   const db = new PGlite();
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create table auth.users(id uuid primary key);
@@ -52,6 +52,30 @@ async function fixture(privatePolicy) {
         allowance,
       ]);
     }
+  }
+  if (costClock) {
+    // Bind the admission RPC and new ledger rows to the same synthetic UTC clock.
+    // The original quota calculator and admission SQL remain unchanged.
+    assert.match(costClock, /^2026-11-(09|25)T13:00:00Z$/);
+    await db.exec(`
+      alter function public.kova_plan_cost_progress(uuid,text,timestamptz)
+        rename to fixture_cost_progress_at;
+      create function public.kova_plan_cost_progress(
+        _user_id uuid, _plan text, _asof timestamptz default statement_timestamp()
+      ) returns table(
+        month_used numeric, monthly_allowance numeric,
+        weekly_used numeric, weekly_allowance numeric,
+        five_hour_used numeric, five_hour_allowance numeric
+      ) language sql stable security definer set search_path=public,pg_temp as $fixture_clock$
+        select * from public.fixture_cost_progress_at(_user_id,_plan,'${costClock}'::timestamptz)
+      $fixture_clock$;
+      revoke all on function public.kova_plan_cost_progress(uuid,text,timestamptz)
+        from public,anon,authenticated;
+      grant execute on function public.kova_plan_cost_progress(uuid,text,timestamptz)
+        to service_role;
+      alter table public.ai_usage_events alter column created_at
+        set default '${costClock}'::timestamptz;
+    `);
   }
   // The synthetic fixture creates daily_usage without historical production
   // grants. Give the same table access to the server role as production.
@@ -118,18 +142,29 @@ test("hourly quota rollover preserves weekly usage", async () => {
 });
 
 test("Free uses reserved cost rather than message count alone", async () => {
-  const db = await fixture();
-  try {
-    assert.equal((await request(db, "free", 0.09)).decision, "acquired");
-    assert.equal((await request(db, "free", 0.02)).decision, "five_hour_cost");
-    const usageSql = "select * from public.kova_plan_cost_progress($1,'free')";
-    const progress = await db.query(usageSql, [owner]);
-    const { rows } = progress;
-    assert.equal(Number(rows[0].monthly_allowance), 3);
-    assert.ok(Number(rows[0].five_hour_used) >= 0.09);
-    assert.ok(Number(rows[0].five_hour_allowance) >= 0.1);
-  } finally {
-    await db.close();
+  for (const [clock, lateMonth] of [
+    ["2026-11-09T13:00:00Z", false],
+    ["2026-11-25T13:00:00Z", true],
+  ]) {
+    const db = await fixture(undefined, clock);
+    try {
+      assert.equal((await request(db, "free", 0.09)).decision, "acquired");
+      assert.equal(
+        (await request(db, "free", 0.02)).decision,
+        lateMonth ? "acquired" : "five_hour_cost",
+      );
+      if (lateMonth) {
+        assert.equal((await request(db, "free", 0.01)).decision, "five_hour_cost");
+      }
+      const usageSql = "select * from public.kova_plan_cost_progress($1,'free')";
+      const { rows } = await db.query(usageSql, [owner]);
+      assert.equal(Number(rows[0].monthly_allowance), 3);
+      assert.equal(Number(rows[0].five_hour_used), lateMonth ? 0.11 : 0.09);
+      assert.ok(Number(rows[0].five_hour_allowance) >= 0.1);
+      if (lateMonth) assert.ok(Number(rows[0].five_hour_allowance) > 0.11);
+    } finally {
+      await db.close();
+    }
   }
 });
 
