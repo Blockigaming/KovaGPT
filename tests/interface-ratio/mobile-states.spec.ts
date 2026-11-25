@@ -298,3 +298,116 @@ for (const theme of ["light", "dark"] as const) {
     await page.screenshot({ path: info.outputPath("rotated-draft.png") });
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`${theme}: generated file and expanded activity stay contained on narrow screens`, async ({
+    page,
+  }) => {
+    const filename = `${"long-generated-filename-".repeat(5)}.pdf`;
+    const response = [
+      "A document with **important information**.",
+      `~~~pdf filename="${filename}"`,
+      "Document body",
+      "~~~",
+    ].join("\n\n");
+    await fixture(page, theme, true, true, "plus", {
+      savedMessages: [
+        {
+          id: "ratio-generated-file",
+          role: "assistant",
+          content: response,
+          workedMs: 2000,
+          activities: [
+            {
+              activityId: "ratio-parent",
+              tool: "github_search",
+              label: "Reviewed a very long repository and document path",
+              status: "done",
+              at: 0,
+            },
+            {
+              parentId: "ratio-parent",
+              tool: "file_search",
+              label: "Located document",
+              detail: "unbroken-document-path-".repeat(8),
+              count: 12345,
+              total: 99999,
+              status: "done",
+              durationMs: 123456,
+            },
+          ],
+        },
+        {
+          id: "ratio-interrupted-file",
+          role: "assistant",
+          content: '~~~pdf filename="unfinished-letter.pdf"\nPartial document',
+          generationStatus: "failed",
+        },
+      ],
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const ready = page.locator('.kova-assistant-message .kova-file-card[data-state="ready"]');
+    const failed = page.locator('.kova-assistant-message .kova-file-card[data-state="interrupted"]');
+    await expect(ready).toBeVisible();
+    await expect(failed).toContainText("Generation interrupted. Retry the response.");
+    await expect(failed.getByRole("button")).toBeDisabled();
+    const group = page.locator(".kova-step-group").first();
+    await expect(group).toHaveAttribute("open", "");
+    await expect(group.getByText("Located document")).toBeVisible();
+    const emphasis = page.locator(".kova-response-emphasis").first();
+    await expect(emphasis).toBeVisible();
+    expect(
+      await emphasis.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const parent = getComputedStyle(element.parentElement!);
+        return style.color !== parent.color && style.fontWeight === parent.fontWeight;
+      }),
+    ).toBe(true);
+    for (const selector of [
+      ".kova-file-card",
+      ".kova-file-card-open",
+      ".kova-file-card-title",
+      ".kova-file-card-meta",
+      ".kova-step-group",
+      ".kova-activity-row",
+      ".kova-activity-progress",
+    ]) {
+      const boxes = await page.locator(selector).evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const element = node as HTMLElement;
+          const box = element.getBoundingClientRect();
+          return {
+            left: box.left,
+            right: box.right,
+            viewport: document.documentElement.clientWidth,
+            overflow: element.scrollWidth - element.clientWidth,
+            verticalOverflow: element.scrollHeight - element.clientHeight,
+          };
+        }),
+      );
+      expect(boxes.length, selector).toBeGreaterThan(0);
+      for (const box of boxes) {
+        expect(box.left, selector).toBeGreaterThanOrEqual(-1);
+        expect(box.right, selector).toBeLessThanOrEqual(box.viewport + 1);
+        expect(box.overflow, selector).toBeLessThanOrEqual(1);
+        expect(box.verticalOverflow, selector).toBeLessThanOrEqual(1);
+      }
+    }
+    const viewport = page.viewportSize()!;
+    if (viewport.width < 480) {
+      const download = ready.getByRole("button", { name: `Download ${filename}`, exact: true });
+      await expect(download).toHaveCSS("opacity", "1");
+      const box = (await download.boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    await group.locator("summary").click();
+    await expect(group).not.toHaveAttribute("open", "");
+    await group.locator("summary").click();
+    await expect(group).toHaveAttribute("open", "");
+    expect(
+      await page.locator("html").evaluate((element) => element.scrollWidth - element.clientWidth),
+    ).toBeLessThanOrEqual(1);
+  });
+}
