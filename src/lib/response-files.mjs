@@ -159,7 +159,8 @@ export function describeFile(name, fenceLanguage, content, complete = true) {
   const languageLabel =
     LANGUAGE_LABEL[language] ?? (extension ? extension.toUpperCase() : language.toUpperCase());
   const writing = language === "markdown" || language === "text" || language === "pdf";
-  const preview = language === "html" || language === "svg" || language === "markdown";
+  const preview =
+    language === "html" || language === "svg" || language === "markdown" || language === "pdf";
   const stem =
     name
       .replace(/\.[^.]+$/u, "")
