@@ -49,9 +49,32 @@
   }
 
   /* ---- Composer action row ---- */
+  .kova-assistant .kova-empty-composer .kova-composer-tray,
+  .kova-assistant .kova-empty-composer [data-desktop-tray="true"] {
+    display: none !important;
+  }
   .kova-assistant .spec400-composer {
     --composer-text-inset: 8px;
     --composer-action-inset: 8px;
+    --chat-composer-corner: 24px;
+    min-height: 0 !important;
+    padding: 12px 8px 8px;
+    gap: 4px;
+    border-radius: var(--chat-composer-corner);
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
+    min-height: 0 !important;
+    padding-block-start: 12px;
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-input,
+  .kova-assistant .spec400-composer .spec400-input-region {
+    min-height: 32px !important;
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-toolbar {
+    margin-top: 0;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-input {
+    padding: 4px 0 0 !important;
   }
   .kova-assistant .spec400-composer .spec400-composer-toolbar {
     display: flex !important;
@@ -182,5 +205,25 @@
     margin: 0;
     padding: 0;
     overflow: visible;
+  }
+}
+
+/* Menu rows with a description: icon, label, description stacked in one tidy column */
+@media (width < 768px) {
+  .kova-composer-full-menu .kova-composer-action:has(> small) {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 1px;
+    align-items: center;
+    text-align: start;
+  }
+  .kova-composer-full-menu .kova-composer-action:has(> small) > :is(svg, span:first-child) {
+    grid-row: span 2;
+  }
+  .kova-composer-full-menu .kova-composer-action:has(> small) > small {
+    grid-column: 2;
+    margin: 0;
+    white-space: normal;
   }
 }
