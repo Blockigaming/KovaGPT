@@ -173,6 +173,8 @@ export function clearOAuthResponseFromUrl() {
   if (!url) return;
 
   url.searchParams.delete("code");
+  url.searchParams.delete("token");
+  url.searchParams.delete("token_hash");
   url.searchParams.delete("error");
   url.searchParams.delete("error_code");
   url.searchParams.delete("error_description");
@@ -259,6 +261,11 @@ export async function completeOAuthSessionFromUrl(
     context.assertCurrent();
   };
   assertCurrent();
+
+  if (options.recoveryOnly && (url.searchParams.has("token") || getHashParams(url).has("token"))) {
+    clearPasswordRecoveryFlow();
+    throw new Error("password_recovery_proof_required");
+  }
 
   const oauthError = getOAuthParam(url, "error");
   if (oauthError) {
