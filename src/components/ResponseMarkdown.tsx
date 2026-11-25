@@ -247,7 +247,7 @@ const writingLanguages = new Set([
   "document",
 ]);
 function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & ExtraProps) {
-  const { onOpenFile, activeFileName } = useContext(MarkdownActionsContext);
+  const { onOpenFile, activeFileName, fileInterrupted } = useContext(MarkdownActionsContext);
   const code = node?.children.length === 1 ? node.children[0] : undefined;
   if (
     code?.type !== "element" ||
@@ -290,7 +290,12 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
   if (filename && !officeLabel && onOpenFile) {
     const file = describeFile(filename, language.toLowerCase(), text, node?.data?.kovaCodeComplete);
     return (
-      <ResponseFileCard file={file} active={activeFileName === filename} onOpen={onOpenFile} />
+      <ResponseFileCard
+        file={file}
+        active={activeFileName === filename}
+        interrupted={fileInterrupted}
+        onOpen={onOpenFile}
+      />
     );
   }
   return (
@@ -424,6 +429,7 @@ type MarkdownActions = {
   /** Named files (```html filename="game.html") render as cards that open this preview. */
   onOpenFile?: (file: ResponseFile, trigger: HTMLButtonElement) => void;
   activeFileName?: string;
+  fileInterrupted?: boolean;
   sources?: ResponseSource[];
   onSourceClick?: (sourceId: string, trigger: HTMLButtonElement) => void;
   onSaveImage?: (src: string, title: string) => Promise<void>;
@@ -562,13 +568,22 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
   imageActions,
   onOpenFile,
   activeFileName,
+  fileInterrupted,
 }: MarkdownActions & {
   children: string;
   boxLongProse?: boolean;
 }) {
   const actions = useMemo(
-    () => ({ sources, onSourceClick, onSaveImage, imageActions, onOpenFile, activeFileName }),
-    [sources, onSourceClick, onSaveImage, imageActions, onOpenFile, activeFileName],
+    () => ({
+      sources,
+      onSourceClick,
+      onSaveImage,
+      imageActions,
+      onOpenFile,
+      activeFileName,
+      fileInterrupted,
+    }),
+    [sources, onSourceClick, onSaveImage, imageActions, onOpenFile, activeFileName, fileInterrupted],
   );
   return (
     <MarkdownActionsContext.Provider value={actions}>
