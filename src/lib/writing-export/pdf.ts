@@ -52,6 +52,13 @@ export function wrapPdfText(text: string, font: PDFFont, size: number, width: nu
   }
   return lines;
 }
+/** A blank US Letter file has no title, footer, or generated text. */
+export async function createBlankLetterPdf() {
+  const pdf = await PDFDocument.create();
+  pdf.addPage([612, 792]);
+  return pdf.save();
+}
+
 export async function createDocumentPdf(
   title: string,
   markdown: string,
