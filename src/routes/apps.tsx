@@ -30,6 +30,7 @@ import {
   Code2,
   Image,
   Settings,
+  BadgeCheck,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -1787,14 +1788,6 @@ function AppsPage() {
               <ArrowLeft aria-hidden="true" /> Back to Connections
             </Button>
             <header className="kova-connection-hero">
-              <div className="kova-connection-hero-motion" aria-hidden="true">
-                <span className="kova-connection-wisp" />
-                <span className="kova-connection-wisp" />
-                <span className="kova-connection-wisp" />
-                <span className="kova-connection-spark" />
-                <span className="kova-connection-spark" />
-                <span className="kova-connection-spark" />
-              </div>
               <div className="kova-connection-hero-top">
                 <AppLogo id={visibleSelectedApp.id} />
                 <div className="kova-connection-header-actions">
@@ -1846,45 +1839,11 @@ function AppsPage() {
               <h1 id="connection-title" ref={detailsHeadingRef} tabIndex={-1}>
                 {visibleSelectedApp.label}
               </h1>
-              <p>{visibleSelectedApp.description}</p>
               <p className="kova-connection-meta">
                 By {selectedProfile.publisher ?? visibleSelectedApp.label} ·{" "}
-                {visibleSelectedApp.category}
+                {visibleSelectedApp.description}
               </p>
             </header>
-            <section className="kova-connection-gallery" aria-label="What this connector does">
-              {selectedProfile.gallery ? (
-                selectedProfile.gallery.map((image) => (
-                  <figure key={image.src}>
-                    <img src={image.src} alt={image.alt} loading="lazy" />
-                    <figcaption>{image.caption}</figcaption>
-                  </figure>
-                ))
-              ) : (
-                <>
-                  {selectedProfile.read.length > 0 && (
-                    <figure>
-                      <ul>
-                        {selectedProfile.read.slice(0, 3).map((label) => (
-                          <li key={label}>{label}</li>
-                        ))}
-                      </ul>
-                      <figcaption>What Kova can read</figcaption>
-                    </figure>
-                  )}
-                  {selectedProfile.write.length > 0 && (
-                    <figure>
-                      <ul>
-                        {selectedProfile.write.slice(0, 3).map((label) => (
-                          <li key={label}>{label}</li>
-                        ))}
-                      </ul>
-                      <figcaption>Optional write access</figcaption>
-                    </figure>
-                  )}
-                </>
-              )}
-            </section>
             <Tabs defaultValue="overview" className="kova-connection-tabs">
               <TabsList className="kova-connection-tablist" aria-label="Connection information">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -1894,21 +1853,42 @@ function AppsPage() {
                 <div className="kova-connection-content">
                   <TabsContent value="overview" forceMount className="kova-connection-tab">
                     <p className="kova-connection-overview">{selectedProfile.overview}</p>
-                    {selectedProfile.example && (
-                      <div className="kova-connection-example">
-                        <Sparkles aria-hidden="true" />
-                        <div>
-                          <h2>Try asking Kova</h2>
-                          <p>“{selectedProfile.example}”</p>
-                          {selectedProfile.exampleResult && (
-                            <div className="kova-connection-example-result">
-                              <span>Illustrative result</span>
-                              <div>{selectedProfile.exampleResult}</div>
-                            </div>
+                    <section
+                      className="kova-connection-gallery"
+                      aria-label="What this connector does"
+                    >
+                      {selectedProfile.gallery ? (
+                        selectedProfile.gallery.map((image) => (
+                          <figure key={image.src}>
+                            <img src={image.src} alt={image.alt} loading="lazy" />
+                            <figcaption className="kova-connection-prompt">
+                              {image.caption}
+                            </figcaption>
+                          </figure>
+                        ))
+                      ) : (
+                        <>
+                          {selectedProfile.example && (
+                            <figure>
+                              <p>{selectedProfile.exampleResult}</p>
+                              <figcaption className="kova-connection-prompt">
+                                {selectedProfile.example}
+                              </figcaption>
+                            </figure>
                           )}
-                        </div>
-                      </div>
-                    )}
+                          {selectedProfile.write.length > 0 && (
+                            <figure>
+                              <ul>
+                                {selectedProfile.write.slice(0, 3).map((label) => (
+                                  <li key={label}>{label}</li>
+                                ))}
+                              </ul>
+                              <figcaption>Optional write access</figcaption>
+                            </figure>
+                          )}
+                        </>
+                      )}
+                    </section>
                     {configuredOf(visibleSelectedApp.id) && (
                       <section
                         className="kova-connection-account"
@@ -2275,13 +2255,17 @@ function AppsPage() {
                   </TabsContent>
                 </div>
                 <aside className="kova-connection-sidebar" aria-label="About this connection">
-                  <h2>Connection details</h2>
                   <dl className="kova-connection-info">
                     {selectedProfile.publisher && (
                       <div>
                         <dt>Developer</dt>
                         <dd className="kova-connection-publisher">
                           {selectedProfile.publisher}
+                          {configuredOf(visibleSelectedApp.id) && (
+                            <span className="kova-connection-verified">
+                              <BadgeCheck aria-hidden="true" /> Verified
+                            </span>
+                          )}
                           {stateOf(visibleSelectedApp.id) === "connected" && (
                             <span className="kova-connection-connected">
                               <Check aria-hidden="true" /> Connected
@@ -2298,12 +2282,18 @@ function AppsPage() {
                         </dd>
                       </div>
                     )}
+                    {/^[a-z0-9.-]+\.[a-z]{2,}$/u.test(visibleSelectedApp.domain) && (
+                      <div>
+                        <dt>Safety and access</dt>
+                        <dd>Can send data to {visibleSelectedApp.domain}</dd>
+                      </div>
+                    )}
                     <div>
                       <dt>Authorization</dt>
                       <dd>{selectedProfile.authorization}</dd>
                     </div>
                     <div>
-                      <dt>Category</dt>
+                      <dt>Categories</dt>
                       <dd>
                         <span>{visibleSelectedApp.category}</span>
                       </dd>

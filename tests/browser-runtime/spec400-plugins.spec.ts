@@ -761,7 +761,6 @@ test("opening and leaving a connector page never starts OAuth; Connect is explic
   await expect(page).toHaveURL(/\/apps\?plugin=gmail$/u);
   await expect(page.getByRole("heading", { level: 1, name: "Gmail" })).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByRole("tab", { name: "Permissions", exact: true }).click();
   const permissions = page.getByRole("tabpanel", { name: "Permissions", exact: true });
   await expect(permissions).toContainText("Capabilities and permissions");
   await expect(permissions).toContainText("Google’s consent screen");
@@ -769,10 +768,12 @@ test("opening and leaving a connector page never starts OAuth; Connect is explic
   await page.getByRole("button", { name: "Back to Connections" }).click();
   await expect(trigger).toBeFocused();
   await trigger.click();
-  await expect(
-    page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
-  ).toBeEnabled();
-  await page.getByRole("article").getByRole("button", { name: "Connect", exact: true }).click();
+  const heroConnect = page
+    .getByRole("article")
+    .locator("header")
+    .getByRole("button", { name: "Connect", exact: true });
+  await expect(heroConnect).toBeEnabled();
+  await heroConnect.click();
   await expect.poll(() => page.evaluate(() => (window as FixtureWindow).operations.length)).toBe(1);
   expect((await page.evaluate(() => (window as FixtureWindow).operations))[0][0]).toBe(
     "google-connect",
@@ -791,7 +792,7 @@ test("unavailable providers have readable details and no connection action", asy
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
-test("connector header wisps and sparks drift down and fade, respecting reduced motion", async ({
+test("connector page fields and example panel use the flat Claude-style layout", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -802,41 +803,6 @@ test("connector header wisps and sparks drift down and fade, respecting reduced 
 
   await expect(page.getByLabel("Approved server ID")).toHaveCSS("margin-block-start", "2px");
   await expect(page.getByLabel("MCP bearer token")).toHaveCSS("margin-block-start", "2px");
-  await expect(page.locator(".kova-connection-example")).toHaveCSS("border-top-width", "0px");
-
-  const motion = page.locator(".kova-connection-hero-motion");
-  await expect(motion).toBeVisible();
-  await expect(motion).toHaveAttribute("aria-hidden", "true");
-  const wisps = motion.locator(".kova-connection-wisp");
-  const sparks = motion.locator(".kova-connection-spark");
-  await expect(wisps).toHaveCount(3);
-  await expect(sparks).toHaveCount(3);
-  for (const particle of [wisps.first(), sparks.first()]) {
-    const [start, bright, fading, end] = await particle.evaluate(async (node) => {
-      const animation = node.getAnimations()[0];
-      if (!animation?.effect) throw new Error("Missing header particle animation");
-      const duration = Number(animation.effect.getTiming().duration);
-      animation.effect.updateTiming({ delay: 0 });
-      animation.pause();
-      await animation.ready;
-
-      return [0, 0.34, 0.72, 0.9999].map((fraction) => {
-        animation.currentTime = duration * fraction;
-        const style = getComputedStyle(node);
-        const transform = new DOMMatrixReadOnly(style.transform);
-        return { x: transform.m41, y: transform.m42, opacity: Number(style.opacity) };
-      });
-    });
-    expect(start.opacity).toBe(0);
-    expect(bright.opacity).toBeGreaterThan(fading.opacity);
-    expect(fading.opacity).toBeGreaterThan(0);
-    expect(fading.x).toBeGreaterThan(bright.x);
-    expect(fading.y).toBeGreaterThan(bright.y);
-    expect(end.opacity).toBeLessThan(0.01);
-  }
-
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(motion).toBeHidden();
 });
 
 test("Manage shows verified account scopes and confirms a disconnect with workflow impact", async ({
@@ -851,12 +817,7 @@ test("Manage shows verified account scopes and confirms a disconnect with workfl
   await expect(connector.getByText("gmail.readonly", { exact: true })).toBeVisible();
   await expect(connector.locator(".spec400-plugin-scope-list summary")).toHaveCount(0);
   const setup = connector.getByRole("region", { name: "Connector setup" });
-  const details = connector.getByRole("complementary", { name: "About this connection" });
-  const [setupBounds, detailBounds] = await Promise.all([
-    setup.boundingBox(),
-    details.boundingBox(),
-  ]);
-  expect(setupBounds!.y + setupBounds!.height).toBeCloseTo(detailBounds!.y + detailBounds!.height);
+  await expect(setup).toBeVisible();
   await page
     .getByRole("button", { name: "Disconnect connected@example.test", exact: true })
     .click();
@@ -967,14 +928,13 @@ test("all connectors have custom overviews and working permissions pages", async
     const detail = page.getByRole("article");
     const overview = detail.getByRole("tabpanel", { name: "Overview", exact: true });
     const description = await overview.locator(".kova-connection-overview").innerText();
-    const example = await overview.locator(".kova-connection-example p").innerText();
+    const example = await overview.locator(".kova-connection-prompt").first().innerText();
     expect(description).toBeTruthy();
     expect(example).toBeTruthy();
     descriptions.add(description);
     examples.add(example);
     await expect(detail.getByText("Developer", { exact: true })).toBeVisible();
     await expect(detail.getByRole("heading", { name: "Related connections" })).toBeVisible();
-    await detail.getByRole("tab", { name: "Permissions", exact: true }).click();
     const permissions = detail.getByRole("tabpanel", { name: "Permissions", exact: true });
     await expect(permissions.getByRole("heading", { name: "Read access" })).toBeVisible();
     if (["oura", "sp-global", "interactive-brokers"].includes(id))

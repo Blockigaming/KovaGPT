@@ -162,7 +162,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await page.getByPlaceholder("Search connections").fill("Gmail");
   await page.getByRole("link", { name: "Gmail", exact: true }).click();
   const plugin = page.getByRole("article", { name: "Gmail", exact: true });
-  await expect(plugin.getByRole("tab", { name: "Permissions" })).toBeVisible();
+  await expect(plugin.getByRole("tabpanel", { name: "Permissions" })).toBeVisible();
   await capture(page, info, "plugins-details");
   await plugin.getByRole("button", { name: "Back to Connections" }).click();
   await page.getByPlaceholder("Search connections").fill("");

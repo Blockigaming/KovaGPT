@@ -286,19 +286,19 @@ const exampleResults: Readonly<Record<string, string>> = {
 const galleries: Readonly<Record<string, NonNullable<Profile["gallery"]>>> = {
   canva: [
     {
-      src: "/connectors/canva-presentation.svg",
-      alt: "Illustration of a presentation slide",
-      caption: "Presentations",
+      src: "/connectors/canva-presentation.jpg",
+      alt: "Presentation template on a laptop",
+      caption: "Make a presentation about our spring campaign launch",
     },
     {
       src: "/connectors/canva-social.svg",
       alt: "Illustration of a social post",
-      caption: "Social posts",
+      caption: "Create a social post announcing our new coffee shop",
     },
     {
-      src: "/connectors/canva-poster.svg",
-      alt: "Illustration of an event poster",
-      caption: "Posters",
+      src: "/connectors/canva-poster.jpg",
+      alt: "Retro lighthouse poster",
+      caption: "Design a retro poster for a coastal festival",
     },
   ],
 };
