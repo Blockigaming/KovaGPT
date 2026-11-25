@@ -658,57 +658,6 @@ test("Outlook asks for a separate send grant and reviews message contents", asyn
   }
 });
 
-test("Outlook Calendar shows the event times before it writes", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await boot(page, emptyGoogle, undefined, {
-    configuredProviders: [
-      {
-        id: "microsoft",
-        name: "Microsoft",
-        requiredScopes: [],
-        optionalScopes: ["Calendars.ReadWrite"],
-      },
-    ],
-    accounts: [
-      {
-        id: "fixture-calendar",
-        provider_id: "microsoft",
-        account_label: "Calendar test account",
-        status: "connected",
-        granted_scopes: ["Calendars.ReadWrite"],
-        token_expires_at: null,
-        deleted_at: null,
-      },
-    ],
-  });
-  await page.getByRole("button", { name: "Connected Outlook Calendar", exact: true }).click();
-  await page.getByRole("button", { name: "Permissions for Calendar test account" }).click();
-  const permissions = page.getByRole("dialog", { name: "Permissions", exact: true });
-  await permissions.getByRole("button", { name: "Read and write" }).click();
-  await permissions.getByLabel("Event title").fill("Calendar fixture event");
-  await permissions.getByLabel("Start (UTC)").fill("2026-11-24T14:00");
-  await permissions.getByLabel("End (UTC)").fill("2026-11-24T14:30");
-  await permissions.getByRole("button", { name: "Review event" }).click();
-  await expect(permissions.getByText("2026-11-24 14:00 to 2026-11-24 14:30 UTC")).toBeVisible();
-  expect(
-    await page.evaluate(() =>
-      (window as FixtureWindow).operations.some(([kind]) => kind === "create-event"),
-    ),
-  ).toBe(false);
-  await permissions.getByRole("button", { name: "Create event" }).click();
-  await expect(permissions.getByText("Event created in Outlook Calendar.")).toBeVisible();
-  expect(await page.evaluate(() => (window as FixtureWindow).operations.at(-1))).toEqual([
-    "create-event",
-    expect.objectContaining({
-      target: "fixture-calendar",
-      title: "Calendar fixture event",
-      start: "2026-11-24T14:00:00Z",
-      end: "2026-11-24T14:30:00Z",
-      actionId: expect.any(String),
-    }),
-  ]);
-});
-
 test("new master entries show the correct native and OAuth setup requirements", async ({
   page,
 }) => {
@@ -989,70 +938,15 @@ test("Microsoft account management searches only the explicitly selected authori
   expect((await page.evaluate(() => (window as FixtureWindow).operations)).length).toBe(1);
 });
 
-test("Outlook Calendar reuses only a calendar-authorized account and requests basic read access explicitly", async ({
-  page,
-}) => {
-  const mailId = "11111111-1111-4111-8111-111111111111";
-  const calendarId = "22222222-2222-4222-8222-222222222222";
+test("Outlook Calendar stays Coming soon until its live read is verified", async ({ page }) => {
   await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
     configuredProviders: [{ id: "microsoft" }],
-    accounts: [
-      {
-        id: mailId,
-        provider_id: "microsoft",
-        account_label: "mail-only@example.test",
-        status: "connected",
-        granted_scopes: ["Mail.Read"],
-        token_expires_at: null,
-      },
-      {
-        id: calendarId,
-        provider_id: "microsoft",
-        account_label: "calendar@example.test",
-        status: "connected",
-        granted_scopes: ["Calendars.ReadWrite"],
-        token_expires_at: null,
-      },
-    ],
+    accounts: [],
   });
-  await page.getByRole("button", { name: "Connected Outlook Calendar", exact: true }).click();
-  const dialog = page.getByRole("article");
-  await expect(dialog).toContainText("subject starts with");
+  const row = page.locator('[data-plugin-id="outlook-calendar"]');
+  await expect(row).toContainText("Coming soon");
+  await expect(row.getByRole("button", { name: /Connect/ })).toHaveCount(0);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
-  await dialog
-    .getByRole("textbox", { name: "Search Outlook Calendar", exact: true })
-    .fill("Meeting");
-  const mail = dialog.getByRole("listitem").filter({ hasText: "mail-only@example.test" });
-  const calendar = dialog.getByRole("listitem").filter({ hasText: "calendar@example.test" });
-  await expect(
-    mail.getByRole("button", { name: "Search this account", exact: true }),
-  ).toBeDisabled();
-  await calendar.getByRole("button", { name: "Search this account", exact: true }).click();
-  expect((await page.evaluate(() => (window as FixtureWindow).operations))[0]).toEqual([
-    "provider-read",
-    { connectionId: "outlook-calendar", accountId: calendarId, query: "Meeting" },
-  ]);
-  await expect(dialog.getByText("Read access verified for this request.")).toBeVisible();
-  await page.evaluate(() => {
-    (window as FixtureWindow).readError =
-      "Microsoft could not find a default calendar for this account.";
-  });
-  await calendar.getByRole("button", { name: "Search this account", exact: true }).click();
-  await expect(dialog.getByRole("alert")).toHaveText(
-    "Microsoft could not find a default calendar for this account.",
-  );
-  await expect(dialog.getByText("Read access verified for this request.")).toHaveCount(0);
-  await mail.getByRole("button", { name: "Reconnect or add read access", exact: true }).click();
-  const operations = await page.evaluate(() => (window as FixtureWindow).operations);
-  expect(operations).toHaveLength(3);
-  expect(operations[2][0]).toBe("provider-request");
-  const init = operations[2][2] as { body: string };
-  expect(JSON.parse(init.body)).toEqual({
-    provider: "microsoft",
-    optionalScopes: ["Calendars.ReadBasic"],
-    returnPath: "/apps?connection_view=outlook-calendar",
-    existingAccountId: mailId,
-  });
 });
 
 test("Notion can read a linked page without a public OAuth app", async ({ page }) => {
