@@ -536,7 +536,7 @@ function ChatMessageInner({
     () => (isUser || hasWidget ? null : segmentReply(message.content, message.activities)),
     [hasWidget, isUser, message.activities, message.content],
   );
-  const [expandSteps, setExpandSteps] = useState(false);
+  const [expandSteps, setExpandSteps] = useState(true);
   // Validated kova-interactive blocks render as native controls; everything else
   // (including malformed or still-streaming blocks) stays ordinary markdown.
   const submitInteractive = onFollowUp ?? undefined;
