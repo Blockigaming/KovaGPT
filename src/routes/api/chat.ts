@@ -2446,6 +2446,9 @@ export const Route = createFileRoute("/api/chat")({
                             enc.encode(sseEvent(responseSourcesDelta(webSources))),
                           );
                         }
+                        if (browserActivity) {
+                          controller.enqueue(enc.encode(sseEvent(activityToSseDelta(browserActivity))));
+                        }
                         for (const a of activityEvents) {
                           controller.enqueue(
                             enc.encode(
@@ -2852,10 +2855,13 @@ export const Route = createFileRoute("/api/chat")({
               // If we already committed to SSE (activities/confirms staged),
               // deliver the error inside the stream so the client renders it
               // instead of hanging.
-              if (hasStreamedActivity) {
+              if (hasStreamedActivity || browserActivity) {
                 const enc = new TextEncoder();
                 const stream = new ReadableStream({
                   start(controller) {
+                    if (browserActivity) {
+                      controller.enqueue(enc.encode(sseEvent(activityToSseDelta(browserActivity))));
+                    }
                     for (const a of activityEvents) {
                       controller.enqueue(
                         enc.encode(
