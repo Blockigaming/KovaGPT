@@ -3,7 +3,10 @@ import { Globe } from "lucide-react";
 import type { Activity } from "@/lib/chat-store";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { chatBrowserDestination } from "@/lib/chat-browser-policy.mjs";
-import { getLiveBrowserActivity, subscribeToLiveBrowserActivity } from "@/lib/message-activity-list.mjs";
+import {
+  getLiveBrowserActivity,
+  subscribeToLiveBrowserActivity,
+} from "@/lib/message-activity-list.mjs";
 import "./response-files.css";
 
 const CloudBrowserTakeover = lazy(() =>
@@ -76,9 +79,7 @@ export function ResponseBrowserCard({
     () => null,
   );
   const boundLive =
-    live?.principal === ownerId &&
-    live.conversationId === chatId &&
-    live.messageId === messageId
+    live?.principal === ownerId && live.conversationId === chatId && live.messageId === messageId
       ? live.activity
       : undefined;
   const activity =
