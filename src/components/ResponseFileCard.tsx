@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import type { ResponseFile } from "@/lib/response-files.mjs";
 import { downloadResponseFile, fileIcon } from "@/lib/response-file-actions";
@@ -13,6 +14,8 @@ export function ResponseFileCard({
   active?: boolean;
   onOpen: (file: ResponseFile, trigger: HTMLButtonElement) => void;
 }) {
+  const [downloadError, setDownloadError] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const Icon = fileIcon(file);
   const writing = !file.complete;
   return (
@@ -41,7 +44,9 @@ export function ResponseFileCard({
           <span className="kova-file-card-meta">
             {writing
               ? `Writing ${file.name}… ${file.lines.toLocaleString()} ${file.lines === 1 ? "line" : "lines"}`
-              : `${file.category} · ${file.languageLabel}`}
+              : downloadError
+                ? "Download failed. Try again."
+                : `${file.category} · ${file.languageLabel}`}
           </span>
         </span>
       </button>
@@ -51,9 +56,16 @@ export function ResponseFileCard({
           className="kova-file-card-download"
           aria-label={`Download ${file.name}`}
           title="Download"
-          onClick={() => downloadResponseFile(file)}
+          disabled={downloading}
+          onClick={() => {
+            setDownloading(true);
+            setDownloadError(false);
+            void downloadResponseFile(file)
+              .catch(() => setDownloadError(true))
+              .finally(() => setDownloading(false));
+          }}
         >
-          <Download aria-hidden="true" />
+          {downloading ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
         </button>
       )}
     </div>
