@@ -33,11 +33,12 @@ async function geometry(page: Page) {
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  // Compact phone corners apply to phone widths on web and in the app shell.
-  const phone = await page.evaluate(
-    () =>
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
+  // Compact phone corners apply in the native app shell and on phone-width web.
+  const phone = await page.evaluate(() =>
+    document.documentElement.dataset.kovaSurface === "app"
+      ? matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches
+      : matchMedia("(width < 768px)").matches,
   );
   await expect(composer).toHaveCSS(
     "border-radius",

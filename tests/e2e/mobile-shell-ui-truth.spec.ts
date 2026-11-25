@@ -418,11 +418,12 @@ test("touch home keeps the greeting centered and the composer text inset", async
   const appShell = await page.evaluate(
     () => document.documentElement.dataset.kovaSurface === "app",
   );
-  if (appShell && (width < 768 || (width < 1024 && height <= 500)))
+  if ((appShell && (width < 768 || (width < 1024 && height <= 500))) || width < 768)
     expect(inset).toBeCloseTo(19, 0);
   else expect(inset).toBeGreaterThanOrEqual(19);
   // The app shell centers its greeting in the free space above a bottom
   // composer; the website keeps the desktop home with the greeting on top.
-  if (appShell) expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
+  if (appShell || width < 768)
+    expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
   expect(greeting!.y + greeting!.height).toBeLessThan(frame!.y);
 });

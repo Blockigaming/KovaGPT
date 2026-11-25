@@ -49,12 +49,15 @@
   }
 
   /* ---- Composer action row ---- */
-  .kova-assistant .kova-empty-composer .kova-composer-tray,
-  .kova-assistant .kova-empty-composer [data-desktop-tray="true"] {
+  .kova-assistant .kova-empty-composer .kova-composer-tray {
     display: none !important;
   }
+  /* A selected project stays visible (and removable) above the writing area. */
+  .kova-assistant .spec400-inline-project-context[data-desktop-tray="true"] {
+    display: flex;
+  }
   .kova-assistant .spec400-composer {
-    --composer-text-inset: 8px;
+    --composer-text-inset: 10px;
     --composer-action-inset: 8px;
     --chat-composer-corner: 21px;
     min-height: 0 !important;
@@ -68,6 +71,8 @@
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     min-height: 0 !important;
     padding-block-start: 10px;
+    /* Matches the app shell's 19px writing inset (8px padding + 1px border + 10px). */
+    --composer-text-inset: 10px;
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-input,
   .kova-assistant .spec400-composer .spec400-input-region {
@@ -81,9 +86,10 @@
   }
   .kova-assistant .spec400-composer .spec400-composer-toolbar {
     display: flex !important;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
-    gap: 4px;
+    gap: 8px 4px;
   }
   .kova-assistant .spec400-composer .spec400-composer-trailing {
     display: contents !important;
@@ -97,15 +103,17 @@
     .spec400-composer-trailing
     > :not(.spec400-composer-speech-actions) {
     order: 1;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
+    max-inline-size: 100%;
     min-width: 0;
     justify-self: auto;
   }
-  /* Model chip stays on one line and truncates instead of wrapping on narrow phones */
+  /* The full model name always shows: when it cannot fit beside the speech
+     controls, those controls wrap to their own row instead of truncating it. */
   .kova-assistant .spec400-composer .kova-consumer-model-trigger,
   .kova-assistant .spec400-composer .kova-thinking-toggle {
     min-width: 0;
-    flex-shrink: 1;
+    flex-shrink: 0;
   }
   .kova-assistant .spec400-composer .kova-consumer-model-pill {
     white-space: nowrap;
@@ -127,6 +135,19 @@
   }
   .kova-mobile-home-actions > * > svg {
     translate: none !important;
+  }
+
+  /* The tray is hidden on phones, so its project, files and plugins actions
+     live in the + menu (the app shell already shows them there). */
+  .kova-phone-resource-actions {
+    display: grid;
+    gap: 2px;
+    margin-block-start: 6px;
+    padding-block-start: 6px;
+    border-block-start: 1px solid var(--border);
+  }
+  .kova-phone-resource-actions .kova-composer-action {
+    min-height: 44px;
   }
 
   /* ---- Popups open centered ---- */
@@ -189,7 +210,11 @@
   [data-sonner-toaster][data-y-position="top"] {
     top: 50% !important;
     bottom: auto !important;
-    transform: translateY(-50%) !important;
+    transform: none !important;
+  }
+  /* Sonner anchors a toast's top edge; pull it up by half its own height. */
+  [data-sonner-toaster][data-y-position="top"] [data-sonner-toast] {
+    margin-top: calc(var(--initial-height, 0px) / -2);
   }
 }
 
@@ -260,9 +285,14 @@
 @media (width < 350px) {
   .kova-assistant .spec400-composer {
     --composer-action-inset: 4px;
-    padding-inline: 4px;
+    padding-inline: 5px;
   }
-  .kova-assistant .spec400-composer .spec400-composer-toolbar,
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
+    --composer-text-inset: 13px;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-toolbar {
+    gap: 8px 0;
+  }
   .kova-assistant .spec400-composer .spec400-composer-speech-actions {
     gap: 0;
   }
