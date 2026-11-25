@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { buildFilePreviewDocument, type ResponseFile } from "@/lib/response-files.mjs";
+import { downloadResponseFile } from "@/lib/response-file-actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,12 +33,7 @@ function paneIcon(file: ResponseFile) {
   return file.category === "Document" ? FileText : Code2;
 }
 function download(file: ResponseFile) {
-  const url = URL.createObjectURL(new Blob([file.content], { type: file.mime }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = file.name;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  void downloadResponseFile(file).catch(() => toast.error("Download failed. Try again."));
 }
 type CopyState = "idle" | "copied" | "error";
 
