@@ -583,24 +583,6 @@ button.kova-sidebar-scrim {
   font-weight: 500;
   line-height: 24px;
 }
-@media (max-width: 599px) {
-  .kova-mobile-home-actions {
-    gap: 0;
-    --mobile-header-icon-inset: 6px;
-  }
-  .kova-mobile-home-actions:has(> :nth-child(3)) {
-    --mobile-header-icon-inset: 12px;
-  }
-  .kova-mobile-home-actions:dir(rtl) {
-    --mobile-header-direction: -1;
-  }
-  .kova-mobile-home-actions > :first-child:not(:last-child) > svg {
-    translate: calc(var(--mobile-header-icon-inset) * var(--mobile-header-direction, 1));
-  }
-  .kova-mobile-home-actions > :last-child:not(:first-child) > svg {
-    translate: calc(-1 * var(--mobile-header-icon-inset) * var(--mobile-header-direction, 1));
-  }
-}
 @media (min-width: 1024px) {
   .kova-sidebar-rail[data-kova-core-rail] {
     display: flex;

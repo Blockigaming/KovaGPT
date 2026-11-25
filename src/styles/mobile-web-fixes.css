@@ -142,3 +142,45 @@
     transform: translateY(-50%) !important;
   }
 }
+
+/* Header buttons: one centered 44px circle; press highlight sits exactly on the icon */
+@media (width < 1024px) {
+  .kova-topbar button,
+  .kova-topbar .kova-free-offer {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overflow: visible;
+    clip-path: none;
+    border-radius: 9999px;
+    outline: none;
+  }
+  .kova-topbar button:not(.kova-auth-primary):not(.kova-auth-sign-up),
+  .kova-topbar .kova-free-offer {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+  }
+  .kova-topbar .kova-action:active,
+  .kova-topbar button:active {
+    transform: none;
+    background: var(--accent);
+  }
+  .kova-topbar button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+  .kova-topbar button > svg {
+    translate: none;
+    margin: 0;
+  }
+  .kova-mobile-home-actions,
+  .kova-mobile-conversation-tools {
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+}
