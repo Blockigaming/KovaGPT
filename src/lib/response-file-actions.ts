@@ -13,16 +13,11 @@ export function fileIcon(file: Pick<ResponseFile, "language" | "category">) {
 export async function downloadResponseFile(file: Pick<ResponseFile, "name" | "content" | "mime">) {
   let blob: Blob;
   if (/\.pdf$/iu.test(file.name)) {
-    const { PDFDocument } = await import("pdf-lib");
-    if (!file.content.trim()) {
-      const pdf = await PDFDocument.create();
-      pdf.addPage([612, 792]);
-      blob = new Blob([new Uint8Array(await pdf.save())], { type: "application/pdf" });
-    } else {
-      const { createDocumentPdf } = await import("./writing-export/pdf");
-      const bytes = await createDocumentPdf(file.name.replace(/\.pdf$/iu, ""), file.content);
-      blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
-    }
+    const { createBlankLetterPdf, createDocumentPdf } = await import("./writing-export/pdf");
+    const bytes = file.content.trim()
+      ? await createDocumentPdf(file.name.replace(/\.pdf$/iu, ""), file.content)
+      : await createBlankLetterPdf();
+    blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
   } else {
     blob = new Blob([file.content], { type: file.mime });
   }
