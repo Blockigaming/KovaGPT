@@ -65,7 +65,11 @@ export function ResponseFileCard({
               .finally(() => setDownloading(false));
           }}
         >
-          {downloading ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
+          {downloading ? (
+            <Loader2 className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Download aria-hidden="true" />
+          )}
         </button>
       )}
     </div>
