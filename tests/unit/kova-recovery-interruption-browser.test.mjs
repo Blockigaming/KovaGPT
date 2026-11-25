@@ -49,9 +49,11 @@ test("pure response classification distinguishes retryable interruption, malform
   );
 });
 
-
 async function page(transport) {
-  const calls = [], messages = [], navigation = [], logs = [];
+  const calls = [],
+    messages = [],
+    navigation = [],
+    logs = [];
   const user = { id: confirmedPrincipal.accountId };
   const context = {
     assertCurrent() {},
