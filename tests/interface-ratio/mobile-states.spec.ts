@@ -348,9 +348,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const ready = page.locator('.kova-assistant-message .kova-file-card[data-state="ready"]');
-    const failed = page.locator(
-      '.kova-assistant-message .kova-file-card[data-state="interrupted"]',
-    );
+    const failed = page.locator('.kova-file-card[data-state="interrupted"]');
     await expect(ready).toBeVisible();
     await expect(failed).toContainText("Generation interrupted. Retry the response.");
     await expect(failed.getByRole("button")).toBeDisabled();
@@ -505,7 +503,7 @@ test("a browser request without a URL keeps its address form within the chat", a
   );
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.getByRole("textbox", { name: "Message KovaGPT", exact: true }).fill("Open cloud browser");
+  await page\n    .getByRole("textbox", { name: "Message KovaGPT", exact: true })\n    .fill("Open cloud browser");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   const form = page.locator(".kova-browser-destination-form");
   await expect(form).toBeVisible();
