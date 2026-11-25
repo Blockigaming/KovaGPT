@@ -130,3 +130,15 @@
     border-bottom: 1px solid var(--border);
   }
 }
+
+/* Notifications: borderless everywhere, centered on phones */
+[data-sonner-toast] {
+  border: 0 !important;
+}
+@media (width < 768px) {
+  [data-sonner-toaster][data-y-position="top"] {
+    top: 50% !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+  }
+}

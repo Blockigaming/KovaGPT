@@ -9,10 +9,10 @@ const toasterStyle = {
   "--width": "360px",
   "--normal-bg": "var(--popover)",
   "--normal-text": "var(--popover-foreground)",
-  "--normal-border": "var(--border)",
+  "--normal-border": "transparent",
   "--border-radius": "0.75rem",
   "--normal-bg-hover": "var(--accent)",
-  "--normal-border-hover": "var(--border)",
+  "--normal-border-hover": "transparent",
   "--gray2": "var(--accent)",
   "--gray4": "var(--border)",
   "--gray5": "var(--border)",
@@ -44,7 +44,7 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:!rounded-[0.75rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background",
+            "group toast group-[.toaster]:!rounded-[0.75rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[var(--shadow-floating)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background",
           icon: "group-[.toast]:!m-0 group-[.toast]:!size-[20px] group-[.toast]:[&_svg]:!m-0 group-[.toast]:[&_svg]:!size-[20px]",
           content: "group-[.toast]:!min-w-0 group-[.toast]:!flex-1 group-[.toast]:!gap-0",
           title: "group-[.toast]:!font-semibold group-[.toast]:!leading-5 [text-wrap:pretty]",
