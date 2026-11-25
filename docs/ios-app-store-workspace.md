@@ -11,7 +11,7 @@
 - Based on the unmerged native implementation from closed PR #744, at 70b58e3764132bf0acac4ff5e355d8625c9a2a14. Ported as an isolated preview onto main at c3b158aa248c3d7b43b7a1d9913867dd0a206d90. This is not a production deployment.
 - The Swift navigation delegate and shared client outlet prevent the defined website-only paths from rendering inside the iOS app. Direct navigation is canceled; client-side navigation offers a return-to-chat action. Browser and Android behavior are unchanged by the new route gate.
 - The route classification is an initial list, not a complete audit or an authorization mechanism. Audit all actual routes, hide website-only navigation links in native mode, and test direct, redirect and client-side navigation before release.
-- The native target is ported without unrelated desktop or Android changes. Native Google handoff and voice bridge consumers are not yet integrated into main-based code; these are separate release gates.
+- The native target is ported without unrelated desktop or Android changes. The verifier-bound iOS Google handoff and its regression tests have been integrated into the main-based code; current-head tests and real-device sign-in remain required. Voice bridge consumers remain a separate integration gate.
 
 ## Release gates (not yet accepted)
 1. Clean iOS target integration against current main; current SDK, device signing and a real iPhone/iPad build.
