@@ -159,7 +159,7 @@
 		CA000000000000000000001E = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0.0;
 				CURRENT_PROJECT_VERSION = 1;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -178,7 +178,7 @@
 		CA000000000000000000001F = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0.0;
 				CURRENT_PROJECT_VERSION = 1;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -240,7 +240,7 @@
 		CA0000000000000000000026 = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0.0;
 				CURRENT_PROJECT_VERSION = 1;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -259,7 +259,7 @@
 		CA0000000000000000000027 = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0.0;
 				CURRENT_PROJECT_VERSION = 1;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
