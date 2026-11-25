@@ -281,3 +281,15 @@ test("RLS-facing library and project functions retain explicit ownership boundar
   );
   assert.match(migration, /project_files_delete[\s\S]*can_edit_project/);
 });
+
+test("hosted recovery keeps the reset subtree mounted without changing ordinary principal keys", async () => {
+  const provider = await read("src/components/auth/ClerkSafe.tsx");
+  const hosted = provider.slice(provider.indexOf("function SupabaseClerkProvider("));
+  assert.match(
+    hosted,
+    /window\.location\.pathname === "\/reset-password"\s*\? "hosted-password-recovery"\s*:\s*\(session\?\.user\.id \?\? "guest"\)/u,
+  );
+  const reset = await read("src/routes/reset-password.tsx");
+  assert.match(reset, /current\.data\.session\?\.user\.id !== boundary\.userId/u);
+  assert.match(reset, /boundary\.context\.assertCurrent\(\)/u);
+});
