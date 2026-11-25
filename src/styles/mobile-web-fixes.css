@@ -32,7 +32,7 @@
   }
   .kova-greeting .kova-home-welcome-logo {
     display: block;
-    width: clamp(40px, 12vw, 56px);
+    width: clamp(48px, 16vw, 72px);
     height: auto;
     opacity: 1;
   }
@@ -56,15 +56,15 @@
   .kova-assistant .spec400-composer {
     --composer-text-inset: 8px;
     --composer-action-inset: 8px;
-    --chat-composer-corner: 24px;
+    --chat-composer-corner: 21px;
     min-height: 0 !important;
-    padding: 12px 8px 8px;
-    gap: 4px;
+    padding: 10px 8px 6px;
+    gap: 2px;
     border-radius: var(--chat-composer-corner);
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     min-height: 0 !important;
-    padding-block-start: 12px;
+    padding-block-start: 10px;
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-input,
   .kova-assistant .spec400-composer .spec400-input-region {
@@ -89,11 +89,27 @@
     order: 0;
     flex: none;
   }
-  .kova-assistant .spec400-composer .spec400-composer-trailing > :not(.spec400-composer-speech-actions) {
+  .kova-assistant
+    .spec400-composer
+    .spec400-composer-trailing
+    > :not(.spec400-composer-speech-actions) {
     order: 1;
     flex: 0 1 auto;
     min-width: 0;
     justify-self: auto;
+  }
+  /* Model chip stays on one line and truncates instead of wrapping on narrow phones */
+  .kova-assistant .spec400-composer .kova-consumer-model-trigger,
+  .kova-assistant .spec400-composer .kova-thinking-toggle {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .kova-assistant .spec400-composer .kova-consumer-model-pill {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+    max-inline-size: 100%;
   }
   .kova-assistant .spec400-composer .spec400-composer-speech-actions {
     order: 2;
@@ -112,14 +128,14 @@
 
   /* ---- Popups open centered ---- */
   [data-radix-popper-content-wrapper]:has(
-      > :is(
-          [data-slot="popover-content"],
-          [data-slot="dropdown-menu-content"],
-          [data-slot="select-content"],
-          [role="menu"],
-          [role="listbox"]
-        )
-    ) {
+    > :is(
+      [data-slot="popover-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="select-content"],
+      [role="menu"],
+      [role="listbox"]
+    )
+  ) {
     position: fixed !important;
     inset: 0 !important;
     transform: none !important;
@@ -130,7 +146,8 @@
     max-width: calc(100vw - 2rem) !important;
     max-height: calc(100dvh - 2rem) !important;
   }
-  [data-radix-popper-content-wrapper] > :is(
+  [data-radix-popper-content-wrapper]
+    > :is(
       [data-slot="popover-content"],
       [data-slot="dropdown-menu-content"],
       [data-slot="select-content"],
@@ -225,5 +242,33 @@
     grid-column: 2;
     margin: 0;
     white-space: normal;
+  }
+}
+
+/* Smallest phones (320px): fit "+", the model name, mic and voice on one row.
+   Touch targets stay 44px. */
+@media (width < 350px) {
+  .kova-assistant .spec400-composer {
+    --composer-action-inset: 4px;
+    padding-inline: 4px;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-toolbar,
+  .kova-assistant .spec400-composer .spec400-composer-speech-actions {
+    gap: 0;
+  }
+  .kova-assistant .spec400-composer .kova-consumer-model-pill {
+    padding-inline: 10px 8px;
+    gap: 4px;
+    font-size: 0.8125rem;
+  }
+  .kova-assistant .spec400-composer .kova-consumer-model-pill .text-muted-foreground {
+    display: none;
+  }
+}
+
+/* While voice is running the dictation mic is disabled; free its space */
+@media (width < 768px) {
+  .spec400-chat-input[data-voice-active] .kova-dictation-button {
+    display: none;
   }
 }

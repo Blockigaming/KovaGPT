@@ -25,13 +25,8 @@ function checkOpeningLayout(
 ) {
   if (width >= 768) return;
   expect(first.composer.width).toBeCloseTo(width - 32, 0);
-  if (!appShell) {
-    // The website keeps the desktop home: greeting above a composer that
-    // starts in view, rather than a composer pinned to the bottom edge.
-    expect(first.heading.y + first.heading.height).toBeLessThanOrEqual(first.composer.y);
-    expect(first.composer.y + first.composer.height).toBeLessThanOrEqual(height);
-    return;
-  }
+  // Phone web and the app shell share one home: greeting centered above a docked composer.
+  void appShell;
   expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
   const center = first.heading.y + first.heading.height / 2;
   const freeSpaceCenter = (first.header.y + first.header.height + first.composer.y) / 2;
