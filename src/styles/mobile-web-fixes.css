@@ -62,6 +62,9 @@
     gap: 2px;
     border-radius: var(--chat-composer-corner);
   }
+  .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
+    --chat-composer-corner: 26px;
+  }
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     min-height: 0 !important;
     padding-block-start: 10px;
@@ -157,6 +160,13 @@
     box-shadow:
       0 0 0 100vmax rgb(0 0 0 / 0.4),
       var(--shadow-floating);
+    /* A centered popup opens under the finger that opened it. Ignore pointer
+       input briefly so the release of that tap cannot select an item. */
+    pointer-events: auto;
+    transition: pointer-events 0s 0.35s allow-discrete;
+    @starting-style {
+      pointer-events: none;
+    }
   }
 
   /* Voice dialog: centered card, not a full-height bottom sheet */

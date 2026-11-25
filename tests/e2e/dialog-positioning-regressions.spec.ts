@@ -1,7 +1,12 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { coreFixture } from "./core-app-fixture";
-import { dismissMobileSidebar, openCurrentSettings, usesSidebarDrawer } from "./current-ui";
+import {
+  chooseSettingsSection,
+  dismissMobileSidebar,
+  openCurrentSettings,
+  usesSidebarDrawer,
+} from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
@@ -104,6 +109,8 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
     } else {
       await openCurrentSettings(page);
+      // Phones open the Settings home list; open a section to get its header.
+      await chooseSettingsSection(page, "General");
     }
     await contained(page, modal);
     const heading = modal.locator(".kova-settings-content-header h2");
