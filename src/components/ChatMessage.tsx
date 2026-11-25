@@ -1081,6 +1081,8 @@ function ChatMessageInner({
                 key={`${userKey}:${message.id}`}
                 activities={message.activities}
                 ownerId={userKey}
+                chatId={chatId}
+                messageId={message.id}
               />
             )}
             {!streaming && message.generationStatus === "stopped" && (
