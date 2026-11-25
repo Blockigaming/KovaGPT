@@ -14,7 +14,7 @@ export function ResponseBrowserCard({
   activities?: Activity[];
   ownerId: string;
 }) {
-  const activity = activities?.findLast((row) => row.tool === "browser_interact" && row.browser);
+  const activity = activities?.slice().reverse().find((row) => row.tool === "browser_interact" && row.browser);
   const browser = activity?.browser;
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(Date.now);
