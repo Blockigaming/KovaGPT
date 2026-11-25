@@ -1,7 +1,10 @@
-import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Globe } from "lucide-react";
 import type { Activity } from "@/lib/chat-store";
-import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
+import {
+  browserActivityIsFresh,
+  normalizeBrowserActivity,
+} from "@/lib/browser-activity-contract.mjs";
 import { chatBrowserDestination } from "@/lib/chat-browser-policy.mjs";
 import {
   getLiveBrowserActivity,
@@ -75,21 +78,24 @@ export function ResponseBrowserCard({
 }) {
   const live = useSyncExternalStore(
     subscribeToLiveBrowserActivity,
-    getLiveBrowserActivity,
+    () => {
+      const live = getLiveBrowserActivity();
+      return live?.principal === ownerId &&
+        live.conversationId === chatId &&
+        live.messageId === messageId
+        ? live.activity
+        : null;
+    },
     () => null,
   );
-  const boundLive =
-    live?.principal === ownerId && live.conversationId === chatId && live.messageId === messageId
-      ? live.activity
-      : undefined;
   const activity =
-    boundLive ??
+    live ??
     activities
       ?.slice()
       .reverse()
       .find((row) => row.tool === "browser_interact" && row.browser);
-  const browser = activity?.browser;
-  const [open, setOpen] = useState(false);
+  const browser = useMemo(() => normalizeBrowserActivity(activity?.browser), [activity?.browser]);
+  const [openSession, setOpenSession] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const trigger = useRef<HTMLButtonElement>(null);
 
@@ -101,7 +107,12 @@ export function ResponseBrowserCard({
     return () => window.clearTimeout(timer);
   }, [browser]);
 
-  if (!browser || !browser.previewPath || !browserActivityIsFresh(browser, now)) {
+  if (
+    !browser ||
+    !/^[0-9a-f-]{36}$/iu.test(browser.sessionId) ||
+    browser.previewPath !== `/api/browser/preview/${browser.sessionId}` ||
+    !browserActivityIsFresh(browser, now)
+  ) {
     return activities?.some((row) => row.tool === "browser_open_request") ? (
       <BrowserDestinationCard ownerId={ownerId} />
     ) : null;
@@ -113,7 +124,7 @@ export function ResponseBrowserCard({
         ref={trigger}
         type="button"
         className="kova-response-browser-card"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpenSession(browser.sessionId)}
       >
         <Globe className="h-5 w-5 shrink-0" aria-hidden="true" />
         <span className="kova-response-browser-details">
@@ -124,14 +135,14 @@ export function ResponseBrowserCard({
         </span>
         <span className="kova-response-browser-action">Open browser</span>
       </button>
-      {open && (
+      {openSession === browser.sessionId && (
         <Suspense fallback={<p role="status">Opening browser…</p>}>
           <CloudBrowserTakeover
             key={browser.sessionId}
             browser={browser}
             ownerId={ownerId}
             description={activity?.label ?? "Cloud Browser"}
-            onClose={() => setOpen(false)}
+            onClose={() => setOpenSession(null)}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               trigger.current?.focus();
