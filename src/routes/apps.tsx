@@ -1852,7 +1852,7 @@ function AppsPage() {
                 {visibleSelectedApp.category}
               </p>
             </header>
-            <section className="kova-connection-gallery" aria-label="See it in action">
+            <section className="kova-connection-gallery" aria-label="What this connector does">
               {selectedProfile.gallery ? (
                 selectedProfile.gallery.map((image) => (
                   <figure key={image.src}>
@@ -1862,22 +1862,26 @@ function AppsPage() {
                 ))
               ) : (
                 <>
-                  <figure>
-                    <div className="kova-connection-panel-ask">{selectedProfile.example}</div>
-                    <figcaption>You ask</figcaption>
-                  </figure>
-                  <figure>
-                    <ul>
-                      {selectedProfile.read.slice(0, 3).map((label) => (
-                        <li key={label}>{label}</li>
-                      ))}
-                    </ul>
-                    <figcaption>Kova reads</figcaption>
-                  </figure>
-                  <figure>
-                    <p>{selectedProfile.exampleResult}</p>
-                    <figcaption>Illustrative result</figcaption>
-                  </figure>
+                  {selectedProfile.read.length > 0 && (
+                    <figure>
+                      <ul>
+                        {selectedProfile.read.slice(0, 3).map((label) => (
+                          <li key={label}>{label}</li>
+                        ))}
+                      </ul>
+                      <figcaption>What Kova can read</figcaption>
+                    </figure>
+                  )}
+                  {selectedProfile.write.length > 0 && (
+                    <figure>
+                      <ul>
+                        {selectedProfile.write.slice(0, 3).map((label) => (
+                          <li key={label}>{label}</li>
+                        ))}
+                      </ul>
+                      <figcaption>Optional write access</figcaption>
+                    </figure>
+                  )}
                 </>
               )}
             </section>
