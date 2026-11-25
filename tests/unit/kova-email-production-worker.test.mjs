@@ -447,12 +447,15 @@ test("Supabase-only production dispatch preserves account notices without any ow
   const summary = await runProductionEmailWorker(run, config, d);
   assert.equal(summary.auth, null);
   assert.equal(summary.attempted, 1);
-  assert.deepEqual(d.calls.map(([name]) => name), [
-    "kova_email_claim_worker_run",
-    "kova_email_worker_scope",
-    "account",
-    "kova_email_finish_worker_run",
-  ]);
+  assert.deepEqual(
+    d.calls.map(([name]) => name),
+    [
+      "kova_email_claim_worker_run",
+      "kova_email_worker_scope",
+      "account",
+      "kova_email_finish_worker_run",
+    ],
+  );
   for (const flag of ["KOVA_AUTH_EMAIL_DISPATCH_ENABLED", "KOVA_EMAIL_QUEUE_ENABLED"]) {
     assert.throws(
       () => productionEmailWorkerConfiguration({ ...hosted, [flag]: "true" }),
