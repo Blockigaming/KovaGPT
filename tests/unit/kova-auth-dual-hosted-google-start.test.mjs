@@ -1,4 +1,5 @@
 import { validateHostedGitHubLoginRedirect } from "../../src/lib/hosted-github-login-redirect.mjs";
+import * as kovaNative from "../../src/lib/kova-native.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -73,6 +74,7 @@ function fixture({
     "@/components/ui/button": { Button: "button" },
     "@/assets/plugins/github.svg": { default: "github.svg" },
     "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect },
+    "@/lib/kova-native": kovaNative,
     "@/components/auth/GoogleIcon": { GoogleIcon: "google-icon" },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "lucide-react": Object.fromEntries(
