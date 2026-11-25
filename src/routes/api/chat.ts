@@ -2447,7 +2447,9 @@ export const Route = createFileRoute("/api/chat")({
                           );
                         }
                         if (browserActivity) {
-                          controller.enqueue(enc.encode(sseEvent(activityToSseDelta(browserActivity))));
+                          controller.enqueue(
+                            enc.encode(sseEvent(activityToSseDelta(browserActivity))),
+                          );
                         }
                         for (const a of activityEvents) {
                           controller.enqueue(
