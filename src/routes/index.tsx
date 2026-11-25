@@ -2311,7 +2311,23 @@ function KovaGPT() {
         if (!isCurrentRequest()) return;
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
         const browserErrorKind = transport?.cloudBrowserErrorKind(e);
-        if (browserErrorKind || (e as Error).name === "AbortError") {
+        if (
+          browserErrorKind &&
+          (e as Error & { code?: string }).code === "cloud_browser_url_required"
+        ) {
+          updateAssistantMessage((message) => ({
+            ...message,
+            content: "Enter a public HTTPS address to open Cloud Browser.",
+            activities: [
+              ...(message.activities ?? []),
+              {
+                tool: "browser_open_request",
+                label: "Choose a website to open",
+                status: "done",
+              },
+            ],
+          }));
+        } else if (browserErrorKind || (e as Error).name === "AbortError") {
           const browserMessage =
             browserErrorKind === "browser_limit"
               ? CLOUD_BROWSER_DAILY_LIMIT_MESSAGE
