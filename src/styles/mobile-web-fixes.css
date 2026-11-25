@@ -326,11 +326,11 @@
     height: auto !important;
     max-height: none !important;
   }
-  .kova-consumer-model-menu,
-  .kova-effort-popover {
+  [data-radix-popper-content-wrapper] > .kova-consumer-model-menu,
+  [data-radix-popper-content-wrapper] > .kova-effort-popover {
     width: 100% !important;
     max-width: none !important;
-    border-radius: var(--chat-composer-corner, 21px) !important;
+    border-radius: var(--chat-composer-corner, 21px);
   }
   /* Settings rows: fully rounded on hover, press and focus. */
   .kova-settings-reference .kova-settings-nav .kova-settings-nav-item {

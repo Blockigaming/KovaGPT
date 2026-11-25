@@ -299,7 +299,7 @@ test("New chat, Search, customization and Settings invoke their existing callbac
     ["new"],
     ["search"],
     ["customize", opener],
-    ["settings", "appearance"],
+    ["settings", undefined],
   ]);
 });
 

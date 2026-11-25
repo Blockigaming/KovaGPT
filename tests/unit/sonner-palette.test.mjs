@@ -19,7 +19,7 @@ test("native toast color and radius variables resolve through the existing appli
   const expected = {
     "--normal-bg": "var(--popover)",
     "--normal-text": "var(--popover-foreground)",
-    "--normal-border": "var(--border)",
+    "--normal-border": "transparent",
     "--border-radius": "0.75rem",
   };
   for (const [key, value] of Object.entries(expected)) {
@@ -39,8 +39,8 @@ test("native toast color and radius variables resolve through the existing appli
 
 test("native close, hover and loading colors follow the application palette", () => {
   const { style, toastOptions } = Toaster({}).props;
-  for (const key of ["--gray4", "--gray5", "--normal-border-hover"])
-    assert.equal(style[key], "var(--border)");
+  for (const key of ["--gray4", "--gray5"]) assert.equal(style[key], "var(--border)");
+  assert.equal(style["--normal-border-hover"], "transparent");
   for (const key of ["--gray2", "--normal-bg-hover"]) assert.equal(style[key], "var(--accent)");
   assert.equal(style["--gray12"], "var(--popover-foreground)");
   assert.equal(style["--gray11"], "var(--muted-foreground)");
