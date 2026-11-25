@@ -457,11 +457,20 @@ test("all configured REST speech models use server-only selection; invalid model
 });
 
 test("Live Voice mints only a scoped token and reserves daily usage for Free and Plus", async () => {
-  const catalog = Array.from({ length: 7 }, (_, index) => ({
-    id: `choice-${index}`,
+  // Plan rule: Free gets Jessica only; Plus gets Jarnathan, Jessica and Lauren; Pro gets all.
+  const catalog = [
+    "jarnathan",
+    "jessica",
+    "lauren",
+    "voice-3",
+    "voice-4",
+    "voice-5",
+    "voice-6",
+  ].map((id, index) => ({
+    id,
     label: `Voice ${index}`,
     providerVoiceId: `fixture-${index}`,
-    allowedPlans: ["pro"],
+    allowedPlans: ["free", "plus", "pro"],
   }));
   const flags = {
     ...env,
@@ -469,8 +478,8 @@ test("Live Voice mints only a scoped token and reserves daily usage for Free and
     KOVA_VOICE_CATALOG: JSON.stringify(catalog),
   };
   for (const [tier, count, dailyLimit] of [
-    ["free", 3, 1],
-    ["plus", 7, 3],
+    ["free", 1, 1],
+    ["plus", 3, 3],
     ["pro", 7, 3],
   ]) {
     const calls = [];

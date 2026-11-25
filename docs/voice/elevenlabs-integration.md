@@ -80,6 +80,10 @@ When `KOVA_VOICE_CATALOG` is absent, the existing valid `ELEVENLABS_VOICE_ID` re
 
 Every authenticated GET and POST resolves the existing authoritative `getCallerTier`/effective billing entitlement. Client-provided plan claims are ignored. GET additionally returns `voices: [{id,label,available}]` and `defaultVoiceId` (nullable). Only allowed entries and explicitly public locked entries appear; provider IDs, API keys and internal plan lists never appear. `available` means plan eligibility. Standalone TTS/STS capability flags remain false because their client-supplied input cannot prove a completed eligible chat reply. `/api/speech` maps the opaque catalog ID to the server-owned provider ID and model and rejects unknown or plan-locked choices before quota/provider work.
 
+The reply voice is chosen only in Settings (Live Voice). The chat voice screen has no picker and speaks with the saved choice, falling back to the plan default when it is locked or unknown.
+
+Every spoken reply, whichever voice or speech model it uses, spends one unit of the caller's plan-based daily voice allowance (`KOVA_VOICE_DAILY_REQUEST_LIMIT`; Free receives half) through `/api/speech` before any provider call, in addition to the per-minute and hourly speech rate limits. Refused or plan-locked voices are not charged.
+
 The UI may remember the catalog ID under an account-scoped preference and must validate it against the current available catalog after account or capability changes. This preference is not an entitlement and is not a provider secret. Output voice choice only changes speech rendering. More capable conversation behavior continues through the existing normal chat model selector, routing and verified plan entitlements; this change neither chooses new models nor changes their pricing or access.
 
 ### Server-owned speech model selection
@@ -120,10 +124,16 @@ separate, review-before-send ElevenLabs recording tool.
    (including Realtime Scribe tokens), Text to Speech, and Speech to Speech if
    voice conversion is enabled. Store any replacement key in Azure Key Vault
    and bind the new version to the existing `ELEVENLABS_API_KEY` server setting.
-2. Set `KOVA_VOICE_CATALOG` to the curated provider voices in priority order.
-   Free can pick from the first three, Plus gets the first ten, and Pro gets the whole configured catalog. This catalog order
-   controls availability while the realtime flag is enabled. Test each chosen
-   voice with the configured ElevenLabs key and TTS model.
+2. Set `KOVA_VOICE_CATALOG` to the curated provider voices. Plan access is a
+   product rule enforced in code by catalog ID (`VOICE_IDS_BY_PLAN`), not by
+   catalog order: Free gets `jessica` only, Plus gets `jarnathan`, `jessica` and
+   `lauren`, and Pro gets every configured voice. Use exactly those IDs for the
+   three named voices; any other ID is Pro-only. An entry's `allowedPlans` can
+   narrow this rule but never widen it, so list `free`, `plus` and `pro` for
+   Jessica and `plus` and `pro` for Jarnathan and Lauren. Set
+   `showWhenLocked: true` so lower plans see the other voices as locked in
+   Settings. Test each chosen voice with the configured ElevenLabs key and TTS
+   model.
 3. Confirm the existing voice/audio/speech flags, account feature flag, and
    production model receipt settings. Set `voiceRealtimeEnabled=true` in
    the Azure deployment parameters. Validate microphone consent, consecutive
