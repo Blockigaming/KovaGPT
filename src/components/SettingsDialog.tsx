@@ -1885,13 +1885,13 @@ export function SettingsDialog({
                         disconnect. Status is verified from the server-backed Apps page.
                       </p>
                     </div>
-                    <ul className="grid gap-2">
+                    <ul className="grid min-w-0 gap-2">
                       {MASTER_PLUGIN_REVIEW_CATALOG.filter(
                         (entry) => entry.availability === "implemented",
                       ).map((entry) => (
                         <li
                           key={entry.connector.id}
-                          className="flex items-center justify-between gap-3 rounded-2xl bg-muted/40 px-4 py-3"
+                          className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted/40 px-3 py-3"
                         >
                           <div className="min-w-0">
                             <div className="truncate text-sm font-medium">
@@ -1901,7 +1901,7 @@ export function SettingsDialog({
                               {entry.connector.category}
                             </div>
                           </div>
-                          <Button asChild variant="outline" className="rounded-full">
+                          <Button asChild variant="outline" className="shrink-0 rounded-full">
                             <Link
                               to="/apps"
                               search={{ plugin: entry.connector.id } as never}
@@ -1913,7 +1913,11 @@ export function SettingsDialog({
                         </li>
                       ))}
                     </ul>
-                    <Button asChild variant="outline" className="rounded-full">
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-auto min-h-11 max-w-full whitespace-normal rounded-full py-2 text-center"
+                    >
                       <Link to="/apps" onClick={closeForNavigation}>
                         Manage apps and permissions
                       </Link>
