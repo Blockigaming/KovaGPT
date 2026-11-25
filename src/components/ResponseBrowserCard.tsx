@@ -31,8 +31,7 @@ export function ResponseBrowserCard({
     return () => window.clearTimeout(timer);
   }, [browser]);
 
-  if (!browser || !browser.previewPath || !browserActivityIsFresh(browser, now))
-    return null;
+  if (!browser || !browser.previewPath || !browserActivityIsFresh(browser, now)) return null;
 
   return (
     <div className="my-3">
