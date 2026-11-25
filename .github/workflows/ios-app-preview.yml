@@ -1,0 +1,46 @@
+name: KovaGPT iOS preview
+on:
+  pull_request:
+    paths:
+      - "ios/KovaChat*/**"
+      - "tests/native/ios/**"
+      - "src/lib/kova-native.ts"
+      - "src/routes/__root.tsx"
+      - ".github/workflows/ios-app-preview.yml"
+permissions:
+  contents: read
+concurrency:
+  group: native-chat-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ios-simulator:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test shortcut URLs and first-party origin checks
+        run: |
+          swiftc ios/KovaChat/KovaDestination.swift tests/native/ios/main.swift -o "$RUNNER_TEMP/kova-ios-navigation"
+          "$RUNNER_TEMP/kova-ios-navigation"
+      - name: Build KovaGPT and its WidgetKit extension without signing
+        run: |
+          xcodebuild -project ios/KovaChat.xcodeproj -scheme KovaChat \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/kova-ios" \
+            CODE_SIGNING_ALLOWED=NO build
+          test -d "$RUNNER_TEMP/kova-ios/Build/Products/Debug-iphonesimulator/KovaChat.app/PlugIns/KovaChatWidgets.appex"
+      - name: Install and launch the unsigned app in an iPhone Simulator
+        run: |
+          device="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          for name in reversed(sorted(runtimes)):
+              for device in runtimes[name]:
+                  if name.startswith("com.apple.CoreSimulator.SimRuntime.iOS-") and device["name"].startswith("iPhone"):
+                      print(device["udid"])
+                      raise SystemExit(0)
+          raise SystemExit("No iPhone simulator is installed")
+          ')"
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" "$RUNNER_TEMP/kova-ios/Build/Products/Debug-iphonesimulator/KovaChat.app"
+          xcrun simctl launch "$device" com.kovagpt.chat
