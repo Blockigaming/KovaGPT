@@ -1,0 +1,64 @@
+name: TMP regenerate baselines
+on:
+  pull_request:
+    paths:
+      - .github/workflows/tmp-regenerate-baselines.yml
+permissions:
+  contents: read
+jobs:
+  regen:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
+    timeout-minutes: 30
+    env:
+      HOME: /root
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build:azure
+      - run: bash scripts/ci/install-playwright-browsers.sh chromium
+      - name: Regenerate auth visual
+        run: |
+          mkdir -p test-results/r
+          cat > test-results/auth.cfg.ts <<'CONFIG'
+          import path from "node:path";
+          import { defineConfig } from "@playwright/test";
+          import auth from "../playwright.auth-visual.config";
+          const root = process.cwd();
+          export default defineConfig({ ...auth, testDir: path.join(root, "tests/e2e"),
+            outputDir: path.join(root, "test-results/r/a"), reporter: [["list"]],
+            webServer: { ...auth.webServer, cwd: root } });
+          CONFIG
+          npx --no-install playwright test --config test-results/auth.cfg.ts --update-snapshots || true
+      - name: Regenerate ui-quality phone
+        run: |
+          cat > test-results/q.cfg.ts <<'CONFIG'
+          import path from "node:path";
+          import { defineConfig } from "@playwright/test";
+          import quality from "../playwright.config";
+          import actualApp from "../playwright.rounded.config";
+          const root = process.cwd();
+          export default defineConfig({ ...quality, testDir: path.join(root, "tests/e2e"),
+            testMatch: ["ui-quality.spec.ts"], outputDir: path.join(root, "test-results/r/q"),
+            reporter: [["list"]], webServer: { ...actualApp.webServer, cwd: root },
+            use: { ...quality.use, serviceWorkers: "block", launchOptions: { ...quality.use?.launchOptions,
+              args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"] } },
+            projects: quality.projects?.filter((p) => p.name === "phone-390x844") });
+          CONFIG
+          npx --no-install playwright test --config test-results/q.cfg.ts --project=phone-390x844 --update-snapshots || true
+      - name: Dump changed snapshots
+        run: |
+          git status --short
+          for f in $(git status --short | awk '{print $2}' | grep '\.png$'); do
+            echo "=====BEGIN $f"; base64 -w 200 "$f"; echo "=====END $f"
+          done
