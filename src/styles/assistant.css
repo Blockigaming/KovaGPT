@@ -484,6 +484,10 @@
   .kova-assistant {
     --chat-control: 44px;
     --chat-nav-height: 44px;
+  }
+}
+@media (width < 1024px), (pointer: coarse) {
+  .kova-assistant {
     --chat-message-action: 44px;
   }
 }

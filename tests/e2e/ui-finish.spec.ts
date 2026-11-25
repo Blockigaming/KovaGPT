@@ -293,11 +293,14 @@ test("appearance changes save and survive a reload", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.reload();
   await waitForKovaHydration(page);
+  // Settings deep links are consumed when opening the modal. A full reload
+  // restores the workspace, so reopen the section to inspect saved preferences.
+  await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveClass(/dark/);
-  // A Settings deep link is consumed on open; reopening the modal must read the saved preference.
   await page.goto("/settings/appearance");
   await waitForKovaHydration(page);
   await expect(page.getByRole("combobox", { name: "Density", exact: true })).toHaveText("Compact");
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.getByRole("button", { name: "Reset appearance", exact: true }).click();
   await expect(page.getByText("Appearance reset to defaults.", { exact: true })).toBeVisible();
 });

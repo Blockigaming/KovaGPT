@@ -74,32 +74,34 @@ export async function commitChatHistoryDevice(previous, next, { signal } = {}) {
       signal?.addEventListener("abort", abort, { once: true });
       // Check the persistent reset generation in the same transaction as every
       // write, including I/O initiated by a tab before another tab erased it.
+      // Capture stores while the transaction is active. A WebKit navigation or
+      // aborted writer may invalidate it before a queued success callback runs.
       const metadataStore = tx.objectStore("meta");
       const records = tx.objectStore("records");
       const check = metadataStore.get(next.ownerId);
-      let writeError;
-      check.onsuccess = () => {
-        if (signal?.aborted) return;
-        try {
-          const meta = check.result;
-          if (meta && meta.localEpoch !== next.localEpoch) {
+      const writes = new Promise((resolve, reject) => {
+        check.onerror = () => reject(new Error("chat_history_device_unavailable"));
+        check.onsuccess = () => {
+          try {
+            if (signal?.aborted) throw new Error("chat_history_canceled");
+            const meta = check.result;
+            if (meta && meta.localEpoch !== next.localEpoch)
+              throw new Error("chat_history_device_unavailable");
+            for (const [id, record] of Object.entries(next.records))
+              if (previous?.records[id] !== record)
+                records.put({ ownerId: next.ownerId, id, record });
+            for (const id of Object.keys(previous?.records ?? {}))
+              if (!Object.hasOwn(next.records, id)) records.delete([next.ownerId, id]);
+            const { records: ignored, ...metadata } = next;
+            metadataStore.put(metadata);
+            resolve();
+          } catch (error) {
+            reject(error);
             abort();
-            return;
           }
-          for (const [id, record] of Object.entries(next.records))
-            if (previous?.records[id] !== record)
-              records.put({ ownerId: next.ownerId, id, record });
-          for (const id of Object.keys(previous?.records ?? {}))
-            if (!Object.hasOwn(next.records, id)) records.delete([next.ownerId, id]);
-          const { records: ignored, ...metadata } = next;
-          metadataStore.put(metadata);
-        } catch (error) {
-          writeError = error;
-          abort();
-        }
-      };
-      await done;
-      if (writeError) throw new Error("chat_history_device_unavailable", { cause: writeError });
+        };
+      });
+      await Promise.all([done, writes]);
     } finally {
       if (abort) signal?.removeEventListener("abort", abort);
       db.close();
