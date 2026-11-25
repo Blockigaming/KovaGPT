@@ -3140,18 +3140,23 @@ export const Route = createFileRoute("/api/chat")({
                   }
                   // Keep the transport open while usage settles, but do not release
                   // DONE until accounting has finished.
-                  const accountingKeepalive = setInterval(() => {
+                  let accountingKeepalive: ReturnType<typeof setTimeout>;
+                  const keepAccountingAlive = () => {
                     if (request.signal.aborted) return;
                     try {
-                      controller.enqueue(enc.encode(": accounting\n\n"));
+                      if ((controller.desiredSize ?? 0) > 0)
+                        controller.enqueue(enc.encode(": accounting\n\n"));
                     } catch {
-                      // The reader may already have disconnected.
+                      // Stop scheduling if the reader has disconnected.
+                      return;
                     }
-                  }, 10_000);
+                    accountingKeepalive = setTimeout(keepAccountingAlive, 10_000);
+                  };
+                  accountingKeepalive = setTimeout(keepAccountingAlive, 10_000);
                   try {
                     await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
                   } finally {
-                    clearInterval(accountingKeepalive);
+                    clearTimeout(accountingKeepalive);
                   }
                   if (!request.signal.aborted) controller.enqueue(enc.encode(sseDone()));
                 } catch (error) {
