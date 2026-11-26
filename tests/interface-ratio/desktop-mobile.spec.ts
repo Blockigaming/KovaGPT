@@ -168,6 +168,26 @@ for (const state of states) {
     const phone =
       data.viewport.width < 768 ||
       (data.viewport.width < 1024 && data.viewport.height <= 500 && data.viewport.coarse);
+    if (state.name === "connections") {
+      const grid = row(".spec400-plugin-grid");
+      const card = row(".spec400-plugin-card");
+      const next = row(".spec400-plugin-card", 1);
+      const columns = grid.columns.split(" ");
+      expect(grid.display).toBe("grid");
+      expect(columns).toHaveLength(grid.width >= 740 ? 2 : 1);
+      expect(card.width).toBeCloseTo(Number.parseFloat(columns[0]), 1);
+      expect(card.x + card.width).toBeLessThanOrEqual(grid.x + grid.width);
+      expect(next.x + next.width).toBeLessThanOrEqual(grid.x + grid.width);
+      expect(card.height).toBeGreaterThanOrEqual(72);
+      unchanged(".spec400-plugin-card", ["radius", "gap", "padding"]);
+      if (columns.length === 1) {
+        expect(next.x).toBe(card.x);
+        expect(next.y).toBeGreaterThanOrEqual(card.y + card.height);
+      } else {
+        expect(next.y).toBe(card.y);
+        expect(next.x).toBeGreaterThanOrEqual(card.x + card.width);
+      }
+    }
     if (!phone) return;
     if (state.name === "home") {
       const welcomeLogo = page.locator(".kova-greeting .kova-home-welcome-logo");
@@ -213,12 +233,6 @@ for (const state of states) {
       unchanged(".kova-file-filters", ["padding", "radius"]);
       expect(row(".kova-file-filters").gap).toBe("4px");
       unchanged(".kova-file-filters button", ["font", "line", "radius"]);
-    }
-    if (state.name === "connections") {
-      // Phones list connections as rows inside one grouped card.
-      expect(row(".spec400-plugin-card").radius).toBe("0px");
-      expect(row(".spec400-plugin-card").gap).toBe("8px");
-      expect(row(".spec400-plugin-grid").display).toBe("block");
     }
     if (state.name === "settings") {
       // Settings opens as a modal; its section heading stays in view.

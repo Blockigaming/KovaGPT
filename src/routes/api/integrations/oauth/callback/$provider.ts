@@ -44,6 +44,7 @@ export const Route = createFileRoute("/api/integrations/oauth/callback/$provider
             state,
             request,
             browserNonce,
+            issuer: url.searchParams.get("iss") ?? undefined,
           });
           const safe = new URL(normalizeOAuthReturnPath(result.returnPath), url.origin);
           safe.searchParams.set("integration_connected", provider);

@@ -226,7 +226,7 @@ const SLASH_COMMANDS = [
 type SlashCommand = (typeof SLASH_COMMANDS)[number]["id"];
 
 const TEXT_LIKE_EXT =
-  /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
+  /\.(txt|md|markdown|csv|tsv|json|jsonl|excalidraw|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
 const MAX_IMAGE_FILE_BYTES = 3 * 1024 * 1024; // bounded for inline vision requests and device history
 
@@ -1146,7 +1146,8 @@ export function ChatInput({
       const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
 
       for (const f of files.slice(0, availableSlots)) {
-        const isImage = f.type.startsWith("image/");
+        const isExcalidraw = /\.excalidraw$/iu.test(f.name);
+        const isImage = !isExcalidraw && f.type.startsWith("image/");
         const isTextLike =
           f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
 
@@ -1282,6 +1283,11 @@ export function ChatInput({
                 documentReadsRef.current.delete(controller);
                 documentReadIdsRef.current.delete(uploading.clientId!);
               }
+            } else if (isExcalidraw) {
+              const { summarizeExcalidrawScene } = await import("@/lib/excalidraw-scene.mjs");
+              if (!currentRead()) return false;
+              textContent = summarizeExcalidrawScene(await f.text());
+              extractionNote = "Attached the diagram's text and layout summary.";
             } else textContent = await f.text();
             if (!currentRead()) return false;
             nextAttachments = composerStateRef.current.attachments;
@@ -1292,7 +1298,7 @@ export function ChatInput({
               extractionNote: extractionNote || undefined,
               pdf,
               status: "complete",
-              ...(isDocument
+              ...(isDocument || isExcalidraw
                 ? {
                     name: `${f.name}.extracted.txt`,
                     fileType: "text/plain",
@@ -2652,7 +2658,7 @@ export function ChatInput({
               aria-label="Choose files"
               disabled={disabled || isStreaming || !isLoaded || !user}
               type="file"
-              accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+              accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.excalidraw,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
               multiple
               hidden
               onChange={onFileChange}

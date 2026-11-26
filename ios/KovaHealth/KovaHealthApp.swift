@@ -16,9 +16,13 @@ struct HealthConnectionsView: UIViewRepresentable {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.add(context.coordinator, name: "kovaHealth")
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
         context.coordinator.webView = webView
-        webView.load(URLRequest(url: URL(string: "https://kovagpt.com/apps?connection_view=health")!))
+        if let url = context.coordinator.healthURL {
+            webView.navigationDelegate = context.coordinator
+            webView.load(URLRequest(url: url))
+        } else {
+            webView.loadHTMLString("<h1>Invalid KovaGPT Health staging configuration</h1>", baseURL: nil)
+        }
         return webView
     }
 
@@ -35,16 +39,41 @@ struct HealthConnectionsView: UIViewRepresentable {
     private let store = HKHealthStore()
     private var id: UUID?
     private var owner: UUID?
-    private static let connectionKey = "kova.health.approvedOwner"
+    private var stepWrite: UUID?
+    private weak var stepConfirmation: UIAlertController?
+    private static let productionHost = "kovagpt.com"
+    private let deploymentHost: String? = {
+        #if DEBUG
+        let host = Bundle.main.object(forInfoDictionaryKey: "KovaHealthStagingHost") as? String ?? ""
+        let stagingBundle = Bundle.main.bundleIdentifier == "com.kovagpt.health.staging"
+        if stagingBundle || !host.isEmpty {
+            let pattern = #"^ca-kovagpt-staging\.[a-z0-9-]+\.[a-z0-9-]+\.azurecontainerapps\.io$"#
+            guard stagingBundle,
+                  host == "staging.kovagpt.com" || host.range(of: pattern, options: .regularExpression) != nil
+            else { return nil }
+            return host
+        }
+        #endif
+        return HealthConnectionsBridge.productionHost
+    }()
+    private var connectionKey: String {
+        let key = "kova.health.approvedOwner"
+        return deploymentHost == Self.productionHost ? key : key + ".staging"
+    }
+    var healthURL: URL? {
+        guard let deploymentHost else { return nil }
+        return URL(string: "https://\(deploymentHost)/apps?connection_view=health")
+    }
     private var observers: [HKObserverQuery] = []
     private var refresh: Task<Void, Never>?
     private var needsFullRead = false
     private var changedTypes: Set<String> = []
     private var latest: LiveHealthAnalytics?
     private var activation: NSObjectProtocol?
+    private var deactivation: NSObjectProtocol?
 
     private func trusted(_ url: URL?) -> Bool {
-        url?.scheme == "https" && url?.host == "kovagpt.com" && url?.user == nil &&
+        deploymentHost != nil && url?.scheme == "https" && url?.host == deploymentHost && url?.user == nil &&
             url?.password == nil && (url?.port == nil || url?.port == 443)
     }
 
@@ -86,13 +115,17 @@ struct HealthConnectionsView: UIViewRepresentable {
               let rawId = request["id"], let requestedId = UUID(uuidString: rawId) else { return }
         if requestedId == id {
             if request["action"] == "disconnect" {
-                if owner?.uuidString == UserDefaults.standard.string(forKey: Self.connectionKey) {
-                    UserDefaults.standard.removeObject(forKey: Self.connectionKey)
+                if owner?.uuidString == UserDefaults.standard.string(forKey: connectionKey) {
+                    UserDefaults.standard.removeObject(forKey: connectionKey)
                 }
                 stop()
                 return
             }
             if request["action"] == "stop" { stop(); return }
+            if request["action"] == "record_steps" {
+                confirmSteps(request, session: requestedId)
+                return
+            }
         }
         guard let action = request["action"], action == "resume" || action == "start",
               id == nil, healthPage(webView?.url),
@@ -101,7 +134,7 @@ struct HealthConnectionsView: UIViewRepresentable {
         owner = requestedOwner
         guard HKHealthStore.isHealthDataAvailable() else { sendError(requestedId); return }
         if action == "resume" {
-            if UserDefaults.standard.string(forKey: Self.connectionKey) == requestedOwner.uuidString {
+            if UserDefaults.standard.string(forKey: connectionKey) == requestedOwner.uuidString {
                 observe(LiveHealthAnalytics.sampleTypes)
             } else {
                 send(["state": "not_connected"], session: requestedId)
@@ -125,18 +158,91 @@ struct HealthConnectionsView: UIViewRepresentable {
     }
 
     private func authorize(_ session: UUID) async {
-        guard id == session, healthPage(webView?.url) else { stop(); return }
+        guard id == session, healthPage(webView?.url) else { return }
         let types = LiveHealthAnalytics.sampleTypes
         do {
             try await store.requestAuthorization(toShare: [], read: Set(types.map { $0 as HKObjectType }))
             guard id == session, healthPage(webView?.url) else { return }
             if let owner {
-                UserDefaults.standard.set(owner.uuidString, forKey: Self.connectionKey)
+                UserDefaults.standard.set(owner.uuidString, forKey: connectionKey)
             }
             observe(types)
         } catch {
             sendError(session)
         }
+    }
+
+    private func canRecordSteps(_ session: UUID) -> Bool {
+        id == session && healthPage(webView?.url) && !observers.isEmpty &&
+            owner?.uuidString == UserDefaults.standard.string(forKey: connectionKey)
+    }
+
+    private func confirmSteps(_ request: [String: String], session: UUID) {
+        guard canRecordSteps(session), stepWrite == nil else { return }
+        guard let rawCount = request["count"], let count = Int(rawCount), (1...1_000_000).contains(count),
+              let rawStart = request["start"], let startMs = Int64(rawStart), startMs > 0,
+              let rawEnd = request["end"], let endMs = Int64(rawEnd), endMs > startMs,
+              Double(endMs) <= Date().timeIntervalSince1970 * 1000 else {
+            send(["stepWriteState": "invalid"], session: session)
+            return
+        }
+        guard UIApplication.shared.applicationState == .active,
+              let presenter = webView?.window?.rootViewController,
+              presenter.presentedViewController == nil else {
+            send(["stepWriteState": "error"], session: session)
+            return
+        }
+        let start = Date(timeIntervalSince1970: Double(startMs) / 1000)
+        let end = Date(timeIntervalSince1970: Double(endMs) / 1000)
+        let format = Date.FormatStyle(date: .abbreviated, time: .shortened)
+        let alert = UIAlertController(
+            title: "Save steps to Apple Health?",
+            message: "\(count.formatted()) steps from \(start.formatted(format)) to \(end.formatted(format))",
+            preferredStyle: .alert
+        )
+        stepWrite = session
+        stepConfirmation = alert
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.finishSteps(session, state: "cancelled")
+        })
+        alert.addAction(UIAlertAction(title: "Save steps", style: .default) { [weak self] _ in
+            Task { await self?.saveSteps(session, count: count, start: start, end: end) }
+        })
+        presenter.present(alert, animated: true)
+    }
+
+    private func saveSteps(_ session: UUID, count: Int, start: Date, end: Date) async {
+        guard stepWrite == session, canRecordSteps(session),
+              let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
+            finishSteps(session, state: "error")
+            return
+        }
+        do {
+            if store.authorizationStatus(for: type) != .sharingAuthorized {
+                try await store.requestAuthorization(toShare: [type], read: [])
+            }
+            guard stepWrite == session, canRecordSteps(session) else { return }
+            guard store.authorizationStatus(for: type) == .sharingAuthorized else {
+                finishSteps(session, state: "permission_required")
+                return
+            }
+            let record = HKQuantitySample(
+                type: type, quantity: HKQuantity(unit: .count(), doubleValue: Double(count)),
+                start: start, end: end, metadata: [HKMetadataKeyWasUserEntered: true]
+            )
+            try await store.save(record)
+            finishSteps(session, state: "saved")
+            scheduleRead(changedType: type.identifier)
+        } catch {
+            finishSteps(session, state: "error")
+        }
+    }
+
+    private func finishSteps(_ session: UUID, state: String) {
+        guard stepWrite == session else { return }
+        stepWrite = nil
+        stepConfirmation = nil
+        if canRecordSteps(session) { send(["stepWriteState": state], session: session) }
     }
 
     private func observe(_ types: [HKSampleType]) {
@@ -155,6 +261,11 @@ struct HealthConnectionsView: UIViewRepresentable {
             forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.scheduleRead() }
+        }
+        deactivation = NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.pauseRead() }
         }
         scheduleRead()
     }
@@ -177,14 +288,22 @@ struct HealthConnectionsView: UIViewRepresentable {
                 let report = await LiveHealthAnalytics.read(from: store, changing: changed, previous: latest)
                 guard !Task.isCancelled, id == session else { return }
                 latest = report
-                if healthPage(webView?.url),
+                if UIApplication.shared.applicationState == .active, healthPage(webView?.url),
                    let data = try? JSONEncoder().encode(report),
                    let value = try? JSONSerialization.jsonObject(with: data) {
-                    send(["report": value], session: session)
+                    send(["report": value, "canWriteSteps": true], session: session)
                 }
             } while needsFullRead || !changedTypes.isEmpty
             refresh = nil
         }
+    }
+
+    private func pauseRead() {
+        guard let id, UIApplication.shared.applicationState != .active else { return }
+        refresh?.cancel()
+        refresh = nil
+        latest = nil
+        send(["state": "paused"], session: id)
     }
 
     private func sendError(_ session: UUID) {
@@ -194,21 +313,24 @@ struct HealthConnectionsView: UIViewRepresentable {
     }
 
     private func send(_ data: [String: Any], session: UUID) {
-        guard let webView, healthPage(webView.url) else { return }
+        guard let webView, let deploymentHost, healthPage(webView.url) else { return }
         var payload = data
         payload["id"] = session.uuidString.lowercased()
         webView.callAsyncJavaScript(
             """
-            if (location.origin === 'https://kovagpt.com' && location.pathname === '/apps' &&
+            if (location.origin === expectedOrigin && location.pathname === '/apps' &&
                 new URLSearchParams(location.search).get('connection_view') === 'health') {
               window.dispatchEvent(new CustomEvent('kova-health-update-v1', {detail: payload}));
             }
             """,
-            arguments: ["payload": payload], in: nil, in: .page
+            arguments: ["payload": payload, "expectedOrigin": "https://\(deploymentHost)"], in: nil, in: .page
         )
     }
 
     func stop() {
+        stepWrite = nil
+        stepConfirmation?.dismiss(animated: false)
+        stepConfirmation = nil
         refresh?.cancel()
         refresh = nil
         needsFullRead = false
@@ -220,5 +342,7 @@ struct HealthConnectionsView: UIViewRepresentable {
         observers.removeAll()
         if let activation { NotificationCenter.default.removeObserver(activation) }
         activation = nil
+        if let deactivation { NotificationCenter.default.removeObserver(deactivation) }
+        deactivation = nil
     }
 }

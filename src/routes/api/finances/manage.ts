@@ -4,6 +4,8 @@ import {
   listFinanceConnections,
   readFinanceConnection,
   disconnectFinanceConnection,
+  restorePlaidWebhook,
+  setPlaidMaintenance,
 } from "@/finances/plaid.server";
 import { publicFinanceError } from "@/finances/public-errors.server";
 import { readUtf8BodyBounded, BodyReadError } from "@/lib/endpoint-reliability.mjs";
@@ -34,10 +36,14 @@ export const Route = createFileRoute("/api/finances/manage")({
           const body = JSON.parse(await readUtf8BodyBounded(request, 4096)) as {
             action?: string;
             connectionId?: string;
+            confirmed?: boolean;
+            enabled?: boolean;
           };
           if (
             !body ||
-            !["read", "disconnect"].includes(body.action ?? "") ||
+            !["read", "disconnect", "restore_webhook", "maintenance"].includes(body.action ?? "") ||
+            (body.action === "restore_webhook" && body.confirmed !== true) ||
+            (body.action === "maintenance" && typeof body.enabled !== "boolean") ||
             typeof body.connectionId !== "string" ||
             !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(
               body.connectionId,
@@ -47,7 +53,11 @@ export const Route = createFileRoute("/api/finances/manage")({
           const result =
             body.action === "read"
               ? await readFinanceConnection(auth, body.connectionId)
-              : await disconnectFinanceConnection(auth, body.connectionId);
+              : body.action === "restore_webhook"
+                ? await restorePlaidWebhook(auth, body.connectionId)
+                : body.action === "maintenance"
+                  ? await setPlaidMaintenance(auth, body.connectionId, body.enabled === true)
+                  : await disconnectFinanceConnection(auth, body.connectionId);
           return Response.json(result, { headers });
         } catch (error) {
           if (error instanceof BodyReadError)

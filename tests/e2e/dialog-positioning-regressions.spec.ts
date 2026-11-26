@@ -179,53 +179,37 @@ for (const theme of ["light", "dark"] as const) {
     await expect(prompt).toHaveValue("Keep this unsaved image idea");
   });
 
-  test(`${theme}: Connections metadata details have one centering transform and a reachable close control`, async ({
+  test(`${theme}: connector details use a scrollable page with a reachable back control`, async ({
     page,
   }, info) => {
     await coreFixture(page, theme);
     await page.goto("/apps");
     await waitForKovaHydration(page);
     const card = page.locator('[data-plugin-id="github"]');
-    const details = card.getByRole("button", {
-      name: "Coming soon GitHub",
-      exact: true,
-    });
+    const details = card.getByRole("link", { name: "GitHub", exact: true });
     await expect(details).toBeVisible();
-    await expect(details).toHaveAttribute("data-coming-soon", "true");
-    await details.click(); // This card action opens metadata; it never connects a provider.
-    const modal = page.getByRole("dialog", { name: "GitHub", exact: true });
-    await contained(page, modal);
-    await expect(modal.getByRole("heading", { name: "GitHub", exact: true })).toBeInViewport({
-      ratio: 1,
+    await details.click();
+    await expect(page).toHaveURL(/\/apps\?plugin=github$/u);
+    const connector = page.getByRole("article", { name: "GitHub", exact: true });
+    await expect(connector.getByRole("heading", { level: 1, name: "GitHub" })).toBeInViewport();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const back = connector.getByRole("button", { name: "Back to Connections", exact: true });
+    await expect(back).toBeInViewport();
+    const geometry = await connector.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return { left: box.left, right: box.right, viewport: window.innerWidth };
     });
-    const close = modal.getByRole("button", {
-      name: "Close connection details",
-      exact: true,
-    });
-    await usableClose(page, close);
-    const scrolling = await modal.evaluate((element) => ({
-      overflow: getComputedStyle(element).overflowY,
-      height: element.clientHeight,
-      content: element.scrollHeight,
-    }));
-    expect(scrolling.overflow).toBe("auto");
-    await modal.evaluate((element) => {
-      element.scrollTop = element.scrollHeight;
-    });
-    await modal.evaluate((element) => {
-      element.scrollTop = 0;
-    });
-    await usableClose(page, close);
-    await focusStaysInside(page, modal);
+    expect(geometry.left).toBeGreaterThanOrEqual(0);
+    expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
     await page.screenshot({
-      path: info.outputPath(`connections-contained-${theme}.png`),
+      path: info.outputPath(`connections-page-${theme}.png`),
       animations: "disabled",
       caret: "hide",
     });
-    await page.keyboard.press("Escape");
-    await expect(modal).toBeHidden();
+    await back.click();
+    await expect(connector).toHaveCount(0);
     await expect(details).toBeFocused();
-    await expect(page).toHaveURL(/\/apps(?:[?#]|$)/);
+    await expect(page).toHaveURL(/\/apps$/u);
   });
 
   test(`${theme}: Sources drawer stays docked inside the viewport and scrolls long local evidence`, async ({

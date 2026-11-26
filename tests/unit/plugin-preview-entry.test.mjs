@@ -11,7 +11,7 @@ test("standalone preview bundles outside production with its existing UI depende
   const result = buildSync({
     entryPoints: ["review-kit/plugin-preview.tsx"],
     bundle: true,
-    loader: { ".svg": "dataurl" },
+    loader: { ".svg": "dataurl", ".png": "dataurl" },
     write: false,
     format: "iife",
     platform: "browser",
@@ -39,7 +39,7 @@ test("shared launch catalog supplies all twelve preview providers", () => {
   const result = buildSync({
     entryPoints: ["src/lib/plugin-review-catalog.ts"],
     bundle: true,
-    loader: { ".svg": "dataurl" },
+    loader: { ".svg": "dataurl", ".png": "dataurl" },
     write: false,
     format: "cjs",
     platform: "node",

@@ -299,7 +299,7 @@ function serverFixture(handler) {
       "./lib/adsense-csp.mjs": { adSenseCsp, createCspNonce },
       "@tanstack/react-start/server-entry": { __esModule: true, default: { fetch: handler } },
     },
-    { Response, Headers, URL },
+    { Response, Headers, URL, process: { env: {} } },
   ).default;
 }
 

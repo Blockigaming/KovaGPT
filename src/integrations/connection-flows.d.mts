@@ -1,5 +1,6 @@
 export type ConnectionFlow = {
   provider: string;
+  authentication?: "api-key";
   scopes: string[];
   tool: string;
   label: string;
@@ -15,9 +16,18 @@ export type ConnectedAccount = {
   deleted_at?: string | null;
   updated_at?: string;
 };
+export const GRANOLA_NOTE_READ: string;
+export const BIGQUERY_READ_SCOPE: string;
+export const BIGQUERY_WRITE_SCOPE: string;
+export const REVIEWED_MCP_WRITE_SCOPE: string;
+export function calendlyUserUri(value: unknown): string;
 export const CONNECTION_FLOWS: Record<string, ConnectionFlow>;
 export function hasConnectionScopes(scopes: string[], required: string[]): boolean;
 export function connectionAccounts<T extends ConnectedAccount>(accounts: T[], id: string): T[];
 export function canReadConnection(account: ConnectedAccount, id: string, now?: number): boolean;
 export function safeConnectionLink(value: unknown): string | null;
 export function connectionAuthorizationUrl(provider: string, value: unknown): string | null;
+export const TANA_MCP_RESOURCE: string;
+export const TANA_MCP_ISSUER: string;
+export const TANA_MCP_AUTHORIZE_ENDPOINT: string;
+export const TANA_MCP_HOSTED_CLIENT_ID: string;

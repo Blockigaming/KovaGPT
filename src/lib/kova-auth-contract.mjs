@@ -17,7 +17,12 @@ const OPAQUE_SESSION_TOKEN = /^[A-Za-z0-9_-]{43,128}$/u;
 export function resolveKovaAuthMode(env = process.env) {
   const raw = env?.[KOVA_AUTH_MODE_ENV];
   if (raw == null || raw === "") return "supabase";
-  if (KOVA_AUTH_MODES.includes(raw)) return raw;
+  if (KOVA_AUTH_MODES.includes(raw)) {
+    // Production authority is retired independently of obsolete Azure settings.
+    if (env.AZURE_ENVIRONMENT === "production" || env.CONTAINER_APP_NAME === "kovagpt-prod-web")
+      return "supabase";
+    return raw;
+  }
   throw new Error(`${KOVA_AUTH_MODE_ENV} must be one of: ${KOVA_AUTH_MODES.join(", ")}`);
 }
 
@@ -91,7 +96,7 @@ export function clearKovaSessionCookie() {
  * token, which would make logout and revocation bypassable.
  */
 export function selectAuthCredential(request, mode = resolveKovaAuthMode()) {
-  const kova = readKovaSessionToken(request);
+  const kova = kovaAuthEnabled(mode) ? readKovaSessionToken(request) : null;
   const authorization = request.headers.get("authorization");
   const hasSupabaseBearer =
     typeof authorization === "string" && /^Bearer[ \t]+[^\s]+$/iu.test(authorization);
