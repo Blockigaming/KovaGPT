@@ -2477,6 +2477,7 @@ export function ChatInput({
         inlineDictation
         autoStartVoice
         mode={activeVoiceMode ?? "dictate"}
+        chatMode={mode}
         onOpenChange={(open) => {
           if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)
             setVoiceOpenMode(null);

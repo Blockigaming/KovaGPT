@@ -29,7 +29,11 @@ import {
 import type { ComposerVoiceSubmit, ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { createAckCache } from "@/lib/voice/acknowledgments.mjs";
 import { createBargeInDetector } from "@/lib/voice/barge-in.mjs";
-import { createStreamingVoicePlayback } from "@/lib/voice/streaming-playback.mjs";
+import {
+  createStreamingVoicePlayback,
+  parseVoiceSegment,
+  predictedDelay,
+} from "@/lib/voice/streaming-playback.mjs";
 import { createVoiceLatencyTracker } from "@/lib/voice/voice-latency.mjs";
 
 // In-memory only: no text, audio or identifiers. Read it from the console with
@@ -112,6 +116,8 @@ export interface ComposerVoiceDialogProps {
   autoStartVoice?: boolean;
   onVoiceSubmit?: ComposerVoiceSubmit;
   onVoicePlaybackProgress?: (fraction: number | null) => void;
+  /** Selected chat reasoning mode; only predicts which acknowledgment may play. */
+  chatMode?: string;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   isStreaming: boolean;
@@ -180,6 +186,7 @@ export function ComposerVoiceDialog({
   isStreaming,
   conversationModelControl,
   onCloseAutoFocus,
+  chatMode,
 }: ComposerVoiceDialogProps) {
   const transcriptId = useId();
   const voiceGlow = useRef<HTMLDivElement>(null);
@@ -258,6 +265,7 @@ export function ComposerVoiceDialog({
     onVoiceSubmit,
     onVoicePlaybackProgress,
     onOpenChange,
+    chatMode,
   });
   current.current = {
     open,
@@ -271,6 +279,7 @@ export function ComposerVoiceDialog({
     onVoiceSubmit,
     onVoicePlaybackProgress,
     onOpenChange,
+    chatMode,
   };
   const streamingBlocked = mode !== "voice" && isStreaming;
   const mounted = useRef(false);
@@ -734,20 +743,23 @@ export function ComposerVoiceDialog({
     });
     voicePlayback.current = playback;
     playback.begin();
+    // Hint only: a reasoning mode predicts a delay. Never changes model or effort.
+    const predicted = predictedDelay(current.current.chatMode);
+    if (predicted) playback.delay(predicted);
     return {
       playback,
       events: {
-        onSegment: (segment: {
-          chatId: string;
-          messageId: string;
-          index: number;
-          text: string;
-          receipt: string;
-        }) => {
-          words += segment.text.trim().split(/\s+/u).length;
-          playback.segment(segment);
+        onStream: (
+          delta: Record<string, unknown> | undefined,
+          chatId: string,
+          messageId: string,
+        ) => {
+          const segment = parseVoiceSegment(delta, chatId, messageId);
+          if (segment) {
+            words += segment.text.trim().split(/\s+/u).length;
+            playback.segment(segment);
+          } else if (delta?.kind === "activity" && delta.label) playback.delay("search");
         },
-        onDelay: (kind: "search" | "reasoning") => playback.delay(kind),
       },
     };
   };

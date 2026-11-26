@@ -1941,14 +1941,6 @@ function KovaGPT() {
       };
 
       voiceRequest?.onAssistant?.(nextConvId, assistantMsg.id);
-      // Hints only: they choose which acknowledgment may play. They never change
-      // the selected model, reasoning effort or plan limits.
-      if (voiceRequest) {
-        if (requestWebSearch) voiceRequest.onDelay?.("search");
-        else if (["thinking", "high", "extra_high", "max", "ultra"].includes(requestMode))
-          voiceRequest.onDelay?.("reasoning");
-      }
-
       // Keep the exact submitted draft in this request's mounted scope. Attachment
       // objects/payloads are retained by reference; they are never re-uploaded here.
       const rejectedDraft: NextPrompt = {
@@ -2249,24 +2241,7 @@ function KovaGPT() {
                 voiceModelReceipt: delta.receipt as string,
               }));
             }
-            if (
-              voiceRequest &&
-              delta?.kind === "voice_segment" &&
-              Number.isSafeInteger(delta.index) &&
-              typeof delta.text === "string" &&
-              delta.text.length > 0 &&
-              delta.text.length <= 1000 &&
-              typeof delta.receipt === "string" &&
-              /^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u.test(delta.receipt)
-            )
-              voiceRequest.onSegment?.({
-                chatId: nextConvId,
-                messageId: assistantMsg.id,
-                index: delta.index as number,
-                text: delta.text,
-                receipt: delta.receipt,
-              });
-            if (delta?.kind === "activity" && delta?.label) voiceRequest?.onDelay?.("search");
+            voiceRequest?.onStream?.(delta, nextConvId, assistantMsg.id);
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
               updateAssistantMessage((message) => ({

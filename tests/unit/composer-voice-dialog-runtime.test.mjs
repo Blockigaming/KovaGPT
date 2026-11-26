@@ -1,6 +1,10 @@
 import { createAckCache } from "../../src/lib/voice/acknowledgments.mjs";
 import { createBargeInDetector } from "../../src/lib/voice/barge-in.mjs";
-import { createStreamingVoicePlayback } from "../../src/lib/voice/streaming-playback.mjs";
+import {
+  createStreamingVoicePlayback,
+  parseVoiceSegment,
+  predictedDelay,
+} from "../../src/lib/voice/streaming-playback.mjs";
 import { createVoiceLatencyTracker } from "../../src/lib/voice/voice-latency.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -308,7 +312,11 @@ function fixture(initial = {}, options = {}) {
     "@/lib/voice/speech-pause.mjs": { createVoiceSilenceGate },
     "@/lib/voice/acknowledgments.mjs": { createAckCache },
     "@/lib/voice/barge-in.mjs": { createBargeInDetector },
-    "@/lib/voice/streaming-playback.mjs": { createStreamingVoicePlayback },
+    "@/lib/voice/streaming-playback.mjs": {
+      createStreamingVoicePlayback,
+      parseVoiceSegment,
+      predictedDelay,
+    },
     "@/lib/voice/voice-latency.mjs": { createVoiceLatencyTracker },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {

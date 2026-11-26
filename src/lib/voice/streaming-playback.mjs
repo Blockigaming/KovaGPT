@@ -21,6 +21,29 @@ async function sha256Hex(text) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+const REASONING_MODES = ["thinking", "high", "extra_high", "max", "ultra"];
+const RECEIPT = /^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u;
+
+/** Validate a stream delta; returns the signed segment it carries, else null. */
+export function parseVoiceSegment(delta, chatId, messageId) {
+  if (
+    delta?.kind !== "voice_segment" ||
+    !Number.isSafeInteger(delta.index) ||
+    typeof delta.text !== "string" ||
+    !delta.text ||
+    delta.text.length > 1000 ||
+    typeof delta.receipt !== "string" ||
+    !RECEIPT.test(delta.receipt)
+  )
+    return null;
+  return { chatId, messageId, index: delta.index, text: delta.text, receipt: delta.receipt };
+}
+
+/** A reasoning mode predicts a delay (a hint only; it never selects a model or effort). */
+export function predictedDelay(mode) {
+  return REASONING_MODES.includes(mode) ? "reasoning" : null;
+}
+
 export function createStreamingVoicePlayback({
   ownerId,
   voiceId,

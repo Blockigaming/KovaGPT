@@ -5,7 +5,11 @@ import {
   createAcknowledgmentPolicy,
   ackClipUrl,
 } from "../../src/lib/voice/acknowledgments.mjs";
-import { createStreamingVoicePlayback } from "../../src/lib/voice/streaming-playback.mjs";
+import {
+  createStreamingVoicePlayback,
+  parseVoiceSegment,
+  predictedDelay,
+} from "../../src/lib/voice/streaming-playback.mjs";
 import {
   createVoiceLatencyTracker,
   percentile,
@@ -329,4 +333,27 @@ test("inline Voice keeps the glow for the whole session and shows no Starting/sp
   assert.doesNotMatch(inline, />\s*Resume\s*</u);
   assert.match(inline, /aria-label="Resume Voice"/u);
   assert.match(view, /startingVoice \? "kova-voice-heading sr-only"/u);
+});
+
+test("stream deltas are validated before speaking and request hints only predict delays", () => {
+  const receipt = `${"a".repeat(20)}.${"b".repeat(43)}`;
+  const ok = { kind: "voice_segment", index: 0, text: "Hello.", receipt };
+  assert.deepEqual(parseVoiceSegment(ok, "c", "m"), {
+    chatId: "c",
+    messageId: "m",
+    index: 0,
+    text: "Hello.",
+    receipt,
+  });
+  for (const bad of [
+    { ...ok, kind: "other" },
+    { ...ok, index: 1.5 },
+    { ...ok, text: "" },
+    { ...ok, text: "x".repeat(1001) },
+    { ...ok, receipt: "nope" },
+  ])
+    assert.equal(parseVoiceSegment(bad, "c", "m"), null);
+  assert.equal(predictedDelay("max"), "reasoning");
+  assert.equal(predictedDelay("instant"), null);
+  assert.equal(predictedDelay(undefined), null);
 });

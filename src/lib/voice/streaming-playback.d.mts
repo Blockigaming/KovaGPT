@@ -32,3 +32,10 @@ export function createStreamingVoicePlayback(options: {
   interrupt(): void;
   readonly active: boolean;
 };
+
+export function parseVoiceSegment(
+  delta: Record<string, unknown> | undefined,
+  chatId: string,
+  messageId: string,
+): VoiceSegmentEvent | null;
+export function predictedDelay(mode: string | undefined): "reasoning" | null;

@@ -21,9 +21,12 @@ export type VoiceSegmentEvent = {
 
 /** Live signals from the chat stream used to start speech early and cover real delays. */
 export type VoiceTurnEvents = {
-  onSegment?: (segment: VoiceSegmentEvent) => void;
-  /** A search/tool step or extended reasoning is genuinely delaying the reply. */
-  onDelay?: (kind: "search" | "reasoning") => void;
+  /** Every raw stream delta; validated and used by the lazily loaded voice module. */
+  onStream?: (
+    delta: Record<string, unknown> | undefined,
+    chatId: string,
+    messageId: string,
+  ) => void;
 };
 
 export type ComposerVoiceSubmit = (
