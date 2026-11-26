@@ -33,6 +33,7 @@ import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
 import { DeveloperFilesPanel } from "@/components/DeveloperFilesPanel";
 import { DeveloperPlayground } from "@/components/DeveloperPlayground";
 import { KOVA_MODEL_LABELS } from "@/lib/kova-foundation-models.mjs";
+import type { DeveloperUsageSummary } from "@/lib/pricing/developer-usage-summary.mjs";
 type Row = Record<string, string | number | boolean | null | string[]>;
 type ConsoleData = {
   enabled: boolean;
@@ -231,6 +232,39 @@ function OwnedDeveloperConsole({
     if (value) usageParams.set(key, value);
   }
   const usageQuery = usageParams.toString();
+  usageParams.delete("usagePage");
+  const summaryQuery = usageParams.toString();
+  const [summary, setSummary] = useState<{ query: string; data: DeveloperUsageSummary; readAt: string } | null>(null);
+  const [summaryBusy, setSummaryBusy] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+  const summaryAbort = useRef<AbortController | null>(null);
+  useEffect(() => {
+    setSummary(null);
+    setSummaryError("");
+    setSummaryBusy(false);
+    return () => { summaryAbort.current?.abort(); summaryAbort.current = null; };
+  }, [summaryQuery, userId]);
+  const loadSummary = async () => {
+    if (summaryAbort.current || !dateFilter || !endDateFilter) return;
+    const controller = new AbortController();
+    summaryAbort.current = controller;
+    setSummaryBusy(true);
+    setSummaryError("");
+    try {
+      const response = await fetchWithTimeoutAuthenticated(`/api/developer/console?${summaryQuery}&usageSummary=1`, { signal: controller.signal, headers: { "X-Kova-Expected-User": userId } }, 45_000);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error?.code === "developer_summary_range_too_large" ? "More than 5,000 matching records. Narrow the date range or choose a project." : result.error?.code === "developer_summary_range_invalid" ? "Select a date range of 93 days or less." : result.error?.message ?? "Could not load analytics.");
+      if (!controller.signal.aborted && summaryAbort.current === controller) {
+        setSummary({ query: summaryQuery, data: result.summary, readAt: result.summaryReadAt });
+      }
+    } catch (cause) {
+      if (!controller.signal.aborted && summaryAbort.current === controller)
+        setSummaryError(cause instanceof Error ? cause.message : "Could not load analytics.");
+    } finally {
+      if (summaryAbort.current === controller) { summaryAbort.current = null; setSummaryBusy(false); }
+    }
+  };
+  const currentSummary = summary?.query === summaryQuery ? summary : null;
   const load = useCallback(
     async (signal?: AbortSignal) => {
       const owner = ownerRef.current;
@@ -810,7 +844,7 @@ function OwnedDeveloperConsole({
           </section>
           <section id="usage" hidden={section !== "usage" && section !== "costs" && section !== "logs"} className="min-w-0 scroll-mt-4 space-y-4 rounded-xl border p-3 sm:p-5">
             <h1 className="text-2xl font-semibold">{section === "logs" ? "Request logs" : section === "costs" ? "Costs" : "Usage"}</h1>
-            <p className="text-sm text-muted-foreground">Filter your API request history on the server. Totals below cover the current page of up to 100 matching records, not the full billing period.</p>
+            <p className="text-sm text-muted-foreground">Filter your API request history. Page totals cover up to 100 records; generate a date-range summary to see all matching records within the supported range.</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="space-y-1 text-sm">
                 <span>Model ID</span>
@@ -887,6 +921,13 @@ function OwnedDeveloperConsole({
               </label>
             </div>
             <div className="flex flex-wrap gap-2">
+              {[7, 30, 90].map((days) => <Button key={days} variant="outline" onClick={() => {
+                const today = new Date();
+                setEndDateFilter(today.toISOString().slice(0, 10));
+                today.setUTCDate(today.getUTCDate() - days + 1);
+                setDateFilter(today.toISOString().slice(0, 10));
+                setUsagePage(0);
+              }}>Last {days} days</Button>)}
               <Button variant="outline" onClick={clearUsageFilters}>Clear filters</Button>
               <Button variant="outline" disabled={!usageReady || !visibleUsage.length} onClick={() => {
                 const fields = ["id", "account_id", "project_id", "api_key_id", "public_model", "capability", "created_at", "settled_at", "settlement_state", ...tokenDimensions, "final_customer_charge", "maximum_reserved_charge", "currency"];
@@ -904,6 +945,37 @@ function OwnedDeveloperConsole({
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
               }}>Export current page</Button>
             </div>
+            {(section === "usage" || section === "costs") && (
+              <section className="min-w-0 space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                <h2 className="font-semibold">Date-range analytics</h2>
+                <p className="text-xs text-muted-foreground">Choose dates (up to 93 days and 5,000 matching records). This is an observed usage summary, not a financial ledger statement.</p>
+                <Button disabled={!dateFilter || !endDateFilter || summaryBusy || dateFilter > endDateFilter} onClick={() => void loadSummary()}>{summaryBusy ? "Calculating…" : "Calculate date-range analytics"}</Button>
+                {summaryError && <p role="alert" className="text-sm text-destructive">{summaryError}</p>}
+                {currentSummary && <div className="min-w-0 space-y-3">
+                  <p className="text-xs text-muted-foreground">Read as of {new Date(currentSummary.readAt).toLocaleString()}</p>
+                  <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+                    <div className="min-w-0 rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Matching requests</p><p className="text-2xl font-semibold tabular-nums">{currentSummary.data.requests.toLocaleString()}</p></div>
+                    <div className="min-w-0 rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Recorded final charges (minor units)</p>{currentSummary.data.charges.map((row) => <p key={row.currency} className="font-semibold tabular-nums">{row.amount} {row.currency}</p>)}{!currentSummary.data.charges.length && <p>—</p>}</div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{currentSummary.data.measuredRequests.toLocaleString()} requests with measured tokens</p>
+                  {(["days", "models", "services", "statuses"] as const).map((group) => {
+                    const rows = currentSummary.data[group];
+                    const max = Math.max(1, ...rows.map((row) => row.requests));
+                    return <section key={group} className="min-w-0 space-y-2 rounded-lg border border-border p-3">
+                      <h3 className="text-sm font-medium capitalize">{group}</h3>
+                      <div className="max-h-72 space-y-2 overflow-auto">
+                        {rows.map((row) => <div key={row.label} className="grid min-w-0 gap-1 border-b border-border/40 pb-2 text-xs last:border-0">
+                          <div className="flex min-w-0 flex-wrap justify-between gap-1"><span className="min-w-0 break-all">{row.label}</span><span className="tabular-nums">{row.requests.toLocaleString()} requests</span></div>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-foreground/70" style={{ width: `${row.requests / max * 100}%` }} /></div>
+                          <p className="text-muted-foreground">{row.measuredRequests ? `${Object.values(row.tokens).reduce((sum, value) => sum + value, 0).toLocaleString()} measured tokens` : "No measured tokens"}{row.charges.length ? ` · ${row.charges.map((charge) => `${charge.amount} ${charge.currency} minor units`).join(" · ")}` : ""}</p>
+                        </div>)}
+                        {!rows.length && <p className="text-xs text-muted-foreground">No matching requests.</p>}
+                      </div>
+                    </section>;
+                  })}
+                </div>}
+              </section>
+            )}
             {(section === "usage" || section === "costs") && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border p-4">
