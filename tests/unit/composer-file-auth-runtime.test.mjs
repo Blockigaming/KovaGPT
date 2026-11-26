@@ -156,6 +156,7 @@ function fixture(
     "@/lib/modes": { DAILY_UPLOAD_LIMIT_BY_TIER: { free: 2 } },
     "@/lib/composer-keyboard.mjs": {},
     "@/lib/dialog-return-focus": { restoreDialogFocus() {} },
+    "@/lib/observe-element-width": { observeElementWidth() {} },
     "@/lib/composer-paste": { prepareComposerPaste: (plain) => plain },
     sonner: { toast: { error() {}, message() {} } },
     "@/hooks/use-library-attachment-auto-save": {
