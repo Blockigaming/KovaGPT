@@ -330,9 +330,7 @@ export function createTranscriptReadingAnchorController(
       queueCapture();
     }
   };
-  const observer = window?.ResizeObserver
-    ? new window.ResizeObserver(queueCompensation)
-    : null;
+  const observer = window?.ResizeObserver ? new window.ResizeObserver(queueCompensation) : null;
   const observe = (target: HTMLElement) => {
     if (sizes.has(target)) return;
     const rect = target.getBoundingClientRect();
