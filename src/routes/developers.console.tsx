@@ -53,6 +53,7 @@ function downloadUsageCsv(rows: Row[], filename: string) {
 type ConsoleData = {
   enabled: boolean;
   workspaceV2?: boolean;
+  consumerCreditSharing?: boolean;
   accounts: Row[];
   projects: Row[];
   keys: Row[];
@@ -589,6 +590,17 @@ function OwnedDeveloperConsole({
                   <Link to="/developers/connections" className="inline-flex min-h-10 items-center text-sm underline">MCP connections</Link>
                 </div>
               </article>
+              {data?.workspaceV2 && (
+                <article className="min-w-0 space-y-2 rounded-xl border border-border p-3 sm:p-4">
+                  <h2 className="font-semibold">KovaGPT usage credits</h2>
+                  <p className="text-sm text-muted-foreground">Your preference is saved to your account. Consumer credit spending is not active until the shared ledger integration is released.</p>
+                  <label className="flex min-w-0 items-start gap-3 py-2 text-sm">
+                    <input type="checkbox" checked={data.consumerCreditSharing === true} disabled={busy} className="mt-0.5 size-5 shrink-0" onChange={(event) => void mutate({ operation: "set_credit_sharing", enabled: event.target.checked })} />
+                    <span className="min-w-0">Allow purchased API credits to fund additional KovaGPT usage when available (off by default).</span>
+                  </label>
+                  <p className="text-xs text-muted-foreground">Included Pro API credits are excluded. This preference does not purchase credits or enable auto-reload.</p>
+                </article>
+              )}
               <article className="space-y-2 rounded-xl border border-border p-4">
                 <h2 className="font-semibold">Data sharing</h2>
                 <p className="text-sm text-muted-foreground">Kova does not offer free API tokens in exchange for training data. The planned Pro monthly API allowance is not tied to data sharing.</p>
@@ -611,6 +623,9 @@ function OwnedDeveloperConsole({
                       <Button variant="outline" onClick={() => {
                         setAccount(String(row.account_id));
                         setProject(String(row.id));
+                        setRenameId("");
+                        setProjectName("");
+                        projectCreateId.current = null;
                         setSecret("");
                         clearUsageFilters();
                       }}>Select project</Button>
