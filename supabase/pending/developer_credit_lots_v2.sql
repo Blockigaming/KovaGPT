@@ -137,27 +137,60 @@ end $$;
 -- Record a confirmed processor receipt exactly once. The receipt, amount,
 -- original purchase time and owner all come from the existing funding tables.
 -- Never derive expiry from login time or a later purchase.
-create function public.developer_record_purchase_v2(p_attempt uuid)
+create function public.developer_record_purchase_v2(p_attempt uuid,p_charge text,p_paid_at timestamptz)
 returns uuid language plpgsql security invoker set search_path='' as $$
-declare item record; l uuid;
+declare item record; lot public.developer_credit_lots_v2%rowtype; expiry timestamptz;
+  target numeric; delta numeric; from_available numeric; from_expired numeric; unresolved numeric;
 begin
   perform pg_advisory_xact_lock(hashtextextended('developer_billing',0));
-  select f.account_id,own.owner_id,p.id purchase_id,p.credits_granted,p.created_at,
-    r.reversal_amount into item
+  select f.account_id,own.owner_id,p.id purchase_id,p.credits_granted,
+    r.charge_id,r.reversal_amount into item
     from public.developer_funding_receipts r
     join public.developer_funding_attempts f on f.id=r.attempt_id
     join public.credit_purchases p on p.id=r.purchase_id and p.account_id=f.account_id
     join public.developer_account_owners own on own.account_id=f.account_id
     where r.attempt_id=p_attempt and f.state='paid';
-  if not found then raise exception 'developer_credit_receipt_required';end if;
+  if not found or p_charge is distinct from item.charge_id
+    then raise exception 'developer_credit_receipt_required';end if;
+  if p_paid_at is null or not isfinite(p_paid_at) or p_paid_at>clock_timestamp()
+    then raise exception 'developer_credit_purchase_time_unverified';end if;
   if item.credits_granted<=0 then raise exception 'developer_credit_amount_invalid';end if;
-  -- Receipt creation is not necessarily payment capture time. Require a
-  -- verified timestamp from the funding integration before creating the lot.
-  -- The integration must call the timestamp-qualified routine below instead.
-  select id into l from public.developer_credit_lots_v2
-    where kind='purchased' and source_key=item.purchase_id::text;
-  if found then return l;end if;
-  raise exception 'developer_credit_purchase_time_unverified';
+  expiry:=((p_paid_at at time zone 'UTC')+interval '1 year') at time zone 'UTC';
+  select * into lot from public.developer_credit_lots_v2
+    where kind='purchased' and source_key=item.purchase_id::text for update;
+  if not found then
+    insert into public.developer_credit_lots_v2(account_id,kind,source_key,owner_id,issued_at,expires_at,issued_amount,available_amount)
+      values(item.account_id,'purchased',item.purchase_id::text,item.owner_id,p_paid_at,expiry,item.credits_granted,item.credits_granted)
+      returning * into lot;
+  elsif lot.account_id<>item.account_id or lot.issued_at<>p_paid_at
+    or lot.issued_amount<>item.credits_granted then
+    raise exception 'developer_credit_receipt_conflict';
+  end if;
+  target:=item.reversal_amount;
+  if target is null or target<0 or target>lot.issued_amount then raise exception 'developer_credit_reversal_invalid';end if;
+  -- A reversal removes unused value only from the original purchase. Spent
+  -- and held value cannot be silently reclaimed. An unresolved liability
+  -- blocks new reservations until reconciliation. Refund/dispute recovery
+  -- restores only the amount previously reversed, never resets expiry.
+  delta:=target-lot.reversed_amount;
+  if delta>0 then
+    from_available:=least(delta,lot.available_amount);
+    from_expired:=least(delta-from_available,lot.expired_amount);
+    update public.developer_credit_lots_v2 set available_amount=available_amount-from_available,
+      expired_amount=expired_amount-from_expired,reversed_amount=reversed_amount+from_available+from_expired
+      where id=lot.id returning * into lot;
+  elsif delta<0 then
+    update public.developer_credit_lots_v2 set reversed_amount=reversed_amount+delta,
+      available_amount=available_amount+case when expires_at>clock_timestamp() then -delta else 0 end,
+      expired_amount=expired_amount+case when expires_at<=clock_timestamp() then -delta else 0 end
+      where id=lot.id returning * into lot;
+  end if;
+  unresolved:=greatest(0,target-lot.reversed_amount);
+  insert into public.developer_credit_reversals_v2(lot_id,target_amount,unresolved_amount)
+    values(lot.id,target,unresolved) on conflict(lot_id) do update set
+    target_amount=excluded.target_amount,unresolved_amount=excluded.unresolved_amount,updated_at=clock_timestamp();
+  perform public.developer_credit_expire_v2(item.account_id,clock_timestamp());
+  return lot.id;
 end $$;
 
 -- Reservation and terminal settlement are transactional and lock the same
@@ -256,19 +289,33 @@ begin
     remaining:=remaining-charged;
   end loop;
   if remaining<>0 then raise exception 'developer_credit_settlement_invariant';end if;
+  -- Apply outstanding reversal targets to newly released value before it can
+  -- be reused. Held charges remain recorded; any shortfall remains a liability.
+  for l in select lot.id,lot.available_amount,lot.expired_amount,lot.reversed_amount,x.target_amount
+    from public.developer_credit_hold_lots_v2 h
+    join public.developer_credit_lots_v2 lot on lot.id=h.lot_id
+    join public.developer_credit_reversals_v2 x on x.lot_id=lot.id
+    where h.hold_id=r.id and x.unresolved_amount>0 for update of lot,x loop
+    charged:=least(l.available_amount,greatest(0,l.target_amount-l.reversed_amount));
+    unused:=least(l.expired_amount,greatest(0,l.target_amount-l.reversed_amount-charged));
+    update public.developer_credit_lots_v2 set available_amount=available_amount-charged,
+      expired_amount=expired_amount-unused,reversed_amount=reversed_amount+charged+unused where id=l.id;
+    update public.developer_credit_reversals_v2 set unresolved_amount=greatest(0,l.target_amount-l.reversed_amount-charged-unused),
+      updated_at=clock_timestamp() where lot_id=l.id;
+  end loop;
   update public.developer_credit_holds_v2 set state=p_outcome,final_amount=p_amount,finished_at=p_at where id=r.id;
   return true;
 end $$;
 
 revoke all on function public.developer_credit_expire_v2(uuid,timestamptz),
  public.developer_pro_period_v2(uuid,timestamptz),public.developer_refresh_pro_v2(uuid,timestamptz),
- public.developer_record_purchase_v2(uuid),
+ public.developer_record_purchase_v2(uuid,text,timestamptz),
  public.developer_reserve_lots_v2(uuid,uuid,text,text,numeric,timestamptz),
  public.developer_dispatch_lots_v2(uuid),public.developer_finish_lots_v2(uuid,text,numeric,timestamptz)
  from public,anon,authenticated;
 grant execute on function public.developer_credit_expire_v2(uuid,timestamptz),
  public.developer_pro_period_v2(uuid,timestamptz),public.developer_refresh_pro_v2(uuid,timestamptz),
- public.developer_record_purchase_v2(uuid),
+ public.developer_record_purchase_v2(uuid,text,timestamptz),
  public.developer_reserve_lots_v2(uuid,uuid,text,text,numeric,timestamptz),
  public.developer_dispatch_lots_v2(uuid),public.developer_finish_lots_v2(uuid,text,numeric,timestamptz)
  to service_role;
