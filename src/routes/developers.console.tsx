@@ -274,6 +274,10 @@ function OwnedDeveloperConsole({
         throw new Error(value.error?.message ?? "The change could not be confirmed.");
       if (owner !== ownerRef.current) return;
       if (value.secret) setSecret(value.secret);
+      if (body.operation === "create_account" && typeof value.accountId === "string") {
+        setAccount(value.accountId);
+        if (typeof value.projectId === "string") setProject(value.projectId);
+      }
       await load();
     } catch (cause) {
       if (owner === ownerRef.current)
@@ -291,6 +295,16 @@ function OwnedDeveloperConsole({
   useEffect(() => {
     if (section !== "keys" && section !== "limits") setSecret("");
   }, [section]);
+  const autoSelected = useRef(false);
+  useEffect(() => {
+    if (!data || autoSelected.current) return;
+    autoSelected.current = true;
+    if (data.accounts.length !== 1) return;
+    const id = String(data.accounts[0].account_id);
+    setAccount(id);
+    const projects = data.projects.filter((row) => row.account_id === id);
+    if (projects.length === 1) setProject(String(projects[0].id));
+  }, [data]);
   const selected = data?.balances.find((row) => row.id === account);
   const usageReady = loadedUsageQuery === usageQuery;
   const visibleUsage = usageReady ? (data?.usage ?? []) : [];
@@ -359,6 +373,13 @@ function OwnedDeveloperConsole({
             <p role="alert" className="text-destructive">
               {error}
             </p>
+          )}
+          {data && data.accounts.length === 0 && section === "overview" && (
+            <section className="min-w-0 rounded-xl border border-border p-4">
+              <h2 className="font-semibold">Set up your developer workspace</h2>
+              <p className="mt-2 text-sm text-muted-foreground">You are already signed in to KovaGPT. Your developer credit account has not been created yet.</p>
+              <Button disabled={busy} className="mt-4" onClick={() => void mutate({ operation: "create_account", name: "Personal workspace", currency: "USD" })}>Create workspace</Button>
+            </section>
           )}
           {data && !data.enabled && (
             <p role="status">
