@@ -10,9 +10,11 @@ export const Route = createFileRoute("/api/google/auth")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const connector = new URL(request.url).searchParams.get("connector") ?? "gmail";
+        const params = new URL(request.url).searchParams;
+        const connector = params.get("connector") ?? "gmail";
+        const access = params.get("access") ?? "read";
         try {
-          googleConnectorScopes(connector);
+          googleConnectorScopes(connector, access);
         } catch {
           return Response.json({ error: "Invalid Google connector" }, { status: 400 });
         }
@@ -74,6 +76,7 @@ export const Route = createFileRoute("/api/google/auth")({
           const url = buildGoogleAuthUrl({
             request,
             connector,
+            access,
             state,
             codeChallenge,
             loginHint: attempt.loginHint ?? undefined,

@@ -1,12 +1,66 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
+
+test("staging candidate builds can publish only to the existing private package without Azure access", () => {
+  const workflow = read(".github/workflows/build-ghcr-staging-candidate.yml");
+  assert.match(workflow, /pull_request:\n    types: \[labeled\]/u);
+  assert.match(workflow, /head\.repo\.full_name == github\.repository/u);
+  assert.match(workflow, /github\.event\.label\.name == 'build-staging-image'/u);
+  assert.match(workflow, /environment: staging/u);
+  assert.match(workflow, /persist-credentials: false/u);
+  assert.match(workflow, /prepare-verified-build-context\.sh/u);
+  assert.match(workflow, /KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="\$PRODUCTION_PROJECT_REF"/u);
+  assert.match(workflow, /KOVA_VERIFY_BROWSER_CONFIG=true/u);
+  assert.match(workflow, /image="\$IMAGE_REPOSITORY:staging-\$SOURCE_SHA-/u);
+  assert.match(workflow, /--network none/u);
+  assert.match(workflow, /gh api [^\n]+--jq \.visibility\)" = private/u);
+  assert.doesNotMatch(
+    workflow,
+    /pull_request_target|environment: production|id-token: write|azure\/login|az acr|az containerapp|az deployment/u,
+  );
+
+  const scripts = [...workflow.matchAll(/^        run: \|\n((?: {10}[^\n]*\n|\n)+)/gmu)].map(
+    ([, script]) => script,
+  );
+  assert.equal(scripts.length, 2);
+  for (const script of scripts)
+    assert.equal(spawnSync("bash", ["-n"], { input: script }).status, 0);
+
+  const env = {
+    VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixturestaging000000",
+    VITE_KOVA_AUTH_MODE: "supabase",
+    PRODUCTION_PROJECT_REF: "mfbycmbjygcfkrsuepxf",
+  };
+  for (const [url, patch, expected] of [
+    ["", {}, /isolated staging Supabase project URL/u],
+    ["https://mfbycmbjygcfkrsuepxf.supabase.co", {}, /a nonproduction project/u],
+    [
+      "https://fixturestaging000000.supabase.co",
+      { VITE_SUPABASE_PUBLISHABLE_KEY: "wrong" },
+      /publishable key/u,
+    ],
+    [
+      "https://fixturestaging000000.supabase.co",
+      { VITE_KOVA_AUTH_MODE: "kova", STAGING_BASE_URL: "https://kovagpt.com" },
+      /requires the verified staging app origin/u,
+    ],
+  ]) {
+    const result = spawnSync("bash", ["-s"], {
+      input: scripts[0],
+      encoding: "utf8",
+      env: { ...env, ...patch, VITE_SUPABASE_URL: url },
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, expected);
+  }
+});
 
 test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the app", () => {
   const workflow = read(".github/workflows/staging-rehearsal.yml");
@@ -308,6 +362,16 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.ok(passing.paths.includes("/assets/preloaded.js"));
     assert.ok(!passing.paths.includes("/assets/assets/preloaded.js"));
     assert.ok(!passing.paths.includes("/stripe.js"));
+
+    const entry = scripts.get("/assets/index.js");
+    const chunks = Array.from({ length: 273 }, (_, i) => `bundle-${i}.js`);
+    for (const chunk of chunks) scripts.set(`/assets/${chunk}`, "export const content = true;");
+    scripts.set("/assets/index.js", entry + chunks.map((chunk) => `import "./${chunk}";`).join(""));
+    const stagingBundle = await runSmoke();
+    assert.equal(stagingBundle.code, 0, stagingBundle.stderr);
+    assert.ok(stagingBundle.paths.includes("/assets/bundle-272.js"));
+    scripts.set("/assets/index.js", entry);
+    for (const chunk of chunks) scripts.delete(`/assets/${chunk}`);
 
     htmlCacheControl = "public, max-age=300";
     const cacheableHtml = await runSmoke();

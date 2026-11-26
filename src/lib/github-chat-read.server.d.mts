@@ -25,6 +25,18 @@ export function createGitHubChatTools(dependencies: {
   rate: (ownerId: string) => Promise<boolean>;
   decrypt: (value: string) => Promise<string>;
   configured: () => boolean;
+  renewAccount?: (
+    ownerId: string,
+    accountId: string,
+  ) => Promise<{
+    id: string;
+    owner_id: string;
+    auth_type: "oauth";
+    status: string;
+    token_ciphertext: string | null;
+    token_expires_at: string | null;
+    updated_at: string;
+  } | null>;
   fetchImpl?: typeof fetch;
   now?: () => number;
 }): {

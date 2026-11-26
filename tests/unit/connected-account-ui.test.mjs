@@ -11,9 +11,9 @@ function fixture() {
     "@tanstack/react-start": { useServerFn: (fn) => fn },
     "@/lib/auth-fetch": {
       authFetch() {},
-      fetchWithTimeoutAuthenticated: () => {
+      fetchWithTimeoutAuthenticated: (url) => {
         const wait = deferred();
-        pending.push(wait);
+        pending.push({ ...wait, url });
         return wait.promise;
       },
     },
@@ -33,6 +33,31 @@ function fixture() {
 const response = (id) => ({
   ok: true,
   json: async () => ({ configuredProviders: [{ id: "microsoft" }], accounts: [{ id }] }),
+});
+
+test("a slow provider renewal leaves the directory usable and cannot cross owners", async () => {
+  const f = fixture();
+  const expired = {
+    id: "outlook-a",
+    provider_id: "microsoft",
+    status: "connected",
+    token_expires_at: new Date(Date.now() - 1000).toISOString(),
+  };
+  f.render("owner-a");
+  f.pending[0].resolve({
+    ok: true,
+    json: async () => ({ configuredProviders: [{ id: "microsoft" }], accounts: [expired] }),
+  });
+  await settle();
+  assert.equal(f.pending[1].url, "/api/integrations/accounts?renew=1");
+  assert.deepEqual(f.render("owner-a").data.accounts, [expired]);
+  assert.equal(f.render("owner-a").loading, false);
+
+  f.render("owner-b");
+  f.pending[2].resolve(response("account-b"));
+  f.pending[1].resolve(response("renewed-a"));
+  await settle();
+  assert.equal(f.render("owner-b").data.accounts[0].id, "account-b");
 });
 
 test("a late account response cannot cross an owner transition", async () => {

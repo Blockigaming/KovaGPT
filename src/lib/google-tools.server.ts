@@ -10,6 +10,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { connectorWriteAllowed, type WritableConnector } from "@/lib/connector-write-policy.server";
 import {
   getValidGoogleAccessToken,
   canUsePaidGoogleConnector,
@@ -282,6 +283,8 @@ const SUPPORTED_WRITE_TOOLS = new Set([
   "gmail_send",
   "calendar_create_event",
 ]);
+const googleWriteConnector = (name: string): WritableConnector =>
+  name.startsWith("gmail_") ? "gmail" : "google-calendar";
 export const ALL_TOOLS: ToolDef[] = [
   ...READ_ONLY_TOOLS,
   ...WRITE_TOOLS.filter((tool) => SUPPORTED_WRITE_TOOLS.has(tool.function.name)),
@@ -302,9 +305,20 @@ export async function getAvailableGoogleTools(
   }
   const health = await getGoogleConnectionHealth(userId, binding?.connectionId);
   if (!health.connected) return [];
+  const writeAccess = new Set<string>();
+  if (health.id) {
+    const accountId = health.id;
+    await Promise.all(
+      (["gmail", "google-calendar"] as const).map(async (connector) => {
+        if (await connectorWriteAllowed(userId, connector, accountId)) writeAccess.add(connector);
+      }),
+    );
+  }
   return ALL_TOOLS.filter(
     (tool) =>
       (paid || !tool.function.name.startsWith("gmail_")) &&
+      (!WRITE_TOOL_NAMES.has(tool.function.name) ||
+        writeAccess.has(googleWriteConnector(tool.function.name))) &&
       hasGoogleCapability(health.scopes, googleToolCapability(tool.function.name)),
   );
 }
@@ -795,6 +809,8 @@ export async function stagePendingAction(
   ) {
     throw new Error("Reconnect Google before preparing this action.");
   }
+  if (!(await connectorWriteAllowed(userId, googleWriteConnector(tool), connection.id)))
+    throw new Error("Enable write access for this Google account in Connections.");
   const summarized = summarizeWriteTool(tool, validated);
   const summary = `${summarized.summary} · Google account: ${connection.email ?? "Selected account"}`;
   const preview = {
@@ -1046,7 +1062,13 @@ export async function executePendingAction(
       expectedGoogleSub: stagedGoogleSub,
       capability: googleToolCapability(claimedTool),
     });
+    if (
+      !(await connectorWriteAllowed(userId, googleWriteConnector(claimedTool), stagedConnectionId))
+    )
+      throw new Error("google_connector_write_disabled");
   } catch (error) {
+    const writeDisabled =
+      error instanceof Error && error.message === "google_connector_write_disabled";
     const connectionChanged =
       error instanceof Error && error.message === "google_connection_changed";
     const { data: released, error: releaseError } = await (db as unknown as SupabaseQueryLike)
@@ -1071,7 +1093,9 @@ export async function executePendingAction(
       ok: false,
       error: connectionChanged
         ? "The connected Google account changed. Prepare this action again."
-        : "Google needs to be reconnected before this action can run.",
+        : writeDisabled
+          ? "Write access for this Google account is off in Connections."
+          : "Google needs to be reconnected before this action can run.",
     };
   }
   const H: HeadersInit = {

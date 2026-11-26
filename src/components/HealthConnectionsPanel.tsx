@@ -10,8 +10,8 @@ import {
 import { Activity, Heart } from "lucide-react";
 import { APPLE_HEALTH_METRICS } from "@/health/apple-health-metrics.mjs";
 import type { AppleHealthAnalytics } from "@/health/apple-health-export.mjs";
-import { AppleHealthReport, HealthTrends } from "@/components/AppleHealthReport";
-import { getAppleHealthBridge } from "@/health/use-apple-health-live";
+import { NativeHealthReport, HealthTrends } from "@/components/AppleHealthReport";
+import { useNativeHealthLive, type NativeHealthLive } from "@/health/use-apple-health-live";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
@@ -160,8 +160,11 @@ function OuraConnections({
   error,
   reload,
   visible,
+  manageOura,
   onReport,
   setChooserOpen,
+  nativeHealth,
+  selectNativeHealth,
 }: {
   ownerId: string | null;
   data: AccountStatus | null;
@@ -169,10 +172,16 @@ function OuraConnections({
   error: boolean;
   reload: () => Promise<boolean>;
   visible: boolean;
+  manageOura: boolean;
   setChooserOpen: (open: boolean) => void;
+  nativeHealth: NativeHealthLive;
+  selectNativeHealth: () => void;
   onReport: (report: AppleHealthAnalytics | null) => void;
 }) {
-  const [showManagement, setShowManagement] = useState(false);
+  const [showManagement, setShowManagement] = useState(manageOura);
+  useEffect(() => {
+    if (visible && manageOura) setShowManagement(true);
+  }, [manageOura, visible]);
   const [pending, setPending] = useState(false);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const [selected, setSelected] = useState("");
@@ -259,13 +268,43 @@ function OuraConnections({
             </span>
             {configured ? (connected ? "Connected" : "Connect") : "Unavailable"}
           </Button>
-          <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm">
-            <span className="flex items-center gap-2 font-medium">
-              <Heart className="size-4 text-rose-500" aria-hidden="true" />
-              Apple Health
-            </span>
-            <span className="text-muted-foreground">Coming soon</span>
-          </div>
+          {[
+            { platform: "apple", label: "Apple Health" },
+            { platform: "android", label: "Android Health Connect" },
+          ].map(({ platform, label }) => {
+            const name = (
+              <span className="flex items-center gap-2 font-medium">
+                <Heart className="size-4 text-rose-500" aria-hidden="true" />
+                {label}
+              </span>
+            );
+            return nativeHealth.platform === platform && ownerId ? (
+              <Button
+                key={platform}
+                type="button"
+                variant="outline"
+                className="h-auto min-h-12 w-full justify-between rounded-xl px-3 py-2 text-left"
+                onClick={selectNativeHealth}
+              >
+                {name}
+                {nativeHealth.report
+                  ? "Connected"
+                  : nativeHealth.connected || nativeHealth.pending
+                    ? "Manage"
+                    : "Connect"}
+              </Button>
+            ) : (
+              <div
+                key={platform}
+                className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm"
+              >
+                {name}
+                <span className="text-muted-foreground">
+                  {platform === "android" ? "Requires Android app" : "Requires iPhone app"}
+                </span>
+              </div>
+            );
+          })}
         </div>
         {message && (
           <p role="status" className="text-sm text-muted-foreground">
@@ -367,6 +406,7 @@ function OuraConnections({
 export function HealthConnectionsPanel({
   ownerId,
   visible = true,
+  manageOura = false,
   data,
   loading,
   error,
@@ -374,18 +414,19 @@ export function HealthConnectionsPanel({
 }: {
   ownerId: string | null;
   visible?: boolean;
+  manageOura?: boolean;
   data: AccountStatus | null;
   loading: boolean;
   error: boolean;
   reload: () => Promise<boolean>;
 }) {
-  const [apple, setApple] = useState<AppleHealthAnalytics | null>(null);
-  const [native, setNative] = useState(false);
-  useEffect(() => setNative(Boolean(getAppleHealthBridge())), []);
+  const [native, setNative] = useState<AppleHealthAnalytics | null>(null);
+  const nativeHealth = useNativeHealthLive(visible ? ownerId : null);
+  const [nativeOpen, setNativeOpen] = useState(false);
   const [oura, setOura] = useState<AppleHealthAnalytics | null>(null);
   const [chooserOpen, setChooserOpen] = useState(false);
-  const metrics = { ...apple?.metrics, ...oura?.metrics };
-  const asOf = [apple?.asOf, oura?.asOf].filter(Boolean).sort().at(-1);
+  const metrics = { ...native?.metrics, ...oura?.metrics };
+  const asOf = [native?.asOf, oura?.asOf].filter(Boolean).sort().at(-1);
   const report = asOf && Object.keys(metrics).length ? { asOf, metrics } : null;
   return (
     <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
@@ -430,15 +471,26 @@ export function HealthConnectionsPanel({
           error={error}
           reload={reload}
           visible={visible}
+          manageOura={manageOura}
           onReport={setOura}
           setChooserOpen={setChooserOpen}
+          nativeHealth={nativeHealth}
+          selectNativeHealth={() => {
+            setChooserOpen(false);
+            setNativeOpen(true);
+            if (!nativeHealth.pending && !nativeHealth.connected) nativeHealth.start();
+          }}
         />
-        {native && ownerId && (
-          <details className="border-t border-border pt-3">
+        {nativeHealth.platform && ownerId && (
+          <details
+            className="border-t border-border pt-3"
+            open={nativeOpen}
+            onToggle={(event) => setNativeOpen(event.currentTarget.open)}
+          >
             <summary className="cursor-pointer text-sm font-semibold">
               Manage health connections
             </summary>
-            <AppleHealthReport ownerId={ownerId} visible={visible} onReport={setApple} />
+            <NativeHealthReport ownerId={ownerId} live={nativeHealth} onReport={setNative} />
           </details>
         )}
       </section>

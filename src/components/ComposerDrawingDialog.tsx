@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import { Pencil, Eraser, Undo2, Redo2, Trash2 } from "lucide-react";
+import { serializeExcalidrawDrawing } from "@/lib/excalidraw-scene.mjs";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,7 @@ export function ComposerDrawingDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAttach: (files: File[]) => Promise<boolean>;
+  onAttach?: (files: File[]) => Promise<boolean>;
   onReturnFocus: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -131,6 +132,7 @@ export function ComposerDrawingDialog({
     else onOpenChange(next);
   };
   const attach = async () => {
+    if (!onAttach) return;
     const canvas = canvasRef.current;
     if (!canvas || attaching.current || strokes.current.length === 0) return;
     attaching.current = true;
@@ -168,6 +170,16 @@ export function ComposerDrawingDialog({
       }
     }
   };
+  const downloadExcalidraw = () => {
+    if (attaching.current || strokes.current.length === 0) return;
+    const source = serializeExcalidrawDrawing(strokes.current, BACKGROUND);
+    const url = URL.createObjectURL(new Blob([source], { type: "application/json" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filenameRef.current.replace(/\.png$/u, ".excalidraw");
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
   const history = (direction: "undo" | "redo") => {
     if (attaching.current) return;
     active.current = null;
@@ -192,7 +204,9 @@ export function ComposerDrawingDialog({
           <DialogHeader>
             <DialogTitle>Drawing</DialogTitle>
             <DialogDescription>
-              Draw with your mouse, pen, or finger. Attach it as an image when you're ready.
+              {onAttach
+                ? "Draw with your mouse, pen, or finger. Attach it as an image when you're ready."
+                : "Draw with your mouse, pen, or finger, then download an editable Excalidraw file."}
             </DialogDescription>
           </DialogHeader>
           <div className="kova-drawing-toolbar" role="toolbar" aria-label="Drawing tools">
@@ -361,7 +375,7 @@ export function ComposerDrawingDialog({
           </div>
           {strokes.current.length >= MAX_STROKES ? (
             <p role="status" className="text-sm">
-              This drawing is full. Undo a stroke or attach it to continue.
+              This drawing is full. Undo a stroke to keep drawing.
             </p>
           ) : null}
           {attachmentError ? (
@@ -380,12 +394,22 @@ export function ComposerDrawingDialog({
             </Button>
             <Button
               type="button"
-              className="kova-drawing-attach"
-              onClick={() => void attach()}
+              variant="outline"
+              onClick={downloadExcalidraw}
               disabled={busy || strokes.current.length === 0}
             >
-              {busy ? "Attaching…" : "Attach drawing"}
+              Download Excalidraw file
             </Button>
+            {onAttach && (
+              <Button
+                type="button"
+                className="kova-drawing-attach"
+                onClick={() => void attach()}
+                disabled={busy || strokes.current.length === 0}
+              >
+                {busy ? "Attaching…" : "Attach drawing"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

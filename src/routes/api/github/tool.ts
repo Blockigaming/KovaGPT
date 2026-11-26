@@ -1,8 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { decryptSecret } from "@/lib/github-oauth.server";
+import {
+  decryptSecret,
+  gitHubTokenCurrent,
+  renewGitHubOAuthAccount,
+} from "@/lib/github-oauth.server";
 import { GitHubClient } from "@/lib/github-connector.mjs";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
+import { connectorWriteAllowed } from "@/lib/connector-write-policy.server";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 /* eslint-disable @typescript-eslint/no-explicit-any -- GitHub migration types are generated after deployment. */
 const reads = new Set([
     "file",
@@ -39,7 +45,7 @@ export const Route = createFileRoute("/api/github/tool")({
         } catch {
           return Response.json({ error: "Invalid JSON" }, { status: 400 });
         }
-        if (!reads.has(input.tool) && !writes.has(input.tool))
+        if (!input || (!reads.has(input.tool) && !writes.has(input.tool)))
           return Response.json({ error: "Unknown GitHub tool" }, { status: 400 });
         const write = writes.has(input.tool);
         const lockdown = await enforceLockdownCapability(
@@ -50,7 +56,7 @@ export const Route = createFileRoute("/api/github/tool")({
         if (lockdown) return lockdown;
         const repo = await (auth.supabaseAdmin as any)
           .from("github_repositories")
-          .select("id,full_name,account_id,permissions,default_branch")
+          .select("id,full_name,account_id,permissions,default_branch,archived,updated_at")
           .eq("owner_id", auth.userId)
           .eq("full_name", String(input.repository).toLowerCase())
           .eq("explicitly_granted", true)
@@ -58,21 +64,81 @@ export const Route = createFileRoute("/api/github/tool")({
           .single();
         if (repo.error)
           return Response.json({ error: "Repository is not authorized" }, { status: 403 });
-        const account = await (auth.supabaseAdmin as any)
+        if (
+          input.expectedRepositoryId !== undefined &&
+          input.expectedRepositoryId !== String(repo.data.id)
+        )
+          return Response.json({ error: "The selected repository changed" }, { status: 409 });
+        const { data: account, error: accountError } = await (auth.supabaseAdmin as any)
           .from("github_accounts")
-          .select("token_ciphertext,status")
+          .select("token_ciphertext,status,auth_type,token_expires_at")
           .eq("id", repo.data.account_id)
           .eq("owner_id", auth.userId)
           .single();
-        if (account.error || account.data.status !== "connected" || !account.data.token_ciphertext)
+        if (accountError || account?.status !== "connected" || !account.token_ciphertext)
           return Response.json({ error: "GitHub reconnect required" }, { status: 401 });
-        if (write && !input.confirmed)
+        if (write && input.confirmed !== true)
           return Response.json({ error: "Explicit confirmation required" }, { status: 409 });
         const permissions = repo.data.permissions ?? {};
-        if (write && permissions.push !== true && permissions.admin !== true)
+        if (
+          write &&
+          (repo.data.archived || (permissions.push !== true && permissions.admin !== true))
+        )
           return Response.json({ error: "Repository write permission required" }, { status: 403 });
+        if (write) {
+          const limit = await consumeApplicationRateLimit({
+            identity: `user:${auth.userId}`,
+            action: "github_connector_write",
+            limit: 16,
+            windowSeconds: 60,
+          });
+          if (!limit.allowed)
+            return Response.json(
+              { error: "GitHub writes are temporarily unavailable" },
+              {
+                status: limit.status === "limited" ? 429 : 503,
+              },
+            );
+        }
+        if (write && !(await connectorWriteAllowed(auth.userId, "github", String(repo.data.id))))
+          return Response.json(
+            { error: "Enable write access for this repository in Connections." },
+            { status: 403 },
+          );
+        let ciphertext = account.token_ciphertext;
+        if (!gitHubTokenCurrent(account.token_expires_at)) {
+          const renewed =
+            account.auth_type === "oauth"
+              ? await renewGitHubOAuthAccount(auth.userId, repo.data.account_id)
+              : null;
+          if (!renewed?.token_ciphertext)
+            return Response.json({ error: "GitHub reconnect required" }, { status: 401 });
+          const current = await (auth.supabaseAdmin as any)
+            .from("github_repositories")
+            .select("id")
+            .eq("owner_id", auth.userId)
+            .eq("id", repo.data.id)
+            .eq("account_id", repo.data.account_id)
+            .eq("explicitly_granted", true)
+            .eq("updated_at", repo.data.updated_at)
+            .is("revoked_at", null)
+            .maybeSingle();
+          const blocked = await enforceLockdownCapability(
+            auth.supabaseAdmin,
+            auth.userId,
+            write ? "connector_write" : "connector_read",
+          );
+          if (blocked) return blocked;
+          if (
+            current.error ||
+            !current.data ||
+            (write && !(await connectorWriteAllowed(auth.userId, "github", String(repo.data.id))))
+          )
+            return Response.json({ error: "Repository access changed" }, { status: 403 });
+          ciphertext = renewed.token_ciphertext;
+        }
         const client = new GitHubClient({
-          token: await decryptSecret(account.data.token_ciphertext),
+          token: await decryptSecret(ciphertext),
           allowedRepositories: [repo.data.full_name],
         });
         let success = false,

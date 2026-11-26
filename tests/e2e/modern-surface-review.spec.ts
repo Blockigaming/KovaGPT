@@ -27,7 +27,7 @@ for (const theme of ["dark", "light"] as const) {
       if (path === "/apps") {
         await expect(page.locator(".spec400-plugin-card h3").first()).toHaveCSS(
           "font-size",
-          "15px",
+          "16px",
         );
         const radius = await page
           .locator(".spec400-plugin-tabs")

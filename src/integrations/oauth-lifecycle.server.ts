@@ -3,12 +3,24 @@ import { decryptCredential, encryptCredential, sha256 } from "./credential-vault
 import {
   OAUTH_PROVIDERS,
   configuredOAuthProviders,
+  oauthClientId,
   type OAuthProviderId,
 } from "./oauth-providers.server";
 import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
-import { oauthTokenRequest, selectOAuthTokens } from "./oauth-token-request.server.mjs";
+import {
+  oauthTokenRequest,
+  selectOAuthTokens,
+  tanaRevocationRequest,
+} from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
+import {
+  CONNECTION_FLOWS,
+  hasConnectionScopes,
+  TANA_MCP_ISSUER,
+  TANA_MCP_RESOURCE,
+} from "./connection-flows.mjs";
+import { verifyTanaRead } from "./mcp-provider-read.server.mjs";
 import { confirmedHealthScopes } from "@/health/health-read.server.mjs";
 import {
   packSalesforceCredential,
@@ -38,8 +50,12 @@ export async function beginOAuth(input: {
 }) {
   await assertLockdownAllows(admin(), input.ownerId, "connector_write");
   const provider = OAUTH_PROVIDERS[input.providerId];
-  const clientId = process.env[provider.clientIdEnv];
-  if (!clientId || !configuredOAuthProviders().some((candidate) => candidate.id === provider.id))
+  const origin = new URL(input.request.url).origin;
+  const clientId = oauthClientId(provider, origin);
+  if (
+    !clientId ||
+    !configuredOAuthProviders(origin).some((candidate) => candidate.id === provider.id)
+  )
     throw new Error("provider_not_configured");
   const state = random();
   const verifier = provider.usesPkce ? random(48) : undefined;
@@ -67,14 +83,19 @@ export async function beginOAuth(input: {
     if (provider.id === "microsoft" && typeof existing.account_label === "string")
       loginHint = existing.account_label;
   }
-  const scopes = [
-    ...new Set([
-      ...provider.requiredScopes,
-      ...previousScopes,
-      ...(input.optionalScopes ?? []).filter((scope) => provider.optionalScopes.includes(scope)),
-    ]),
-  ];
-  const redirectUri = `${new URL(input.request.url).origin}/api/integrations/oauth/callback/${provider.id}`;
+  const scopes =
+    provider.id === "gamma"
+      ? [input.optionalScopes?.includes("generate") ? "generate" : "gamma:read"]
+      : [
+          ...new Set([
+            ...provider.requiredScopes,
+            ...previousScopes,
+            ...(input.optionalScopes ?? []).filter((scope) =>
+              provider.optionalScopes.includes(scope),
+            ),
+          ]),
+        ];
+  const redirectUri = `${origin}/api/integrations/oauth/callback/${provider.id}`;
   const { error } = await admin()
     .from("integration_oauth_states")
     .insert({
@@ -94,13 +115,29 @@ export async function beginOAuth(input: {
     response_type: "code",
     state,
   });
-  if (scopes.length)
+  if (provider.id === "stripe") params.delete("response_type");
+  if (scopes.length && !["stripe", "tana"].includes(provider.id))
     params.set(
       provider.id === "slack" ? "user_scope" : "scope",
       scopes.join(["slack", "linear"].includes(provider.id) ? "," : " "),
     );
+  if (provider.id === "hubspot") {
+    params.set("scope", provider.requiredScopes.join(" "));
+    const optional = scopes.filter((scope) => provider.optionalScopes.includes(scope));
+    if (optional.length) params.set("optional_scope", optional.join(" "));
+  }
+  if (provider.id === "gamma") params.set("resource", "https://public-api.gamma.app");
+  if (provider.id === "tana") {
+    params.set("resource", TANA_MCP_RESOURCE);
+    params.set("scope", "openid offline_access");
+    params.set("prompt", "consent");
+  }
   if (provider.id === "microsoft") params.set("response_mode", "query");
   if (loginHint) params.set("login_hint", loginHint);
+  if (provider.id === "google-bigquery") {
+    params.set("access_type", "offline");
+    params.set("prompt", "consent");
+  }
   if (provider.id === "dropbox") params.set("token_access_type", "offline");
   if (provider.id === "notion") params.set("owner", "user");
   if (verifier) {
@@ -123,8 +160,15 @@ export async function completeOAuth(input: {
   state: string;
   request: Request;
   browserNonce: string;
+  issuer?: string;
 }) {
   const provider = OAUTH_PROVIDERS[input.providerId];
+  const origin = new URL(input.request.url).origin;
+  if (provider.id === "tana") {
+    if (!configuredOAuthProviders(origin).some(({ id }) => id === provider.id))
+      throw new Error("provider_not_configured");
+    if (input.issuer !== TANA_MCP_ISSUER) throw new Error("oauth_issuer_mismatch");
+  }
   const db = admin();
   const { data: record } = await db
     .from("integration_oauth_states")
@@ -149,13 +193,14 @@ export async function completeOAuth(input: {
     .select("id")
     .maybeSingle();
   if (!consumed.data) throw new Error("oauth_state_replayed");
-  const redirectUri = `${new URL(input.request.url).origin}/api/integrations/oauth/callback/${provider.id}`;
+  const redirectUri = `${origin}/api/integrations/oauth/callback/${provider.id}`;
   const tokenRequest = oauthTokenRequest({
     providerId: provider.id,
     code: input.code,
     redirectUri,
-    clientId: process.env[provider.clientIdEnv],
+    clientId: oauthClientId(provider, origin),
     clientSecret: process.env[provider.clientSecretEnv],
+    ...(provider.id === "tana" ? { tokenClientAuth: provider.tokenClientAuth } : {}),
     verifier: record.pkce_verifier_ciphertext
       ? await decryptCredential(record.pkce_verifier_ciphertext)
       : undefined,
@@ -170,41 +215,85 @@ export async function completeOAuth(input: {
     provider.id,
     await readProviderJsonObject(tokenResponse, 64_000),
   );
-  if (["oura", "whoop", "box", "canva", "figma"].includes(provider.id) && !tokens.expires_in)
+  const needsExplicitScopes = ["calendly", "google-bigquery", "hubspot", "gamma"].includes(
+    provider.id,
+  );
+  if (
+    (needsExplicitScopes || ["oura", "whoop", "box", "canva", "figma"].includes(provider.id)) &&
+    !tokens.expires_in
+  )
     throw new Error("oauth_token_expiry_missing");
-  if (["box", "canva", "figma"].includes(provider.id) && !tokens.refresh_token)
+  if (
+    (needsExplicitScopes || ["box", "canva", "figma"].includes(provider.id)) &&
+    !tokens.refresh_token
+  )
     throw new Error("oauth_refresh_token_missing");
+  if (
+    provider.id === "gamma" &&
+    (record.requested_scopes.length !== 1 ||
+      !["gamma:read", "generate"].includes(record.requested_scopes[0]) ||
+      tokens.scope?.trim() !== record.requested_scopes[0])
+  )
+    throw new Error("oauth_scope_verification_failed");
   if (provider.id === "salesforce" && (!tokens.refresh_token || !tokens.scope))
     throw new Error("oauth_scope_verification_failed");
+  if (
+    needsExplicitScopes &&
+    (!tokens.scope ||
+      !hasConnectionScopes(
+        tokens.scope.split(/[ ,]+/u),
+        provider.requiredScopes.filter((scope) => scope !== "openid" && scope !== "email"),
+      ))
+  )
+    throw new Error("oauth_scope_verification_failed");
+  if (provider.id === "stripe") {
+    const secret = process.env[provider.clientSecretEnv];
+    const expectedMode = secret?.startsWith("sk_live_") ? "live:" : "test:";
+    if (!tokens.provider_account_id?.startsWith(expectedMode))
+      throw new Error("oauth_profile_identity_mismatch");
+  }
   await assertLockdownAllows(db, record.owner_id, "connector_write");
-  const profileResponse = await fetch(provider.profileEndpoint, {
-    method: ["linear", "slack", "dropbox"].includes(provider.id) ? "POST" : "GET",
-    redirect: "error",
-    signal: AbortSignal.timeout(15_000),
-    headers: {
-      Authorization: `Bearer ${tokens.access_token}`,
-      Accept: "application/json",
-      "User-Agent": "KovaGPT/1.0",
-      ...(provider.id === "notion" ? { "Notion-Version": "2022-06-28" } : {}),
-      ...(provider.id === "linear" ? { "Content-Type": "application/json" } : {}),
-    },
-    body:
-      provider.id === "linear"
-        ? JSON.stringify({ query: "query { viewer { id name email } }" })
-        : undefined,
-  });
-  if (!profileResponse.ok) throw new Error(`oauth_profile_${profileResponse.status}`);
-  const profile = (await readProviderJsonObject(profileResponse, 128_000)) as Record<
-    string,
-    unknown
-  >;
+  if (provider.id === "tana") {
+    await verifyTanaRead(tokens.access_token, fetch, () =>
+      assertLockdownAllows(db, record.owner_id, "connector_write"),
+    );
+  }
+  let profile: Record<string, unknown> = { verifiedAccountId: tokens.provider_account_id };
+  if (provider.profileEndpoint) {
+    const profileResponse = await fetch(provider.profileEndpoint, {
+      method: ["linear", "slack", "dropbox"].includes(provider.id) ? "POST" : "GET",
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        Accept: "application/json",
+        "User-Agent": "KovaGPT/1.0",
+        ...(provider.id === "notion" ? { "Notion-Version": "2022-06-28" } : {}),
+        ...(provider.id === "stripe" ? { "Stripe-Version": "2026-11-18.endive" } : {}),
+        ...(provider.id === "linear" ? { "Content-Type": "application/json" } : {}),
+      },
+      body:
+        provider.id === "linear"
+          ? JSON.stringify({ query: "query { viewer { id name email } }" })
+          : undefined,
+    });
+    if (!profileResponse.ok) throw new Error(`oauth_profile_${profileResponse.status}`);
+    profile = await readProviderJsonObject(profileResponse, 128_000);
+  }
   if (
     (provider.id === "slack" && profile.ok !== true) ||
     (provider.id === "linear" && Array.isArray(profile.errors) && profile.errors.length)
   )
     throw new Error("oauth_profile_failed");
+  if (provider.id === "stripe") {
+    if (profile.object !== "list" || profile.url !== "/v1/charges" || !Array.isArray(profile.data))
+      throw new Error("oauth_profile_failed");
+    profile = { verifiedAccountId: tokens.provider_account_id };
+  }
   const providerAccountId = provider.profileId(profile);
   if (!providerAccountId) throw new Error("oauth_profile_identity_missing");
+  if (provider.id === "calendly" && tokens.provider_account_id !== providerAccountId)
+    throw new Error("oauth_profile_identity_mismatch");
   const granted = ["oura", "whoop"].includes(provider.id)
     ? await confirmedHealthScopes(
         provider.id,
@@ -214,7 +303,9 @@ export async function completeOAuth(input: {
         fetch,
         () => assertLockdownAllows(db, record.owner_id, "connector_write"),
       )
-    : (tokens.scope ?? record.requested_scopes.join(" ")).split(/[ ,]+/).filter(Boolean);
+    : provider.id === "tana"
+      ? [...provider.requiredScopes]
+      : (tokens.scope ?? record.requested_scopes.join(" ")).split(/[ ,]+/).filter(Boolean);
   await assertLockdownAllows(db, record.owner_id, "connector_write");
   const { data: account, error } = await db
     .from("integration_linked_accounts")
@@ -267,18 +358,16 @@ export async function completeOAuth(input: {
   return { account, returnPath: record.return_path as string };
 }
 
-export async function disconnectOAuth(ownerId: string, accountId: string) {
-  const db = admin();
-  const { data: account } = await db
-    .from("integration_linked_accounts")
-    .select("*")
-    .eq("id", accountId)
-    .eq("owner_id", ownerId)
-    .maybeSingle();
-  if (!account) throw new Error("linked_account_not_found");
-  const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
-  if (!provider) throw new Error("unsupported_linked_account_provider");
-  const clientId = process.env[provider.clientIdEnv];
+async function revokeOAuthCredential(
+  provider: (typeof OAUTH_PROVIDERS)[OAuthProviderId],
+  account: {
+    owner_id: string;
+    access_token_ciphertext: string;
+    refresh_token_ciphertext?: string | null;
+  },
+) {
+  const ownerId = account.owner_id;
+  const clientId = oauthClientId(provider);
   const clientSecret = process.env[provider.clientSecretEnv];
   const revocationCiphertext = ["github", "slack", "whoop", "box"].includes(provider.id)
     ? account.access_token_ciphertext
@@ -295,14 +384,42 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     });
   }
 
+  if (provider.id === "tana" && provider.revocationEndpoint && token) {
+    try {
+      const response = await fetch(
+        provider.revocationEndpoint,
+        tanaRevocationRequest({
+          clientId,
+          clientSecret,
+          tokenClientAuth: provider.tokenClientAuth,
+          token,
+        }),
+      );
+      await response.body?.cancel().catch(() => undefined);
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
   // Only a confirmed provider response counts as remote revocation. Providers
   // without an implemented endpoint remain pending even though local
   // credentials are still destroyed below.
   let providerRevoked = false;
   const canAttemptRevocation =
     Boolean(provider.revocationEndpoint && token) &&
-    ["github", "slack", "linear", "dropbox", "box", "whoop", "salesforce"].includes(provider.id) &&
-    (!["github", "box"].includes(provider.id) || Boolean(clientId && clientSecret));
+    [
+      "github",
+      "slack",
+      "linear",
+      "dropbox",
+      "box",
+      "whoop",
+      "salesforce",
+      "calendly",
+      "google-bigquery",
+    ].includes(provider.id) &&
+    (!["github", "box", "calendly"].includes(provider.id) || Boolean(clientId && clientSecret));
   if (provider.revocationEndpoint && token && canAttemptRevocation) {
     try {
       const endpoint =
@@ -321,7 +438,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
         redirect: "error",
         signal: AbortSignal.timeout(10_000),
         headers: {
-          ...(!["salesforce", "box"].includes(provider.id)
+          ...(!["salesforce", "box", "calendly", "google-bigquery"].includes(provider.id)
             ? { Authorization: githubAuthorization ?? `Bearer ${token}` }
             : {}),
           "Content-Type":
@@ -332,13 +449,13 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
         body:
           provider.id === "github"
             ? JSON.stringify({ access_token: token })
-            : provider.id === "box"
+            : ["box", "calendly"].includes(provider.id)
               ? new URLSearchParams({
                   token,
                   client_id: clientId!,
                   client_secret: clientSecret!,
                 })
-              : ["linear", "salesforce"].includes(provider.id)
+              : ["linear", "salesforce", "google-bigquery"].includes(provider.id)
                 ? new URLSearchParams({ token })
                 : undefined,
       });
@@ -351,6 +468,23 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
       providerRevoked = false;
     }
   }
+  return providerRevoked;
+}
+
+export async function disconnectOAuth(ownerId: string, accountId: string) {
+  const db = admin();
+  const { data: account } = await db
+    .from("integration_linked_accounts")
+    .select("*")
+    .eq("id", accountId)
+    .eq("owner_id", ownerId)
+    .maybeSingle();
+  if (!account) throw new Error("linked_account_not_found");
+  const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
+  const keyFlow = CONNECTION_FLOWS[account.provider_id];
+  if (!provider && keyFlow?.authentication !== "api-key")
+    throw new Error("unsupported_linked_account_provider");
+  const providerRevoked = provider ? await revokeOAuthCredential(provider, account) : false;
   const { error: deletionRequestError } = await db.from("integration_deletion_requests").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
@@ -366,16 +500,26 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .in("status", ["queued", "leased", "running", "retry_wait"]);
   if (syncCancellationError) throw new Error("linked_account_sync_cancellation_failed");
 
-  const { data: purgedAccount, error: credentialDeletionError } = await db
+  const purge = db
     .from("integration_linked_accounts")
     .update({
       status: "revoked",
       access_token_ciphertext: "deleted",
       refresh_token_ciphertext: null,
       deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq("id", account.id)
-    .eq("owner_id", ownerId)
+    .eq("owner_id", ownerId);
+  if (!provider || provider.id === "tana") {
+    purge
+      .eq("provider_id", account.provider_id)
+      .eq("updated_at", account.updated_at)
+      .eq("access_token_ciphertext", account.access_token_ciphertext)
+      .is("workspace_id", null)
+      .is("deleted_at", null);
+  }
+  const { data: purgedAccount, error: credentialDeletionError } = await purge
     .select("id")
     .maybeSingle();
   if (credentialDeletionError || !purgedAccount) throw new Error("linked_account_purge_failed");
@@ -383,14 +527,14 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   const { error: auditError } = await db.from("integration_audit_events").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
-    provider_id: provider.id,
+    provider_id: account.provider_id,
     event_type: "disconnect",
     result: providerRevoked ? "success" : "failure",
-    safe_summary: `Disconnected ${provider.name} account`,
+    safe_summary: `Disconnected ${provider?.name ?? keyFlow?.label} account`,
   });
   if (auditError) {
     console.error("[oauth-disconnect] audit insert failed", {
-      providerId: provider.id,
+      providerId: account.provider_id,
       ownerId,
     });
   }

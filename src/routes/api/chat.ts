@@ -1836,7 +1836,9 @@ export const Route = createFileRoute("/api/chat")({
               ? permittedTools.filter(({ function: { name } }) =>
                   selectedConnectorIds.some(
                     (id) =>
-                      READ_ONLY_PLUGIN_TOOLS[name] === id || CONNECTION_FLOWS[id]?.tool === name,
+                      READ_ONLY_PLUGIN_TOOLS[name] === id ||
+                      CONNECTION_FLOWS[id]?.tool === name ||
+                      (id === "hubspot" && CONNECTION_FLOWS["hubspot-contacts"].tool === name),
                   ),
                 )
               : permittedTools;

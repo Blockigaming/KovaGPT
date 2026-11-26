@@ -3,6 +3,7 @@ import { requireAdministrator } from "@/lib/administrator.server";
 import { runtimeReadiness } from "@/lib/readiness.server";
 import { correlationHeaders, correlationId as resolveCorrelationId } from "@/lib/correlation";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { connectorDeploymentReadiness } from "@/integrations/connector-readiness.server";
 
 export const Route = createFileRoute("/api/admin/diagnostics")({
   server: {
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/api/admin/diagnostics")({
             correlationId,
             version: process.env.KOVA_BUILD_COMMIT?.slice(0, 40) ?? "unknown",
             ...readiness,
+            connectors: connectorDeploymentReadiness(request),
           },
           { headers: { "Cache-Control": "no-store", "X-Correlation-Id": correlationId } },
         );

@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useCallback,
@@ -21,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { readAppleHealthExport, type AppleHealthAnalytics } from "@/health/apple-health-export.mjs";
 import { APPLE_HEALTH_DAY_MS, APPLE_HEALTH_HISTORY_DAYS } from "@/health/apple-health-metrics.mjs";
-import { useAppleHealthLive } from "@/health/use-apple-health-live";
+import type { NativeHealthLive } from "@/health/use-apple-health-live";
 
 const number = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 
@@ -373,20 +374,20 @@ function HealthMetric({
   );
 }
 
-export function AppleHealthReport({
+export function NativeHealthReport({
   ownerId,
-  visible,
+  live,
   onReport,
 }: {
   ownerId: string | null;
-  visible: boolean;
+  live: NativeHealthLive;
   onReport: (report: AppleHealthAnalytics | null) => void;
 }) {
   const [report, setReport] = useState<AppleHealthAnalytics | null>(null);
   const [status, setStatus] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const pending = useRef<AbortController>(null);
-  const live = useAppleHealthLive(visible ? ownerId : null);
+  const label = live.platform === "android" ? "Health Connect" : "Apple Health";
   const displayed = live.report ?? report;
   useEffect(() => {
     onReport(displayed);
@@ -433,11 +434,11 @@ export function AppleHealthReport({
   };
 
   return (
-    <section className="space-y-4" aria-labelledby="apple-health-title">
+    <section className="space-y-4" aria-labelledby="native-health-title">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 id="apple-health-title" className="text-lg font-semibold">
-            Apple Health
+          <h3 id="native-health-title" className="text-lg font-semibold">
+            {label}
           </h3>
           {live.status && (
             <p role="status" className="text-sm text-muted-foreground">
@@ -454,25 +455,29 @@ export function AppleHealthReport({
             </p>
           )}
         </div>
-        {ownerId && (
+        {ownerId && (live.platform === "apple" || live.connected) && (
           <details className="relative shrink-0 text-sm">
             <summary className="cursor-pointer text-muted-foreground">Connection options</summary>
             <div className="absolute top-full right-0 z-10 mt-2 grid min-w-52 gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-md">
-              <input
-                type="file"
-                accept=".zip,.xml,application/zip,application/xml,text/xml"
-                aria-label="Apple Health report file"
-                className="hidden"
-                ref={fileInput}
-                onChange={(event) => void readFile(event)}
-              />
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => fileInput.current?.click()}
-              >
-                Import Apple Health data
-              </Button>
+              {live.platform === "apple" && (
+                <>
+                  <input
+                    type="file"
+                    accept=".zip,.xml,application/zip,application/xml,text/xml"
+                    aria-label="Apple Health report file"
+                    className="hidden"
+                    ref={fileInput}
+                    onChange={(event) => void readFile(event)}
+                  />
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    Import Apple Health data
+                  </Button>
+                </>
+              )}
               {report && (
                 <Button variant="ghost" className="justify-start" onClick={clear}>
                   Clear imported data
@@ -480,7 +485,7 @@ export function AppleHealthReport({
               )}
               {live.connected && (
                 <Button variant="ghost" className="justify-start" onClick={live.disconnect}>
-                  Disconnect Apple Health
+                  Disconnect {label}
                 </Button>
               )}
             </div>
@@ -492,14 +497,52 @@ export function AppleHealthReport({
           {status}
         </p>
       )}
-      {ownerId && live.available && !live.connected && (
-        <Button onClick={live.start}>Connect Apple Health</Button>
+      {ownerId && live.connected && live.canWriteSteps && (
+        <details className="rounded-xl border border-border p-3">
+          <summary className="cursor-pointer font-medium">Record steps</summary>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Enter steps you tracked yourself. The device asks you to confirm before saving and may
+            request separate write permission.
+          </p>
+          <form
+            className="mt-3 grid gap-3 sm:grid-cols-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const fields = new FormData(event.currentTarget);
+              live.recordSteps(
+                Number(fields.get("steps")),
+                new Date(String(fields.get("start"))).getTime(),
+                new Date(String(fields.get("end"))).getTime(),
+              );
+            }}
+          >
+            <label className="grid min-w-0 gap-1 text-sm">
+              Steps
+              <Input name="steps" type="number" min={1} max={1_000_000} required />
+            </label>
+            <label className="grid min-w-0 gap-1 text-sm">
+              Started at
+              <Input name="start" type="datetime-local" required />
+            </label>
+            <label className="grid min-w-0 gap-1 text-sm">
+              Ended at
+              <Input name="end" type="datetime-local" required />
+            </label>
+            <Button type="submit" variant="outline" disabled={live.writingSteps}>
+              {live.writingSteps ? "Waiting for device…" : "Review on device"}
+            </Button>
+          </form>
+          {live.stepWriteStatus && (
+            <p className="mt-2 text-sm text-muted-foreground" role="status">
+              {live.stepWriteStatus}
+            </p>
+          )}
+        </details>
       )}
-      {ownerId && !live.available && !displayed && (
-        <p className="text-sm text-muted-foreground">
-          Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates.
-          You can also open an export from Connection options.
-        </p>
+      {ownerId && live.platform && !live.connected && (
+        <Button onClick={live.start} disabled={live.pending}>
+          Connect {label}
+        </Button>
       )}
     </section>
   );

@@ -76,12 +76,14 @@ export type GoogleAccountStatus = {
     calendar: boolean;
     calendarWrite: boolean;
     drive: boolean;
+    driveWrite?: boolean;
   };
 };
 
 export type GoogleConnection = GoogleAccountStatus & { id: string; connectionRevision: number };
 export type GoogleStatus = GoogleAccountStatus & {
   accounts?: GoogleConnection[];
+  writeAccess?: { gmail: boolean; calendar: boolean };
   selectedConnectionId?: string | null;
   selectionRevision?: number;
 };
@@ -145,10 +147,12 @@ export async function startGoogleConnect(
   id: string | undefined,
   expectedUserId: string,
   connector = "gmail",
+  access?: "read" | "read-write",
 ): Promise<void> {
   if (!["gmail", "google-calendar", "google-drive"].includes(connector))
     throw new Error("Invalid Google connector.");
   const params = new URLSearchParams({ connector });
+  if (access) params.set("access", access);
   if (id) params.set("connectionId", connectionId(id));
   const suffix = `?${params}`;
   const { response, body } = await accountRequest(`/api/google/auth${suffix}`, {}, expectedUserId);

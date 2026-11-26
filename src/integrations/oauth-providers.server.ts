@@ -1,6 +1,22 @@
+import {
+  BIGQUERY_READ_SCOPE,
+  BIGQUERY_WRITE_SCOPE,
+  CONNECTION_FLOWS,
+  calendlyUserUri,
+  TANA_MCP_AUTHORIZE_ENDPOINT,
+  TANA_MCP_HOSTED_CLIENT_ID,
+  TANA_MCP_ISSUER,
+} from "./connection-flows.mjs";
+import { approvedMcpServers } from "./approved-mcp-servers.server.mjs";
 import { OURA_SCOPES } from "@/health/oura-metrics.mjs";
 
 export type OAuthProviderId =
+  | "tana"
+  | "stripe"
+  | "gamma"
+  | "calendly"
+  | "google-bigquery"
+  | "hubspot"
   | "canva"
   | "figma"
   | "microsoft"
@@ -25,7 +41,8 @@ export type OAuthProviderAdapter = {
   requiredScopes: string[];
   optionalScopes: string[];
   usesPkce: boolean;
-  profileEndpoint: string;
+  tokenClientAuth?: "client_secret_post" | "client_secret_basic" | "none";
+  profileEndpoint?: string;
   profileId: (value: Record<string, unknown>) => string;
   profileLabel: (value: Record<string, unknown>) => string;
 };
@@ -34,6 +51,108 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 const teamUser = (value: unknown) =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  tana: {
+    id: "tana",
+    name: "Tana",
+    authorizationEndpoint: TANA_MCP_AUTHORIZE_ENDPOINT,
+    tokenEndpoint: `${TANA_MCP_ISSUER}/oauth2/token`,
+    revocationEndpoint: `${TANA_MCP_ISSUER}/oauth2/revoke`,
+    get tokenClientAuth() {
+      if (
+        !process.env.TANA_MCP_CLIENT_ID ||
+        process.env.TANA_MCP_CLIENT_ID === TANA_MCP_HOSTED_CLIENT_ID
+      )
+        return "none";
+      const method = process.env.TANA_MCP_TOKEN_AUTH_METHOD;
+      if (method === "none" || method === "client_secret_basic" || method === "client_secret_post")
+        return method;
+      return method ? undefined : "client_secret_post";
+    },
+    clientIdEnv: "TANA_MCP_CLIENT_ID",
+    clientSecretEnv: "TANA_MCP_CLIENT_SECRET",
+    requiredScopes: CONNECTION_FLOWS.tana.scopes,
+    optionalScopes: [],
+    usesPkce: true,
+    profileId: () => "tana-mcp",
+    profileLabel: () => "Tana account",
+  },
+  stripe: {
+    id: "stripe",
+    name: "Stripe",
+    authorizationEndpoint: "https://marketplace.stripe.com/oauth/v2/authorize",
+    tokenEndpoint: "https://api.stripe.com/v1/oauth/token",
+    clientIdEnv: "STRIPE_APPS_OAUTH_CLIENT_ID",
+    clientSecretEnv: "STRIPE_APPS_OAUTH_API_KEY",
+    requiredScopes: ["stripe_apps"],
+    optionalScopes: [],
+    usesPkce: false,
+    profileEndpoint: "https://api.stripe.com/v1/charges?limit=1",
+    profileId: (v) => text(v.verifiedAccountId),
+    profileLabel: (v) =>
+      text(v.verifiedAccountId).startsWith("test:") ? "Stripe test account" : "Stripe live account",
+  },
+  gamma: {
+    id: "gamma",
+    name: "Gamma",
+    authorizationEndpoint: "https://auth.gamma.app/oauth/authorize",
+    tokenEndpoint: "https://auth.gamma.app/oauth/token",
+    clientIdEnv: "GAMMA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "GAMMA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["gamma:read"],
+    optionalScopes: ["generate"],
+    usesPkce: true,
+    profileEndpoint: "https://public-api.gamma.app/v1.0/me",
+    profileId: (v) => {
+      const userId = text(v.userId);
+      const workspaceId = text(v.workspaceId);
+      const id = /^[a-zA-Z0-9_-]{1,128}$/u;
+      return id.test(userId) && id.test(workspaceId) ? `${workspaceId}:${userId}` : "";
+    },
+    profileLabel: (v) => text(v.workspaceName).slice(0, 120) || "Gamma workspace",
+  },
+  calendly: {
+    id: "calendly",
+    name: "Calendly",
+    authorizationEndpoint: "https://auth.calendly.com/oauth/authorize",
+    tokenEndpoint: "https://auth.calendly.com/oauth/token",
+    revocationEndpoint: "https://auth.calendly.com/oauth/revoke",
+    clientIdEnv: "CALENDLY_OAUTH_CLIENT_ID",
+    clientSecretEnv: "CALENDLY_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["users:read", "scheduled_events:read"],
+    optionalScopes: ["scheduling_links:write"],
+    usesPkce: true,
+    profileEndpoint: "https://api.calendly.com/users/me",
+    profileId: (v) => calendlyUserUri(teamUser(v.resource).uri),
+    profileLabel: (v) => text(teamUser(v.resource).name) || "Calendly account",
+  },
+  "google-bigquery": {
+    id: "google-bigquery",
+    name: "Google Cloud BigQuery",
+    authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    revocationEndpoint: "https://oauth2.googleapis.com/revoke",
+    clientIdEnv: "BIGQUERY_OAUTH_CLIENT_ID",
+    clientSecretEnv: "BIGQUERY_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["openid", "email", BIGQUERY_READ_SCOPE],
+    optionalScopes: [BIGQUERY_WRITE_SCOPE],
+    usesPkce: true,
+    profileEndpoint: "https://openidconnect.googleapis.com/v1/userinfo",
+    profileId: (v) => text(v.sub),
+    profileLabel: (v) => (v.email_verified === true ? text(v.email) : "") || "Google Cloud account",
+  },
+  hubspot: {
+    id: "hubspot",
+    name: "HubSpot",
+    authorizationEndpoint: "https://app.hubspot.com/oauth/authorize",
+    tokenEndpoint: "https://api.hubspot.com/oauth/2026-09/token",
+    clientIdEnv: "HUBSPOT_OAUTH_CLIENT_ID",
+    clientSecretEnv: "HUBSPOT_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["crm.objects.companies.read"],
+    optionalScopes: ["crm.objects.contacts.read", "crm.objects.companies.write"],
+    usesPkce: false,
+    profileId: (v) => text(v.verifiedAccountId),
+    profileLabel: (v) => `HubSpot portal ${text(v.verifiedAccountId)}`,
+  },
   canva: {
     id: "canva",
     name: "Canva",
@@ -42,7 +161,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "CANVA_OAUTH_CLIENT_ID",
     clientSecretEnv: "CANVA_OAUTH_CLIENT_SECRET",
     requiredScopes: ["design:meta:read"],
-    optionalScopes: [],
+    optionalScopes: ["design:content:write"],
     usesPkce: true,
     profileEndpoint: "https://api.canva.com/rest/v1/users/me",
     profileId: (v) => {
@@ -60,7 +179,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "FIGMA_OAUTH_CLIENT_ID",
     clientSecretEnv: "FIGMA_OAUTH_CLIENT_SECRET",
     requiredScopes: ["current_user:read", "file_metadata:read"],
-    optionalScopes: [],
+    optionalScopes: ["file_comments:write"],
     usesPkce: true,
     profileEndpoint: "https://api.figma.com/v1/me",
     profileId: (v) => text(v.id),
@@ -124,14 +243,18 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     requiredScopes: ["openid", "profile", "email", "offline_access", "User.Read"],
     optionalScopes: [
       "Files.Read",
+      "Files.ReadWrite",
       "Files.Read.All",
       "Sites.Read.All",
+      "Sites.ReadWrite.All",
       "Mail.Read",
+      "Mail.ReadWrite",
       "Mail.Send",
-      "Calendars.ReadBasic",
+      "Calendars.Read",
       "Calendars.ReadWrite",
       "Team.ReadBasic.All",
       "Chat.Read",
+      "ChatMessage.Send",
     ],
     usesPkce: true,
     profileEndpoint: "https://graph.microsoft.com/v1.0/me",
@@ -199,7 +322,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "LINEAR_OAUTH_CLIENT_ID",
     clientSecretEnv: "LINEAR_OAUTH_CLIENT_SECRET",
     requiredScopes: ["read"],
-    optionalScopes: ["write", "issues:create"],
+    optionalScopes: ["issues:create"],
     usesPkce: true,
     profileEndpoint: "https://api.linear.app/graphql",
     profileId: (v) =>
@@ -233,7 +356,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "BOX_OAUTH_CLIENT_ID",
     clientSecretEnv: "BOX_OAUTH_CLIENT_SECRET",
     requiredScopes: ["root_readonly"],
-    optionalScopes: [],
+    optionalScopes: ["root_readwrite"],
     usesPkce: false,
     profileEndpoint: "https://api.box.com/2.0/users/me",
     profileId: (v) => text(v.id),
@@ -241,10 +364,43 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
   },
 };
 
-export function configuredOAuthProviders() {
+export function credentialVaultConfigured() {
   const key = process.env.CONNECTOR_TOKEN_ENCRYPTION_KEY;
-  if (!key || Buffer.from(key, "base64").length !== 32) return [];
-  return Object.values(OAUTH_PROVIDERS).filter(
-    (provider) => process.env[provider.clientIdEnv] && process.env[provider.clientSecretEnv],
-  );
+  return Boolean(key && Buffer.from(key, "base64").length === 32);
+}
+
+export function configuredKeyProviders() {
+  if (!credentialVaultConfigured()) return [];
+  return Object.values(CONNECTION_FLOWS)
+    .filter((flow) => flow.authentication === "api-key")
+    .filter(
+      (flow) => flow.provider !== "sp-global" || process.env.KOVA_SP_GLOBAL_ENABLED === "true",
+    )
+    .filter((flow) => flow.provider !== "custom-mcp" || approvedMcpServers().size > 0)
+    .map(({ provider, label, scopes }) => ({
+      id: provider,
+      name: label,
+      requiredScopes: scopes,
+      optionalScopes: [],
+    }));
+}
+
+export function oauthClientId(provider: OAuthProviderAdapter, redirectOrigin?: string) {
+  const configured = process.env[provider.clientIdEnv]?.trim() || undefined;
+  if (provider.id !== "tana") return configured;
+  if (configured && configured !== TANA_MCP_HOSTED_CLIENT_ID) return configured;
+  return !redirectOrigin || redirectOrigin === new URL(TANA_MCP_HOSTED_CLIENT_ID).origin
+    ? TANA_MCP_HOSTED_CLIENT_ID
+    : undefined;
+}
+
+export function configuredOAuthProviders(redirectOrigin?: string) {
+  if (!credentialVaultConfigured()) return [];
+  return Object.values(OAUTH_PROVIDERS).filter((provider) => {
+    const id = oauthClientId(provider, redirectOrigin);
+    const secret = process.env[provider.clientSecretEnv];
+    if (!id || (!secret?.trim() && provider.tokenClientAuth !== "none")) return false;
+    if (provider.id === "tana") return Boolean(provider.tokenClientAuth);
+    return provider.id !== "stripe" || /^sk_(test|live)_[A-Za-z0-9]+$/u.test(secret ?? "");
+  });
 }

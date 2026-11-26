@@ -1,0 +1,51 @@
+name: Android Health Connect build
+on:
+  pull_request:
+    paths:
+      - "android/**"
+      - "src/health/use-apple-health-live.ts"
+      - "src/components/AppleHealthReport.tsx"
+      - "src/components/HealthConnectionsPanel.tsx"
+      - "tests/browser-runtime/finance-health-connections.spec.ts"
+      - "tests/browser-runtime/spec400-plugins.spec.ts"
+      - ".github/workflows/android-health.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-health-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build and check the Android companion
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          archive="$RUNNER_TEMP/gradle-8.11.1-bin.zip"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 --output "$archive" \
+            https://downloads.gradle.org/distributions/gradle-8.11.1-bin.zip
+          printf '%s  %s\n' f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6 "$archive" | sha256sum --check --strict
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          "$RUNNER_TEMP/gradle-8.11.1/bin/gradle" -p android --no-daemon :app:lintDebug :app:assembleDebug
+          "$RUNNER_TEMP/gradle-8.11.1/bin/gradle" -p android --no-daemon \
+            -PkovaHealthStagingHost=staging.kovagpt.com :app:assembleDebug
+          grep -F '"staging.kovagpt.com"' android/app/build/generated/source/buildConfig/debug/com/kovagpt/health/BuildConfig.java
+          grep -F '"com.kovagpt.health.staging"' android/app/build/generated/source/buildConfig/debug/com/kovagpt/health/BuildConfig.java
+  bridge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: bash scripts/ci/install-playwright-browsers.sh chromium
+      - name: Verify the Connections directory and finance and health permissions
+        run: >-
+          npx --no-install playwright test tests/browser-runtime/finance-health-connections.spec.ts tests/browser-runtime/spec400-plugins.spec.ts
+          --config=playwright.browser.config.ts --project=chromium

@@ -1,6 +1,7 @@
 import { createHash, randomBytes, createPrivateKey, sign } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- GitHub tables are available after the Mercury migrations regenerate Supabase types. */
 
@@ -29,6 +30,148 @@ export async function decryptSecret(value: string) {
     Buffer.from(data, "base64url"),
   );
   return new TextDecoder().decode(plain);
+}
+
+type GitHubOAuthAccount = {
+  id: string;
+  owner_id: string;
+  auth_type: "oauth";
+  github_user_id: number;
+  status: string;
+  token_ciphertext: string | null;
+  refresh_token_ciphertext: string | null;
+  token_expires_at: string | null;
+  updated_at: string;
+};
+
+const oauthAccountColumns =
+  "id,owner_id,auth_type,github_user_id,status,token_ciphertext,refresh_token_ciphertext,token_expires_at,updated_at";
+
+export function gitHubTokenCurrent(expiresAt: string | null, now = Date.now()) {
+  return expiresAt === null || Date.parse(expiresAt) > now + 30_000;
+}
+
+export async function renewGitHubOAuthAccount(
+  ownerId: string,
+  accountId: string,
+  deadline?: AbortSignal,
+): Promise<GitHubOAuthAccount | null> {
+  const clientId = process.env.GITHUB_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_OAUTH_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  const accounts = () => (supabaseAdmin as any).from("github_accounts");
+  const owned = (query: any) =>
+    query.eq("owner_id", ownerId).eq("id", accountId).eq("auth_type", "oauth");
+  const lockdown = () => assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+  await lockdown();
+  const { data, error } = await owned(accounts().select(oauthAccountColumns))
+    .eq("status", "connected")
+    .maybeSingle();
+  const account: GitHubOAuthAccount | null = error ? null : data;
+  if (!account?.token_ciphertext) return null;
+  if (gitHubTokenCurrent(account.token_expires_at)) return account;
+  if (!account.refresh_token_ciphertext || !Number.isSafeInteger(account.github_user_id))
+    return null;
+
+  const refreshToken = await decryptSecret(account.refresh_token_ciphertext);
+  await lockdown();
+  const startedAt = new Date().toISOString();
+  // GitHub consumes refresh tokens. Only one replica may attempt the exchange.
+  // A failed or interrupted exchange requires reconnecting before another try.
+  const claim = await owned(
+    accounts().update({ status: "reauthorization_required", updated_at: startedAt }),
+  )
+    .eq("status", "connected")
+    .eq("updated_at", account.updated_at)
+    .eq("token_ciphertext", account.token_ciphertext)
+    .eq("refresh_token_ciphertext", account.refresh_token_ciphertext)
+    .select("id")
+    .maybeSingle();
+  if (claim.error || !claim.data) return null;
+  const claimed = (query: any) =>
+    owned(query)
+      .eq("status", "reauthorization_required")
+      .eq("updated_at", startedAt)
+      .eq("token_ciphertext", account.token_ciphertext);
+  const assertClaim = async () => {
+    await lockdown();
+    const current = await claimed(accounts().select("id")).maybeSingle();
+    if (current.error || !current.data) throw new Error("github_refresh_binding_changed");
+  };
+  const signal = deadline
+    ? AbortSignal.any([deadline, AbortSignal.timeout(15_000)])
+    : AbortSignal.timeout(15_000);
+  try {
+    await assertClaim();
+    const response = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      }),
+      redirect: "error",
+      signal,
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return null;
+    }
+    const tokens = await readProviderJsonObject(response, 64_000);
+    if (
+      tokens.error ||
+      typeof tokens.access_token !== "string" ||
+      !tokens.access_token ||
+      typeof tokens.refresh_token !== "string" ||
+      !tokens.refresh_token ||
+      tokens.refresh_token === refreshToken ||
+      typeof tokens.expires_in !== "number" ||
+      !Number.isSafeInteger(tokens.expires_in) ||
+      tokens.expires_in <= 30 ||
+      tokens.expires_in > 86_400
+    )
+      return null;
+
+    await assertClaim();
+    const profileResponse = await fetch("https://api.github.com/user", {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${tokens.access_token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      redirect: "error",
+      signal,
+    });
+    if (!profileResponse.ok) {
+      await profileResponse.body?.cancel();
+      return null;
+    }
+    const profile = await readProviderJsonObject(profileResponse, 64_000);
+    if (profile.id !== account.github_user_id) return null;
+    const [access, refresh] = await Promise.all([
+      encryptSecret(tokens.access_token),
+      encryptSecret(tokens.refresh_token),
+    ]);
+    await lockdown();
+    const updatedAt = new Date().toISOString();
+    const updated = await claimed(
+      accounts().update({
+        status: "connected",
+        token_ciphertext: access,
+        refresh_token_ciphertext: refresh,
+        token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        last_refresh_at: updatedAt,
+        updated_at: updatedAt,
+      }),
+    )
+      .select(oauthAccountColumns)
+      .maybeSingle();
+    return updated.error || !updated.data ? null : updated.data;
+  } catch {
+    return null;
+  }
 }
 export async function startGitHubOAuth(ownerId: string, origin: string) {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_write");

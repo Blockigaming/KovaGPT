@@ -127,9 +127,9 @@ export function composerPluginConnection(id, { userId, authLoaded, snapshot }) {
     return state("Access unverified");
   const canWrite =
     capability === "gmail"
-      ? google.has.gmailWrite === true
+      ? google.has.gmailWrite === true && google.writeAccess?.gmail === true
       : capability === "calendar"
-        ? google.has.calendarWrite === true
+        ? google.has.calendarWrite === true && google.writeAccess?.calendar === true
         : false;
   return state(canWrite ? "View + write · approval required" : "View only", true);
 }

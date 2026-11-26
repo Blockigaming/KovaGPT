@@ -10,6 +10,7 @@ const PATHS = new Set([
   "/item/public_token/exchange",
   "/item/get",
   "/item/remove",
+  "/item/webhook/update",
   "/accounts/get",
   "/transactions/sync",
   "/transactions/get",

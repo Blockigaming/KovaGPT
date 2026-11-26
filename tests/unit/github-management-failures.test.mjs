@@ -67,7 +67,14 @@ function fixture(results, options = {}) {
     zod: { z },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: {} },
     "@/integrations/supabase/client.server": { supabaseAdmin: admin },
-    "@/lib/github-oauth.server": { decryptSecret: async () => "fixture" },
+    "@/lib/github-oauth.server": {
+      decryptSecret: async () => "fixture",
+      gitHubTokenCurrent: (value) => value === null || Date.parse(value) > Date.now() + 30_000,
+      renewGitHubOAuthAccount: async (owner, id) => {
+        calls.push({ renewedAccount: [owner, id] });
+        return options.renewedAccount ?? null;
+      },
+    },
     "@/lib/github-user-access.server.mjs": {
       discoverGitHubUserRepositories: async (...args) => {
         discoveries.push(args);
@@ -307,7 +314,7 @@ test("an incomplete provider discovery does not persist partial grants", async (
   );
   assert.equal(f.calls.length, 1);
 });
-test("expired credentials require reconnect before provider requests or writes", async () => {
+test("expired credentials with a failed renewal require reconnect before installation discovery", async () => {
   const row = {
     ...connected,
     value: {
@@ -321,7 +328,7 @@ test("expired credentials require reconnect before provider requests or writes",
     /GitHub reconnect required/,
   );
   assert.equal(f.discoveries.length, 0);
-  assert.equal(f.calls.length, 1);
+  assert.deepEqual(f.calls.slice(1), [{ renewedAccount: ["owner", "account"] }]);
 });
 test("account discovery cannot silently truncate the owner's connected accounts", async () => {
   const f = fixture([

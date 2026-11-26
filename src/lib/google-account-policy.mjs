@@ -8,10 +8,22 @@ export const GOOGLE_CONNECTOR_SCOPES = Object.freeze({
   "google-calendar": ["https://www.googleapis.com/auth/calendar.events"],
   "google-drive": ["https://www.googleapis.com/auth/drive.readonly"],
 });
-export function googleConnectorScopes(connector = "gmail") {
+export function googleConnectorScopes(
+  connector = "gmail",
+  access = connector === "google-drive" ? "read" : "read-write",
+) {
   if (!Object.hasOwn(GOOGLE_CONNECTOR_SCOPES, connector))
     throw new Error("google_invalid_connector");
-  return ["openid", "email", "profile", ...GOOGLE_CONNECTOR_SCOPES[connector]].join(" ");
+  if (access !== "read" && access !== "read-write") throw new Error("google_invalid_access");
+  const scopes =
+    access === "read" && connector === "gmail"
+      ? [GOOGLE_CONNECTOR_SCOPES.gmail[0]]
+      : access === "read" && connector === "google-calendar"
+        ? ["https://www.googleapis.com/auth/calendar.events.readonly"]
+        : access === "read-write" && connector === "google-drive"
+          ? [...GOOGLE_CONNECTOR_SCOPES[connector], "https://www.googleapis.com/auth/drive.file"]
+          : GOOGLE_CONNECTOR_SCOPES[connector];
+  return ["openid", "email", "profile", ...scopes].join(" ");
 }
 
 export const GOOGLE_CAPABILITY_SCOPES = {
@@ -38,7 +50,12 @@ export const GOOGLE_CAPABILITY_SCOPES = {
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/calendar",
   ],
+  "drive.write": [
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive",
+  ],
   "drive.read": [
+    "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/drive.readonly",
     "https://www.googleapis.com/auth/drive.file",
   ],
@@ -88,6 +105,7 @@ export function googleConnectionHealth(connection, now = Date.now()) {
     calendar: hasGoogleCapability(scopes, "calendar.read"),
     calendarWrite: hasGoogleCapability(scopes, "calendar.write"),
     drive: hasGoogleCapability(scopes, "drive.read"),
+    driveWrite: hasGoogleCapability(scopes, "drive.write"),
   };
   if (!connection) return { connected: false, state: "disconnected", scopes, has };
   const expiry = Date.parse(connection.expires_at);
@@ -103,7 +121,7 @@ export function googleConnectionHealth(connection, now = Date.now()) {
     connected: !reauthorize,
     state: reauthorize
       ? "reauthorization_required"
-      : Object.values(has).every(Boolean)
+      : has.gmail && has.gmailWrite && has.calendar && has.calendarWrite && has.drive
         ? "connected"
         : "permission_incomplete",
     scopes,

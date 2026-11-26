@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KovaGPT Health</string>
+    <string name="health_connect_title">Connect Health Connect</string>
+    <string name="health_connect_privacy">Kova reads the steps, sleep and heart-rate data you allow to show daily trends on this device. Readings stay on your device. You can change access for KovaGPT Health in Android Health Connect settings.</string>
+    <string name="health_connect_continue">Continue</string>
+    <string name="health_step_write_title">Save steps to Health Connect?</string>
+    <string name="health_step_write_review">%1$d steps from %2$s to %3$s</string>
+    <string name="health_step_write_confirm">Save steps</string>
+    <string name="health_step_write_privacy">Kova saves steps you enter manually only after you confirm. Health Connect manages a separate permission for saving steps.</string>
+    <string name="health_connect_unavailable">Update Health Connect or install it from Google Play, then try again.</string>
+</resources>
