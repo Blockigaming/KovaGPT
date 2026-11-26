@@ -125,14 +125,14 @@ test("hosted identity is conditional even on the first turn", () => {
   const hosted = readFileSync("src/lib/ai/kova-identity-policy.mjs", "utf8");
   assert.match(
     hosted,
-    /Introduce yourself using your Kova product name only when explicitly asked/,
+    /Introduce yourself using your Kova product name only when asked or directly relevant/,
   );
-  assert.match(hosted, /Never prepend an unsolicited model-name introduction/);
   const prompt = buildKovaModelIdentityInstructions({
     role: "DEFAULT_CHAT",
     modelId: "kova-argon-4.6",
     provider: "openai",
     hasAssistantHistory: false,
   });
-  assert.match(prompt, /without an introduction unless asked or identity is directly relevant/);
+  assert.match(prompt, /introduce yourself only if asked or directly relevant/);
+  assert.match(prompt, /Never volunteer model names in greetings, tool failures, or routine replies/);
 });
