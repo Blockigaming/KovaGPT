@@ -226,29 +226,23 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
           {delivery !== "self" && (
             <fieldset className="space-y-3">
               <legend className="mb-2 text-sm font-medium">Gift details</legend>
-              {delivery !== "self" && (
-                <>
-                  <label className="block space-y-1 text-sm">
-                    <span>Recipient’s name</span>
-                    <Input name="recipient" autoComplete="off" maxLength={80} />
-                  </label>
-                  <label key={delivery} className="block space-y-1 text-sm">
-                    <span>
-                      {delivery === "email"
-                        ? "Recipient’s email address"
-                        : "Recipient’s phone number"}
-                    </span>
-                    <Input
-                      name="to"
-                      type={delivery === "email" ? "email" : "tel"}
-                      autoComplete="off"
-                      required={checkoutEnabled}
-                      maxLength={254}
-                      placeholder={delivery === "text" ? "+1…" : undefined}
-                    />
-                  </label>
-                </>
-              )}
+              <label className="block space-y-1 text-sm">
+                <span>Recipient’s name</span>
+                <Input name="recipient" autoComplete="off" maxLength={80} />
+              </label>
+              <label key={delivery} className="block space-y-1 text-sm">
+                <span>
+                  {delivery === "email" ? "Recipient’s email address" : "Recipient’s phone number"}
+                </span>
+                <Input
+                  name="to"
+                  type={delivery === "email" ? "email" : "tel"}
+                  autoComplete="off"
+                  required={checkoutEnabled}
+                  maxLength={254}
+                  placeholder={delivery === "text" ? "+1…" : undefined}
+                />
+              </label>
               <label className="block space-y-1 text-sm">
                 <span>Gift message</span>
                 <Textarea
