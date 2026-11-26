@@ -42,3 +42,34 @@
     min-height: var(--kova-touch);
   }
 }
+
+/* Geometry follows the platform dashboard reference while retaining Kova tokens. */
+[data-developer-workspace] main table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+[data-developer-workspace] main th,
+[data-developer-workspace] main td {
+  padding: 0.625rem 0.75rem;
+  text-align: start;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+[data-developer-workspace] main th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+@media (min-width: 768px) and (pointer: fine) {
+  [data-developer-workspace] main [data-slot="input"],
+  [data-developer-workspace] main [data-slot="select-trigger"] {
+    min-height: var(--kova-control-md);
+  }
+
+  [data-developer-workspace] main select {
+    min-height: var(--kova-control-md);
+  }
+}

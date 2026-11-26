@@ -218,7 +218,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   return (
     <section className="min-w-0 space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Playground</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Playground</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Test approved text, image and embedding models with your scoped API key. Every paid run
           requires a fresh signed quote and explicit confirmation.
@@ -229,8 +229,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           Paid API execution is not enabled.
         </p>
       )}
-      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-        <div className="min-w-0 space-y-5 rounded-[var(--kova-radius-panel)] border border-border p-4 sm:p-6">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        <div className="min-w-0 space-y-5 rounded-[var(--kova-radius-panel)] border border-border p-4">
           <label className="block space-y-1 text-sm">
             <span>API key</span>
             <Input
@@ -407,7 +407,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             </div>
           )}
         </div>
-        <div className="min-w-0 space-y-5 rounded-[var(--kova-radius-panel)] border border-border p-4 sm:p-6">
+        <div className="min-w-0 space-y-5 rounded-[var(--kova-radius-panel)] border border-border p-4">
           <h2 className="font-semibold">Response</h2>
           {error && (
             <p role="alert" className="break-words text-sm text-destructive">

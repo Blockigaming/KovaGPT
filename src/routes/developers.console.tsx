@@ -170,7 +170,7 @@ function DeveloperWorkspace({
       data-developer-workspace
       className="min-h-dvh min-w-0 w-full bg-background font-sans text-foreground [overflow-wrap:anywhere]"
     >
-      <header className="sticky top-0 z-30 flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-4 sm:min-h-16 sm:px-6">
+      <header className="sticky top-0 z-30 flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-4 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Button
             variant="ghost"
@@ -211,10 +211,10 @@ function DeveloperWorkspace({
           <span className="hidden sm:inline">KovaGPT</span>
         </Link>
       </header>
-      <div className="grid min-h-[calc(100dvh-4rem)] w-full min-w-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[224px_minmax(0,1fr)] xl:grid-cols-[var(--kova-sidebar-width)_minmax(0,1fr)]">
+      <div className="grid min-h-[calc(100dvh-3.5rem)] w-full min-w-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[256px_minmax(0,1fr)]">
         <aside
           id="developer-workspace-navigation"
-          className={`min-w-0 rounded-b-[var(--kova-radius-panel)] border-b border-border bg-sidebar px-3 py-4 md:block md:rounded-none md:border-b-0 md:border-r md:bg-background md:px-4 md:py-6 ${mobileNavOpen ? "block" : "hidden"}`}
+          className={`min-w-0 rounded-b-[var(--kova-radius-panel)] border-b border-border bg-sidebar px-3 py-4 md:block md:rounded-none md:border-b-0 md:border-r md:bg-background md:px-3 md:py-4 ${mobileNavOpen ? "block" : "hidden"}`}
         >
           <nav
             aria-label="Developer workspace"
@@ -224,7 +224,7 @@ function DeveloperWorkspace({
               const items = group.items.filter((item) => authenticated || item.anchor === "overview");
               if (items.length === 0) return null;
               return (
-                <div key={group.label} className="mb-4 flex min-w-0 flex-col gap-1">
+                <div key={group.label} className="mb-3 flex min-w-0 flex-col gap-0.5">
                   {authenticated && (
                     <p className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
                       {group.label}
@@ -237,7 +237,7 @@ function DeveloperWorkspace({
                       search={{ section: anchor }}
                       onClick={() => setMobileNavOpen(false)}
                       aria-current={section === anchor ? "page" : undefined}
-                      className={`flex min-h-11 items-center gap-3 rounded-[var(--kova-radius-sidebar)] px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring md:min-h-9 ${section === anchor ? "bg-sidebar-active font-medium text-foreground" : "text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"}`}
+                      className={`flex min-h-11 items-center gap-2.5 rounded-[var(--kova-radius-sidebar)] px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring md:min-h-8 ${section === anchor ? "bg-sidebar-active font-medium text-foreground" : "text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"}`}
                     >
                       <Icon className="size-4 shrink-0" aria-hidden="true" />
                       {label}
@@ -259,7 +259,7 @@ function DeveloperWorkspace({
           id="main-content"
           tabIndex={-1}
           data-ui-reference="chatgpt-settings-form"
-          className="mx-auto w-full min-w-0 max-w-[1320px] space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-10 xl:px-12 [&_button]:max-w-full [&_button]:whitespace-normal"
+          className="w-full min-w-0 max-w-full space-y-5 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 [&_button]:max-w-full [&_button]:whitespace-normal"
         >
           {children}
         </main>
@@ -687,7 +687,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
       <section id="overview" hidden={section !== "overview"} className="scroll-mt-20 space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Overview</h1>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Overview</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Build and manage your applications with Kova.
             </p>
@@ -717,9 +717,9 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               ["Requests in current view", usageReady ? visibleUsage.length : undefined],
             ] as const
           ).map(([label, value]) => (
-            <div key={label} className="min-w-0 rounded-[var(--kova-radius-panel)] border border-border bg-background p-4 sm:p-6">
+            <div key={label} className="min-w-0 rounded-[var(--kova-radius-card)] border border-border bg-background p-4">
               <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="mt-3 text-2xl font-semibold tabular-nums">{value ?? "—"}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">{value ?? "—"}</p>
             </div>
           ))}
         </div>
@@ -778,7 +778,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
           {section === "models" && (
             <section className="min-w-0 space-y-6">
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Models</h1>
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Models</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Explore the Kova model families. An approved pricing contract and enabled API key
                   are required before a model can be used.
@@ -845,7 +845,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
           )}
           {section === "settings" && (
             <section className="min-w-0 space-y-6">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Settings</h1>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Settings</h1>
               <article className="space-y-3 border-b border-border pb-6">
                 <h2 className="font-semibold">Account</h2>
                 <p className="text-sm text-muted-foreground">
@@ -926,7 +926,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
           )}
           {section === "projects" && (
             <section className="min-w-0 space-y-5 border-b border-border pb-6">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Projects</h1>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Projects</h1>
               <p className="text-sm text-muted-foreground">
                 Projects belong to your developer credit accounts.
               </p>
@@ -1073,7 +1073,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
             hidden={section !== "keys" && section !== "limits"}
             className="min-w-0 scroll-mt-20 space-y-6"
           >
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
               {section === "keys" ? "API keys" : "Spending limits"}
             </h1>
             {section === "keys" && (
@@ -1268,7 +1268,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
           </section>
           <section id="billing" hidden={section !== "billing"} className="scroll-mt-20 space-y-6">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Billing</h1>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Billing</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 Manage prepaid API credits and payment history for the selected account.
               </p>
@@ -1388,14 +1388,14 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
             hidden={section !== "usage" && section !== "costs" && section !== "logs"}
             className="min-w-0 scroll-mt-20 space-y-6"
           >
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
               {section === "logs" ? "Request logs" : section === "costs" ? "Costs" : "Usage"}
             </h1>
             <p className="text-sm text-muted-foreground">
               Filter your API request history. Page totals cover up to 100 records; generate a
               date-range summary to see all matching records within the supported range.
             </p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <label className="space-y-1 text-sm">
                 <span>Model ID</span>
                 <div className="flex min-w-0 flex-wrap gap-2 sm:flex-nowrap">
@@ -1672,7 +1672,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">Requests on this page</p>
-                  <p className="text-2xl font-semibold tracking-tight sm:text-3xl">{usageReady ? visibleUsage.length : "—"}</p>
+                  <p className="text-2xl font-semibold tracking-tight sm:text-[28px]">{usageReady ? visibleUsage.length : "—"}</p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">
