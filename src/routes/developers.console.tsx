@@ -35,6 +35,21 @@ import { DeveloperPlayground } from "@/components/DeveloperPlayground";
 import { KOVA_MODEL_LABELS } from "@/lib/kova-foundation-models.mjs";
 import type { DeveloperUsageSummary } from "@/lib/pricing/developer-usage-summary.mjs";
 type Row = Record<string, string | number | boolean | null | string[]>;
+const CSV_FIELDS = ["id", "account_id", "project_id", "api_key_id", "public_model", "capability", "created_at", "settled_at", "settlement_state", "input_tokens", "cached_input_tokens", "image_input_tokens", "output_tokens", "final_customer_charge", "maximum_reserved_charge", "currency"] as const;
+function downloadUsageCsv(rows: Row[], filename: string) {
+  const cell = (value: unknown) => {
+    let text = String(value ?? "");
+    if (/^[=+@-]/.test(text.trimStart()) || /^[\t\r\n]/.test(text)) text = "'" + text;
+    return '"' + text.replaceAll('"', '""') + '"';
+  };
+  const csv = [CSV_FIELDS.join(","), ...rows.map((row) => CSV_FIELDS.map((field) => cell(row[field])).join(","))].join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 type ConsoleData = {
   enabled: boolean;
   workspaceV2?: boolean;
@@ -269,6 +284,37 @@ function OwnedDeveloperConsole({
     }
   };
   const currentSummary = summary?.query === summaryQuery ? summary : null;
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const exportAbort = useRef<AbortController | null>(null);
+  useEffect(() => {
+    setExportBusy(false);
+    setExportError("");
+    return () => { exportAbort.current?.abort(); exportAbort.current = null; };
+  }, [summaryQuery, userId]);
+  const exportRange = async () => {
+    if (exportAbort.current || !dateFilter || !endDateFilter) return;
+    const controller = new AbortController();
+    exportAbort.current = controller;
+    setExportBusy(true);
+    setExportError("");
+    try {
+      const response = await fetchWithTimeoutAuthenticated(`/api/developer/console?${summaryQuery}&usageExport=1`, {
+        signal: controller.signal,
+        headers: { "X-Kova-Expected-User": userId },
+      }, 45_000);
+      const result = await response.json();
+      if (!response.ok || !Array.isArray(result.exportRows))
+        throw new Error(result.error?.code === "developer_summary_range_too_large" ? "More than 5,000 matching records. Choose a narrower date range." : result.error?.message ?? "Export could not be completed.");
+      if (!controller.signal.aborted && exportAbort.current === controller)
+        downloadUsageCsv(result.exportRows, `kova-api-usage-${dateFilter}-${endDateFilter}.csv`);
+    } catch (cause) {
+      if (!controller.signal.aborted && exportAbort.current === controller)
+        setExportError(cause instanceof Error ? cause.message : "Export failed.");
+    } finally {
+      if (exportAbort.current === controller) { exportAbort.current = null; setExportBusy(false); }
+    }
+  };
   const load = useCallback(
     async (signal?: AbortSignal) => {
       const owner = ownerRef.current;
@@ -1007,22 +1053,10 @@ function OwnedDeveloperConsole({
                 setUsagePage(0);
               }}>Last {days} days</Button>)}
               <Button variant="outline" onClick={clearUsageFilters}>Clear filters</Button>
-              <Button variant="outline" disabled={!usageReady || !visibleUsage.length} onClick={() => {
-                const fields = ["id", "account_id", "project_id", "api_key_id", "public_model", "capability", "created_at", "settled_at", "settlement_state", ...tokenDimensions, "final_customer_charge", "maximum_reserved_charge", "currency"];
-                const cell = (value: unknown) => {
-                  let text = String(value ?? "");
-                  if (/^[=+@-]/.test(text.trimStart()) || text.startsWith("\t") || text.startsWith("\r") || text.startsWith("\n")) text = "'" + text;
-                  return '"' + text.replaceAll('"', '""') + '"';
-                };
-                const csv = [fields.join(","), ...visibleUsage.map((row) => fields.map((field) => cell(row[field])).join(","))].join("\r\n");
-                const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `kova-api-usage-page-${usagePage + 1}.csv`;
-                link.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-              }}>Export current page</Button>
+              <Button variant="outline" disabled={!usageReady || !visibleUsage.length} onClick={() => downloadUsageCsv(visibleUsage, `kova-api-usage-page-${usagePage + 1}.csv`)}>Export current page</Button>
+              <Button variant="outline" disabled={!dateFilter || !endDateFilter || dateFilter > endDateFilter || exportBusy} onClick={() => void exportRange()}>{exportBusy ? "Exporting…" : "Export date range"}</Button>
             </div>
+            {exportError && <p role="alert" className="text-sm text-destructive">{exportError}</p>}
             {(section === "usage" || section === "costs") && (
               <section className="min-w-0 space-y-3 rounded-lg border border-border p-3 sm:p-4">
                 <h2 className="font-semibold">Date-range analytics</h2>
