@@ -374,6 +374,22 @@ export async function handleDeveloperConsole(request: Request) {
   try {
     if (request.method === "GET") {
       const params = new URL(request.url).searchParams;
+      if (params.has("creditWallet")) {
+        if (runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") !== "true")
+          return developerJson({ enabled: false });
+        const accountId = developerUuid(params.get("creditWallet"));
+        const page = Number(params.get("creditPage") ?? 0);
+        if (!Number.isSafeInteger(page) || page < 0 || page > 4000)
+          throw new Error("developer_page_invalid");
+        const wallet = await db.rpc("developer_credit_wallet_status_v2", {
+          p_owner: caller.userId,
+          p_account: accountId,
+          p_offset: page * 25,
+        }).abortSignal(AbortSignal.timeout(10000));
+        if (wallet.error?.code === "42501") throw new Error("developer_owner_required");
+        if (wallet.error) throw new Error("developer_storage_unavailable");
+        return developerJson({ enabled: true, wallet: wallet.data, page });
+      }
       const limitsPage = Number(params.get("limitsPage") ?? 0);
       const usagePage = Number(params.get("usagePage") ?? 0);
       const summaryRequested = params.get("usageSummary") === "1";
