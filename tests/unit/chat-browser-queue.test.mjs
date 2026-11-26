@@ -59,9 +59,8 @@ async function queueDatabase(t, fixedQuotaClock = false) {
         select ((clock_timestamp() at time zone 'UTC')::date - 1 + time '12:00')
           at time zone 'UTC' - clock_timestamp();
       create function public.test_quota_clock() returns timestamptz
-        language sql volatile as $
-          select clock_timestamp() + delta from public.test_quota_clock_offset
-        $;
+        language sql volatile as
+          'select clock_timestamp() + delta from public.test_quota_clock_offset';
       grant select on public.test_quota_clock_offset to service_role;
     `);
   }
