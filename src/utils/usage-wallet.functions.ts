@@ -18,7 +18,15 @@ export type UsageWallet = {
   environment: "live" | "sandbox";
   fundedCents: number;
   spentMicros: number;
-  spending: { id: string; model: string; date: string; micros: number; pending: boolean }[];
+  availableMicros: number;
+  spending: {
+    id: string;
+    model: string;
+    date: string;
+    micros: number;
+    pending: boolean;
+    needsReview: boolean;
+  }[];
   delivery: { email: boolean; text: boolean };
   orders: {
     id: string;
@@ -54,6 +62,7 @@ export const getMyUsageWallet = createServerFn({ method: "GET" })
       ...result.data,
       environment,
       spentMicros: spending.data.spentMicros,
+      availableMicros: spending.data.availableMicros,
       spending: spending.data.entries,
       delivery: giftDeliveryAvailability(),
     } as UsageWallet;

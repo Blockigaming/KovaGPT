@@ -46,7 +46,7 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
           {!gift && (
             <p>
               {wallet.environment === "sandbox" ? "Test balance" : "Available credits"}{" "}
-              {usd.format(Math.max(0, wallet.fundedCents / 100 - wallet.spentMicros / 1_000_000))}
+              {usd.format(wallet.availableMicros / 1_000_000)}
             </p>
           )}
           {!gift && (
@@ -133,7 +133,7 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
                       <span>{entry.model}</span>
                       <span>
                         {usd.format(entry.micros / 1_000_000)}
-                        {entry.pending ? " reserved" : ""}
+                        {entry.needsReview ? " under review" : entry.pending ? " reserved" : ""}
                       </span>
                     </li>
                   ))}

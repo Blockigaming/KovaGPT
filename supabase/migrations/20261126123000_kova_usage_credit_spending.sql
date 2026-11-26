@@ -6,6 +6,9 @@ create table kova_private.usage_credit_spends (
   order_id uuid not null references kova_private.usage_credit_orders(id),
   maximum_micros bigint not null check (maximum_micros > 0),
   settled_micros bigint check (settled_micros >= 0),
+  reconciled_at timestamptz,
+  reconciled_by uuid,
+  reconciliation_reason text,
   pricing_divisor bigint not null check (pricing_divisor > 0)
 );
 create index on kova_private.usage_credit_spends(order_id);
@@ -141,9 +144,15 @@ returns jsonb language sql stable security definer set search_path='' as $$
     'spentMicros',coalesce((select sum(coalesce(s.settled_micros,s.maximum_micros))
       from kova_private.usage_credit_spends s join kova_private.usage_credit_orders o on o.id=s.order_id
       where o.claimed_by=p_user and o.environment=p_env),0),
+    'availableMicros',coalesce((select sum(greatest(0,o.amount_cents::bigint*10000-coalesce((
+      select sum(coalesce(s.settled_micros,s.maximum_micros))
+      from kova_private.usage_credit_spends s where s.order_id=o.id
+    ),0))) from kova_private.usage_credit_orders o where o.claimed_by=p_user
+      and o.environment=p_env and not o.disputed and o.refunded_cents=0),0),
     'entries',coalesce((select jsonb_agg(to_jsonb(history) order by date desc) from (
       select e.id,e.provider_model as model,e.created_at as date,
-        coalesce(s.settled_micros,s.maximum_micros) as micros,s.settled_micros is null as pending
+        coalesce(s.settled_micros,s.maximum_micros) as micros,s.settled_micros is null as pending,
+        (s.settled_micros is null and e.status='stale') as "needsReview"
       from kova_private.usage_credit_spends s join kova_private.usage_credit_orders o on o.id=s.order_id
       join public.ai_usage_events e on e.id=s.event_id
       where o.claimed_by=p_user and o.environment=p_env order by e.created_at desc,e.id limit 50
@@ -194,3 +203,33 @@ returns boolean language sql stable security invoker set search_path='' as $$
 $$;
 revoke all on function public.kova_live_credit_checkout_ready() from public,anon,authenticated;
 grant execute on function public.kova_live_credit_checkout_ready() to service_role;
+
+
+-- A missing final usage receipt does not establish that provider usage was zero.
+-- An administrator can resolve a stale reservation after checking actual costs.
+create function public.kova_reconcile_stale_credit_spend(
+  p_event uuid,p_admin uuid,p_actual_cost numeric,p_reason text
+) returns boolean language plpgsql security definer set search_path='' as $$
+declare
+  event_status text;
+  recorded_cost numeric;
+begin
+  if p_admin is null or p_actual_cost is null or p_actual_cost<0
+    or p_actual_cost>500 or p_reason is null or length(btrim(p_reason)) not between 1 and 240
+    or not kova_private.auth_user_exists(p_admin)
+    or exists(select 1 from public.account_deletion_fences where user_id=p_admin) then
+    return false;
+  end if;
+  select status,actual_cost_usd into event_status,recorded_cost
+    from public.ai_usage_events where id=p_event for update;
+  if not found or event_status<>'stale' or recorded_cost is not null then return false; end if;
+  update kova_private.usage_credit_spends s
+    set settled_micros=least(s.maximum_micros,
+      ceil(p_actual_cost*1000000*o.amount_cents*10000/s.pricing_divisor)::bigint),
+      reconciled_at=now(),reconciled_by=p_admin,reconciliation_reason=btrim(p_reason)
+    from kova_private.usage_credit_orders o
+    where s.event_id=p_event and s.order_id=o.id and s.settled_micros is null;
+  return found;
+end $$;
+revoke all on function public.kova_reconcile_stale_credit_spend(uuid,uuid,numeric,text) from public,anon,authenticated;
+grant execute on function public.kova_reconcile_stale_credit_spend(uuid,uuid,numeric,text) to service_role;
