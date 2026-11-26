@@ -20,6 +20,7 @@ import {
   KeyRound,
   LayoutDashboard,
   List,
+  Menu,
   SlidersHorizontal,
   Users,
 } from "lucide-react";
@@ -47,6 +48,7 @@ const WORKSPACE_SECTIONS = [
   "keys",
   "files",
   "usage",
+  "costs",
   "logs",
   "billing",
   "limits",
@@ -78,33 +80,50 @@ function DeveloperWorkspace({
   authenticated?: boolean;
   section?: WorkspaceSection;
 }) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  useEffect(() => setMobileNavOpen(false), [section]);
   const navigation = [
     { label: "Overview", anchor: "overview", icon: LayoutDashboard },
     { label: "Projects", anchor: "projects", icon: Users },
     { label: "API keys", anchor: "keys", icon: KeyRound },
     { label: "Files", anchor: "files", icon: Folder },
     { label: "Usage", anchor: "usage", icon: ChartNoAxesColumn },
+    { label: "Costs", anchor: "costs", icon: CreditCard },
     { label: "Logs", anchor: "logs", icon: List },
     { label: "Billing", anchor: "billing", icon: CreditCard },
     { label: "Limits", anchor: "limits", icon: SlidersHorizontal },
   ] as const;
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border px-4 sm:px-6">
-        <div className="flex items-center gap-3">
+    <div data-developer-workspace className="min-h-dvh min-w-0 w-full bg-background text-foreground [overflow-wrap:anywhere]">
+      <header className="flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border px-3 sm:min-h-16 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 md:hidden"
+            aria-label={mobileNavOpen ? "Close developer navigation" : "Open developer navigation"}
+            aria-expanded={mobileNavOpen}
+            aria-controls="developer-workspace-navigation"
+            onClick={() => setMobileNavOpen((open) => !open)}
+          >
+            <Menu className="size-5" aria-hidden="true" />
+          </Button>
           <Link to="/developers" className="text-lg font-semibold tracking-tight">
             Kova
           </Link>
           <span aria-hidden="true" className="text-muted-foreground">/</span>
-          <span className="text-sm font-medium">API Platform</span>
+          <span className="min-w-0 text-xs font-medium sm:text-sm">API Platform</span>
         </div>
         <Link to="/" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
           <ChevronLeft className="size-4" aria-hidden="true" /> KovaGPT
         </Link>
       </header>
-      <div className="mx-auto grid min-w-0 max-w-[1600px] md:grid-cols-[224px_minmax(0,1fr)]">
-        <aside className="min-w-0 border-b border-border p-3 md:border-b-0 md:border-r md:p-4">
-          <nav aria-label="Developer workspace" className="flex flex-wrap gap-1 md:sticky md:top-4 md:flex-col">
+      <div className="mx-auto grid w-full min-w-0 max-w-[1600px] grid-cols-[minmax(0,1fr)] md:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[224px_minmax(0,1fr)]">
+        <aside
+          id="developer-workspace-navigation"
+          className={`min-w-0 border-b border-border p-3 md:block md:border-b-0 md:border-r md:p-4 ${mobileNavOpen ? "block" : "hidden"}`}
+        >
+          <nav aria-label="Developer workspace" className="flex flex-col gap-1 md:sticky md:top-4">
             {navigation
               .filter((item) => authenticated || item.anchor === "overview")
               .map(({ label, anchor, icon: Icon }) => (
@@ -112,6 +131,7 @@ function DeveloperWorkspace({
                   key={anchor}
                   to="/developers/console"
                   search={{ section: anchor }}
+                  onClick={() => setMobileNavOpen(false)}
                   aria-current={section === anchor ? "page" : undefined}
                   className={`flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring ${section === anchor ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                 >
@@ -130,7 +150,7 @@ function DeveloperWorkspace({
             </Link>
           </nav>
         </aside>
-        <main id="main-content" tabIndex={-1} data-ui-reference="chatgpt-settings-form" className="min-w-0 space-y-6 px-4 py-6 sm:px-8 sm:py-10">
+        <main id="main-content" tabIndex={-1} data-ui-reference="chatgpt-settings-form" className="w-full min-w-0 space-y-4 px-3 py-5 sm:space-y-6 sm:px-6 sm:py-8 lg:px-8">
           {children}
         </main>
       </div>
@@ -291,7 +311,15 @@ function OwnedDeveloperConsole({
     if (Number.isFinite(amount))
       settledByCurrency.set(currency, (settledByCurrency.get(currency) ?? 0) + amount);
   }
-  const fieldClass = "mt-1 block w-full";
+  const activityByDay = new Map<string, number>();
+  for (const row of visibleUsage) {
+    const day = String(row.created_at).slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day))
+      activityByDay.set(day, (activityByDay.get(day) ?? 0) + 1);
+  }
+  const activity = [...activityByDay].sort(([a], [b]) => a.localeCompare(b));
+  const peak = Math.max(1, ...activity.map(([, count]) => count));
+  const fieldClass = "mt-1 block w-full min-w-0";
   return (
     <DeveloperWorkspace authenticated section={section}>
       <section id="overview" hidden={section !== "overview"} className="scroll-mt-4 space-y-4">
@@ -305,7 +333,7 @@ function OwnedDeveloperConsole({
             MCP connections
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           {([
             ["Credit accounts", data?.accounts.length],
             ["Projects", data?.projects.length],
@@ -394,7 +422,7 @@ function OwnedDeveloperConsole({
             </Button>
           </form>
           <section aria-label="Account and project selection" className="grid gap-4 rounded-xl border border-border p-4 sm:grid-cols-2">
-            <div className="grid gap-1">
+            <div className="grid min-w-0 gap-1">
               <label htmlFor="developer-console-account">Account</label>
               <Select
                 value={account || "__none__"}
@@ -425,7 +453,7 @@ function OwnedDeveloperConsole({
                 {selected.suspended_at ? "This account is suspended." : ""}
               </p>
             )}
-            <div className="grid gap-1">
+            <div className="grid min-w-0 gap-1">
               <label htmlFor="developer-console-project">Project</label>
               <Select
                 value={project || "__none__"}
@@ -447,7 +475,7 @@ function OwnedDeveloperConsole({
               </Select>
             </div>
           </section>
-          <section id="keys" hidden={section !== "keys" && section !== "limits"} className="scroll-mt-4 space-y-4 rounded-xl border p-5">
+          <section id="keys" hidden={section !== "keys" && section !== "limits"} className="min-w-0 scroll-mt-4 space-y-4 rounded-xl border p-3 sm:p-5">
             <h2 className="text-lg font-semibold">Keys and spending limits</h2>
             <p>
               Enter spending limits in the account currency’s minor units. Organization, project,
@@ -631,10 +659,10 @@ function OwnedDeveloperConsole({
               </div>
             )}
           </section>
-          <section id="limits" hidden={section !== "limits"} className="scroll-mt-4 space-y-3 rounded-xl border p-5">
+          <section id="limits" hidden={section !== "limits"} className="min-w-0 scroll-mt-4 space-y-3 rounded-xl border p-3 sm:p-5">
             <h2 className="text-lg font-semibold">Stored spending limits</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="max-w-full min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr>
                     <th>Account</th>
@@ -679,8 +707,8 @@ function OwnedDeveloperConsole({
               </Button>
             </div>
           </section>
-          <section id="usage" hidden={section !== "usage" && section !== "logs"} className="scroll-mt-4 space-y-4 rounded-xl border p-5">
-            <h1 className="text-2xl font-semibold">{section === "logs" ? "Request logs" : "Usage"}</h1>
+          <section id="usage" hidden={section !== "usage" && section !== "costs" && section !== "logs"} className="min-w-0 scroll-mt-4 space-y-4 rounded-xl border p-3 sm:p-5">
+            <h1 className="text-2xl font-semibold">{section === "logs" ? "Request logs" : section === "costs" ? "Costs" : "Usage"}</h1>
             <p className="text-sm text-muted-foreground">Filter your API request history on the server. Totals below cover the current page of up to 100 matching records, not the full billing period.</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="space-y-1 text-sm">
@@ -702,7 +730,7 @@ function OwnedDeveloperConsole({
                 <select value={serviceFilter} onChange={(event) => {
                   setServiceFilter(event.target.value);
                   setUsagePage(0);
-                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
                   <option value="">All services</option>
                   {["chat", "streaming", "image_generation", "embeddings", "files"].map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
@@ -712,7 +740,7 @@ function OwnedDeveloperConsole({
                 <select value={statusFilter} onChange={(event) => {
                   setStatusFilter(event.target.value);
                   setUsagePage(0);
-                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
                   <option value="">All statuses</option>
                   {["reserved", "dispatched", "settled", "uncertain", "reconciliation_required", "rejected"].map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
@@ -723,7 +751,7 @@ function OwnedDeveloperConsole({
                   setUsageProject(event.target.value);
                   setUsageKey("");
                   setUsagePage(0);
-                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
                   <option value="">All projects</option>
                   {data?.projects.filter((row) => !account || row.account_id === account).map((row) => <option key={String(row.id)} value={String(row.id)}>{row.name}</option>)}
                 </select>
@@ -733,7 +761,7 @@ function OwnedDeveloperConsole({
                 <select value={usageKey} onChange={(event) => {
                   setUsageKey(event.target.value);
                   setUsagePage(0);
-                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
                   <option value="">All keys (including revoked)</option>
                   {data?.keys.filter((row) => (!account || row.account_id === account) && (!usageProject || row.project_id === usageProject)).map((row) => <option key={String(row.id)} value={String(row.id)}>{row.name}</option>)}
                 </select>
@@ -775,7 +803,7 @@ function OwnedDeveloperConsole({
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
               }}>Export current page</Button>
             </div>
-            {section === "usage" && (
+            {(section === "usage" || section === "costs") && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">Requests on this page</p>
@@ -789,10 +817,26 @@ function OwnedDeveloperConsole({
                 </div>
               </div>
             )}
+            {section === "usage" && usageReady && activity.length > 0 && (
+              <section className="min-w-0 rounded-lg border border-border p-3" aria-label="Requests by UTC day, current page">
+                <h2 className="text-sm font-medium">Requests by day (current page)</h2>
+                <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+                  {activity.map(([day, count]) => (
+                    <div key={day} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-xs">
+                      <span className="tabular-nums">{day}</span>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-foreground/70" style={{ width: `${count / peak * 100}%` }} />
+                      </div>
+                      <span className="tabular-nums">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
             {!usageReady && !error && <p role="status" className="text-sm text-muted-foreground">Loading usage…</p>}
             {usageReady && !visibleUsage.length && <p className="text-sm text-muted-foreground">No matching API calls on this page.</p>}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="max-w-full min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr>
                     <th className="p-2">Model</th>
