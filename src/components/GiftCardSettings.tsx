@@ -60,15 +60,22 @@ export function UsageCredits({
 
 export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
+  const [deliveryAvailability, setDeliveryAvailability] = useState({ email: false, text: false });
   const [pending, setPending] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
-  const attempt = useRef<{ cents: number; design: string; id: string } | null>(null);
+  const attempt = useRef<{ signature: string; id: string } | null>(null);
   useEffect(() => {
     if (!ownerId) return;
     let current = true;
     void getMyUsageWallet({ data: { ownerId } }).then(
       (wallet) => {
-        if (current) setCheckoutEnabled(wallet !== null);
+        if (current) {
+          setCheckoutEnabled(wallet !== null);
+          if (wallet) {
+            setDeliveryAvailability(wallet.delivery);
+            setDelivery(wallet.delivery.email ? "email" : wallet.delivery.text ? "text" : "self");
+          }
+        }
       },
       () => {
         if (current) setCheckoutError("Gift checkout is temporarily unavailable.");
@@ -92,7 +99,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
     <section className="kova-settings-section space-y-5">
       <p className="text-sm text-muted-foreground">
         {checkoutEnabled
-          ? "Stripe sandbox. Buy a test gift card and share the code from Gift history."
+          ? "Stripe sandbox. Choose how to send your test gift card."
           : "Gift cards will be available on every Kova plan, including Free."}
       </p>
       <form
@@ -101,8 +108,17 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
           event.preventDefault();
           if (!ownerId || !checkoutEnabled || !validAmount || pending) return;
           const cents = Math.round(Number(value) * 100);
-          if (attempt.current?.cents !== cents || attempt.current.design !== design.name)
-            attempt.current = { cents, design: design.name, id: crypto.randomUUID() };
+          const fields = new FormData(event.currentTarget);
+          const details = {
+            channel: delivery,
+            to: String(fields.get("to") ?? ""),
+            recipient: String(fields.get("recipient") ?? ""),
+            sender: String(fields.get("sender") ?? ""),
+            message,
+          };
+          const signature = JSON.stringify([cents, design.name, details]);
+          if (attempt.current?.signature !== signature)
+            attempt.current = { signature, id: crypto.randomUUID() };
           setPending(true);
           setCheckoutError("");
           try {
@@ -113,6 +129,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                 cents,
                 gift: true,
                 design: design.name,
+                delivery: details,
               },
             });
             window.location.assign(url);
@@ -186,33 +203,34 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
               </label>
             )}
           </fieldset>
-          {!checkoutEnabled && (
-            <fieldset>
-              <legend className="mb-2 text-sm font-medium">Delivery preview</legend>
-              <div className="flex flex-wrap gap-2">
-                {deliveryOptions.map(({ id: option, label, icon: Icon }) => (
-                  <Button
-                    key={option}
-                    type="button"
-                    variant="outline"
-                    aria-pressed={delivery === option}
-                    className="aria-pressed:border-current"
-                    onClick={() => setDelivery(option)}
-                  >
-                    <Icon aria-hidden="true" /> {label}
-                  </Button>
-                ))}
-              </div>
-            </fieldset>
-          )}
-          {!checkoutEnabled && (
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium">
+              {checkoutEnabled ? "Delivery" : "Delivery preview"}
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {deliveryOptions.map(({ id: option, label, icon: Icon }) => (
+                <Button
+                  key={option}
+                  type="button"
+                  variant="outline"
+                  aria-pressed={delivery === option}
+                  disabled={checkoutEnabled && option !== "self" && !deliveryAvailability[option]}
+                  className="aria-pressed:border-current"
+                  onClick={() => setDelivery(option)}
+                >
+                  <Icon aria-hidden="true" /> {label}
+                </Button>
+              ))}
+            </div>
+          </fieldset>
+          {delivery !== "self" && (
             <fieldset className="space-y-3">
               <legend className="mb-2 text-sm font-medium">Gift details</legend>
               {delivery !== "self" && (
                 <>
                   <label className="block space-y-1 text-sm">
                     <span>Recipient’s name</span>
-                    <Input autoComplete="off" maxLength={80} />
+                    <Input name="recipient" autoComplete="off" maxLength={80} />
                   </label>
                   <label key={delivery} className="block space-y-1 text-sm">
                     <span>
@@ -220,7 +238,14 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                         ? "Recipient’s email address"
                         : "Recipient’s phone number"}
                     </span>
-                    <Input type={delivery === "email" ? "email" : "tel"} autoComplete="off" />
+                    <Input
+                      name="to"
+                      type={delivery === "email" ? "email" : "tel"}
+                      autoComplete="off"
+                      required={checkoutEnabled}
+                      maxLength={254}
+                      placeholder={delivery === "text" ? "+1…" : undefined}
+                    />
                   </label>
                 </>
               )}
@@ -238,7 +263,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
               </label>
               <label className="block space-y-1 text-sm">
                 <span>Sender’s name</span>
-                <Input autoComplete="off" maxLength={80} />
+                <Input name="sender" autoComplete="off" maxLength={80} />
               </label>
             </fieldset>
           )}

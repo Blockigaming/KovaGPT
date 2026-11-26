@@ -1,3 +1,8 @@
+import {
+  giftDeliveryAvailability,
+  validateGiftDelivery,
+  type GiftDelivery,
+} from "@/lib/gift-delivery.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -11,6 +16,7 @@ import {
 
 export type UsageWallet = {
   fundedCents: number;
+  delivery: { email: boolean; text: boolean };
   orders: {
     id: string;
     gift: boolean;
@@ -34,14 +40,20 @@ export const getMyUsageWallet = createServerFn({ method: "GET" })
       .rpc("kova_credit_wallet", { p_user: context.userId, p_env: environment })
       .abortSignal(AbortSignal.timeout(10_000));
     if (result.error || !result.data) throw new Error("Credit wallet unavailable.");
-    return result.data as UsageWallet;
+    return { ...result.data, delivery: giftDeliveryAvailability() } as UsageWallet;
   });
 
 export const createUsageCreditCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (data: { ownerId: string; orderId: string; cents: number; gift: boolean; design?: string }) =>
-      data,
+    (data: {
+      ownerId: string;
+      orderId: string;
+      cents: number;
+      gift: boolean;
+      design?: string;
+      delivery?: GiftDelivery;
+    }) => data,
   )
   .handler(async ({ context, data }) => {
     const environment = creditCheckoutEnvironment();
@@ -55,6 +67,10 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
       typeof data.gift !== "boolean"
     )
       throw new Error("Checkout is unavailable.");
+    const delivery = data.gift && data.delivery ? validateGiftDelivery(data.delivery) : undefined;
+    const availability = giftDeliveryAvailability();
+    if (delivery && delivery.channel !== "self" && !availability[delivery.channel])
+      throw new Error("This delivery method is unavailable.");
     const prepared = await loose(supabaseAdmin).rpc("kova_prepare_credit_order", {
       p_id: data.orderId,
       p_buyer: context.userId,
@@ -63,6 +79,15 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
       p_gift: data.gift,
     });
     if (prepared.error || prepared.data !== true) throw new Error("Could not prepare checkout.");
+    if (delivery && delivery.channel !== "self") {
+      const saved = await loose(supabaseAdmin).rpc("kova_set_gift_delivery", {
+        p_id: data.orderId,
+        p_buyer: context.userId,
+        p_env: environment,
+        p_delivery: delivery,
+      });
+      if (saved.error || saved.data !== true) throw new Error("Could not save gift delivery.");
+    }
     const design =
       data.gift && ["Midnight", "Evergreen", "Ember"].includes(data.design ?? "")
         ? data.design

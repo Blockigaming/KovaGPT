@@ -1,3 +1,4 @@
+import { deliverFundedGift } from "@/lib/gift-delivery.server";
 import type Stripe from "stripe";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { loose } from "@/lib/supabase-loose";
@@ -70,5 +71,6 @@ export async function projectUsageCreditStripeEvent(event: VerifiedStripeEvent, 
     p_disputed: charge.disputed,
   });
   if (error || data !== true) throw new Error("Credit fulfillment failed.");
+  await deliverFundedGift(order, env);
   return true;
 }
