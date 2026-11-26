@@ -70,7 +70,7 @@ export function UsageLimitResets({
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
 
   return (
-    <section className="kova-settings-section space-y-4">
+    <section className="kova-settings-section space-y-4" style={{ marginBlockStart: "2rem" }}>
       <h3>Usage limit resets</h3>
       <p className="text-sm text-muted-foreground">
         {tier === "free"

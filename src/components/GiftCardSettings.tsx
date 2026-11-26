@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { PackageOpen as Gift, Mail, MessageSquare as Smartphone, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CONSUMER_MODELS } from "@/lib/consumer-model-selection.mjs";
 import { canBuyUsageCredits, canUseCreditsForModel } from "@/lib/usage-credit-pricing.mjs";
@@ -91,6 +92,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
   const [customAmount, setCustomAmount] = useState("");
   const [delivery, setDelivery] = useState<(typeof deliveryOptions)[number]["id"]>("email");
   const [design, setDesign] = useState<(typeof designs)[number]>(designs[0]);
+  const [showLogo, setShowLogo] = useState(true);
   const [message, setMessage] = useState("");
   const value = amount === "custom" ? customAmount : amount;
   const validAmount =
@@ -119,7 +121,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
             sender: String(fields.get("sender") ?? ""),
             message,
           };
-          const signature = JSON.stringify([cents, design.name, details]);
+          const signature = JSON.stringify([cents, design.name, showLogo, details]);
           if (attempt.current?.signature !== signature)
             attempt.current = { signature, id: crypto.randomUUID() };
           setPending(true);
@@ -132,6 +134,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                 cents,
                 gift: true,
                 design: design.name,
+                showLogo,
                 delivery: details,
               },
             });
@@ -144,18 +147,21 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
       >
         <div className="min-w-0 space-y-4">
           <figure
-            className="flex aspect-[8/5] flex-col justify-between rounded-2xl p-5 text-white"
+            className="flex aspect-[8/5] flex-col justify-end rounded-2xl p-5 text-white"
             style={{ background: design.color }}
           >
-            <figcaption className="flex items-center gap-2 text-sm font-semibold">
-              <Gift className="size-5" aria-hidden="true" /> KovaGPT
-            </figcaption>
+            {showLogo && (
+              <figcaption className="mb-auto flex items-center gap-2 text-sm font-semibold">
+                <img src="/kova-logo.png" alt="" className="size-7 object-contain" />
+                KovaGPT
+              </figcaption>
+            )}
             <p className="break-words text-3xl font-semibold tabular-nums">
               {validAmount ? usd.format(Number(value)) : "Gift card"}
             </p>
           </figure>
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">Card design</legend>
+          <fieldset className="min-w-0 rounded-2xl bg-muted/40 p-3 sm:p-4">
+            <legend className="px-2 text-sm font-medium">Card design</legend>
             <div className="flex flex-wrap gap-2">
               {designs.map((option) => (
                 <Button
@@ -175,11 +181,15 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                 </Button>
               ))}
             </div>
+            <label className="mt-3 flex min-h-11 items-center justify-between gap-3 text-sm">
+              Show KovaGPT logo
+              <Switch checked={showLogo} onCheckedChange={setShowLogo} />
+            </label>
           </fieldset>
         </div>
         <div className="min-w-0 space-y-4">
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">Amount (USD)</legend>
+          <fieldset className="min-w-0 rounded-2xl bg-muted/40 p-3 sm:p-4">
+            <legend className="px-2 text-sm font-medium">Amount (USD)</legend>
             <div className="flex flex-wrap gap-2">
               {amounts.map((option) => (
                 <Button
@@ -206,8 +216,8 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
               </label>
             )}
           </fieldset>
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">
+          <fieldset className="min-w-0 rounded-2xl bg-muted/40 p-3 sm:p-4">
+            <legend className="px-2 text-sm font-medium">
               {checkoutEnabled ? "Delivery" : "Delivery preview"}
             </legend>
             <div className="flex flex-wrap gap-2">

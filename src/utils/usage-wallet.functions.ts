@@ -79,6 +79,7 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
       cents: number;
       gift: boolean;
       design?: string;
+      showLogo?: boolean;
       delivery?: GiftDelivery;
     }) => data,
   )
@@ -125,7 +126,11 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
       {
         mode: "payment",
         payment_method_types: ["card"],
-        metadata: { kind: CREDIT_ORDER_KIND, order: data.orderId, ...(design ? { design } : {}) },
+        metadata: {
+          kind: CREDIT_ORDER_KIND,
+          order: data.orderId,
+          ...(design ? { design, show_logo: data.showLogo === false ? "false" : "true" } : {}),
+        },
         line_items: [
           {
             quantity: 1,
