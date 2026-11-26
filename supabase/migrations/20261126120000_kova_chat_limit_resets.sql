@@ -279,3 +279,32 @@ grant execute on function public.try_consume_paid_message(uuid,boolean,integer,i
   to service_role;
 
 
+
+create or replace function public.kova_chat_usage_breakdown(p_user uuid,p_days integer)
+returns jsonb language sql stable security definer set search_path=public,pg_temp as $$
+  with events as (
+    select provider_model,conversation_id,tool_usage,
+      (created_at at time zone 'UTC')::date as day
+    from ai_usage_events where user_id=p_user and p_days in (7,30)
+      and created_at>=(((now() at time zone 'UTC')::date-p_days+1)::timestamp at time zone 'UTC')
+      and created_at<=now() and status='completed'
+  ), models as (
+    select provider_model as model,count(*) as messages from events
+    group by provider_model order by count(*) desc,provider_model limit 30
+  ), chats as (
+    select conversation_id as id,count(*) as messages from events
+    where conversation_id is not null group by conversation_id
+    order by count(*) desc,conversation_id limit 10
+  ), tools as (
+    select day,sum(case
+      when jsonb_typeof(tool_usage->'calls')='number' then greatest((tool_usage->>'calls')::numeric,0)
+      else 0 end) as calls from events group by day
+  )
+  select jsonb_build_object(
+    'models',coalesce((select jsonb_agg(to_jsonb(models) order by messages desc,model) from models),'[]'::jsonb),
+    'chats',coalesce((select jsonb_agg(to_jsonb(chats) order by messages desc,id) from chats),'[]'::jsonb),
+    'tools',coalesce((select jsonb_agg(to_jsonb(tools) order by day) from tools where calls>0),'[]'::jsonb)
+  );
+$$;
+revoke all on function public.kova_chat_usage_breakdown(uuid,integer) from public,anon,authenticated;
+grant execute on function public.kova_chat_usage_breakdown(uuid,integer) to service_role;

@@ -276,3 +276,22 @@ export const redeemMyChatLimitReset = createServerFn({ method: "POST" })
     if (result.error || result.data !== true) throw new Error("This reset could not be applied.");
     return true;
   });
+
+type UsageBreakdown = {
+  models: { model: string; messages: number }[];
+  chats: { id: string; messages: number }[];
+  tools: { day: string; calls: number }[];
+};
+
+export const getMyChatUsageBreakdown = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string; days: 7 | 30 }) => data)
+  .handler(async ({ context, data }): Promise<UsageBreakdown> => {
+    if (data.ownerId !== context.userId || ![7, 30].includes(data.days))
+      throw new Error("Invalid usage range.");
+    const result = await loose(supabaseAdmin)
+      .rpc("kova_chat_usage_breakdown", { p_user: context.userId, p_days: data.days })
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (result.error || !result.data) throw new Error("Chat breakdown is unavailable.");
+    return result.data as UsageBreakdown;
+  });
