@@ -4,7 +4,11 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recha
 import { Button } from "@/components/ui/button";
 import { loadConversations, loadArchivedConversations } from "@/lib/chat-store";
 import { consumerModel } from "@/lib/consumer-model-selection.mjs";
-import { getMyUsageHistory, getMyChatUsageBreakdown } from "@/utils/usage.functions";
+import {
+  getMyUsageHistory,
+  getMyChatUsageBreakdown,
+  getMyQuotaObservations,
+} from "@/utils/usage.functions";
 
 type UsageHistory = Awaited<ReturnType<typeof getMyUsageHistory>>;
 const currency = new Intl.NumberFormat(undefined, {
@@ -22,6 +26,23 @@ export function UsageAnalytics({ ownerId }: { ownerId: string }) {
   const [history, setHistory] = useState<UsageHistory | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [quotaHistory, setQuotaHistory] = useState<Awaited<
+    ReturnType<typeof getMyQuotaObservations>
+  > | null>();
+  useEffect(() => {
+    let current = true;
+    void getMyQuotaObservations({ data: { ownerId } }).then(
+      (rows) => {
+        if (current) setQuotaHistory(rows);
+      },
+      () => {
+        if (current) setQuotaHistory(null);
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [ownerId]);
   const [creditWallet, setCreditWallet] = useState<UsageWallet | null>();
   const [creditError, setCreditError] = useState(false);
   useEffect(() => {
@@ -294,6 +315,42 @@ export function UsageAnalytics({ ownerId }: { ownerId: string }) {
           )}
         </section>
       )}
+      <section className="space-y-3 border-t border-border pt-4">
+        <h4 className="font-medium">Plan limit history</h4>
+        <p className="text-sm text-muted-foreground">
+          Last recorded usage for each window. Observations are saved when you open Analytics.
+        </p>
+        {quotaHistory === null ? (
+          <p role="status">Plan limit history is unavailable.</p>
+        ) : quotaHistory === undefined ? (
+          <p role="status">Loading plan limit history…</p>
+        ) : quotaHistory.length === 0 ? (
+          <p className="text-sm">No windows recorded yet.</p>
+        ) : (
+          <details>
+            <summary className="cursor-pointer text-sm">Recorded limits</summary>
+            <ul className="divide-y divide-border">
+              {quotaHistory
+                .filter((row) => Date.parse(row.observedAt) >= Date.now() - range * 86_400_000)
+                .map((row) => (
+                  <li
+                    key={row.kind + row.start}
+                    className="flex flex-wrap justify-between gap-2 py-2 text-sm"
+                  >
+                    <span>
+                      {row.kind === "weekly" ? "Weekly" : "5-hour"} ·{" "}
+                      {new Date(row.start).toLocaleString()}
+                    </span>
+                    <span>{row.percent === null ? "Unavailable" : `${row.percent}% used`}</span>
+                    <time className="w-full text-muted-foreground" dateTime={row.observedAt}>
+                      Observed {new Date(row.observedAt).toLocaleString()}
+                    </time>
+                  </li>
+                ))}
+            </ul>
+          </details>
+        )}
+      </section>
     </section>
   );
 }

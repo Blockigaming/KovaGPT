@@ -295,3 +295,23 @@ export const getMyChatUsageBreakdown = createServerFn({ method: "GET" })
     if (result.error || !result.data) throw new Error("Chat breakdown is unavailable.");
     return result.data as UsageBreakdown;
   });
+
+type QuotaObservation = {
+  kind: "weekly" | "five_hour";
+  start: string;
+  observedAt: string;
+  percent: number | null;
+};
+
+export const getMyQuotaObservations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string }) => data)
+  .handler(async ({ context, data }): Promise<QuotaObservation[]> => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const plan = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+    const result = await loose(supabaseAdmin)
+      .rpc("kova_observe_chat_quota", { p_user: context.userId, p_plan: plan })
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (result.error || !Array.isArray(result.data)) throw new Error("Quota history unavailable.");
+    return result.data as QuotaObservation[];
+  });
