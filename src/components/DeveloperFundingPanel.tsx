@@ -131,7 +131,7 @@ export function DeveloperFundingPanel({
   return (
     <section
       data-ui-reference="chatgpt-settings-form"
-      className="space-y-3 rounded-2xl border border-border p-5"
+      className="min-w-0 space-y-3 rounded-2xl border border-border p-3 sm:p-5"
     >
       <h2 className="text-lg font-semibold">Prepaid API credit</h2>
       {error && (
@@ -149,7 +149,7 @@ export function DeveloperFundingPanel({
           </p>
           <ul className="space-y-3">
             {data?.offers.map((offer) => (
-              <li key={offer.id} className="flex flex-wrap items-center justify-between gap-3">
+              <li key={offer.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                 <div>
                   <p>{offer.name}</p>
                   <p className="text-sm text-muted-foreground">
