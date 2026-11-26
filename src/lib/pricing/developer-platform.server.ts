@@ -437,7 +437,7 @@ export async function handleDeveloperConsole(request: Request) {
       let usageQuery = db
         .from("developer_api_requests")
         .select(
-          "id,account_id,project_id,api_key_id,public_model,capability,currency,settlement_state,maximum_reserved_charge,final_customer_charge,created_at",
+          "id,account_id,project_id,api_key_id,public_model,capability,currency,settlement_state,maximum_reserved_charge,final_customer_charge,created_at,settled_at,authoritative_usage",
         )
         .in("account_id", ids);
       if (usageAccount) usageQuery = usageQuery.eq("account_id", usageAccount);
@@ -488,7 +488,21 @@ export async function handleDeveloperConsole(request: Request) {
         limits: rows[2].data?.slice(0, 100),
         limitsPage,
         limitsHasMore: (rows[2].data?.length ?? 0) > 100,
-        usage: rows[3].data?.slice(0, 100),
+        usage: rows[3].data?.slice(0, 100).map(({ authoritative_usage, ...row }) => {
+          const dimension = (name: string) => {
+            const value = authoritative_usage?.[name];
+            return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+              ? value
+              : null;
+          };
+          return {
+            ...row,
+            input_tokens: dimension("input_tokens"),
+            cached_input_tokens: dimension("cached_input_tokens"),
+            image_input_tokens: dimension("image_input_tokens"),
+            output_tokens: dimension("output_tokens"),
+          };
+        }),
         usagePage,
         usageHasMore: (rows[3].data?.length ?? 0) > 100,
         balances: rows[4].data,
