@@ -3208,6 +3208,7 @@ function KovaGPT() {
       showChooseProject
       showResources={!chatStarted}
       savedConversations={userKey && principalReady ? conversations : []}
+      homeSuggestions={settingsReady && settings.rememberAcross && !tempChat}
       onOpenChatContext={active ? openChatWorkspace : undefined}
       chatRulesActive={chatRulesActive}
       onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
@@ -3459,9 +3460,6 @@ function KovaGPT() {
               chatId={activeId}
               conversations={isLoaded && isSignedIn ? historyConversations : []}
               onSelect={setActiveId}
-              draft={principalReady ? input : ""}
-              onDraftChange={setInput}
-              personalize={settingsReady && settings.rememberAcross && !tempChat}
             >
               {active && editingMessage?.conversationId === active.id && (
                 <div

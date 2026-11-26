@@ -203,6 +203,7 @@ function fixture(
     "ComposerPluginList",
   ])
     modules[`@/components/${name}`] = { [name]: name };
+  modules["@/components/HomeAutocompleteHost"] = { default: () => null };
   modules["@/components/ComposerPluginList"].useComposerPluginConnections = () => ({});
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],

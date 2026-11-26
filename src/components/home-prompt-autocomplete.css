@@ -33,3 +33,7 @@
     display: none;
   }
 }
+
+.kova-empty-chat-content:has(> .kova-home-autocomplete) > .kova-desktop-recent-work {
+  display: none;
+}
