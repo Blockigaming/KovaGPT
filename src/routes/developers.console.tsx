@@ -28,6 +28,8 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NovaLogo } from "@/components/NovaLogo";
+import "@/styles/developer-console.css";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
 import { DeveloperCreditWallet } from "@/components/DeveloperCreditWallet";
@@ -164,25 +166,33 @@ function DeveloperWorkspace({
           >
             <Menu className="size-5" aria-hidden="true" />
           </Button>
-          <Link to="/developers" className="text-lg font-semibold tracking-tight">
-            Kova
+          <Link
+            to="/developers"
+            className="flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight"
+          >
+            <NovaLogo decorative className="size-6" />
+            <span>KovaGPT</span>
           </Link>
           <span aria-hidden="true" className="text-muted-foreground">
             /
           </span>
-          <span className="min-w-0 text-xs font-medium sm:text-sm">API Platform</span>
+          <span className="min-w-0 text-sm text-muted-foreground">
+            API<span className="hidden sm:inline"> Platform</span>
+          </span>
         </div>
         <Link
           to="/"
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Back to KovaGPT"
+          className="kova-button inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <ChevronLeft className="size-4" aria-hidden="true" /> KovaGPT
+          <ChevronLeft className="size-4" aria-hidden="true" />
+          <span className="hidden sm:inline">KovaGPT</span>
         </Link>
       </header>
-      <div className="grid min-h-[calc(100dvh-4rem)] w-full min-w-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[224px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)]">
+      <div className="grid min-h-[calc(100dvh-4rem)] w-full min-w-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[224px_minmax(0,1fr)] xl:grid-cols-[var(--kova-sidebar-width)_minmax(0,1fr)]">
         <aside
           id="developer-workspace-navigation"
-          className={`min-w-0 border-b border-border bg-background px-3 py-4 md:block md:border-b-0 md:border-r md:px-4 md:py-6 ${mobileNavOpen ? "block" : "hidden"}`}
+          className={`min-w-0 rounded-b-[var(--kova-radius-panel)] border-b border-border bg-sidebar px-3 py-4 md:block md:rounded-none md:border-b-0 md:border-r md:bg-background md:px-4 md:py-6 ${mobileNavOpen ? "block" : "hidden"}`}
         >
           <nav
             aria-label="Developer workspace"
@@ -197,7 +207,7 @@ function DeveloperWorkspace({
                   search={{ section: anchor }}
                   onClick={() => setMobileNavOpen(false)}
                   aria-current={section === anchor ? "page" : undefined}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors md:min-h-9 focus-visible:ring-2 focus-visible:ring-ring ${section === anchor ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                  className={`flex min-h-11 items-center gap-3 rounded-[var(--kova-radius-sidebar)] px-3 text-sm transition-colors md:min-h-9 focus-visible:ring-2 focus-visible:ring-ring ${section === anchor ? "bg-sidebar-active font-medium text-foreground" : "text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"}`}
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
                   {label}
@@ -206,7 +216,7 @@ function DeveloperWorkspace({
             <Link
               to="/developers/$docSlug"
               params={{ docSlug: "docs" }}
-              className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-h-10 items-center gap-2.5 rounded-[var(--kova-radius-sidebar)] px-3 text-sm text-muted-foreground hover:bg-sidebar-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
               <BookOpen className="size-4 shrink-0" aria-hidden="true" /> Documentation
             </Link>
@@ -216,7 +226,7 @@ function DeveloperWorkspace({
           id="main-content"
           tabIndex={-1}
           data-ui-reference="chatgpt-settings-form"
-          className="mx-auto w-full min-w-0 max-w-[1320px] space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-10 xl:px-12 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:h-auto [&_button]:min-h-10 [&_button]:py-2"
+          className="mx-auto w-full min-w-0 max-w-[1320px] space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-10 xl:px-12 [&_button]:max-w-full [&_button]:whitespace-normal"
         >
           {children}
         </main>
@@ -586,7 +596,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
           </div>
           <Link
             to="/developers/connections"
-            className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+            className="rounded-full border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
           >
             MCP connections
           </Link>
@@ -603,7 +613,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               ["Requests in current view", usageReady ? visibleUsage.length : undefined],
             ] as const
           ).map(([label, value]) => (
-            <div key={label} className="min-w-0 rounded-xl border border-border bg-background p-4 sm:p-6">
+            <div key={label} className="min-w-0 rounded-[var(--kova-radius-panel)] border border-border bg-background p-4 sm:p-6">
               <p className="text-sm text-muted-foreground">{label}</p>
               <p className="mt-3 text-2xl font-semibold tabular-nums">{value ?? "—"}</p>
             </div>
@@ -684,7 +694,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                   .map(([id, label]) => (
                     <article
                       key={id}
-                      className="min-w-0 space-y-2 rounded-xl border border-border bg-card p-4"
+                      className="min-w-0 space-y-2 rounded-[var(--kova-radius-card)] border border-border bg-background p-5"
                     >
                       <Layers className="size-5 text-muted-foreground" aria-hidden="true" />
                       <h2 className="font-semibold">{label}</h2>
@@ -720,7 +730,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                       key={slug}
                       to="/developers/$docSlug"
                       params={{ docSlug: slug }}
-                      className="min-w-0 rounded-lg border border-border p-3 text-sm hover:bg-muted"
+                      className="min-w-0 rounded-[var(--kova-radius-card)] border border-border p-4 text-sm hover:bg-muted"
                     >
                       {label}
                     </Link>
@@ -1092,7 +1102,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               </div>
             )}
             <details key={section} open={section === "limits" ? true : undefined}>
-              <summary className="cursor-pointer rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted">
+              <summary className="cursor-pointer rounded-full border border-border px-5 py-3 text-sm font-medium hover:bg-muted">
                 {section === "keys" ? "Create API key" : "Configure spending limits"}
               </summary>
               <div className="mt-5 space-y-5">
@@ -1360,7 +1370,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     setServiceFilter(event.target.value);
                     setUsagePage(0);
                   }}
-                  className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm"
+                  className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                 >
                   <option value="">All services</option>
                   {["chat", "streaming", "image_generation", "embeddings", "files"].map((item) => (
@@ -1378,7 +1388,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     setStatusFilter(event.target.value);
                     setUsagePage(0);
                   }}
-                  className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm"
+                  className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                 >
                   <option value="">All statuses</option>
                   {[
@@ -1404,7 +1414,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     setUsageKey("");
                     setUsagePage(0);
                   }}
-                  className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm"
+                  className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                 >
                   <option value="">All projects</option>
                   {data?.projects
@@ -1424,7 +1434,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     setUsageKey(event.target.value);
                     setUsagePage(0);
                   }}
-                  className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm"
+                  className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                 >
                   <option value="">All keys (including revoked)</option>
                   {data?.keys
@@ -1532,13 +1542,13 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                       Read as of {new Date(currentSummary.readAt).toLocaleString()}
                     </p>
                     <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-                      <div className="min-w-0 rounded-lg bg-muted/40 p-3">
+                      <div className="min-w-0 rounded-[var(--kova-radius-card)] bg-muted/40 p-4">
                         <p className="text-xs text-muted-foreground">Matching requests</p>
                         <p className="text-2xl font-semibold tabular-nums">
                           {currentSummary.data.requests.toLocaleString()}
                         </p>
                       </div>
-                      <div className="min-w-0 rounded-lg bg-muted/40 p-3">
+                      <div className="min-w-0 rounded-[var(--kova-radius-card)] bg-muted/40 p-4">
                         <p className="text-xs text-muted-foreground">
                           Recorded final charges (minor units)
                         </p>

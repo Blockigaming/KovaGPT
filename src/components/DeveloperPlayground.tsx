@@ -230,7 +230,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         </p>
       )}
       <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-        <div className="min-w-0 space-y-5 rounded-xl border border-border p-4 sm:p-6">
+        <div className="min-w-0 space-y-5 rounded-[var(--kova-radius-panel)] border border-border p-4 sm:p-6">
           <label className="block space-y-1 text-sm">
             <span>API key</span>
             <Input
@@ -263,7 +263,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           <label className="block space-y-1 text-sm">
             <span>Service</span>
             <select
-              className="block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-base md:text-sm"
+              className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
               value={operation}
               disabled={busy}
               onChange={(event) => {
@@ -282,7 +282,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           <label className="block space-y-1 text-sm">
             <span>Model</span>
             <select
-              className="block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-base md:text-sm"
+              className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
               value={model}
               disabled={busy}
               onChange={(event) => {
@@ -335,7 +335,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <label className="block space-y-1 text-sm">
                 <span>Size</span>
                 <select
-                  className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-2 text-base md:text-sm"
+                  className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                   value={size}
                   disabled={busy}
                   onChange={(event) => {
@@ -352,7 +352,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <label className="block space-y-1 text-sm">
                 <span>Quality</span>
                 <select
-                  className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-2 text-base md:text-sm"
+                  className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                   value={quality}
                   disabled={busy}
                   onChange={(event) => {
@@ -407,7 +407,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             </div>
           )}
         </div>
-        <div className="min-w-0 space-y-5 border-b border-border pb-6">
+        <div className="min-w-0 space-y-5 rounded-[var(--kova-radius-panel)] border border-border p-4 sm:p-6">
           <h2 className="font-semibold">Response</h2>
           {error && (
             <p role="alert" className="break-words text-sm text-destructive">
@@ -428,7 +428,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             />
           ))}
           {output ? (
-            <pre className="max-h-[32rem] max-w-full overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted/40 p-3 text-xs">
+            <pre className="max-h-[32rem] max-w-full overflow-auto whitespace-pre-wrap break-all rounded-[var(--kova-radius-output)] bg-muted/40 p-4 text-xs">
               {output}
             </pre>
           ) : (

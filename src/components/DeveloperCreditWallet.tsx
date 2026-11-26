@@ -180,7 +180,7 @@ export function DeveloperCreditWallet({
                 ["Expired", wallet.expired],
               ] as const
             ).map(([label, amount]) => (
-              <div key={label} className="min-w-0 rounded-lg border border-border p-4 sm:p-5">
+              <div key={label} className="min-w-0 rounded-[var(--kova-radius-panel)] border border-border bg-background p-4 sm:p-5">
                 <p className="text-xs text-muted-foreground">{label}</p>
                 <p className="mt-1 break-words text-lg font-semibold tabular-nums sm:text-2xl">
                   {money(amount, wallet.currency)}

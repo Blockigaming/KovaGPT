@@ -1,0 +1,44 @@
+/* Developer controls share the product's native visual tokens. Scope these
+   refinements to this workspace; do not change global component geometry. */
+[data-developer-workspace] {
+  font-family: var(--font-ui);
+  line-height: 1.5;
+}
+
+[data-developer-workspace] h1,
+[data-developer-workspace] h2,
+[data-developer-workspace] h3 {
+  font-family: var(--font-display);
+}
+
+[data-developer-workspace] h1 {
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+[data-developer-workspace] [data-slot="input"],
+[data-developer-workspace] textarea {
+  border-radius: var(--kova-radius-input);
+}
+
+[data-developer-workspace] nav a {
+  transition: background-color var(--kova-motion-fast) var(--kova-ease);
+}
+
+[data-developer-workspace] nav svg {
+  stroke-width: var(--kova-icon-stroke);
+}
+
+@media (max-width: 767px) {
+  [data-developer-workspace] header {
+    padding-top: var(--safe-top);
+  }
+
+  [data-developer-workspace] main {
+    padding-bottom: max(var(--space-8), var(--safe-bottom));
+  }
+
+  [data-developer-workspace] main [data-slot="button"] {
+    min-height: var(--kova-touch);
+  }
+}

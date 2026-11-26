@@ -82,7 +82,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
         {data?.data.map((file) => (
           <li
             key={file.id}
-            className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border p-2.5 sm:p-3"
+            className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-[var(--kova-radius-card)] border border-border p-3 sm:p-4"
           >
             <div>
               <p>{file.filename}</p>
@@ -151,7 +151,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
               Close preview
             </Button>
           </div>
-          <pre className="max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-3 text-sm">
+          <pre className="max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-all rounded-[var(--kova-radius-output)] bg-muted p-4 text-sm">
             {preview.content}
           </pre>
         </div>
