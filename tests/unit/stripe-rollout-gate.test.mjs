@@ -42,6 +42,7 @@ function fixture(
         },
       };
     },
+    projectUsageCreditStripeEvent: async () => false,
     projectTeamStripeEvent: async () => false,
     durableStripeBillingEnabled: () => enabled,
     monthlyIntroBillingEnabled: () => monthlyIntro,
