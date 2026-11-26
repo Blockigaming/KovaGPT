@@ -46,6 +46,18 @@ Owner clarification, 2026-11-26: purchased API credits expire one year after pur
 
 First increment: dedicated responsive console shell and real existing account/project/key/recent-call metrics, with anchors to already implemented controls. Do not advertise the anchors as separate completed pages. Follow with real routes, loading/error/empty states, accessible navigation, server-backed actions and responsive visual acceptance. Use the main Kova typography and existing light/dark theme tokens. Do not populate dashboards with fabricated spend or request data.
 
+## Developer experience parity and explicit exclusions
+
+Owner clarification, 2026-11-26: offer the viewing options, spending options, analytics and account settings of a complete developer platform. Use the current OpenAI API Platform as a functional reference, not a promise of identical upstream services or an exact visual clone.
+
+- Analytics and activity: independent Usage, Costs and Logs views, UTC date range and time granularity, organization/project/key/model/service/status filters, request and token counts, cache/other metered dimensions where applicable, time-series charts, breakdowns, pagination and CSV export. Separate finalized charges from pending reservations and do not sum different currencies. Never use a recent-call sample as a full billing-period total.
+- Spending: wallet and lot history, monthly included allowance, purchased balances/expiry, explicit auto-recharge thresholds and caps, invoices/receipts, payment methods, project/account/key spending and concurrency limits, configurable alerts and model/service access. Clearly distinguish hard limits from notifications. Any charge or external payment action requires appropriate authority.
+- Settings: organization and project lifecycle, profile, members and roles, key scope/revocation, security, usage-sharing opt-in, privacy and data retention. Keep developer credentials distinct from consumer sessions while reusing the same verified account.
+- No complimentary usage, daily free tokens, promotional credits or model discounts in exchange for sharing prompts, outputs, evaluations or training data, including small models. The explicit paid Pro monthly USD 80 allowance is independent of data sharing. Do not make data sharing a condition of API access or automatically enroll users in training.
+- Full page coverage is not complete until each route is accessible directly and has verified, server-backed functionality, or is clearly identified as unavailable. Do not ship simulated dashboards or pretend missing actions work.
+
+Current increment: eight URL-selectable console views (overview, projects, keys, files, usage, logs, billing, limits), account/project selection, model/service/status/date-range filters and currency-separated final-charge totals over the latest 100 server-returned records. Full history, charts, export, project CRUD, account provisioning, credit-lot accounting and opt-in funding still require implementation and verification.
+
 ## API coverage
 
 Inventory all approved text models, aliases, supported effort levels, image generation/editing, embeddings, audio/voice, vision, search/research, hosted tool calling, agents, browser, analysis/containers, decisions, moderation, files/vector stores, webhooks and MCP. Map each to a real server capability, approved provider contract, scoped key permission, request validation, metering, limits, documentation and isolated test. A provider-backed alias is not a separately trained foundation model. Do not publish unsupported models or capabilities as available.
