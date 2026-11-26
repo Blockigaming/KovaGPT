@@ -45,12 +45,9 @@ Evaluation (from ElevenLabs' published material, September 2026; not measured on
 | Eleven Flash v2.5 (`eleven_flash_v2_5`) | ~75 ms                            | Lowest latency, less expressive. Current default; already used by direct speech.  |
 | Eleven v3 Conversational                | ~280 ms                           | Expressive, slower. Its API model ID was not confirmed, so it is not allowlisted. |
 
-**Whether Turbo is included in our ElevenLabs plan could not be verified from CI or this repo.** No plan
-change was made or is requested. To check without spending: run
-`curl -s https://api.elevenlabs.io/v1/models -H "xi-api-key: $ELEVENLABS_API_KEY"` and look for
-`eleven_v4_turbo` with `can_do_text_to_speech: true`. If present, set
-`voiceStreamTtsModel=eleven_v4_turbo` in the production parameters (it maps to
-`KOVA_VOICE_STREAM_TTS_MODEL`); if not, leave it empty (Flash v2.5).
+**Eleven v4 Turbo is confirmed working on our existing subscription** (owner-confirmed; no plan change). Set
+`voiceStreamTtsModel=eleven_v4_turbo` in the production parameters (maps to `KOVA_VOICE_STREAM_TTS_MODEL`) to use it;
+leave it empty for Flash v2.5.
 
 Each segment is sent with the previous segment as `previous_text` so intonation continues across cuts.
 
@@ -63,7 +60,7 @@ configured voice and served as static files from `/voice-acks/<voiceId>/`:
 ELEVENLABS_API_KEY=... KOVA_VOICE_CATALOG='<production catalog JSON>' node scripts/generate-voice-acks.mjs
 ```
 
-Commit the generated `public/voice-acks/`. They are fetched once per session and cached in memory. A missing clip is
+The generated `public/voice-acks/` clips (all nine) are committed. They are fetched once per session and cached in memory. A missing clip is
 skipped silently. Policy (`acknowledgments.mjs`):
 
 - Search/tool step known: clip due 450 ms after end of speech. Extended-reasoning mode: 600 ms.
@@ -95,7 +92,8 @@ model and TTS latencies (labelled synthetic; use it for regressions, not as prod
 
 ## Known limits
 
-- Browsers without MP3 `MediaSource` (notably iOS Safari) buffer the audio and start when the reply
-  finishes (the old behaviour) rather than streaming; acknowledgments still apply.
+- iOS Safari has no MP3 `MediaSource`, so it uses a Web Audio segment sink (`webaudio-sink.mjs`): the
+  AudioContext is unlocked inside the mic/voice tap, each segment is decoded as it completes and scheduled
+  gaplessly. Playback starts per segment, not per chunk. Untested on a physical iOS device here.
 - Barge-in thresholds are conservative and untested on physical speakers/headsets here.
 - `firstSubstantive` after an acknowledgment is estimated from the clip length.

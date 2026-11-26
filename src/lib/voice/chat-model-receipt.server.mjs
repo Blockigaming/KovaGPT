@@ -27,6 +27,8 @@ export async function relayEligibleVoiceChat(stream, { signal, emit, policy, ide
       const delta = {
         role: "assistant",
         kind: "voice_segment",
+        chatId: identity.chatId,
+        messageId: identity.messageId,
         index: segmentIndex,
         text,
         receipt,

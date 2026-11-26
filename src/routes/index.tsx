@@ -2241,7 +2241,7 @@ function KovaGPT() {
                 voiceModelReceipt: delta.receipt as string,
               }));
             }
-            voiceRequest?.onStream?.(delta, nextConvId, assistantMsg.id);
+            voiceRequest?.onStream?.(delta);
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
               updateAssistantMessage((message) => ({

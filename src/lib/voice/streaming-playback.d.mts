@@ -11,6 +11,7 @@ export function createStreamingVoicePlayback(options: {
     onError: () => void;
   }) => {
     write(bytes: Uint8Array): Promise<void>;
+    segmentEnd?(): Promise<void>;
     end(): Promise<void>;
     dispose(): void;
   };
@@ -35,7 +36,5 @@ export function createStreamingVoicePlayback(options: {
 
 export function parseVoiceSegment(
   delta: Record<string, unknown> | undefined,
-  chatId: string,
-  messageId: string,
 ): VoiceSegmentEvent | null;
 export function predictedDelay(mode: string | undefined): "reasoning" | null;

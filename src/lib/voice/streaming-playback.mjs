@@ -25,9 +25,15 @@ const REASONING_MODES = ["thinking", "high", "extra_high", "max", "ultra"];
 const RECEIPT = /^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u;
 
 /** Validate a stream delta; returns the signed segment it carries, else null. */
-export function parseVoiceSegment(delta, chatId, messageId) {
+export function parseVoiceSegment(delta) {
   if (
     delta?.kind !== "voice_segment" ||
+    typeof delta.chatId !== "string" ||
+    typeof delta.messageId !== "string" ||
+    !delta.chatId ||
+    !delta.messageId ||
+    delta.chatId.length > 200 ||
+    delta.messageId.length > 200 ||
     !Number.isSafeInteger(delta.index) ||
     typeof delta.text !== "string" ||
     !delta.text ||
@@ -36,7 +42,13 @@ export function parseVoiceSegment(delta, chatId, messageId) {
     !RECEIPT.test(delta.receipt)
   )
     return null;
-  return { chatId, messageId, index: delta.index, text: delta.text, receipt: delta.receipt };
+  return {
+    chatId: delta.chatId,
+    messageId: delta.messageId,
+    index: delta.index,
+    text: delta.text,
+    receipt: delta.receipt,
+  };
 }
 
 /** A reasoning mode predicts a delay (a hint only; it never selects a model or effort). */
@@ -112,6 +124,15 @@ export function createStreamingVoicePlayback({
     });
     return writeChain;
   };
+  // One complete MP3 has been written. Sinks that cannot stream partial MP3 (Web
+  // Audio on iOS) decode and schedule it here; streaming sinks ignore it.
+  const segmentEnd = () => {
+    writeChain = writeChain.then(() => {
+      if (!live) return;
+      return sink.segmentEnd?.();
+    });
+    return writeChain;
+  };
 
   const pump = async () => {
     if (pumping) return;
@@ -144,6 +165,7 @@ export function createStreamingVoicePlayback({
           if (nextWrite === 0) markSubstantive();
         }
         if (!total) throw new Error("speech_unavailable");
+        await segmentEnd();
         nextWrite++;
       }
       if (live && closed && nextWrite >= segments.length && !ended) {
@@ -209,6 +231,7 @@ export function createStreamingVoicePlayback({
     ackDurationMs = clip.durationMs;
     ackAudibleAt = now();
     await write(clip.bytes).catch(() => undefined);
+    await segmentEnd().catch(() => undefined);
   };
 
   const stop = (silent = true) => {

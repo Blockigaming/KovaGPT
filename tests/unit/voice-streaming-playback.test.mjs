@@ -337,8 +337,15 @@ test("inline Voice keeps the glow for the whole session and shows no Starting/sp
 
 test("stream deltas are validated before speaking and request hints only predict delays", () => {
   const receipt = `${"a".repeat(20)}.${"b".repeat(43)}`;
-  const ok = { kind: "voice_segment", index: 0, text: "Hello.", receipt };
-  assert.deepEqual(parseVoiceSegment(ok, "c", "m"), {
+  const ok = {
+    kind: "voice_segment",
+    chatId: "c",
+    messageId: "m",
+    index: 0,
+    text: "Hello.",
+    receipt,
+  };
+  assert.deepEqual(parseVoiceSegment(ok), {
     chatId: "c",
     messageId: "m",
     index: 0,
@@ -351,9 +358,112 @@ test("stream deltas are validated before speaking and request hints only predict
     { ...ok, text: "" },
     { ...ok, text: "x".repeat(1001) },
     { ...ok, receipt: "nope" },
+    { ...ok, chatId: "" },
+    { ...ok, messageId: 7 },
   ])
-    assert.equal(parseVoiceSegment(bad, "c", "m"), null);
+    assert.equal(parseVoiceSegment(bad), null);
   assert.equal(predictedDelay("max"), "reasoning");
   assert.equal(predictedDelay("instant"), null);
   assert.equal(predictedDelay(undefined), null);
+});
+
+test("sinks that cannot stream partial MP3 are told when each segment and acknowledgment is complete", async () => {
+  const h = harness();
+  const marks = [];
+  const original = h.playback;
+  void original;
+  const calls = [];
+  const wrapped = createStreamingVoicePlayback({
+    ownerId: "o",
+    voiceId: "jessica",
+    ackCache: createAckCache({
+      fetchImpl: async () =>
+        new Response(new Uint8Array(16000), { headers: { "Content-Type": "audio/mpeg" } }),
+    }),
+    setTimer: (fn, ms) => setTimeout(fn, ms / 100),
+    clearTimer: (t) => clearTimeout(t),
+    createSink: () => ({
+      async write(bytes) {
+        calls.push(["write", bytes.byteLength]);
+      },
+      async segmentEnd() {
+        calls.push(["segmentEnd"]);
+      },
+      async end() {
+        calls.push(["end"]);
+      },
+      dispose() {},
+    }),
+    fetchImpl: async (_url, init) =>
+      new Response(new Uint8Array([JSON.parse(init.body).segmentIndex + 1, 0, 0]), {
+        headers: { "Content-Type": "audio/mpeg" },
+      }),
+  });
+  void marks;
+  wrapped.begin();
+  wrapped.delay("search");
+  await new Promise((r) => setTimeout(r, 40));
+  wrapped.segment(seg(0));
+  wrapped.segment(seg(1));
+  wrapped.finish();
+  await new Promise((r) => setTimeout(r, 60));
+  assert.deepEqual(calls, [
+    ["write", 16000],
+    ["segmentEnd"],
+    ["write", 3],
+    ["segmentEnd"],
+    ["write", 3],
+    ["segmentEnd"],
+    ["end"],
+  ]);
+});
+
+import { existsSync, readFileSync as readBytes } from "node:fs";
+import { ACK_KINDS } from "../../src/lib/voice/acknowledgments.mjs";
+
+test("all nine acknowledgment clips exist at the exact URLs the client requests and are short MP3s", () => {
+  const manifest = JSON.parse(readBytes("public/voice-acks/manifest.json", "utf8"));
+  const voices = ["jarnathan", "jessica", "lauren"];
+  for (const voice of voices)
+    for (const kind of Object.keys(ACK_KINDS)) {
+      const url = ackClipUrl(voice, kind);
+      const file = `public${url}`;
+      assert.ok(existsSync(file), `${file} exists`);
+      const bytes = readBytes(file);
+      const id3 = bytes.subarray(0, 3).toString("latin1") === "ID3";
+      const frame = bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0;
+      assert.ok(id3 || frame, `${file} is MP3`);
+      assert.ok(
+        bytes.byteLength > 4000 && bytes.byteLength < 256 * 1024,
+        `${file} size is bounded`,
+      );
+      assert.ok(bytes.byteLength / 16000 < 4, `${file} is a short clip`);
+    }
+  assert.deepEqual(Object.keys(manifest).sort(), voices);
+});
+
+test("listening resumes after a spoken reply, speaking over Kova interrupts, and the glow animates in every phase", () => {
+  const dialog = readBytes("src/components/ComposerVoiceDialog.tsx", "utf8");
+  // Natural end -> automatic listening.
+  assert.match(
+    dialog,
+    /onEnded: \(\) => \{[\s\S]{0,400}updatePhase\("idle"\);[\s\S]{0,200}resumeRecording\.current\?\.\(true\)/u,
+  );
+  // Barge-in -> interrupt, then listen.
+  assert.match(
+    dialog,
+    /playback\.interrupt\(\);\s*updatePhase\("idle"\);\s*void resumeRecording\.current\?\.\(true\)/u,
+  );
+  // Glow breathes while thinking/searching and follows audio while listening/speaking.
+  assert.match(dialog, /active === "recording" \|\| active === "speaking"/u);
+  assert.match(dialog, /0\.2 \+ 0\.08 \* Math\.sin\(now \/ 700\)/u);
+  // iOS: Web Audio sink when MP3 MediaSource is missing; audio unlocked inside the tap.
+  assert.match(
+    dialog,
+    /supportsStreamingMp3\(\) \? createBrowserSpeechSink : createWebAudioSegmentSink/u,
+  );
+  assert.match(
+    readBytes("src/components/ChatInput.tsx", "utf8"),
+    /if \(next === "voice"\) primeVoiceAudio\(\)/u,
+  );
 });

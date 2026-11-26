@@ -35,6 +35,11 @@ import {
   predictedDelay,
 } from "@/lib/voice/streaming-playback.mjs";
 import { createVoiceLatencyTracker } from "@/lib/voice/voice-latency.mjs";
+import {
+  createWebAudioSegmentSink,
+  primeVoiceAudio,
+  supportsStreamingMp3,
+} from "@/lib/voice/webaudio-sink.mjs";
 
 // In-memory only: no text, audio or identifiers. Read it from the console with
 // window.__kovaVoiceLatency.summary() to get p50/p95 on a real device.
@@ -703,8 +708,10 @@ export function ComposerVoiceDialog({
       fetchImpl: authFetch,
       ackCache,
       tracker: latencyTracker,
+      // MediaSource streams MP3 where available; otherwise (iPhone) segments are
+      // decoded and scheduled with Web Audio on a context unlocked by the tap.
       createSink: (options) =>
-        createBrowserSpeechSink({
+        (supportsStreamingMp3() ? createBrowserSpeechSink : createWebAudioSegmentSink)({
           ...options,
           onLevel: (level: number) => {
             playbackLevelSeen.current = true;
@@ -749,12 +756,8 @@ export function ComposerVoiceDialog({
     return {
       playback,
       events: {
-        onStream: (
-          delta: Record<string, unknown> | undefined,
-          chatId: string,
-          messageId: string,
-        ) => {
-          const segment = parseVoiceSegment(delta, chatId, messageId);
+        onStream: (delta: Record<string, unknown> | undefined) => {
+          const segment = parseVoiceSegment(delta);
           if (segment) {
             words += segment.text.trim().split(/\s+/u).length;
             playback.segment(segment);
@@ -1073,6 +1076,7 @@ export function ComposerVoiceDialog({
   };
 
   const startRecording = async (continuing = false) => {
+    if (!continuing) primeVoiceAudio();
     if (!userId || !capabilities?.configured || !capabilities.stt || phaseRef.current !== "idle")
       return;
     if (

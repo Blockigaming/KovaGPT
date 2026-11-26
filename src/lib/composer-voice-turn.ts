@@ -22,11 +22,7 @@ export type VoiceSegmentEvent = {
 /** Live signals from the chat stream used to start speech early and cover real delays. */
 export type VoiceTurnEvents = {
   /** Every raw stream delta; validated and used by the lazily loaded voice module. */
-  onStream?: (
-    delta: Record<string, unknown> | undefined,
-    chatId: string,
-    messageId: string,
-  ) => void;
+  onStream?: (delta: Record<string, unknown> | undefined) => void;
 };
 
 export type ComposerVoiceSubmit = (

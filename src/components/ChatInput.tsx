@@ -72,6 +72,7 @@ import { ComposerUploadAllowance } from "@/components/ComposerUploadAllowance";
 import { ComposerContextPanel } from "@/components/ComposerContextPanel";
 import { ComposerModelStatus } from "@/components/ComposerModelStatus";
 import { ComposerVoiceDialog } from "@/components/ComposerVoiceDialog";
+import { primeVoiceAudio } from "@/lib/voice/webaudio-sink.mjs";
 import type { ComposerVoiceSubmit, ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-auto-save";
@@ -657,6 +658,8 @@ export function ChatInput({
         (!voiceScope.userId || !latest.onVoiceSubmit || latest.voiceOpeningBlocked))
     )
       return;
+    // Unlock audio inside this tap so iOS lets the spoken reply play later.
+    if (next === "voice") primeVoiceAudio();
     voiceTriggerRef.current = trigger;
     voiceReturnUrlRef.current = window.location.href;
     voiceDraftAppliedRef.current = false;

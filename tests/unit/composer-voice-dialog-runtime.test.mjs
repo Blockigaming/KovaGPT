@@ -6,6 +6,11 @@ import {
   predictedDelay,
 } from "../../src/lib/voice/streaming-playback.mjs";
 import { createVoiceLatencyTracker } from "../../src/lib/voice/voice-latency.mjs";
+import {
+  createWebAudioSegmentSink,
+  primeVoiceAudio,
+  supportsStreamingMp3,
+} from "../../src/lib/voice/webaudio-sink.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -318,6 +323,11 @@ function fixture(initial = {}, options = {}) {
       predictedDelay,
     },
     "@/lib/voice/voice-latency.mjs": { createVoiceLatencyTracker },
+    "@/lib/voice/webaudio-sink.mjs": {
+      createWebAudioSegmentSink,
+      primeVoiceAudio,
+      supportsStreamingMp3,
+    },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
         const pending = deferred();
