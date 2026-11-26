@@ -9,7 +9,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { NovaLogo } from "@/components/NovaLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Mail } from "lucide-react";
@@ -94,7 +93,7 @@ export function ForgotPasswordDialog({
     >
       <DialogContent
         data-ui-reference="chatgpt-auth-recovery"
-        className="kova-auth-surface p-5 sm:max-w-[450px]"
+        className="kova-auth-surface kova-password-recovery p-5 sm:max-w-[450px]"
         onOpenAutoFocus={(event) => {
           returnFocusRef.current =
             document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -108,9 +107,6 @@ export function ForgotPasswordDialog({
         }}
       >
         <DialogHeader className="text-center">
-          <div className="flex justify-center mb-3">
-            <NovaLogo mark className="h-8 w-8" />
-          </div>
           <DialogTitle className="text-center text-[32px] font-medium leading-[38px]">
             Reset your password
           </DialogTitle>

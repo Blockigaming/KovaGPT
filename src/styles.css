@@ -2104,3 +2104,17 @@ body {
   outline-offset: -2px !important;
   box-shadow: none !important;
 }
+
+/* Route landmarks receive programmatic focus during navigation. */
+:is(html, body, main[tabindex="-1"], #main-content[tabindex="-1"]):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.kova-auth-surface.kova-password-recovery {
+  padding-block: calc(1.25rem + 22px);
+}
+
+.kova-auth-surface.kova-password-recovery input#fp-email {
+  border-radius: 14px;
+}
