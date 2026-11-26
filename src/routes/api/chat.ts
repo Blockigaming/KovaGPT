@@ -1372,7 +1372,10 @@ export const Route = createFileRoute("/api/chat")({
               !explicitBrowser &&
               (m.id !== "instant" || explicitWebSearch)
             ) {
-              if (explicitWebSearch || shouldRunWebSearch(lastText, personalContext?.webSearch)) {
+              if (
+                explicitWebSearch ||
+                (!connectorId && shouldRunWebSearch(lastText, personalContext?.webSearch))
+              ) {
                 const search = async (signal: AbortSignal) => {
                   await assertSelectedContextsCurrent(signal);
                   return searchWeb(lastText, {

@@ -1698,7 +1698,10 @@ function AppsPage() {
       safeBrowserStorage("sessionStorage"),
       "kova-app-chat-context",
       isLoaded ? userKey : undefined,
-      `Use my connected ${item.label} account for this request when relevant: `,
+      {
+        prompt: `Use my connected ${item.label} account for this request: `,
+        connector: { id: item.id, label: item.label },
+      },
     );
     if (!handoff.ok) {
       toast.error("Plugin context could not be prepared. Reload and try again.");
@@ -2101,14 +2104,19 @@ function AppsPage() {
                               >
                                 Refresh status
                               </Button>
-                              {isGoogleConnected(visibleSelectedApp.id) && (
+                              {visibleSelectedApp.id === "gmail" &&
+                              tierStatus === "ready" &&
+                              tier === "free" ? (
+                                <p>Using Gmail in chat requires Kova Plus or Pro.</p>
+                              ) : isGoogleConnected(visibleSelectedApp.id) &&
+                                (visibleSelectedApp.id !== "gmail" || tierStatus === "ready") ? (
                                 <Button
                                   variant="ghost"
                                   onClick={() => handleUseInChat(visibleSelectedApp)}
                                 >
                                   Use in chat
                                 </Button>
-                              )}
+                              ) : null}
                             </div>
                           </section>
                         ) : visibleSelectedApp.id === "github" ? (

@@ -223,7 +223,10 @@ type ChatRequestNotice = {
   kind: "session-expired";
   signedIn: boolean;
 };
-type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
+type AppChatContextHandoff =
+  | string
+  | { prompt: string; tool: "web_search" }
+  | { prompt: string; connector: { id: string; label: string } };
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { settings?: string } =>
@@ -1200,11 +1203,24 @@ function KovaGPT() {
 
     consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
       if (typeof appContext === "string") return () => setInput(appContext);
-      if (typeof appContext?.prompt !== "string" || appContext.tool !== "web_search")
+      if (typeof appContext?.prompt !== "string") throw new Error();
+      if ("tool" in appContext && appContext.tool === "web_search") {
+        return () => {
+          setInput(appContext.prompt);
+          setSelectedTool("web_search");
+        };
+      }
+      if (
+        !("connector" in appContext) ||
+        !["gmail", "google-drive", "google-calendar"].includes(appContext.connector?.id) ||
+        typeof appContext.connector?.label !== "string"
+      )
         throw new Error();
       return () => {
+        setActiveId(null);
+        setSelectedTool(null);
+        setPluginSelection({ owner: userKey, chat: null, value: [appContext.connector] });
         setInput(appContext.prompt);
-        setSelectedTool("web_search");
       };
     });
 
