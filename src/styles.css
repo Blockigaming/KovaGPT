@@ -1624,7 +1624,7 @@ body {
   }
 }
 
-/* Phone dialogs start below the safe area and follow the visible viewport
+/* Phone dialogs center within the safe area and follow the visible viewport
    when the keyboard is open. Docked and full-height workspaces own their bounds. */
 @media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
   body
@@ -1640,11 +1640,15 @@ body {
       .kova-result-dialog
     ) {
     --kova-popup-top-gap: max(16px, env(safe-area-inset-top));
-    top: calc(var(--kova-visible-top, 0px) + var(--kova-popup-top-gap));
-    translate: -50% 0;
+    --kova-popup-bottom-gap: max(16px, env(safe-area-inset-bottom));
+    top: calc(
+      var(--kova-visible-top, 0px) +
+        (var(--kova-visible-height, 100dvh) + var(--kova-popup-top-gap) - var(--kova-popup-bottom-gap)) / 2
+    );
+    translate: -50% -50%;
     max-height: calc(
       var(--kova-visible-height, 100dvh) - var(--kova-popup-top-gap) -
-        max(16px, env(safe-area-inset-bottom))
+        var(--kova-popup-bottom-gap)
     );
   }
 }
@@ -2117,4 +2121,9 @@ body {
 
 .kova-auth-surface.kova-password-recovery input#fp-email {
   border-radius: 14px;
+}
+
+.kova-settings-reference button.kova-gift-option {
+  min-height: 2rem !important;
+  height: 2rem;
 }

@@ -104,17 +104,3 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
     transition: none;
   }
 }
-
-@media (max-width: 767px) {
-  [data-kova-dialog-surface]:not(
-    .kova-settings-dialog,
-    .spec400-context-drawer,
-    .spec400-expanded-input
-  ) {
-    top: calc(var(--kova-visible-top, 0px) + var(--kova-visible-height, 100dvh) / 2);
-    max-height: calc(
-      var(--kova-visible-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) -
-        2rem
-    );
-  }
-}

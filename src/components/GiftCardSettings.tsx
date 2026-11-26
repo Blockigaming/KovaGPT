@@ -175,7 +175,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                   type="button"
                   variant="ghost"
                   aria-pressed={design === option}
-                  className="h-8 min-h-0 rounded-lg bg-muted/70 px-3 [@media(pointer:coarse)]:min-h-0 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
+                  className="kova-gift-option h-8 rounded-lg bg-muted/70 px-3 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
                   onClick={() => setDesign(option)}
                 >
                   <span
@@ -203,7 +203,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                   type="button"
                   variant="ghost"
                   aria-pressed={amount === option}
-                  className="h-8 min-h-0 rounded-lg bg-muted/70 px-3 [@media(pointer:coarse)]:min-h-0 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
+                  className="kova-gift-option h-8 rounded-lg bg-muted/70 px-3 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
                   onClick={() => setAmount(option)}
                 >
                   {option === "custom" ? "Other" : `$${option}`}
@@ -234,7 +234,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                   variant="ghost"
                   aria-pressed={delivery === option}
                   disabled={checkoutEnabled && option !== "self" && !deliveryAvailability[option]}
-                  className="h-8 min-h-0 rounded-lg bg-muted/70 px-3 [@media(pointer:coarse)]:min-h-0 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
+                  className="kova-gift-option h-8 rounded-lg bg-muted/70 px-3 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
                   onClick={() => setDelivery(option)}
                 >
                   <Icon aria-hidden="true" /> {label}
