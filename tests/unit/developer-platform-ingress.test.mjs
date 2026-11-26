@@ -63,7 +63,8 @@ async function fixture(options = {}) {
     from(table) {
       let range, registryIds;
       const orders = [];
-      state.queries.push({ table, orders });
+      const filters = [];
+      state.queries.push({ table, orders, filters });
       const raw = () =>
         state.rows[table] ??
         (table === "developer_credit_accounts"
@@ -71,15 +72,23 @@ async function fixture(options = {}) {
           : table === "api_pricing_versions"
             ? state.version
             : state.registry);
-      const result = () => ({
-        data:
-          registryIds && table === "upstream_price_registry"
-            ? raw().filter((row) => registryIds.includes(row.id))
-            : range
-              ? raw().slice(range[0], range[1] + 1)
-              : raw(),
-        error: null,
-      });
+      const result = () => {
+        let rows = raw();
+        if (registryIds && table === "upstream_price_registry") {
+          rows = rows.filter((row) => registryIds.includes(row.id));
+        }
+        if (table === "developer_api_requests") {
+          rows = rows.filter((row) =>
+            filters.every(([operator, column, value]) =>
+              operator === "in" ? value.includes(row[column]) :
+              operator === "eq" ? row[column] === value :
+              operator === "gte" ? row[column] >= value :
+              operator === "lt" ? row[column] < value : true,
+            ),
+          );
+        }
+        return { data: range ? rows.slice(range[0], range[1] + 1) : rows, error: null };
+      };
       const q = {
         maybeSingle: async () => result(),
         then(resolve) {
@@ -90,8 +99,15 @@ async function fixture(options = {}) {
         q[method] = () => q;
       q.in = (column, ids) => {
         if (column === "id") registryIds = ids;
+        filters.push(["in", column, ids]);
         return q;
       };
+      for (const method of ["eq", "gte", "lt"]) {
+        q[method] = (column, value) => {
+          filters.push([method, column, value]);
+          return q;
+        };
+      }
       q.order = (name) => {
         orders.push(name);
         return q;
@@ -339,6 +355,68 @@ test("console paginates every stored budget deterministically beyond the first h
       .filter((query) => query.table === "developer_billing_limits")
       .every((query) => query.orders.join() === "account_id,scope_type,scope_id"),
   );
+});
+
+test("console filters owner-scoped API history before pagination and rejects foreign accounts", async () => {
+  const f = await fixture();
+  globalThis[slot].owner = "owner-a";
+  const account = "11111111-1111-4111-8111-111111111111";
+  const other = "22222222-2222-4222-8222-222222222222";
+  const project = "33333333-3333-4333-8333-333333333333";
+  const key = "44444444-4444-4444-8444-444444444444";
+  const row = {
+    account_id: account,
+    project_id: project,
+    api_key_id: key,
+    public_model: "kova-argon-4.6",
+    capability: "chat",
+    settlement_state: "settled",
+    created_at: "2026-11-26T12:00:00.000Z",
+  };
+  f.state.rows = {
+    developer_account_owners: [{ account_id: account, name: "Owner" }],
+    developer_projects: [],
+    developer_billing_keys: [],
+    developer_billing_limits: [],
+    developer_credit_accounts: [],
+    developer_api_requests: [
+      { ...row, account_id: other, id: "foreign" },
+      { ...row, project_id: other, id: "other-project" },
+      { ...row, api_key_id: other, id: "other-key" },
+      { ...row, public_model: "other-model", id: "other-model" },
+      { ...row, created_at: "2026-11-27T00:00:00.000Z", id: "after" },
+      ...Array.from({ length: 105 }, (_, id) => ({ ...row, id })),
+    ],
+  };
+  const page = (params) =>
+    f.module.handleDeveloperConsole(
+      new Request("https://kovagpt.com/api/developer/console?" + new URLSearchParams(params), {
+        headers: { "x-kova-expected-user": "owner-a" },
+      }),
+    );
+  const filters = {
+    usageAccount: account,
+    usageProject: project,
+    usageKey: key,
+    usageModel: row.public_model,
+    usageService: row.capability,
+    usageStatus: row.settlement_state,
+    usageFrom: "2026-11-26",
+    usageThrough: "2026-11-26",
+  };
+  const first = await (await page(filters)).json();
+  const last = await (await page({ ...filters, usagePage: "1" })).json();
+  assert.equal(first.usage.length, 100);
+  assert.equal(first.usageHasMore, true);
+  assert.equal(last.usage.length, 5);
+  assert.equal(last.usageHasMore, false);
+  assert.equal(last.usage[0].id, 100);
+  assert.ok(first.usage.every((item) => item.account_id === account));
+  assert.ok(f.state.queries.filter((query) => query.table === "developer_api_requests")
+    .every((query) => query.orders.join() === "created_at,id"));
+  assert.equal((await page({ usageAccount: other })).status, 403);
+  assert.equal((await page({ usageFrom: "2026-02-30" })).status, 400);
+  assert.equal((await page({ usagePage: "-1" })).status, 400);
 });
 
 test("configured Azure aliases remain identical from accepted quote through meter to outbound provider body", async () => {
