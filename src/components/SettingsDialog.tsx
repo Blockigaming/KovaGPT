@@ -7,6 +7,7 @@ import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
 import { GiftCardSettings, UsageCredits } from "@/components/GiftCardSettings";
 import { UsageLimitResets } from "@/components/UsageLimitResets";
+import { UsageWallet } from "@/components/UsageWallet";
 import { UsageAnalytics } from "@/components/UsageAnalytics";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
@@ -2012,6 +2013,7 @@ export function SettingsDialog({
                         onOpenGiftCards={() => selectTab("gift-cards")}
                       />
                     )}
+                    {userKey && <UsageWallet key={userKey} ownerId={userKey} />}
                     <section className="kova-settings-section">
                       <h3>How limits work</h3>
                       <p className="mt-2 text-sm text-muted-foreground">
@@ -2041,6 +2043,7 @@ export function SettingsDialog({
 
               <TabsContent aria-labelledby={currentSectionHeadingId} value="gift-cards">
                 <GiftCardSettings key={userKey ?? "guest"} />
+                {userKey && <UsageWallet key={userKey} ownerId={userKey} gift />}
               </TabsContent>
 
               {/* BILLING */}
