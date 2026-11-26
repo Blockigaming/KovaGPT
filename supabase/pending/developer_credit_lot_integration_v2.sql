@@ -203,3 +203,43 @@ grant execute on function public.developer_enable_credit_lots_v2(uuid),
  public.dispatch_developer_billing_v2(uuid,uuid,jsonb),public.finish_developer_billing_v2(uuid,uuid,text,jsonb),
  public.recover_developer_billing_v2(integer),public.complete_developer_funding_v2(uuid,uuid,bigint,jsonb,jsonb,timestamptz)
  to service_role;
+
+-- Owner-scoped customer billing projection. No grant or balance mutation on GET.
+-- Expired or ineligible included amounts are not displayed as spendable.
+create function public.developer_credit_wallet_status_v2(p_owner uuid,p_account uuid,p_offset integer default 0)
+returns jsonb language plpgsql security invoker set search_path='' as $$
+declare a public.developer_credit_accounts%rowtype; at_time timestamptz:=clock_timestamp();
+  included numeric; purchased numeric; held numeric; expired numeric; period record;
+  items jsonb; more boolean;
+begin
+  if p_offset is null or p_offset not between 0 and 100000 then raise exception 'developer_page_invalid';end if;
+  if not kova_private.auth_user_exists(p_owner)
+    or exists(select 1 from public.account_deletion_fences where user_id=p_owner)
+    or not exists(select 1 from public.developer_account_owners where account_id=p_account and owner_id=p_owner)
+    then raise exception 'developer_owner_required' using errcode='42501';end if;
+  select * into a from public.developer_credit_accounts where id=p_account;
+  if not found then raise exception 'developer_owner_required' using errcode='42501';end if;
+  if not exists(select 1 from public.developer_credit_lot_accounts_v2 where account_id=p_account)
+    then return jsonb_build_object('tracked',false,'currency',a.currency,'asOf',at_time);end if;
+  select * into period from public.developer_pro_period_v2(p_owner,at_time);
+  select
+    coalesce(sum(available_amount) filter(where kind='included_pro' and issued_at=period.period_start and expires_at>at_time),0),
+    coalesce(sum(available_amount) filter(where kind='purchased' and expires_at>at_time),0),
+    coalesce(sum(held_amount),0),
+    coalesce(sum(expired_amount+case when expires_at<=at_time then available_amount else 0 end),0)
+    into included,purchased,held,expired
+    from public.developer_credit_lots_v2 where account_id=p_account and owner_id=p_owner;
+  select coalesce(jsonb_agg(to_jsonb(q) order by q.issued_at desc,q.id desc),'[]'::jsonb) into items
+    from (select id,kind,issued_at,expires_at,issued_amount,held_amount,spent_amount,expired_amount,reversed_amount,
+      case when expires_at<=at_time or (kind='included_pro' and issued_at is distinct from period.period_start)
+        then 0 else available_amount end as available_amount
+      from public.developer_credit_lots_v2 where account_id=p_account and owner_id=p_owner
+      order by issued_at desc,id desc offset p_offset limit 25) q;
+  select exists(select 1 from public.developer_credit_lots_v2
+    where account_id=p_account and owner_id=p_owner offset p_offset+25 limit 1) into more;
+  return jsonb_build_object('tracked',true,'currency',a.currency,'asOf',at_time,
+    'included',included,'purchased',purchased,'held',held,'expired',expired,'debt',a.funding_debt,
+    'suspended',a.suspended_at is not null,'renewalAt',period.period_end,'lots',items,'hasMore',more);
+end $$;
+revoke all on function public.developer_credit_wallet_status_v2(uuid,uuid,integer) from public,anon,authenticated;
+grant execute on function public.developer_credit_wallet_status_v2(uuid,uuid,integer) to service_role;
