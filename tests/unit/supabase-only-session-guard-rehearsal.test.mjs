@@ -56,9 +56,7 @@ test("retirement preserves hosted owner isolation and rejects retired credential
     [{ role: "authenticated", sub: other, kova_auth: null }, []],
     [{ role: "authenticated", sub: owner, user_metadata: { kova_auth: 1 } }, [owner]],
   ]) {
-    await db.query("select set_config('request.jwt.claims', $1, true)", [
-      JSON.stringify(claims),
-    ]);
+    await db.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify(claims)]);
     await db.exec("set local role authenticated");
     const rows = await db.query("select owner_id from public.fixture_data order by owner_id");
     assert.deepEqual(
