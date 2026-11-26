@@ -37,7 +37,7 @@ export const Route = createFileRoute("/developers/console")({
     ],
   }),
 });
-function DeveloperWorkspace({ children }: { children: ReactNode }) {
+function DeveloperWorkspace({ children, authenticated = false }: { children: ReactNode; authenticated?: boolean }) {
   const navigation = [
     { label: "Overview", anchor: "overview", icon: LayoutDashboard },
     { label: "API keys & projects", anchor: "keys", icon: KeyRound },
@@ -63,7 +63,7 @@ function DeveloperWorkspace({ children }: { children: ReactNode }) {
       <div className="mx-auto grid min-w-0 max-w-[1600px] md:grid-cols-[224px_minmax(0,1fr)]">
         <aside className="min-w-0 border-b border-border p-3 md:border-b-0 md:border-r md:p-4">
           <nav aria-label="Developer workspace" className="flex flex-wrap gap-1 md:sticky md:top-4 md:flex-col">
-            {navigation.map(({ label, anchor, icon: Icon }) => (
+            {navigation.filter((item) => authenticated || item.anchor === "overview").map(({ label, anchor, icon: Icon }) => (
               <a key={anchor} href={`#${anchor}`} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
                 <Icon className="size-4 shrink-0" aria-hidden="true" />
                 {label}
@@ -177,7 +177,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
   const selected = data?.balances.find((row) => row.id === account);
   const fieldClass = "mt-1 block w-full";
   return (
-    <DeveloperWorkspace>
+    <DeveloperWorkspace authenticated>
       <section id="overview" className="scroll-mt-4 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
