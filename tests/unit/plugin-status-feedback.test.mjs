@@ -320,6 +320,7 @@ function countFixture(overrides = {}) {
     connectionAccounts,
     hasConnectionScopes,
     configuredOf: () => false,
+    NATIVE_HEALTH_IDS: new Set(["apple-health", "android-health-connect"]),
     googleServiceAccess,
     otherConnections: {
       data: { accounts: [], configuredProviders: [] },

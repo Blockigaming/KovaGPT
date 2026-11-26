@@ -1,6 +1,6 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
-import { ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
+import { ArrowUp, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { DialogContent } from "@/components/ui/dialog";
@@ -8,22 +8,12 @@ import { ComposerVoiceDialogView } from "@/components/ComposerVoiceDialogView";
 import { ComposerDictationView } from "@/components/ComposerDictationView";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   isPrincipalBrowserStorageClearedEvent,
-  principalScopedStorageKey,
-  safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
 import {
-  VOICE_PREFERENCE_KEY,
   preferredVoice,
   preferredVoiceGlow,
   readVoiceChoices,
@@ -160,8 +150,6 @@ export function ComposerVoiceDialog({
   onCloseAutoFocus,
 }: ComposerVoiceDialogProps) {
   const transcriptId = useId();
-  const voicePickerId = useId();
-  const voiceHelpId = useId();
   const voiceGlow = useRef<HTMLDivElement>(null);
   const glowTarget = useRef(0);
   const updateGlow = (level: number) => {
@@ -205,7 +193,6 @@ export function ComposerVoiceDialog({
   const [audioUrl, setAudioUrl] = useState("");
   const [capabilityAttempt, setCapabilityAttempt] = useState(0);
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
-  const [preferenceNotice, setPreferenceNotice] = useState("");
   const [lastVoiceReply, setLastVoiceReply] = useState("");
   const dictationStartScope = useRef<string | null>(null);
   const voiceStartScope = useRef<string | null>(null);
@@ -372,7 +359,6 @@ export function ComposerVoiceDialog({
     selectedVoice.current = "";
     defaultVoice.current = "";
     setSelectedVoiceId("");
-    setPreferenceNotice("");
     setLastVoiceReply("");
     setVoiceLog([]);
     if (open) billingAfterClose.current = null;
@@ -537,7 +523,6 @@ export function ComposerVoiceDialog({
       setLastVoiceReply("");
       selectedVoice.current = defaultVoice.current;
       setSelectedVoiceId(defaultVoice.current);
-      setPreferenceNotice("");
       current.current.onOpenChange(false);
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, resetPreference);
@@ -1204,34 +1189,6 @@ export function ComposerVoiceDialog({
     }
     onOpenChange(next);
   };
-  const changeVoice = (id: string) => {
-    if (!userId || (phaseRef.current !== "idle" && phaseRef.current !== "synthesizing")) return;
-    const scope = { generation: generation.current, userId, contextKey };
-    if (!isCurrent(scope)) return;
-    const choice = voiceCatalog.current.find((voice) => voice.id === id);
-    if (!choice) return;
-    if (!choice.available) {
-      billingAfterClose.current = { userId, contextKey };
-      closeDialog(false);
-      return;
-    }
-    stopReplyPlayback();
-    selectedVoice.current = choice.id;
-    setSelectedVoiceId(choice.id);
-    setError("");
-    setPreferenceNotice("");
-    const key = principalScopedStorageKey(VOICE_PREFERENCE_KEY, scope.userId);
-    const storage = safeBrowserStorage("localStorage");
-    try {
-      if (!key || !storage) throw new Error("storage_unavailable");
-      storage.setItem(key, choice.id);
-    } catch {
-      setPreferenceNotice(
-        "Your voice choice applies for this session, but could not be saved on this device.",
-      );
-    }
-  };
-
   const handleCloseAutoFocus: NonNullable<ComposerVoiceDialogProps["onCloseAutoFocus"]> = (
     event,
   ) => {
@@ -1410,22 +1367,6 @@ export function ComposerVoiceDialog({
             Try again
           </Button>
         )}
-        {ready && capabilities.voices.filter((voice) => voice.available).length > 1 && (
-          <Select value={selectedVoiceId} onValueChange={changeVoice} disabled={busy}>
-            <SelectTrigger aria-label="Reply voice" className="kova-inline-voice-picker">
-              <SelectValue placeholder="Reply voice" />
-            </SelectTrigger>
-            <SelectContent className="max-h-64">
-              {capabilities.voices
-                .filter((voice) => voice.available)
-                .map((voice) => (
-                  <SelectItem key={voice.id} value={voice.id}>
-                    {voice.label}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        )}
       </div>
     );
   }
@@ -1462,60 +1403,6 @@ export function ComposerVoiceDialog({
       replyAvailable={mode === "voice" ? false : (capabilities?.tts ?? false)}
       error={error}
       conversationModelControl={conversationModelControl}
-      voicePicker={
-        !unavailable && !checking && capabilities && capabilities.voices.length > 0 ? (
-          <>
-            <label htmlFor={voicePickerId} className="sr-only">
-              Reply voice
-            </label>
-            <Select
-              value={selectedVoiceId}
-              onValueChange={changeVoice}
-              disabled={busy && phase !== "synthesizing"}
-            >
-              <SelectTrigger
-                id={voicePickerId}
-                aria-describedby={voiceHelpId}
-                className="kova-voice-picker-trigger min-h-11"
-              >
-                <SelectValue placeholder="Choose a voice" />
-              </SelectTrigger>
-              <SelectContent
-                className="max-h-64"
-                onCloseAutoFocus={(event) => {
-                  if (closing.current) event.preventDefault();
-                }}
-              >
-                {capabilities.voices.map((voice) => (
-                  <SelectItem
-                    key={voice.id}
-                    value={voice.id}
-                    className="min-h-11 whitespace-normal"
-                  >
-                    <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
-                      <span>{voice.label}</span>
-                      {!voice.available && (
-                        <>
-                          <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-                          <span className="text-xs text-muted-foreground">View plans</span>
-                        </>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p id={voiceHelpId} className="sr-only">
-              Choose a sound. Available voices depend on your plan.
-            </p>
-            {preferenceNotice && (
-              <p role="status" className="kova-voice-preference-notice">
-                {preferenceNotice}
-              </p>
-            )}
-          </>
-        ) : undefined
-      }
       recordingControl={
         ready && !realtimeListening ? (
           phase === "recording" ? (

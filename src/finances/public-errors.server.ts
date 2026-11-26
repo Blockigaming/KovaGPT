@@ -10,6 +10,7 @@ const FINANCE_PUBLIC_ERRORS = new Map<string, number>([
   ["plaid_response_rejected", 502],
   ["finance_connection_not_found", 404],
   ["finance_connection_changed", 409],
+  ["finance_maintenance_required", 403],
   ["finance_rate_limited", 429],
   ["finance_session_expired", 401],
   ["finance_audit_unavailable", 503],

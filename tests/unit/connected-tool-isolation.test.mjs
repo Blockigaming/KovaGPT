@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import * as flows from "../../src/integrations/connection-flows.mjs";
+import * as mcpReads from "../../src/integrations/mcp-provider-read.server.mjs";
 import * as salesforceCredentials from "../../src/integrations/salesforce-credential.server.mjs";
 import * as tokenRequests from "../../src/integrations/oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "../../src/lib/provider-response.server.mjs";
@@ -114,9 +115,20 @@ function fixture() {
       consumeApplicationRateLimit: async () => ({ allowed: state.allowRate, status: "limited" }),
     },
     "./connection-flows.mjs": flows,
+    "./mcp-provider-read.server.mjs": mcpReads,
     "./oauth-providers.server": {
+      oauthClientId: () => "fake-client",
+      configuredKeyProviders: () => (state.configured ? [{ id: "granola" }] : []),
       configuredOAuthProviders: () => (state.configured ? [{ id: state.row.provider_id }] : []),
       OAUTH_PROVIDERS: {
+        gamma: {
+          id: "gamma",
+          tokenEndpoint: "https://auth.gamma.app/oauth/token",
+          clientIdEnv: "TEST_ID",
+          clientSecretEnv: "TEST_SECRET",
+          profileEndpoint: "https://public-api.gamma.app/v1.0/me",
+          profileId: ({ userId, workspaceId }) => `${workspaceId}:${userId}`,
+        },
         notion: {
           id: "notion",
           tokenEndpoint: "https://api.notion.com/v1/oauth/token",
@@ -132,6 +144,12 @@ function fixture() {
         microsoft: {
           id: "microsoft",
           tokenEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+          clientIdEnv: "TEST_ID",
+          clientSecretEnv: "TEST_SECRET",
+        },
+        linear: {
+          id: "linear",
+          tokenEndpoint: "https://api.linear.app/oauth/token",
           clientIdEnv: "TEST_ID",
           clientSecretEnv: "TEST_SECRET",
         },
@@ -190,7 +208,7 @@ function fixture() {
 
 test("calendar tools bind to the selected Microsoft account and discard results after scope removal", async () => {
   const f = fixture();
-  f.state.row.granted_scopes = ["Calendars.ReadBasic"];
+  f.state.row.granted_scopes = ["Calendars.Read"];
   const context = await f.getConnectedToolContext("owner-a");
   assert.deepEqual(
     context.tools.map((tool) => tool.function.name),
@@ -212,6 +230,63 @@ test("calendar tools bind to the selected Microsoft account and discard results 
     /connection_changed_or_expired/,
   );
   assert.equal(f.state.reads, 2);
+});
+
+test("Microsoft and Linear retry one rejected read through the same account and scoped grant", async () => {
+  for (const [provider, scope, tool] of [
+    ["microsoft", "Files.Read", "onedrive_search"],
+    ["linear", "read", "linear_search"],
+  ]) {
+    const f = fixture();
+    Object.assign(f.state.row, {
+      provider_id: provider,
+      granted_scopes: [scope],
+      refresh_token_ciphertext: "encrypted:existing-refresh",
+      token_expires_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    f.state.fetchResponse = Response.json({
+      access_token: "renewed-token",
+      refresh_token: "rotated-refresh",
+      expires_in: 3600,
+      scope,
+    });
+    f.state.onRead = () => {
+      if (f.state.reads === 1)
+        throw new Error("connection_reauthorization_required", { cause: 401 });
+    };
+    const context = await f.getConnectedToolContext("owner-a");
+    const args = { account_id: f.state.row.id, query: "fixture" };
+    await f.runConnectionAccountSearch("owner-a", tool, args, context);
+    assert.equal(f.state.refreshCalls, 1);
+    assert.equal(f.state.reads, 2);
+    assert.equal(f.calls.filter(([call]) => call === "read")[1][3], "renewed-token");
+    assert.deepEqual(f.state.row.granted_scopes, [scope]);
+  }
+});
+
+test("Calendly chat relies on the stored provider identity and discards output after the binding changes", async () => {
+  const f = fixture();
+  const user = "https://api.calendly.com/users/linked-user";
+  Object.assign(f.state.row, {
+    provider_id: "calendly",
+    provider_account_id: user,
+    granted_scopes: ["users:read"],
+  });
+  assert.deepEqual((await f.getConnectedToolContext("owner-a")).tools, []);
+  f.state.row.granted_scopes.push("scheduled_events:read");
+  const context = await f.getConnectedToolContext("owner-a");
+  assert.equal(context.tools[0].function.name, "calendly_search_events");
+  assert.equal(JSON.stringify(context).includes(user), false);
+  const args = { account_id: f.state.row.id, query: "upcoming", calendlyUser: "attacker-supplied" };
+  await f.runConnectedTool("owner-a", "calendly_search_events", args, context);
+  assert.equal(f.calls.find(([operation]) => operation === "read").at(-1).calendlyUser, user);
+  f.state.onRead = () => {
+    f.state.row.provider_account_id = "https://api.calendly.com/users/different-user";
+  };
+  await assert.rejects(
+    f.runConnectedTool("owner-a", "calendly_search_events", args, context),
+    /connection_changed_or_expired/,
+  );
 });
 
 test("chat merges GitHub repository tools and dispatches through its pinned context", async () => {
@@ -474,6 +549,43 @@ test("concurrent token refreshes claim a credential only once and persist the ro
   assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:rotated");
 });
 
+test("the Connections list renews an expiring grant and returns safe current status", async () => {
+  const f = fixture();
+  f.state.row.token_expires_at = new Date(Date.now() - 1000).toISOString();
+  f.state.row.refresh_token_ciphertext = "old-refresh";
+  const { id, provider_id, account_label, status, granted_scopes, token_expires_at, updated_at } =
+    f.state.row;
+  const account = {
+    id,
+    provider_id,
+    account_label,
+    status,
+    granted_scopes,
+    token_expires_at,
+    updated_at,
+  };
+  const configured = new Set(["microsoft"]);
+  const renew = (currentSession) =>
+    f.renewListedOAuthAccounts("owner-a", [account], configured, async () => currentSession);
+
+  assert.deepEqual(await renew(false), [account]);
+  assert.equal(f.state.refreshCalls ?? 0, 0);
+  assert.deepEqual(await f.renewListedOAuthAccounts("owner-a", [account], new Set()), [account]);
+  f.state.allowRate = false;
+  assert.deepEqual(await renew(true), [account]);
+  assert.equal(f.state.refreshCalls ?? 0, 0);
+
+  f.state.allowRate = true;
+  const [fresh] = await renew(true);
+  assert.equal(f.state.refreshCalls, 1);
+  assert.equal(fresh.id, account.id);
+  assert.equal(fresh.status, "connected");
+  assert.ok(Date.parse(fresh.token_expires_at) > Date.now());
+  assert.equal(flows.canReadConnection(fresh, "outlook"), true);
+  assert.deepEqual(Object.keys(fresh), Object.keys(account));
+  assert.doesNotMatch(JSON.stringify(fresh), /encrypted|rotated|renewed|old-refresh/u);
+});
+
 test("uncertain token rotation is not replayed and cannot replace a newer reconnect", async () => {
   for (const failure of ["response", "disconnect", "reconnect"]) {
     const f = fixture();
@@ -574,7 +686,7 @@ test("Salesforce refreshes only after a rejected read and pins the renewed ident
     salesforceCredentials.unpackSalesforceCredential(reads[1][3]).access_token,
     "renewed-token",
   );
-  assert.deepEqual(reads[1][4], { recordType: "opportunities" });
+  assert.equal(reads[1][4].recordType, "opportunities");
   assert.equal(context.accounts[0].updated_at, f.state.row.updated_at);
   assert.equal("access_token_ciphertext" in context.accounts[0], false);
 });
@@ -863,5 +975,49 @@ test("forced Notion renewal cannot access another owner, workspace or deleted ac
     );
     assert.equal(f.state.decrypts, 0);
     assert.equal(f.state.refreshCalls ?? 0, 0);
+  }
+});
+
+test("Gamma rotates a credential only for the same scope, user, and workspace", async () => {
+  for (const [oldScope, scope, workspaceId] of [
+    ["gamma:read", "gamma:read", "workspace_2"],
+    ["generate", "generate", "workspace_2"],
+    ["gamma:read", "generate", "workspace_2"],
+    ["generate", "gamma:read", "workspace_2"],
+    ["gamma:read", "gamma:read", "unexpected_workspace"],
+  ]) {
+    const f = fixture();
+    Object.assign(f.state.row, {
+      provider_id: "gamma",
+      provider_account_id: "workspace_2:user_1",
+      granted_scopes: [oldScope],
+      refresh_token_ciphertext: "encrypted:old-refresh",
+      token_expires_at: new Date(Date.now() + 1000).toISOString(),
+    });
+    f.state.onFetch = (url, init) => {
+      if (url === "https://auth.gamma.app/oauth/token") {
+        assert.equal(init.body.get("refresh_token"), "old-refresh");
+        return Response.json({
+          access_token: "renewed",
+          refresh_token: "rotated",
+          scope,
+          expires_in: 3600,
+        });
+      }
+      assert.equal(url, "https://public-api.gamma.app/v1.0/me");
+      assert.equal(init.headers.Authorization, "Bearer renewed");
+      return Response.json({ userId: "user_1", workspaceId });
+    };
+    const { id, updated_at } = f.state.row;
+    const refreshed = await f.refreshExpiringConnection("owner-a", id, updated_at);
+    if (workspaceId === "workspace_2" && oldScope === scope) {
+      assert.ok(refreshed);
+      assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:rotated");
+      assert.equal(f.state.row.access_token_ciphertext, "encrypted:renewed");
+    } else {
+      assert.equal(refreshed, null);
+      assert.equal(f.state.row.status, "expired");
+      assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:old-refresh");
+    }
   }
 });

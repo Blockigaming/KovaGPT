@@ -24,7 +24,13 @@ import {
 
 type FinanceStatus = {
   configured: boolean;
-  connections: { id: string; status: string; country: string; created_at: string }[];
+  connections: {
+    id: string;
+    status: string;
+    country: string;
+    created_at: string;
+    maintenanceAllowed?: boolean;
+  }[];
 };
 const getPlaidSdk = createClientOnlyFn(async () => {
   const { loadPlaidLink } = await import("@/finances/plaid-link.client");
@@ -208,6 +214,7 @@ export function BankConnectionsPanel({
   const newlyLinked = useRef<string | null>(null);
   const [snapshot, setSnapshot] = useState<FinanceSnapshot | null>(null);
   const [disconnect, setDisconnect] = useState<string | null>(null);
+  const [restoreWebhook, setRestoreWebhook] = useState<string | null>(null);
   const active = useRef(true);
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
@@ -365,17 +372,42 @@ export function BankConnectionsPanel({
     }
   };
   const manage = useCallback(
-    async (connectionId: string, action: "read" | "disconnect") => {
+    async (
+      connectionId: string,
+      action: "read" | "disconnect" | "restore_webhook" | "maintenance",
+      enabled?: boolean,
+    ) => {
       if (running.current) return;
       setBusy(true);
       if (action === "disconnect") setSnapshot(null);
       try {
-        const response = await request("/api/finances/manage", { connectionId, action });
+        const response = await request("/api/finances/manage", {
+          connectionId,
+          action,
+          ...(action === "restore_webhook" ? { confirmed: true } : {}),
+          ...(action === "maintenance" ? { enabled } : {}),
+        });
         const body = await response.json();
         if (!response.ok) throw new Error();
         if (active.current) {
           if (action === "read") setSnapshot(body);
-          else {
+          else if (action === "maintenance") {
+            if (body.maintenanceAllowed !== enabled) throw new Error();
+            setStatus(
+              (current) =>
+                current && {
+                  ...current,
+                  connections: current.connections.map((connection) =>
+                    connection.id === connectionId
+                      ? { ...connection, maintenanceAllowed: body.maintenanceAllowed }
+                      : connection,
+                  ),
+                },
+            );
+          } else if (action === "restore_webhook") {
+            if (body.restored !== true) throw new Error();
+            toast.success("Plaid webhook restored.");
+          } else {
             initialRead.current = false;
             toast.success("Bank disconnected and Plaid access removed.");
             await reload();
@@ -386,12 +418,17 @@ export function BankConnectionsPanel({
           toast.error(
             action === "read"
               ? "The bank could not be read. Reconnect or try again later."
-              : "Disconnect could not be confirmed. Refresh status before retrying.",
+              : action === "disconnect"
+                ? "Disconnect could not be confirmed. Refresh status before retrying."
+                : action === "maintenance"
+                  ? "The permission change could not be confirmed. Refresh bank status."
+                  : "Plaid did not confirm the webhook change.",
           );
       } finally {
         if (active.current) {
           setBusy(false);
           setDisconnect(null);
+          setRestoreWebhook(null);
         }
       }
     },
@@ -429,15 +466,17 @@ export function BankConnectionsPanel({
     }
   };
   const hasConnections = Boolean(ownerId && status?.connections.length);
+  // Any in-progress state (opening Plaid, saving, reading) shows the spinner inside the button.
+  const showSpinner = linking || busy;
   const linkButton = (
     <Button
       onClick={() => void connect()}
       disabled={busy || !status?.configured}
-      aria-busy={linking}
-      aria-label={linking ? "Connecting a bank" : undefined}
+      aria-busy={showSpinner}
+      aria-label={showSpinner ? "Connecting a bank" : undefined}
       className="min-w-[132px] bg-white text-neutral-950 hover:bg-neutral-100 disabled:opacity-100"
     >
-      {linking ? (
+      {showSpinner ? (
         <span
           aria-hidden="true"
           className="size-4 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
@@ -479,7 +518,7 @@ export function BankConnectionsPanel({
             : "Bank accounts"}
         </h2>
         <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          Read-only connections
+          Read-only by default
         </span>
       </div>
       {snapshot && <FinanceActivityDashboard snapshot={snapshot} />}
@@ -519,6 +558,31 @@ export function BankConnectionsPanel({
                 >
                   Refresh balances and transactions
                 </Button>
+                {status.configured && connection.status === "connected" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      aria-pressed={connection.maintenanceAllowed === true}
+                      disabled={busy}
+                      onClick={() =>
+                        void manage(connection.id, "maintenance", !connection.maintenanceAllowed)
+                      }
+                    >
+                      {connection.maintenanceAllowed
+                        ? "Disable connection maintenance"
+                        : "Allow connection maintenance"}
+                    </Button>
+                    {connection.maintenanceAllowed && (
+                      <Button
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => setRestoreWebhook(connection.id)}
+                      >
+                        Restore Plaid webhook
+                      </Button>
+                    )}
+                  </>
+                )}
                 <Button
                   variant="outline"
                   disabled={busy}
@@ -611,6 +675,15 @@ export function BankConnectionsPanel({
           )}
         </div>
       )}
+      <ConfirmActionDialog
+        open={restoreWebhook !== null}
+        onOpenChange={(open) => !busy && !open && setRestoreWebhook(null)}
+        title="Restore the Plaid webhook?"
+        description="Plaid will send connection status updates for this linked bank to KovaGPT again."
+        confirmLabel="Restore webhook"
+        disabled={busy}
+        onConfirm={() => restoreWebhook && void manage(restoreWebhook, "restore_webhook")}
+      />
       <ConfirmActionDialog
         open={disconnect !== null}
         onOpenChange={(open) => !busy && !open && setDisconnect(null)}

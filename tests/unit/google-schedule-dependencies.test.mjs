@@ -262,7 +262,10 @@ test("close and keyed account changes ignore old pending reads and start fresh o
     route,
     /key=\{`\$\{principal\}:\$\{lifecycleVersion\}:\$\{pendingGoogleDisconnect.id\}/,
   );
-  assert.match(route, /open=\{activityReady && isSignedIn && pendingGoogleDisconnect !== null\}/);
+  assert.match(
+    route,
+    /open=\{\s*activityReady &&\s*isSignedIn &&\s*Boolean\(detailId && isGoogleId\(detailId\)\) &&\s*pendingGoogleDisconnect !== null\s*\}/,
+  );
 });
 
 test("confirmation content is read-only and preserves the shared confirmation defaults and cancel", () => {

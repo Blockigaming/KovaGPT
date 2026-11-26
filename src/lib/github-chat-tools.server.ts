@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { assertLockdownAllows } from "./lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "./distributed-rate-limit.server";
-import { decryptSecret } from "./github-oauth.server";
+import { decryptSecret, renewGitHubOAuthAccount } from "./github-oauth.server";
 import { createGitHubChatTools } from "./github-chat-read.server.mjs";
 
 export const githubChatTools = createGitHubChatTools({
@@ -17,6 +17,7 @@ export const githubChatTools = createGitHubChatTools({
     return result.allowed;
   },
   decrypt: decryptSecret,
+  renewAccount: renewGitHubOAuthAccount,
   configured: () =>
     Boolean(
       process.env.GITHUB_OAUTH_CLIENT_ID &&

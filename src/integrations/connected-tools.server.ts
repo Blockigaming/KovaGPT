@@ -5,12 +5,15 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 import type { ToolDef } from "@/lib/google-tools.server";
 import { CONNECTION_FLOWS, canReadConnection, type ConnectedAccount } from "./connection-flows.mjs";
 import {
+  configuredKeyProviders,
   configuredOAuthProviders,
+  oauthClientId,
   OAUTH_PROVIDERS,
   type OAuthProviderId,
 } from "./oauth-providers.server";
 import { decryptCredential, encryptCredential } from "./credential-vault.server";
 import { readConnection } from "./connection-read.server.mjs";
+import { verifyTanaRead } from "./mcp-provider-read.server.mjs";
 import { oauthRefreshRequest, selectRefreshTokens } from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { githubChatTools } from "@/lib/github-chat-tools.server";
@@ -33,9 +36,13 @@ const accountColumns =
 // generated application Database type. No schema change is required.
 type AccountRow = BoundAccount & {
   owner_id: string;
+  provider_account_id: string;
   workspace_id: string | null;
   deleted_at: string | null;
   created_at: string;
+  health_checked_at: string | null;
+  last_success_at: string | null;
+  last_error_code: string | null;
   access_token_ciphertext: string;
   refresh_token_ciphertext: string | null;
 };
@@ -48,13 +55,31 @@ type AuditRow = {
   result: string;
   safe_summary: string;
 };
-type ConnectorDatabase = {
+type ConsentRow = {
+  id: string;
+  owner_id: string;
+  linked_account_id: string;
+  scopes: string[];
+  purpose: string;
+  decision: string;
+};
+export type ConnectorDatabase = {
   public: {
     Tables: {
       integration_linked_accounts: {
         Row: AccountRow;
-        Insert: AccountRow;
+        Insert: Pick<
+          AccountRow,
+          "owner_id" | "provider_id" | "provider_account_id" | "access_token_ciphertext"
+        > &
+          Partial<AccountRow>;
         Update: Partial<AccountRow>;
+        Relationships: [];
+      };
+      integration_consents: {
+        Row: ConsentRow;
+        Insert: Omit<ConsentRow, "id">;
+        Update: Partial<ConsentRow>;
         Relationships: [];
       };
       integration_audit_events: {
@@ -72,6 +97,83 @@ type ConnectorDatabase = {
 };
 const db = supabaseAdmin as unknown as SupabaseClient<ConnectorDatabase>;
 
+const renewableProviders = new Set([
+  "microsoft",
+  "linear",
+  "slack",
+  "oura",
+  "whoop",
+  "salesforce",
+  "stripe",
+  "notion",
+  "box",
+  "canva",
+  "figma",
+  "calendly",
+  "gamma",
+  "tana",
+  "google-bigquery",
+  "hubspot",
+]);
+const retryUnauthorizedProviders = new Set(["microsoft", "linear", "salesforce", "notion", "tana"]);
+
+function renewalDue(account: BoundAccount) {
+  return Boolean(
+    account.status === "connected" &&
+    renewableProviders.has(account.provider_id) &&
+    account.token_expires_at &&
+    Date.parse(account.token_expires_at) <= Date.now() + 60_000,
+  );
+}
+
+export async function renewListedOAuthAccounts<T extends BoundAccount>(
+  ownerId: string,
+  accounts: T[],
+  configuredProviders: ReadonlySet<string>,
+  sessionIsCurrent?: () => Promise<boolean>,
+): Promise<T[]> {
+  const due = accounts
+    .filter((account) => configuredProviders.has(account.provider_id) && renewalDue(account))
+    .slice(0, 3);
+  if (!due.length) return accounts;
+  const limit = await consumeApplicationRateLimit({
+    identity: `user:${ownerId}`,
+    action: "connection_status_renewal",
+    limit: 6,
+    windowSeconds: 60,
+  }).catch(() => null);
+  if (!limit?.allowed) return accounts;
+  const renewed = new Map(
+    await Promise.all(
+      due.map(
+        async (account) =>
+          [
+            account.id,
+            await refreshExpiringConnection(
+              ownerId,
+              account.id,
+              account.updated_at,
+              false,
+              sessionIsCurrent,
+            ).catch(() => null),
+          ] as const,
+      ),
+    ),
+  );
+  return accounts.map((account) => {
+    const fresh = renewed.get(account.id);
+    return fresh
+      ? {
+          ...account,
+          status: fresh.status,
+          granted_scopes: fresh.granted_scopes,
+          token_expires_at: fresh.token_expires_at,
+          updated_at: fresh.updated_at,
+        }
+      : account;
+  });
+}
+
 // Claim each expiring credential before rotating it. An uncertain/crashed
 // refresh remains expired and requires fresh OAuth consent, so another replica
 // cannot replay a potentially consumed refresh token.
@@ -80,8 +182,10 @@ export async function refreshExpiringConnection(
   id: string,
   version: string,
   forceRejectedRead = false,
+  sessionIsCurrent?: () => Promise<boolean>,
 ) {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+  if (sessionIsCurrent && !(await sessionIsCurrent())) return null;
   const { data: row, error } = await db
     .from("integration_linked_accounts")
     .select("*")
@@ -95,21 +199,9 @@ export async function refreshExpiringConnection(
   if (
     error ||
     !row ||
-    (!(forceRejectedRead && ["salesforce", "notion"].includes(row.provider_id)) &&
-      (!row.token_expires_at || Date.parse(row.token_expires_at) > Date.now() + 60_000)) ||
+    (!(forceRejectedRead && retryUnauthorizedProviders.has(row.provider_id)) && !renewalDue(row)) ||
     !row.refresh_token_ciphertext ||
-    ![
-      "microsoft",
-      "linear",
-      "slack",
-      "oura",
-      "whoop",
-      "salesforce",
-      "notion",
-      "box",
-      "canva",
-      "figma",
-    ].includes(row.provider_id)
+    !renewableProviders.has(row.provider_id)
   )
     return null;
   const provider = OAUTH_PROVIDERS[row.provider_id as OAuthProviderId];
@@ -131,6 +223,8 @@ export async function refreshExpiringConnection(
   if (claimError || !claim) return null;
   const ensureRefreshLease = async () => {
     await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+    if (sessionIsCurrent && !(await sessionIsCurrent()))
+      throw new Error("connection_session_changed");
     const current = await db
       .from("integration_linked_accounts")
       .select("id")
@@ -162,9 +256,10 @@ export async function refreshExpiringConnection(
         : (provider.refreshEndpoint ?? provider.tokenEndpoint),
       oauthRefreshRequest({
         providerId: provider.id,
-        clientId: process.env[provider.clientIdEnv],
+        clientId: oauthClientId(provider),
         clientSecret: process.env[provider.clientSecretEnv],
         refreshToken,
+        ...(provider.id === "tana" ? { tokenClientAuth: provider.tokenClientAuth } : {}),
       }),
     );
     if (!response.ok) {
@@ -172,7 +267,40 @@ export async function refreshExpiringConnection(
       throw new Error("refresh_failed");
     }
     const tokens = selectRefreshTokens(provider.id, await readProviderJsonObject(response, 64_000));
+    if (
+      ["hubspot", "calendly", "stripe"].includes(provider.id) &&
+      (tokens.provider_account_id !== row.provider_account_id || !tokens.scope)
+    )
+      throw new Error("refresh_binding_changed");
     await ensureRefreshLease();
+    if (provider.id === "gamma") {
+      const scopes =
+        tokens.scope === undefined ? row.granted_scopes : tokens.scope.trim().split(/\s+/u);
+      if (
+        scopes.length !== 1 ||
+        row.granted_scopes.length !== 1 ||
+        scopes[0] !== row.granted_scopes[0] ||
+        !["gamma:read", "generate"].includes(scopes[0]) ||
+        !provider.profileEndpoint
+      )
+        throw new Error("refresh_scope_changed");
+      const profile = await fetch(provider.profileEndpoint, {
+        redirect: "error",
+        signal: AbortSignal.timeout(12_000),
+        headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: "application/json" },
+      });
+      if (!profile.ok) {
+        await profile.body?.cancel();
+        throw new Error("refresh_binding_changed");
+      }
+      const identity = provider.profileId(await readProviderJsonObject(profile, 64_000));
+      if (identity !== row.provider_account_id) throw new Error("refresh_binding_changed");
+      await ensureRefreshLease();
+    }
+    if (provider.id === "tana") {
+      await verifyTanaRead(tokens.access_token, fetch, ensureRefreshLease);
+      await ensureRefreshLease();
+    }
     const packed = oldSalesforceCredential
       ? await renewSalesforceCredential(
           oldSalesforceCredential,
@@ -184,7 +312,11 @@ export async function refreshExpiringConnection(
     const newCiphertext = await encryptCredential(packed);
     await ensureRefreshLease();
     const scopes =
-      tokens.scope === undefined ? row.granted_scopes : tokens.scope.split(/[ ,]+/).filter(Boolean);
+      provider.id === "tana"
+        ? provider.requiredScopes
+        : tokens.scope === undefined
+          ? row.granted_scopes
+          : tokens.scope.split(/[ ,]+/).filter(Boolean);
     const { data: renewed, error: updateError } = await db
       .from("integration_linked_accounts")
       .update({
@@ -210,7 +342,7 @@ export async function refreshExpiringConnection(
       .maybeSingle();
     return updateError || !renewed
       ? null
-      : forceRejectedRead && ["salesforce", "notion"].includes(provider.id)
+      : forceRejectedRead && retryUnauthorizedProviders.has(provider.id)
         ? { ...renewed, renewalCiphertext: newCiphertext }
         : renewed;
   } catch {
@@ -221,6 +353,7 @@ export async function refreshExpiringConnection(
 export async function getConnectedToolContext(ownerId: string): Promise<ConnectedToolContext> {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
   const configured = new Set<string>(configuredOAuthProviders().map((provider) => provider.id));
+  for (const { id } of configuredKeyProviders()) configured.add(id);
   const { data, error } = await db
     .from("integration_linked_accounts")
     .select(accountColumns)
@@ -235,12 +368,7 @@ export async function getConnectedToolContext(ownerId: string): Promise<Connecte
   let refreshes = 0;
   for (let index = 0; index < accounts.length; index += 1) {
     const account = accounts[index];
-    if (
-      refreshes < 3 &&
-      configured.has(account.provider_id) &&
-      account.token_expires_at &&
-      Date.parse(account.token_expires_at) <= Date.now() + 60_000
-    ) {
+    if (refreshes < 3 && configured.has(account.provider_id) && renewalDue(account)) {
       refreshes += 1;
       const renewed = await refreshExpiringConnection(ownerId, account.id, account.updated_at);
       accounts[index] = renewed ? (renewed as BoundAccount) : { ...account, status: "expired" };
@@ -307,7 +435,9 @@ export async function runConnectionAccountSearch(
   );
   if (!bound) throw new Error("connection_account_not_allowed");
   const providerConfigured = () =>
-    configuredOAuthProviders().some((provider) => provider.id === flow.provider);
+    flow.authentication === "api-key"
+      ? configuredKeyProviders().some((provider) => provider.id === flow.provider)
+      : configuredOAuthProviders().some((provider) => provider.id === flow.provider);
   if (!providerConfigured()) throw new Error("connection_changed_or_expired");
   const limit = await consumeApplicationRateLimit({
     identity: `user:${ownerId}`,
@@ -322,7 +452,7 @@ export async function runConnectionAccountSearch(
   const lookup = () =>
     db
       .from("integration_linked_accounts")
-      .select(`${accountColumns},access_token_ciphertext,deleted_at`)
+      .select(`${accountColumns},provider_account_id,access_token_ciphertext,deleted_at`)
       .eq("id", bound.id)
       .eq("owner_id", ownerId)
       .eq("provider_id", flow.provider)
@@ -339,15 +469,7 @@ export async function runConnectionAccountSearch(
     throw new Error("connection_changed_or_expired");
   let account = original;
   const ensureCurrentBinding = async () => {
-    const { data: current, error: currentError } = await db
-      .from("integration_linked_accounts")
-      .select(`${accountColumns},access_token_ciphertext,deleted_at`)
-      .eq("id", bound.id)
-      .eq("owner_id", ownerId)
-      .eq("provider_id", flow.provider)
-      .is("workspace_id", null)
-      .is("deleted_at", null)
-      .maybeSingle();
+    const { data: current, error: currentError } = await lookup();
     await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
     if (
       currentError ||
@@ -355,20 +477,26 @@ export async function runConnectionAccountSearch(
       !providerConfigured() ||
       !canReadConnection(current, id) ||
       current.updated_at !== account.updated_at ||
+      current.provider_account_id !== account.provider_account_id ||
       current.access_token_ciphertext !== account.access_token_ciphertext
     )
       throw new Error("connection_changed_or_expired");
   };
   let token = await decryptCredential(account.access_token_ciphertext);
   await ensureCurrentBinding();
-  const options =
-    id === "salesforce" ? { recordType: args.record_type as SalesforceRecordType | undefined } : {};
+  const options = {
+    beforeRequest: ensureCurrentBinding,
+    ...(id === "salesforce"
+      ? { recordType: args.record_type as SalesforceRecordType | undefined }
+      : {}),
+    ...(id === "calendly" ? { calendlyUser: account.provider_account_id } : {}),
+  };
   let result;
   try {
     result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
   } catch (error) {
     if (
-      !["salesforce", "notion"].includes(id) ||
+      !retryUnauthorizedProviders.has(flow.provider) ||
       !(error instanceof Error) ||
       error.message !== "connection_reauthorization_required"
     )

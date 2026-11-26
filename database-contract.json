@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 224,
+  "migrationCount": 230,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -59,6 +59,8 @@
     "collaboration_presence",
     "connected_account_audit_log",
     "connected_accounts",
+    "connector_directory_submissions",
+    "connector_write_preferences",
     "context_packs",
     "credit_purchases",
     "custom_kova_link_grants",
@@ -1127,6 +1129,8 @@
     "chat_public_shares_owner_created_idx",
     "collaboration_presence_resource",
     "connected_account_audit_log_user_created_idx",
+    "connector_directory_submissions_owner_idx",
+    "connector_directory_submissions_status_idx",
     "context_packs_user_updated_idx",
     "custom_kova_reports_queue_idx",
     "custom_kovas_owner_idx",
@@ -1752,6 +1756,8 @@
     "collaboration_presence",
     "connected_account_audit_log",
     "connected_accounts",
+    "connector_directory_submissions",
+    "connector_write_preferences",
     "context_packs",
     "credit_purchases",
     "custom_kova_link_grants",
@@ -2660,6 +2666,7 @@
     "select, insert, update, delete on public.chat_message_versions to service_role",
     "select, insert, update, delete on public.chat_pinned_files to authenticated",
     "select, insert, update, delete on public.chat_pinned_files to service_role",
+    "select, insert, update, delete on public.connector_write_preferences, public.connector_directory_submissions to service_role",
     "select, insert, update, delete on public.discovery_provider_days, public.discovery_usage_days to service_role",
     "select, insert, update, delete on public.feedback_submissions to authenticated",
     "select, insert, update, delete on public.goal_milestones to authenticated",
@@ -3305,6 +3312,7 @@
     "all on public.chat_pinned_files from anon",
     "all on public.chat_public_shares from public,anon,authenticated",
     "all on public.connected_account_audit_log from anon, authenticated",
+    "all on public.connector_write_preferences, public.connector_directory_submissions from public, anon, authenticated",
     "all on public.developer_account_export_records from public,anon,authenticated",
     "all on public.developer_account_owners,public.developer_projects from public,anon,authenticated",
     "all on public.developer_billing_alert_deliveries from public,anon,authenticated",
@@ -3939,5 +3947,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "48fb042ef6daacaccd66204d3b278ff05f38af1954016dea2f995d6e6dd4342d"
+  "sha256": "b52aae2bcc4a2a01214d1570d893b40c3d5fb26ff36723b4ff5af05c57bbf77a"
 }

@@ -80,6 +80,7 @@ import {
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
+import { MASTER_PLUGIN_REVIEW_CATALOG } from "@/lib/plugin-review-catalog";
 import {
   useEffect,
   useCallback,
@@ -1874,17 +1875,49 @@ export function SettingsDialog({
 
               <TabsContent aria-labelledby={currentSectionHeadingId} value="linked">
                 {!loggedIn ? (
-                  <SignInGate label="Apps" />
+                  <SignInGate label="Connections" />
                 ) : (
                   <section className="space-y-4">
                     <div className="space-y-1">
-                      <h3 className="text-sm font-semibold">Connected apps</h3>
+                      <h3 className="text-sm font-semibold">Connections</h3>
                       <p className="text-xs text-muted-foreground">
-                        Connection status, provider permissions, reconnection, and revocation are
-                        verified from the server-backed Apps page.
+                        Open a connection to see its status, change permissions, reconnect, or
+                        disconnect. Status is verified from the server-backed Apps page.
                       </p>
                     </div>
-                    <Button asChild variant="outline">
+                    <ul className="grid min-w-0 gap-2">
+                      {MASTER_PLUGIN_REVIEW_CATALOG.filter(
+                        (entry) => entry.availability === "implemented",
+                      ).map((entry) => (
+                        <li
+                          key={entry.connector.id}
+                          className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted/40 px-3 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              {entry.connector.label}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {entry.connector.category}
+                            </div>
+                          </div>
+                          <Button asChild variant="outline" className="shrink-0 rounded-full">
+                            <Link
+                              to="/apps"
+                              search={{ plugin: entry.connector.id } as never}
+                              onClick={closeForNavigation}
+                            >
+                              Manage
+                            </Link>
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-auto min-h-11 max-w-full whitespace-normal rounded-full py-2 text-center"
+                    >
                       <Link to="/apps" onClick={closeForNavigation}>
                         Manage apps and permissions
                       </Link>
