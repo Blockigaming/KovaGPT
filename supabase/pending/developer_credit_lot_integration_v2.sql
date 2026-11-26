@@ -2,18 +2,13 @@
 -- Integration boundary for newly provisioned or proven-empty wallets. A legacy
 -- wallet with any monetary history needs a separately reviewed reconciliation,
 -- not an inferred opening credit lot. The activation marker is not public.
-create table public.developer_credit_lot_accounts_v2 (
-  account_id uuid primary key references public.developer_credit_accounts(id),
-  enabled_at timestamptz not null default clock_timestamp()
-);
 create table public.developer_credit_api_hold_links_v2 (
   request_id uuid primary key references public.developer_api_requests(id),
   hold_id uuid unique not null references public.developer_credit_holds_v2(id)
 );
-alter table public.developer_credit_lot_accounts_v2 enable row level security;
 alter table public.developer_credit_api_hold_links_v2 enable row level security;
-revoke all on public.developer_credit_lot_accounts_v2,public.developer_credit_api_hold_links_v2 from public,anon,authenticated;
-grant select,insert on public.developer_credit_lot_accounts_v2,public.developer_credit_api_hold_links_v2 to service_role;
+revoke all on public.developer_credit_api_hold_links_v2 from public,anon,authenticated;
+grant select,insert on public.developer_credit_api_hold_links_v2 to service_role;
 
 create function public.developer_enable_credit_lots_v2(p_account uuid)
 returns void language plpgsql security invoker set search_path='' as $$
