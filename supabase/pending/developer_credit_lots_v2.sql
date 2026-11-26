@@ -2,6 +2,13 @@
 -- existing aggregate balance. Materialize and replay with the funding/admission
 -- integration before activation. All amounts use the existing minor-unit scale 8.
 -- Server-only routines; no caller-supplied subscription tier or payment amount.
+create table public.developer_credit_lot_accounts_v2 (
+  account_id uuid primary key references public.developer_credit_accounts(id),
+  enabled_at timestamptz not null default clock_timestamp()
+);
+alter table public.developer_credit_lot_accounts_v2 enable row level security;
+revoke all on public.developer_credit_lot_accounts_v2 from public,anon,authenticated;
+grant select,insert on public.developer_credit_lot_accounts_v2 to service_role;
 create table public.developer_credit_lots_v2 (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references public.developer_credit_accounts(id),
@@ -126,6 +133,7 @@ begin
   if found then return l;end if;
   select own.account_id into a from public.developer_account_owners own
     join public.developer_credit_accounts acc on acc.id=own.account_id
+    join public.developer_credit_lot_accounts_v2 tracked on tracked.account_id=own.account_id
     where own.owner_id=p_owner and acc.currency='USD' and acc.suspended_at is null
     order by own.created_at,own.account_id limit 1;
   if a is null then return null;end if;
