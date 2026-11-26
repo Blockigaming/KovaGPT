@@ -1027,58 +1027,68 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                 <p className="text-sm text-muted-foreground">
                   Manage API keys for the selected account and project.
                 </p>
-              <ul className="divide-y divide-border border-y border-border">
-                {data?.keys
-                  .filter((row) => row.account_id === account)
-                  .map((row) => (
-                    <li
-                      key={String(row.id)}
-                      className="flex flex-wrap items-center justify-between gap-3 py-4"
-                    >
-                      <span>
-                        {row.name} · …{row.secret_suffix} ·{" "}
-                        {row.revoked_at
-                          ? "revoked"
-                          : `expires ${String(row.expires_at).slice(0, 10)}`}
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          disabled={busy || Boolean(row.revoked_at)}
-                          variant="outline"
-                          onClick={() =>
-                            void mutate({
-                              operation: "revoke_key",
-                              accountId: account,
-                              keyId: row.id,
-                            })
-                          }
-                        >
-                          Revoke
-                        </Button>
-                        <Button
-                          disabled={busy || Boolean(row.revoked_at) || !project}
-                          variant="outline"
-                          onClick={() =>
-                            void mutate({
-                              operation: "issue_key",
-                              accountId: account,
-                              projectId: project,
-                              name: row.name,
-                              scopes,
-                              limits: limits(),
-                              rotateKeyId: row.id,
-                            })
-                          }
-                        >
-                          Rotate
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-              </ul>
+                <ul className="divide-y divide-border border-y border-border">
+                  {data?.keys
+                    .filter((row) => row.account_id === account)
+                    .map((row) => (
+                      <li
+                        key={String(row.id)}
+                        className="flex flex-wrap items-center justify-between gap-3 py-4"
+                      >
+                        <span>
+                          {row.name} · …{row.secret_suffix} ·{" "}
+                          {row.revoked_at
+                            ? "revoked"
+                            : `expires ${String(row.expires_at).slice(0, 10)}`}
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            disabled={busy || Boolean(row.revoked_at)}
+                            variant="outline"
+                            onClick={() =>
+                              void mutate({
+                                operation: "revoke_key",
+                                accountId: account,
+                                keyId: row.id,
+                              })
+                            }
+                          >
+                            Revoke
+                          </Button>
+                          <Button
+                            disabled={busy || Boolean(row.revoked_at) || !project}
+                            variant="outline"
+                            onClick={() =>
+                              void mutate({
+                                operation: "issue_key",
+                                accountId: account,
+                                projectId: project,
+                                name: row.name,
+                                scopes,
+                                limits: limits(),
+                                rotateKeyId: row.id,
+                              })
+                            }
+                          >
+                            Rotate
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                </ul>
                 {!data?.keys.some((row) => row.account_id === account) && (
                   <p className="py-4 text-sm text-muted-foreground">No API keys yet.</p>
                 )}
+              </div>
+            )}
+            {secret && (
+              <div role="status" className="space-y-3 rounded-lg border border-border p-4">
+                <p>
+                  Save this key in your server’s secret manager. It is shown once and expires in 89
+                  days.
+                </p>
+                <Textarea readOnly aria-label="New API key" value={secret} className={fieldClass} />
+                <Button onClick={() => setSecret("")}>Hide key</Button>
               </div>
             )}
             <details key={section} open={section === "limits" ? true : undefined}>
@@ -1183,16 +1193,6 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                 >
                   Create key with these limits
                 </Button>
-                {secret && (
-                  <div role="status" className="space-y-2 rounded-md border p-3">
-                    <p>
-                      Save this key in your server’s secret manager. It is shown once and expires in 89
-                      days.
-                    </p>
-                    <Textarea readOnly aria-label="New API key" value={secret} className={fieldClass} />
-                    <Button onClick={() => setSecret("")}>Hide key</Button>
-                  </div>
-                )}
               </div>
             </details>
           </section>
