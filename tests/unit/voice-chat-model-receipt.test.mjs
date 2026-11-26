@@ -3,6 +3,7 @@ import test from "node:test";
 import { relayEligibleVoiceChat } from "../../src/lib/voice/chat-model-receipt.server.mjs";
 import {
   verifyVoiceModelReceipt,
+  verifyVoiceSegmentReceipt,
   voiceModelPolicy,
 } from "../../src/lib/voice/openai-model-eligibility.server.mjs";
 
@@ -51,7 +52,22 @@ test("only a completed normalized reply receives a model-bound receipt", async (
     }),
     { provider: "openai", modelId: "fixture-model" },
   );
-  assert.equal(emitted.join(""), `${delta("Kova ")}${delta("reply.")}`);
+  assert.equal(emitted.length, 3);
+  assert.equal(emitted.slice(0, 2).join(""), `${delta("Kova ")}${delta("reply.")}`);
+  const segment = JSON.parse(emitted[2].slice("data: ".length)).choices[0].delta;
+  assert.equal(segment.kind, "voice_segment");
+  assert.equal(segment.index, 0);
+  assert.equal(segment.text, "Kova reply.");
+  assert.deepEqual(
+    verifyVoiceSegmentReceipt(policy, segment.receipt, {
+      ownerId: identity.ownerId,
+      chatId: identity.chatId,
+      messageId: identity.messageId,
+      index: 0,
+      text: "Kova reply.",
+    }),
+    { provider: "openai", modelId: "fixture-model" },
+  );
 });
 
 test("incomplete, rejected, too-long or cancelled streams never authorize speech", async () => {
