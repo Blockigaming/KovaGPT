@@ -59,7 +59,8 @@ export function UsageCredits({
 }
 
 export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
-  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<"live" | "sandbox" | null>(null);
+  const checkoutEnabled = checkoutMode !== null;
   const [deliveryAvailability, setDeliveryAvailability] = useState({ email: false, text: false });
   const [pending, setPending] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -70,7 +71,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
     void getMyUsageWallet({ data: { ownerId } }).then(
       (wallet) => {
         if (current) {
-          setCheckoutEnabled(wallet !== null);
+          setCheckoutMode(wallet?.environment ?? null);
           if (wallet) {
             setDeliveryAvailability(wallet.delivery);
             setDelivery(wallet.delivery.email ? "email" : wallet.delivery.text ? "text" : "self");
@@ -99,7 +100,9 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
     <section className="kova-settings-section space-y-5">
       <p className="text-sm text-muted-foreground">
         {checkoutEnabled
-          ? "Stripe sandbox. Choose how to send your test gift card."
+          ? checkoutMode === "sandbox"
+            ? "Stripe sandbox. Choose how to send your test gift card."
+            : "Choose how to send your gift card."
           : "Gift cards will be available on every Kova plan, including Free."}
       </p>
       <form
@@ -263,7 +266,11 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
           )}
           {checkoutEnabled && (
             <Button type="submit" disabled={pending || !validAmount}>
-              {pending ? "Opening checkout…" : "Buy test gift card"}
+              {pending
+                ? "Opening checkout…"
+                : checkoutMode === "sandbox"
+                  ? "Buy test gift card"
+                  : "Buy gift card"}
             </Button>
           )}
           {checkoutError && (

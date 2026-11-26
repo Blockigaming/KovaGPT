@@ -7,9 +7,14 @@ import { createStripeClient, type StripeEnv, type VerifiedStripeEvent } from "@/
 export const CREDIT_ORDER_KIND = "kova_usage_credits_v1";
 export const CREDIT_UUID = /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i;
 
-export function creditCheckoutEnvironment(): StripeEnv | null {
+export async function creditCheckoutEnvironment(): Promise<StripeEnv | null> {
   const mode = process.env.KOVA_USAGE_CREDIT_CHECKOUT;
-  return mode === "sandbox" ? mode : null;
+  if (mode === "sandbox") return mode;
+  if (mode !== "live" || process.env.KOVA_CHAT_CREDIT_FALLBACK !== "enabled") return null;
+  const readiness = await loose(supabaseAdmin)
+    .rpc("kova_live_credit_checkout_ready", {})
+    .abortSignal(AbortSignal.timeout(5_000));
+  return readiness.data === true && !readiness.error ? "live" : null;
 }
 
 export async function projectUsageCreditStripeEvent(event: VerifiedStripeEvent, env: StripeEnv) {

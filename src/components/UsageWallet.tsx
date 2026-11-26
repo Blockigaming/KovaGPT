@@ -40,10 +40,12 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
         </Button>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground">Stripe sandbox. Test payments only.</p>
+          {wallet.environment === "sandbox" && (
+            <p className="text-sm text-muted-foreground">Stripe sandbox. Test payments only.</p>
+          )}
           {!gift && (
             <p>
-              Test balance{" "}
+              {wallet.environment === "sandbox" ? "Test balance" : "Available credits"}{" "}
               {usd.format(Math.max(0, wallet.fundedCents / 100 - wallet.spentMicros / 1_000_000))}
             </p>
           )}
@@ -84,7 +86,7 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
                 />
               </label>
               <Button type="submit" disabled={pending}>
-                {gift ? "Buy test gift card" : "Add test credits"}
+                {wallet.environment === "sandbox" ? "Add test credits" : "Add credits"}
               </Button>
             </form>
           )}
@@ -99,7 +101,7 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
                 try {
                   await redeemUsageCreditGift({ data: { ownerId, code } });
                   form.reset();
-                  setStatus("Test gift redeemed.");
+                  setStatus("Gift redeemed.");
                   setRevision((value) => value + 1);
                 } catch {
                   setStatus("Gift code unavailable.");
@@ -169,14 +171,14 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" asChild>
                             <a
-                              href={`mailto:?subject=${encodeURIComponent("KovaGPT test gift card")}&body=${encodeURIComponent(`Redeem this test gift code in KovaGPT Settings → Gift cards: ${order.giftCode}`)}`}
+                              href={`mailto:?subject=${encodeURIComponent(wallet.environment === "sandbox" ? "KovaGPT test gift card" : "KovaGPT gift card")}&body=${encodeURIComponent(`Redeem this gift code in KovaGPT Settings → Gift cards: ${order.giftCode}`)}`}
                             >
                               Send by email
                             </a>
                           </Button>
                           <Button size="sm" variant="outline" asChild>
                             <a
-                              href={`sms:?body=${encodeURIComponent(`KovaGPT test gift code: ${order.giftCode}`)}`}
+                              href={`sms:?body=${encodeURIComponent(`KovaGPT gift code: ${order.giftCode}`)}`}
                             >
                               Send by text
                             </a>

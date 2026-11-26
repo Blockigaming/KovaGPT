@@ -15,6 +15,7 @@ import {
 } from "@/lib/usage-credit-checkout.server";
 
 export type UsageWallet = {
+  environment: "live" | "sandbox";
   fundedCents: number;
   spentMicros: number;
   spending: { id: string; model: string; date: string; micros: number; pending: boolean }[];
@@ -36,7 +37,7 @@ export const getMyUsageWallet = createServerFn({ method: "GET" })
   .validator((data: { ownerId: string }) => data)
   .handler(async ({ context, data }): Promise<UsageWallet | null> => {
     if (data.ownerId !== context.userId) throw new Error("Your account changed.");
-    const environment = creditCheckoutEnvironment();
+    const environment = await creditCheckoutEnvironment();
     if (!environment) return null;
     const result = await loose(supabaseAdmin)
       .rpc("kova_credit_wallet", { p_user: context.userId, p_env: environment })
@@ -51,6 +52,7 @@ export const getMyUsageWallet = createServerFn({ method: "GET" })
     if (spending.error || !spending.data) throw new Error("Credit spending unavailable.");
     return {
       ...result.data,
+      environment,
       spentMicros: spending.data.spentMicros,
       spending: spending.data.entries,
       delivery: giftDeliveryAvailability(),
@@ -70,7 +72,7 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ context, data }) => {
-    const environment = creditCheckoutEnvironment();
+    const environment = await creditCheckoutEnvironment();
     if (
       !environment ||
       data.ownerId !== context.userId ||
@@ -141,7 +143,7 @@ export const redeemUsageCreditGift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { ownerId: string; code: string }) => data)
   .handler(async ({ context, data }) => {
-    const environment = creditCheckoutEnvironment();
+    const environment = await creditCheckoutEnvironment();
     if (!environment || data.ownerId !== context.userId || !CREDIT_UUID.test(data.code))
       throw new Error("Gift code unavailable.");
     const result = await loose(supabaseAdmin).rpc("kova_claim_credit_gift", {

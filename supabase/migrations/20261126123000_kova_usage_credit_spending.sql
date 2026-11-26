@@ -186,3 +186,11 @@ begin
 end $$;
 revoke all on function public.kova_fund_credit_order_with_fee(uuid,text,text,text,integer,integer,boolean,integer) from public,anon,authenticated;
 grant execute on function public.kova_fund_credit_order_with_fee(uuid,text,text,text,integer,integer,boolean,integer) to service_role;
+
+create function public.kova_live_credit_checkout_ready()
+returns boolean language sql stable security invoker set search_path='' as $$
+  select coalesce(current_setting('kova.usage_credit_spending',true)='enabled'
+    and current_setting('kova.usage_credit_funding_environment',true)='live',false);
+$$;
+revoke all on function public.kova_live_credit_checkout_ready() from public,anon,authenticated;
+grant execute on function public.kova_live_credit_checkout_ready() to service_role;
