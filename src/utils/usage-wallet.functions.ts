@@ -1,3 +1,4 @@
+import { PUBLIC_STRIPE_ACCOUNT_ID } from "@/config/public-config";
 import {
   giftDeliveryAvailability,
   validateGiftDelivery,
@@ -95,6 +96,12 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
       typeof data.gift !== "boolean"
     )
       throw new Error("Checkout is unavailable.");
+    const stripe = createStripeClient(environment);
+    if (environment === "live") {
+      const account = await stripe.accounts.retrieve(null, {});
+      if (account.id !== PUBLIC_STRIPE_ACCOUNT_ID || !account.charges_enabled)
+        throw new Error("Live credit checkout is unavailable.");
+    }
     const delivery = data.gift && data.delivery ? validateGiftDelivery(data.delivery) : undefined;
     const availability = giftDeliveryAvailability();
     if (delivery && delivery.channel !== "self" && !availability[delivery.channel])
@@ -122,7 +129,7 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
         : undefined;
     const section = data.gift ? "gift-cards" : "usage";
     const returnUrl = `https://kovagpt.com/settings/${section}`;
-    const session = await createStripeClient(environment).checkout.sessions.create(
+    const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
         payment_method_types: ["card"],
