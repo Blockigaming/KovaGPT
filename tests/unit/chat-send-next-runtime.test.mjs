@@ -3,7 +3,7 @@ import {
   CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
   CLOUD_BROWSER_USAGE_HEADER,
 } from "../../src/lib/chat-browser-policy.mjs";
-import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { browserAddressReply, chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
 import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import { chatResponseError, cloudBrowserErrorKind } from "../../src/lib/chat-sse-client.mjs";
 import assert from "node:assert/strict";
@@ -281,6 +281,7 @@ function fixture() {
       withResponsePresentation: (profile) => profile,
       chatResponseError: async (response) => response.error,
       cloudBrowserErrorKind,
+      browserAddressReply,
       consumeChatSse: (body, args) => {
         const d = deferred();
         streams.push({ ...d, args });

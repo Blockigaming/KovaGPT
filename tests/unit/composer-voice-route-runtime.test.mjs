@@ -2,7 +2,7 @@ import {
   chatBrowserDestination,
   CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
 } from "../../src/lib/chat-browser-policy.mjs";
-import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { browserAddressReply, chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
 import { chatResponseError, cloudBrowserErrorKind } from "../../src/lib/chat-sse-client.mjs";
 import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
@@ -81,6 +81,7 @@ const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   completedChatReply,
   extractResponseFollowups,
   chatRequestHeaders,
+  browserAddressReply,
   chatBrowserDestination,
   CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
   chatResponseError,

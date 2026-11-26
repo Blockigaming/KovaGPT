@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { t } from "@/lib/localization";
 import {
   Check,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { buildFilePreviewDocument, type ResponseFile } from "@/lib/response-files.mjs";
+import { downloadResponseFile } from "@/lib/response-file-actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,12 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import "./response-file-pane.css";
+
+const GeneratedPdfPreview = lazy(() =>
+  import("./generative-ui/GeneratedPdfPreview").then((module) => ({
+    default: module.GeneratedPdfPreview,
+  })),
+);
 
 type View = "preview" | "code";
 
@@ -32,12 +39,7 @@ function paneIcon(file: ResponseFile) {
   return file.category === "Document" ? FileText : Code2;
 }
 function download(file: ResponseFile) {
-  const url = URL.createObjectURL(new Blob([file.content], { type: file.mime }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = file.name;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  void downloadResponseFile(file).catch(() => toast.error("Download failed. Try again."));
 }
 type CopyState = "idle" | "copied" | "error";
 
@@ -220,6 +222,17 @@ export function FilePreviewPane({
             referrerPolicy="no-referrer"
             srcDoc={previewDoc}
           />
+        ) : view === "preview" && file.language === "pdf" ? (
+          <div className="kova-file-pane-document">
+            <Suspense fallback={<p role="status">Preparing PDF preview…</p>}>
+              <GeneratedPdfPreview
+                key={JSON.stringify([file.name, file.content])}
+                title={file.name.replace(/\.pdf$/iu, "")}
+                content={file.content}
+                blankLetter
+              />
+            </Suspense>
+          </div>
         ) : view === "preview" && file.language === "markdown" && renderMarkdown ? (
           <div className="kova-file-pane-document prose-chat" tabIndex={0}>
             {renderMarkdown?.(file.content)}

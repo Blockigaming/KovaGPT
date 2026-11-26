@@ -4,18 +4,17 @@
   display: flex;
   align-items: stretch;
   width: min(100%, 480px);
+  min-width: 0;
+  max-width: 100%;
   margin-block: 12px;
   border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
   border-radius: 14px;
   background: color-mix(in oklab, var(--background) 82%, var(--muted));
-  transition:
-    border-color 140ms ease,
-    background-color 140ms ease;
+  transition: background-color 140ms ease;
 }
 .kova-file-card:hover:not([data-state="writing"]),
 .kova-file-card[data-active] {
-  border-color: color-mix(in oklab, var(--foreground) 24%, var(--border));
-  background: color-mix(in oklab, var(--background) 70%, var(--muted));
+  background: var(--accent);
 }
 .kova-file-card-open {
   display: flex;
@@ -59,6 +58,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
   min-width: 0;
 }
 .kova-file-card-title {
@@ -67,16 +67,16 @@
   font-size: 15px;
   font-weight: 500;
   line-height: 20px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .kova-file-card-meta {
   overflow: hidden;
   color: var(--muted-foreground);
   font-size: 13px;
   line-height: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .kova-file-card-download {
   display: inline-grid;
@@ -118,6 +118,8 @@
   align-items: center;
   gap: 4px;
   min-height: 28px;
+  max-width: 100%;
+  text-align: start;
   margin: 0 0 8px;
   padding: 0;
   border: 0;
@@ -133,6 +135,7 @@
 .kova-activity-summary svg {
   width: 14px;
   height: 14px;
+  flex: none;
   transition: transform 160ms ease;
 }
 .kova-activity-summary[aria-expanded="true"] svg {
@@ -153,4 +156,100 @@
   .kova-activity-summary svg {
     transition: none;
   }
+}
+
+/* Response browser handoff: wrap the action instead of squeezing the label. */
+.kova-response-browser-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 448px);
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-align: start;
+  transition: background-color 140ms ease;
+}
+.kova-response-browser-card:hover {
+  background: var(--accent);
+}
+.kova-response-browser-card:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-response-browser-details {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kova-response-browser-action {
+  flex: 0 1 auto;
+  max-width: 100%;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 479px) {
+  .kova-file-card-open {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+  .kova-file-card-download {
+    margin-inline-end: 6px;
+    min-height: 44px;
+  }
+  .kova-activity-summary {
+    min-height: 44px;
+  }
+}
+
+.kova-browser-destination-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  width: min(100%, 448px);
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.kova-browser-destination-form label {
+  display: flex;
+  flex: 1 1 180px;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+.kova-browser-destination-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 16px;
+}
+.kova-browser-destination-form button {
+  min-height: 44px;
+  max-width: 100%;
+  padding-inline: 12px;
+  border-radius: 8px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.kova-browser-destination-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.kova-browser-destination-form :is(input, button):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

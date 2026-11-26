@@ -191,7 +191,7 @@ const CHART_INSTRUCTION = "";
 // Files appear in chat as a card that opens a side preview, so a file needs its name.
 const FILE_OUTPUT_INSTRUCTION = `
 
-When the user asks you to make, create, build or write a file (a web page, game, script, stylesheet, config, component, data file or similar), put the complete file in one fenced code block whose opening line has the language and a quoted filename, for example: \`\`\`html filename="game.html". Use a short, descriptive lowercase filename with the right extension. A self-contained web page or game goes in a single .html file with its CSS and JavaScript inline and no external network requests. Keep the explanation around the file brief, and do not repeat the file's contents outside the block. Ordinary short code examples that are not files need no filename.`;
+When the user asks you to make, create, build or write a file (a web page, game, script, stylesheet, config, component, data file or similar), put the complete file in one fenced code block whose opening line has the language and a quoted filename, for example: \`\`\`html filename="game.html". Use a short, descriptive lowercase filename with the right extension. A self-contained web page or game goes in a single .html file with its CSS and JavaScript inline and no external network requests. Keep the explanation around the file brief, and do not repeat the file's contents outside the block. For PDF requests, use a named pdf fence containing only the document's Markdown text (an empty fence for a blank page); the application generates the actual PDF bytes. Never invent PDF binary syntax or base64. Ordinary short code examples that are not files need no filename.`;
 const COMPACT_CHART_INSTRUCTION = `
 
 When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
@@ -203,7 +203,7 @@ When a chart would help, emit a complete fenced kova-chart JSON block using this
 // The file-output protocol is only sent when the turn plausibly asks for a file, so
 // ordinary Free turns keep their token headroom.
 const FILE_OUTPUT_REQUEST =
-  /\b(?:files?|web ?pages?|websites?|web ?sites?|landing page|games?|apps?|scripts?|html|css|javascript|typescript|python|components?|config|program|code|svg|readme)\b/i;
+  /\b(?:files?|web ?pages?|websites?|web ?sites?|landing page|games?|apps?|scripts?|html|css|javascript|typescript|python|components?|config|program|code|svg|pdf|readme)\b/i;
 const RICH_RESPONSE_REQUEST =
   /\b(?:charts?|plots?|graphs?|heatmaps?|radar|candlesticks?|sankey|waterfalls?|treemaps?|histograms?|diagrams?|flowcharts?|maps?|quizz(?:es)?|quiz|flashcards?|simulations?|memory game|sticker packs?|patterns?|narration|read aloud|interactive|file bundle|zip archive|latex|equations?)\b/i;
 const CREATOR_INSTRUCTION = "";
@@ -2448,6 +2448,11 @@ export const Route = createFileRoute("/api/chat")({
                             enc.encode(sseEvent(responseSourcesDelta(webSources))),
                           );
                         }
+                        if (browserActivity) {
+                          controller.enqueue(
+                            enc.encode(sseEvent(activityToSseDelta(browserActivity))),
+                          );
+                        }
                         for (const a of activityEvents) {
                           controller.enqueue(
                             enc.encode(
@@ -2854,10 +2859,13 @@ export const Route = createFileRoute("/api/chat")({
               // If we already committed to SSE (activities/confirms staged),
               // deliver the error inside the stream so the client renders it
               // instead of hanging.
-              if (hasStreamedActivity) {
+              if (hasStreamedActivity || browserActivity) {
                 const enc = new TextEncoder();
                 const stream = new ReadableStream({
                   start(controller) {
+                    if (browserActivity) {
+                      controller.enqueue(enc.encode(sseEvent(activityToSseDelta(browserActivity))));
+                    }
                     for (const a of activityEvents) {
                       controller.enqueue(
                         enc.encode(
