@@ -13,10 +13,22 @@ Owner direction, 2026-11-26: build a complete paid public API for Kova models an
 
 - USD 80 face value each monthly paid Pro subscription period, automatically associated with that same account. No manual claim or account-link step. No carryover, cash redemption, gift, or transfer.
 - Proposed period definition: authoritative paid subscription billing period (not browser time or calendar month). At renewal expire the unused balance and grant at most one new USD 80 allowance for the new eligible period. Confirm billing-period edge cases before enabling.
-- Purchased developer credits must be a separate balance/ledger bucket. Consume eligible included credits first, then purchased credits only within the customer's configured budget. Never reset purchased credits at renewal.
+- Purchased developer credits must be a separate balance/ledger bucket. Consume eligible included credits first, then purchased credits only within the customer's configured budget. Never reset purchased credits at subscription renewal; each purchased lot follows its own expiry below.
 - All grants, expiry, reservations, usage settlement, adjustments and releases must be atomic, auditable and idempotent; preserve original funding bucket on releases. Explicitly handle in-flight usage crossing expiry, duplicate/out-of-order subscription events, downgrade, cancellation, refunds, disputes and multiple workspaces. A refund or plan change must not create a second grant.
 - Verify subscription status on the server against the established payment authority, not user metadata or a client-supplied plan. Reconcile against actual provider usage; enforce account/project/key limits and zero-balance rejection before provider dispatch.
 - No Stripe charge, live credit grant, SQL migration or activation is authorized by this design document. Coordinate with consumer credits PR #774; do not conflate its wallet with developer API credits. Review upstream cost and gross margin before launch.
+
+## Purchased API credits and optional KovaGPT usage
+
+Owner clarification, 2026-11-26: purchased API credits expire one year after purchase and can optionally fund KovaGPT consumer usage. This setting is off by default.
+
+- Track each confirmed purchase as a distinct credit lot with original amount, remaining amount, purchase timestamp, and expiry one calendar year after purchase (UTC; define and test leap-day handling). Subsequent purchases, auto-reload, sign-in, setting changes, or internal allocation must never extend an existing lot's expiry. Pending or failed payments create no spendable credits.
+- Expire only unspent value from the specific lot. Apply earliest-expiring eligible purchased lots first after included API allowance for API requests. Preserve expiry and original funding provenance for refunds, reservation releases and reconciliation. Show expiry dates, expiring amounts and purchase history in Billing. Review applicable prepaid-credit terms and consumer protection requirements before commercial activation.
+- Add a server-persisted account setting, "Use purchased API credits for KovaGPT usage", default false for new and existing accounts. Expose it in KovaGPT Settings > Usage and developer Billing; both surfaces read and write the same verified user's setting. Explain that enabling it allows eligible paid over-limit consumer usage to draw from purchased API credits.
+- Proposed spending order: consumer plan allowance first, then existing consumer usage wallet, then eligible purchased API credits only when the setting is enabled. Do not spend or convert the included monthly Pro API allowance on consumer usage. Do not automatically purchase credits or enable auto-reload through this toggle; those require separate explicit settings.
+- Use a shared atomic authorization/reservation/settlement boundary across API and consumer spending so the same purchased balance cannot be spent twice. No duplicate wallet credit, copying of balances, or transfer that resets expiry. Apply the established consumer usage price, cost floor, user budget and limits. If disabled, insufficient, expired, or unauthorized, fall back to the existing consumer behavior without charging API credits.
+- Disabling the setting blocks new consumer reservations immediately; already authorized in-flight reservations reconcile against the original lot. Record every debit with surface, model/service, purchase lot and request identity. Show both API and KovaGPT usage in transaction history and prevent cross-account or cross-organization spending.
+- Coordinate integration with PR #774 before release. Add tests for one-year expiry per lot, staggered purchases, toggle default/persistence/revocation, opt-in/opt-out, included-credit isolation, insufficient funds, simultaneous API/consumer reservations, replay, and refund/expiry reconciliation.
 
 ## Required independently navigable product surfaces
 
@@ -28,7 +40,7 @@ Owner direction, 2026-11-26: build a complete paid public API for Kova models an
 | Development | API keys, service accounts, projects, logs, request details, webhooks |
 | Resources | Files, vector stores, containers, agent runs, browser sessions |
 | Usage | Spend, requests, tokens and per-service meters; filter by project, model, key and date |
-| Billing | Balance, included Pro allowance and renewal date, purchased credits, auto-reload, payment methods, invoices, transaction history, limits |
+| Billing | Balance, included Pro allowance and renewal date, purchased credits and lot expiry, KovaGPT usage opt-in, auto-reload, payment methods, invoices, transaction history, limits |
 | Settings | Profile, organization, members, roles, permissions, security |
 | Documentation | Overview, quickstart, authentication, API reference by service, guides, SDKs, examples, errors, limits, pricing, status, changelog |
 
