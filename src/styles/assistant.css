@@ -197,6 +197,7 @@
 }
 
 .kova-assistant .kova-desktop-topbar {
+  --chat-toolbar: 48px;
   flex-basis: var(--chat-toolbar);
   padding-inline: var(--chat-gap);
 }

@@ -15,6 +15,9 @@
   color: var(--foreground);
   box-shadow: none;
 }
+.dark .kova-response-output {
+  background: color-mix(in oklab, var(--surface-secondary, var(--card)) 90%, var(--foreground));
+}
 .kova-response-output-header {
   grid-area: header;
   min-height: 44px;
@@ -24,7 +27,6 @@
   gap: 8px;
   padding-inline: 16px;
   min-width: 0;
-  border-bottom: 1px solid var(--border);
   font-size: 13px;
   line-height: 18px;
 }
@@ -76,7 +78,6 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  border-bottom: 1px solid var(--border);
 }
 .kova-response-copy-button,
 .kova-response-download-button {
@@ -660,5 +661,15 @@ body .prose-chat .kova-table-scroll:focus-visible {
   }
   .kova-response-output[data-output-kind="code"] .kova-response-output-header {
     padding-inline-end: 168px;
+  }
+}
+
+/* Desktop writing blocks share the code block's quiet, icon-only header. */
+@media (min-width: 768px) {
+  .kova-response-output[data-output-kind="text"] .kova-response-copy-button {
+    padding-inline: 12px;
+  }
+  .kova-response-output[data-output-kind="text"] .kova-copy-label-stack {
+    display: none;
   }
 }

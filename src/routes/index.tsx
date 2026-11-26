@@ -2331,7 +2331,10 @@ function KovaGPT() {
         if (!isCurrentRequest()) return;
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
         const browserErrorKind = transport?.cloudBrowserErrorKind(e);
-        if (browserErrorKind || (e as Error).name === "AbortError") {
+        const addressReply = transport?.browserAddressReply(e);
+        if (addressReply) {
+          updateAssistantMessage((message) => ({ ...message, ...addressReply }));
+        } else if (browserErrorKind || (e as Error).name === "AbortError") {
           const browserMessage =
             browserErrorKind === "browser_limit"
               ? CLOUD_BROWSER_DAILY_LIMIT_MESSAGE

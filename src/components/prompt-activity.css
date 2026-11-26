@@ -55,6 +55,7 @@
 }
 .kova-activity-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -64,6 +65,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   min-height: 28px;
   font-size: 13px;
   color: var(--muted-foreground);
@@ -146,6 +148,9 @@
 .kova-activity-text {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   gap: 2px;
 }
 .kova-activity-detail {
@@ -155,12 +160,14 @@
 }
 .kova-activity-progress {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 12px;
 }
 .kova-activity-progress progress {
   width: 120px;
+  max-width: 100%;
   height: 4px;
   appearance: none;
   border: 0;
@@ -373,6 +380,7 @@
 }
 .kova-step-group-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   margin: 8px 0 4px 7px;
   padding: 4px 0 4px 22px;
@@ -435,4 +443,22 @@ button.kova-response-work-time[aria-expanded="true"] .kova-response-work-chevron
   border-radius: 0;
   background: none;
   box-shadow: none;
+}
+
+@media (max-width: 479px) {
+  .kova-activity-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kova-activity-row[data-nested] {
+    padding-inline-start: 12px;
+  }
+  .kova-step-group-text {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .kova-step-group > summary {
+    min-height: 44px;
+    flex-wrap: wrap;
+  }
 }

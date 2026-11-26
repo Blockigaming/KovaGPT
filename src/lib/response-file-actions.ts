@@ -10,8 +10,18 @@ export function fileIcon(file: Pick<ResponseFile, "language" | "category">) {
 }
 
 /** Save a reply's file locally with its own name and type. */
-export function downloadResponseFile(file: Pick<ResponseFile, "name" | "content" | "mime">) {
-  const url = URL.createObjectURL(new Blob([file.content], { type: file.mime }));
+export async function downloadResponseFile(file: Pick<ResponseFile, "name" | "content" | "mime">) {
+  let blob: Blob;
+  if (/\.pdf$/iu.test(file.name)) {
+    const { createBlankLetterPdf, createDocumentPdf } = await import("./writing-export/pdf");
+    const bytes = file.content.trim()
+      ? await createDocumentPdf(file.name.replace(/\.pdf$/iu, ""), file.content)
+      : await createBlankLetterPdf();
+    blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
+  } else {
+    blob = new Blob([file.content], { type: file.mime });
+  }
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = file.name;

@@ -5,6 +5,20 @@ import { enqueueMemoryWrite } from "./memory-write-coordinator.mjs";
 
 export { chatResponseError, cloudBrowserErrorKind, consumeChatSse } from "./chat-sse-client.mjs";
 
+export function browserAddressReply(error) {
+  if (error?.code !== "cloud_browser_url_required") return null;
+  return {
+    content: "Enter a public HTTPS address to open Cloud Browser.",
+    activities: [
+      {
+        tool: "browser_open_request",
+        label: "Choose a website to open",
+        status: "done",
+      },
+    ],
+  };
+}
+
 async function digestMessages(messages) {
   const bytes = new TextEncoder().encode(
     JSON.stringify({
