@@ -4,6 +4,8 @@ export function canBuyUsageCredits(tier) {
   return USAGE_CREDIT_TIERS.includes(tier);
 }
 
+export const DEFAULT_USAGE_CREDIT_MARGIN_BPS = 1_000;
+
 const BPS = 10_000n;
 const MICROS_PER_CENT = 10_000n;
 
@@ -18,7 +20,7 @@ export function quoteUsageCreditDebit({
   costMicros,
   topUpCents,
   paymentFeeCents,
-  targetMarginBps,
+  targetMarginBps = DEFAULT_USAGE_CREDIT_MARGIN_BPS,
 }) {
   if (
     ![costMicros, topUpCents, paymentFeeCents, targetMarginBps].every(Number.isSafeInteger) ||

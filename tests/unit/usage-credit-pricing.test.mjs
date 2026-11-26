@@ -20,6 +20,10 @@ test("only paid consumer tiers can purchase usage credits", () => {
 test("the minimum debit covers direct costs, allocated payment fees and the selected gross margin", () => {
   const { debitMicros, fitsWithinFundingLotFaceValue } = quoteUsageCreditDebit(inputs);
   assert.equal(debitMicros, 1_164_416);
+  assert.equal(
+    quoteUsageCreditDebit({ ...inputs, targetMarginBps: undefined }).debitMicros,
+    debitMicros,
+  );
   assert.equal(fitsWithinFundingLotFaceValue, true);
   const denominator =
     inputs.topUpCents * (10_000 - inputs.targetMarginBps) - inputs.paymentFeeCents * 10_000;
