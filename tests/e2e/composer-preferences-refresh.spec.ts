@@ -28,7 +28,7 @@ for (const [tier, choices] of [
         () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
       );
       await height.toBeLessThanOrEqual(
-        singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+        singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 100,
       );
     } else {
       const phone = await page.evaluate(

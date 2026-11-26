@@ -88,7 +88,13 @@ test("crossing the phone and tablet boundaries preserves the draft and model men
     await trigger.click();
     const menu = page.getByRole("dialog", { name: "Select model", exact: true });
     await expect(menu).toBeVisible();
-    await expect.poll(async () => (await menu.boundingBox())?.width).toBeCloseTo(282, 0);
+    if (width < 768) {
+      // Phones anchor the popup directly above the chat bar at the bar's width.
+      const bar = (await page.locator(".spec400-composer:visible").first().boundingBox())!;
+      await expect.poll(async () => (await menu.boundingBox())?.width).toBeCloseTo(bar.width, 0);
+      const above = (await menu.boundingBox())!;
+      expect(above.y + above.height).toBeLessThanOrEqual(bar.y);
+    } else await expect.poll(async () => (await menu.boundingBox())?.width).toBeCloseTo(282, 0);
     const box = (await menu.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);

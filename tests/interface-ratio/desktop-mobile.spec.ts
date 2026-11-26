@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
-import { expectsSeparateModeRow } from "../e2e/current-ui";
 import { fixture } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
@@ -193,7 +192,11 @@ for (const state of states) {
     if (state.name === "home") {
       const welcomeLogo = page.locator(".kova-greeting .kova-home-welcome-logo");
       await expect(welcomeLogo).toBeVisible();
-      await expect(page.locator(".kova-greeting .kova-home-greeting-text")).toBeHidden();
+      // Portrait phones show the greeting text under the logo; short landscape
+      // phones keep only the logo to leave room for the composer.
+      const greetingText = page.locator(".kova-greeting .kova-home-greeting-text");
+      if (data.viewport.width < 768) await expect(greetingText).toBeVisible();
+      else await expect(greetingText).toBeHidden();
       const expectedSize = Math.min(72, Math.max(48, data.viewport.width * 0.16));
       const logo = await welcomeLogo.boundingBox();
       expect(logo!.width).toBeCloseTo(expectedSize, 1);
@@ -203,8 +206,20 @@ for (const state of states) {
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
       ).toBeCloseTo(0.47, 2);
-      const stacked = await expectsSeparateModeRow(page.locator(".spec400-composer"));
-      expect(row(".spec400-composer").height).toBe(stacked ? 148 : 96);
+      // The add control, model chip, mic and voice share one compact action row.
+      const centers = await page.evaluate(() =>
+        [
+          'button[aria-label="Attach"]',
+          ".kova-consumer-model-trigger, .kova-thinking-toggle",
+          "[data-testid=dictate-button]",
+          ".spec400-primary-voice",
+        ].map((selector) => {
+          const box = document.querySelector(selector)!.getBoundingClientRect();
+          return box.top + box.height / 2;
+        }),
+      );
+      for (const center of centers) expect(Math.abs(center - centers[0])).toBeLessThanOrEqual(4);
+      expect(row(".spec400-composer").height).toBe(96);
       expect(row(".kova-topbar").height).toBe(56);
       expect(row(".spec400-primary-voice").height).toBeGreaterThanOrEqual(44);
       await expect(page.locator(".kova-composer-tray")).toBeHidden();
