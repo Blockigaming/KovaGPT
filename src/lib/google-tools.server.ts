@@ -311,7 +311,9 @@ export async function getAvailableGoogleTools(
     await Promise.all(
       (["gmail", "google-calendar"] as const).map(async (connector) => {
         // Write policy availability must not hide independently authorized read tools.
-        const allowed = await connectorWriteAllowed(userId, connector, accountId).catch(() => false);
+        const allowed = await connectorWriteAllowed(userId, connector, accountId).catch(
+          () => false,
+        );
         if (allowed) writeAccess.add(connector);
       }),
     );
@@ -448,7 +450,8 @@ export async function runGoogleTool(
       case "google_connection_changed":
         return {
           error: "google_reauthorization_required",
-          message: "Google authorization needs to be renewed. Reconnect the account on Connections.",
+          message:
+            "Google authorization needs to be renewed. Reconnect the account on Connections.",
         };
       case "google_permission_incomplete":
         return {
