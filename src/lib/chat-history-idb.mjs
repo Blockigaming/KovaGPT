@@ -46,8 +46,8 @@ export async function loadChatHistoryDevice(ownerId) {
     const [meta, rows] = await Promise.all([
       result(tx.objectStore("meta").get(ownerId)),
       result(tx.objectStore("records").index("ownerId").getAll(IDBKeyRange.only(ownerId), 10001)),
+      done,
     ]);
-    await done;
     if (!meta) return null;
     if (rows.length > 10000) throw new Error("chat_history_device_unavailable");
     return { ...meta, records: Object.fromEntries(rows.map(({ id, record }) => [id, record])) };
@@ -74,22 +74,34 @@ export async function commitChatHistoryDevice(previous, next, { signal } = {}) {
       signal?.addEventListener("abort", abort, { once: true });
       // Check the persistent reset generation in the same transaction as every
       // write, including I/O initiated by a tab before another tab erased it.
-      const check = tx.objectStore("meta").get(next.ownerId);
-      check.onsuccess = () => {
-        const meta = check.result;
-        if (meta && meta.localEpoch !== next.localEpoch) {
-          tx.abort();
-          return;
-        }
-        const records = tx.objectStore("records");
-        for (const [id, record] of Object.entries(next.records))
-          if (previous?.records[id] !== record) records.put({ ownerId: next.ownerId, id, record });
-        for (const id of Object.keys(previous?.records ?? {}))
-          if (!Object.hasOwn(next.records, id)) records.delete([next.ownerId, id]);
-        const { records: ignored, ...metadata } = next;
-        tx.objectStore("meta").put(metadata);
-      };
-      await done;
+      // Capture stores while the transaction is active. A WebKit navigation or
+      // aborted writer may invalidate it before a queued success callback runs.
+      const metadataStore = tx.objectStore("meta");
+      const records = tx.objectStore("records");
+      const check = metadataStore.get(next.ownerId);
+      const writes = new Promise((resolve, reject) => {
+        check.onerror = () => reject(new Error("chat_history_device_unavailable"));
+        check.onsuccess = () => {
+          try {
+            if (signal?.aborted) throw new Error("chat_history_canceled");
+            const meta = check.result;
+            if (meta && meta.localEpoch !== next.localEpoch)
+              throw new Error("chat_history_device_unavailable");
+            for (const [id, record] of Object.entries(next.records))
+              if (previous?.records[id] !== record)
+                records.put({ ownerId: next.ownerId, id, record });
+            for (const id of Object.keys(previous?.records ?? {}))
+              if (!Object.hasOwn(next.records, id)) records.delete([next.ownerId, id]);
+            const { records: ignored, ...metadata } = next;
+            metadataStore.put(metadata);
+            resolve();
+          } catch (error) {
+            reject(error);
+            abort();
+          }
+        };
+      });
+      await Promise.all([done, writes]);
     } finally {
       if (abort) signal?.removeEventListener("abort", abort);
       db.close();

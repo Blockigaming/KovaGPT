@@ -151,6 +151,7 @@ export function createGitHubChatTools({
   rate,
   decrypt,
   configured,
+  renewAccount,
   fetchImpl = fetch,
   now = Date.now,
 }) {
@@ -209,6 +210,18 @@ export function createGitHubChatTools({
       installations.data.length > 60
     )
       throw new Error("github_read_context_unavailable");
+    if (renewAccount) {
+      const usedAccounts = new Set(repositories.data.map((repository) => repository.account_id));
+      let attempts = 0;
+      for (const [index, account] of accounts.data.entries()) {
+        if (attempts >= 3) break;
+        if (!usedAccounts.has(account.id) || validExpiry(account, now())) continue;
+        attempts += 1;
+        const renewed = await renewAccount(ownerId, account.id).catch(() => null);
+        if (renewed?.id === account.id && renewed.owner_id === ownerId)
+          accounts.data[index] = renewed;
+      }
+    }
     const bindings = repositories.data.flatMap((r) => {
       const a = accounts.data.find((a) => a.id === r.account_id);
       const i = installations.data.find((i) => i.id === r.installation_id);

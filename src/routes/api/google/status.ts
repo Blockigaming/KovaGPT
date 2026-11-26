@@ -4,6 +4,7 @@ import { getGoogleAccountsHealth } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { safeConnectorError } from "@/lib/connectors.server";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
+import { connectorWriteAllowed } from "@/lib/connector-write-policy.server";
 
 export const Route = createFileRoute("/api/google/status")({
   server: {
@@ -20,9 +21,21 @@ export const Route = createFileRoute("/api/google/status")({
         const limited = await enforceGoogleRateLimit(auth.userId, "status", 30);
         if (limited) return limited;
         try {
-          return Response.json(await getGoogleAccountsHealth(auth.userId), {
-            headers: { "Cache-Control": "private, no-store", Vary: "Authorization" },
-          });
+          const health = await getGoogleAccountsHealth(auth.userId);
+          const selected = health.selectedConnectionId;
+          const [gmail, calendar] =
+            selected && health.connected
+              ? await Promise.all([
+                  connectorWriteAllowed(auth.userId, "gmail", selected),
+                  connectorWriteAllowed(auth.userId, "google-calendar", selected),
+                ])
+              : [false, false];
+          return Response.json(
+            { ...health, writeAccess: { gmail, calendar } },
+            {
+              headers: { "Cache-Control": "private, no-store", Vary: "Authorization" },
+            },
+          );
         } catch (error) {
           console.error("[google status]", safeConnectorError(error));
           return Response.json(

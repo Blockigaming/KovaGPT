@@ -133,7 +133,7 @@ test("actual auth endpoint validates connector before starting an OAuth attempt"
     assert.equal(result.status, 200);
     assert.equal(
       new URL((await result.json()).url).searchParams.get("scope"),
-      policy.googleConnectorScopes(connector),
+      policy.googleConnectorScopes(connector, "read"),
     );
     assert.match(result.headers.get("set-cookie"), /HttpOnly; Secure; SameSite=Lax/);
   }

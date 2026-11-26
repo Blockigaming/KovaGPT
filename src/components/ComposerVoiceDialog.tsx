@@ -1,6 +1,6 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
-import { ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
+import { ArrowUp, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { DialogContent } from "@/components/ui/dialog";
@@ -8,22 +8,12 @@ import { ComposerVoiceDialogView } from "@/components/ComposerVoiceDialogView";
 import { ComposerDictationView } from "@/components/ComposerDictationView";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   isPrincipalBrowserStorageClearedEvent,
-  principalScopedStorageKey,
-  safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
 import {
-  VOICE_PREFERENCE_KEY,
   preferredVoice,
   preferredVoiceGlow,
   readVoiceChoices,
@@ -89,6 +79,7 @@ export interface ComposerVoiceDialogProps {
   inlineDictation?: boolean;
   autoStartVoice?: boolean;
   onVoiceSubmit?: ComposerVoiceSubmit;
+  onVoicePlaybackProgress?: (fraction: number | null) => void;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   isStreaming: boolean;
@@ -151,6 +142,7 @@ export function ComposerVoiceDialog({
   inlineDictation = false,
   autoStartVoice = false,
   onVoiceSubmit,
+  onVoicePlaybackProgress,
   latestAssistantText = "",
   latestAssistantReply,
   isStreaming,
@@ -158,12 +150,37 @@ export function ComposerVoiceDialog({
   onCloseAutoFocus,
 }: ComposerVoiceDialogProps) {
   const transcriptId = useId();
-  const voicePickerId = useId();
-  const voiceHelpId = useId();
+  const voiceGlow = useRef<HTMLDivElement>(null);
+  const glowTarget = useRef(0);
+  const updateGlow = (level: number) => {
+    glowTarget.current = 1 - Math.exp(-9 * Math.max(0, level - 0.002));
+  };
+
   const [realtimeFailed, setRealtimeFailed] = useState(false);
   const [capabilities, setCapabilities] = useState<VoiceCapabilities | null>(null);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
+  useLayoutEffect(() => {
+    const glow = voiceGlow.current;
+    if (!glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let smoothed = 0;
+    let previous = performance.now();
+    let frame: number;
+    const animate = (now: number) => {
+      const elapsed = Math.max(0, Math.min(64, now - previous));
+      previous = now;
+      const target = glowTarget.current;
+      const response = target > smoothed ? 85 : 250;
+      smoothed += (target - smoothed) * (1 - Math.exp(-elapsed / response));
+      glow.style.setProperty("--voice-level", smoothed.toFixed(3));
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(frame);
+      glowTarget.current = 0;
+    };
+  }, [open, phase]);
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
   /** This voice session's turns with speaker and time; cleared when the dialog closes. */
@@ -176,7 +193,6 @@ export function ComposerVoiceDialog({
   const [audioUrl, setAudioUrl] = useState("");
   const [capabilityAttempt, setCapabilityAttempt] = useState(0);
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
-  const [preferenceNotice, setPreferenceNotice] = useState("");
   const [lastVoiceReply, setLastVoiceReply] = useState("");
   const dictationStartScope = useRef<string | null>(null);
   const voiceStartScope = useRef<string | null>(null);
@@ -198,6 +214,7 @@ export function ComposerVoiceDialog({
     latestAssistantReply,
     mode,
     onVoiceSubmit,
+    onVoicePlaybackProgress,
     onOpenChange,
   });
   current.current = {
@@ -210,6 +227,7 @@ export function ComposerVoiceDialog({
     latestAssistantReply,
     mode,
     onVoiceSubmit,
+    onVoicePlaybackProgress,
     onOpenChange,
   };
   const streamingBlocked = mode !== "voice" && isStreaming;
@@ -269,6 +287,7 @@ export function ComposerVoiceDialog({
 
   const releasePlayback = useCallback(() => {
     if (player.current) {
+      player.current.onended = player.current.onerror = null;
       player.current.pause();
       player.current.removeAttribute("src");
       player.current.load();
@@ -282,6 +301,7 @@ export function ComposerVoiceDialog({
     // resources. A late getUserMedia result must immediately stop its own tracks.
     generation.current += 1;
     voiceSessionActive.current = false;
+    if (current.current.mode === "voice") current.current.onVoicePlaybackProgress?.(null);
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
     activePlayback?.stop();
@@ -339,7 +359,6 @@ export function ComposerVoiceDialog({
     selectedVoice.current = "";
     defaultVoice.current = "";
     setSelectedVoiceId("");
-    setPreferenceNotice("");
     setLastVoiceReply("");
     setVoiceLog([]);
     if (open) billingAfterClose.current = null;
@@ -504,7 +523,6 @@ export function ComposerVoiceDialog({
       setLastVoiceReply("");
       selectedVoice.current = defaultVoice.current;
       setSelectedVoiceId(defaultVoice.current);
-      setPreferenceNotice("");
       current.current.onOpenChange(false);
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, resetPreference);
@@ -582,12 +600,24 @@ export function ComposerVoiceDialog({
         ...log.slice(-49),
         { speaker: "Kova", text: reply.content, at: Date.now() },
       ]);
-      updatePhase("speaking");
+      updatePhase("synthesizing");
       let ended = false;
       let started = false;
+      const wordCount = reply.content.trim().split(/\s+/u).length;
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
-        createSink: createBrowserSpeechSink,
+        createSink: (options) =>
+          createBrowserSpeechSink({
+            ...options,
+            onLevel: updateGlow,
+            onProgress: (elapsed, duration) => {
+              if (!isCurrent(scope) || voicePlayback.current !== playback) return;
+              // MP3 streams may initially report an infinite duration. Start
+              // with a speech-rate estimate and refine it as metadata arrives.
+              const total = Number.isFinite(duration) && duration > 0 ? duration : wordCount / 2.7;
+              current.current.onVoicePlaybackProgress?.(Math.min(0.99, (elapsed + 0.18) / total));
+            },
+          }),
         onEnded: (completed) => {
           if (
             !isCurrent(scope) ||
@@ -600,6 +630,7 @@ export function ComposerVoiceDialog({
           )
             return;
           ended = true;
+          current.current.onVoicePlaybackProgress?.(null);
           voicePlayback.current = null;
           updatePhase("idle");
           // Only the shared manager's current natural-ended receipt advances
@@ -610,6 +641,7 @@ export function ComposerVoiceDialog({
         onState: (state, code) => {
           if (!isCurrent(scope) || voicePlayback.current !== playback) return;
           if (state === "loading") started = true;
+          if (state === "playing") updatePhase("speaking");
           if (state === "error") {
             const messages: Record<string, string> = {
               speech_message_not_synced:
@@ -634,6 +666,7 @@ export function ComposerVoiceDialog({
             void Promise.resolve().then(() => {
               if (!isCurrent(scope) || voicePlayback.current !== playback || ended) return;
               voicePlayback.current = null;
+              current.current.onVoicePlaybackProgress?.(null);
               voiceSessionActive.current = false;
               updatePhase("idle");
             });
@@ -660,6 +693,64 @@ export function ComposerVoiceDialog({
       );
     } catch (cause) {
       if (!isCurrent(scope)) return;
+      const limit = cause as { code?: string; resetsAt?: string } | null;
+      if (limit?.code === "message_window_limit" && typeof limit.resetsAt === "string") {
+        const remaining = Math.ceil((Date.parse(limit.resetsAt) - Date.now()) / 60_000);
+        if (Number.isFinite(remaining) && remaining > 0 && remaining <= 7 * 24 * 60) {
+          const hours = Math.floor(remaining / 60);
+          const minutes = remaining % 60;
+          const duration = [
+            hours ? `${hours} ${hours === 1 ? "hour" : "hours"}` : "",
+            minutes ? `${minutes} ${minutes === 1 ? "minute" : "minutes"}` : "",
+          ]
+            .filter(Boolean)
+            .join(" and ");
+          const notice = `Whoops! You've hit your usage limit, although we can talk again in ${duration}.`;
+          finishRequest(controller);
+          current.current.onVoicePlaybackProgress?.(null);
+          setError(notice);
+          updatePhase("synthesizing");
+          const noticeRequest = beginRequest(20_000);
+          try {
+            const response = await authFetch("/api/voice", {
+              method: "POST",
+              signal: noticeRequest.signal,
+              headers: {
+                "Content-Type": "application/json",
+                "X-Kova-Voice-Owner": scope.userId,
+              },
+              // The server picks the plan's default ElevenLabs voice.
+              body: JSON.stringify({ action: "tts", text: notice }),
+            });
+            if (!response.ok) throw new Error("voice_notice_unavailable", { cause });
+            const audio = await response.blob();
+            if (!isCurrent(scope) || noticeRequest.signal.aborted) return;
+            const output = new Audio();
+            player.current = output;
+            objectUrl.current = URL.createObjectURL(audio);
+            output.src = objectUrl.current;
+            const finishNotice = () => {
+              if (!isCurrent(scope) || player.current !== output) return;
+              releasePlayback();
+              voiceSessionActive.current = false;
+              updatePhase("idle");
+            };
+            output.onended = output.onerror = finishNotice;
+            await output.play();
+            if (!isCurrent(scope) || player.current !== output) return;
+            updatePhase("speaking");
+          } catch {
+            if (isCurrent(scope)) {
+              releasePlayback();
+              voiceSessionActive.current = false;
+              updatePhase("idle");
+            }
+          } finally {
+            finishRequest(noticeRequest);
+          }
+          return;
+        }
+      }
       const code = cause instanceof Error ? cause.message : "";
       failOperation(
         controller.signal.aborted
@@ -842,6 +933,7 @@ export function ComposerVoiceDialog({
               throw new Error("Live Voice could not connect.");
             return token;
           },
+          onLevel: updateGlow,
           onListening: () => {
             startedListening = true;
             if (isCurrent(scope)) {
@@ -947,7 +1039,9 @@ export function ComposerVoiceDialog({
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
-            if (gate.sample(Math.sqrt(total / samples.length), Date.now())) stopRecording();
+            const level = Math.sqrt(total / samples.length);
+            updateGlow(level);
+            if (gate.sample(level, Date.now())) stopRecording();
           }, 100);
           silenceMonitor.current = { context, source, interval, gate };
           setHandsFreeListening(true);
@@ -1095,34 +1189,6 @@ export function ComposerVoiceDialog({
     }
     onOpenChange(next);
   };
-  const changeVoice = (id: string) => {
-    if (!userId || (phaseRef.current !== "idle" && phaseRef.current !== "synthesizing")) return;
-    const scope = { generation: generation.current, userId, contextKey };
-    if (!isCurrent(scope)) return;
-    const choice = voiceCatalog.current.find((voice) => voice.id === id);
-    if (!choice) return;
-    if (!choice.available) {
-      billingAfterClose.current = { userId, contextKey };
-      closeDialog(false);
-      return;
-    }
-    stopReplyPlayback();
-    selectedVoice.current = choice.id;
-    setSelectedVoiceId(choice.id);
-    setError("");
-    setPreferenceNotice("");
-    const key = principalScopedStorageKey(VOICE_PREFERENCE_KEY, scope.userId);
-    const storage = safeBrowserStorage("localStorage");
-    try {
-      if (!key || !storage) throw new Error("storage_unavailable");
-      storage.setItem(key, choice.id);
-    } catch {
-      setPreferenceNotice(
-        "Your voice choice applies for this session, but could not be saved on this device.",
-      );
-    }
-  };
-
   const handleCloseAutoFocus: NonNullable<ComposerVoiceDialogProps["onCloseAutoFocus"]> = (
     event,
   ) => {
@@ -1238,6 +1304,73 @@ export function ComposerVoiceDialog({
     !realtimeFailed &&
     canListenInRealtime();
 
+  if (mode === "voice" && autoStartVoice) {
+    if (!open) return null;
+    const liveStatus =
+      error ||
+      (startingVoice
+        ? "Starting Voice…"
+        : phase === "recording"
+          ? "Listening…"
+          : phase === "speaking"
+            ? "Kova is speaking…"
+            : busy
+              ? "Kova is responding…"
+              : ready
+                ? "Voice paused"
+                : "Voice is unavailable right now.");
+    return (
+      <div id="kova-inline-voice" className="kova-inline-voice" data-phase={phase}>
+        {(phase === "recording" || phase === "speaking") && (
+          <div
+            ref={voiceGlow}
+            style={glowStyle}
+            className="kova-inline-voice-glow"
+            aria-hidden="true"
+          />
+        )}
+        <span
+          role="status"
+          className={
+            !error && (phase === "recording" || phase === "speaking") ? "sr-only" : undefined
+          }
+        >
+          {liveStatus}
+        </span>
+        {ready && phase === "recording" && !realtimeListening && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Finish turn"
+            title="Finish turn"
+            onClick={stopRecording}
+          >
+            <ArrowUp aria-hidden="true" />
+          </Button>
+        )}
+        {ready && !busy && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => void startRecording()}>
+            Resume
+          </Button>
+        )}
+        {!checking && !capabilities && error && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              voiceStartScope.current = null;
+              setCapabilityAttempt((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <VoiceView
       open={open}
@@ -1270,60 +1403,6 @@ export function ComposerVoiceDialog({
       replyAvailable={mode === "voice" ? false : (capabilities?.tts ?? false)}
       error={error}
       conversationModelControl={conversationModelControl}
-      voicePicker={
-        !unavailable && !checking && capabilities && capabilities.voices.length > 0 ? (
-          <>
-            <label htmlFor={voicePickerId} className="sr-only">
-              Reply voice
-            </label>
-            <Select
-              value={selectedVoiceId}
-              onValueChange={changeVoice}
-              disabled={busy && phase !== "synthesizing"}
-            >
-              <SelectTrigger
-                id={voicePickerId}
-                aria-describedby={voiceHelpId}
-                className="kova-voice-picker-trigger min-h-11"
-              >
-                <SelectValue placeholder="Choose a voice" />
-              </SelectTrigger>
-              <SelectContent
-                className="max-h-64"
-                onCloseAutoFocus={(event) => {
-                  if (closing.current) event.preventDefault();
-                }}
-              >
-                {capabilities.voices.map((voice) => (
-                  <SelectItem
-                    key={voice.id}
-                    value={voice.id}
-                    className="min-h-11 whitespace-normal"
-                  >
-                    <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
-                      <span>{voice.label}</span>
-                      {!voice.available && (
-                        <>
-                          <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-                          <span className="text-xs text-muted-foreground">View plans</span>
-                        </>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p id={voiceHelpId} className="sr-only">
-              Choose a sound. Available voices depend on your plan.
-            </p>
-            {preferenceNotice && (
-              <p role="status" className="kova-voice-preference-notice">
-                {preferenceNotice}
-              </p>
-            )}
-          </>
-        ) : undefined
-      }
       recordingControl={
         ready && !realtimeListening ? (
           phase === "recording" ? (

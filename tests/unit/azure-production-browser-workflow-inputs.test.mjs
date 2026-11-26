@@ -17,18 +17,20 @@ const jobEnvironment = buildJob.split("    env:\n")[1]?.split("    steps:\n")[0]
 assert.ok(jobEnvironment, "Browser inputs are supplied to the whole protected job");
 const names = ["VITE_KOVA_AUTH_MODE", "VITE_KOVA_GOOGLE_AUTH_ENABLED", "VITE_KOVA_AUTH_ORIGIN"];
 
-// Evaluate only the literal protected-var expressions used by this workflow.
-// Missing GitHub vars are empty strings; nonempty strings such as "false" are
-// truthy. This is a source/config integration check, not an Actions/cloud run.
-function selectedBrowserInputs(variables = {}) {
+// Production workflows must pin the hosted authority, independent of stale vars.
+const ghcr = readFileSync(
+  new URL("../../.github/workflows/build-ghcr-production-candidate.yml", import.meta.url),
+  "utf8",
+);
+function selectedBrowserInputs() {
   return Object.fromEntries(
     names.map((name) => {
-      const entry = jobEnvironment.match(new RegExp(`^      ${name}: (.+)$`, "mu"));
-      assert.ok(entry, `${name} must reach the production job`);
-      const expression = entry[1].match(/^\$\{\{ vars\.([A-Z_]+)(?: \|\| '([^']*)')? \}\}$/u);
-      assert.ok(expression, `${name} uses only a protected public variable and literal default`);
-      assert.equal(expression[1], name, "Server Auth bindings cannot select browser values");
-      return [name, variables[name] || expression[2] || ""];
+      const entry = jobEnvironment.match(new RegExp(`^      ${name}: "([^"]*)"$`, "mu"));
+      assert.ok(entry, `${name} must be a pinned literal`);
+      const other = ghcr.match(new RegExp(`^      ${name}: "([^"]*)"$`, "mu"));
+      assert.ok(other, `${name} must also be pinned in the GHCR workflow`);
+      assert.equal(other[1], entry[1]);
+      return [name, entry[1]];
     }),
   );
 }
@@ -80,81 +82,51 @@ function forwarded(inputMode, variables, overrides) {
   };
 }
 
-test("workflow reads browser Auth inputs only inside the protected production build job", () => {
+const hosted = {
+  VITE_KOVA_AUTH_MODE: "supabase",
+  VITE_KOVA_GOOGLE_AUTH_ENABLED: "false",
+  VITE_KOVA_AUTH_ORIGIN: "",
+};
+
+test("both production workflows pin Supabase-only browser auth", () => {
   assert.match(buildJob, /environment:\n      name: production/u);
-  assert.deepEqual(
-    selectedBrowserInputs({
-      VITE_KOVA_AUTH_MODE: "dual",
-      VITE_KOVA_GOOGLE_AUTH_ENABLED: "true",
-      VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid",
-    }),
-    {
-      VITE_KOVA_AUTH_MODE: "dual",
-      VITE_KOVA_GOOGLE_AUTH_ENABLED: "true",
-      VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid",
-    },
-  );
-  assert.doesNotMatch(workflow.split("  build-only:\n")[0], /vars\.VITE_KOVA_/u);
+  assert.deepEqual(selectedBrowserInputs(), hosted);
+  assert.doesNotMatch(workflow, /vars\.VITE_KOVA_(?:AUTH_MODE|GOOGLE_AUTH_ENABLED|AUTH_ORIGIN)/u);
+  assert.doesNotMatch(ghcr, /vars\.VITE_KOVA_(?:AUTH_MODE|GOOGLE_AUTH_ENABLED|AUTH_ORIGIN)/u);
 });
 
-test("missing or unset protected vars retain hosted Auth, Google-off and same-origin", () => {
+test("stale repository variables cannot change the commit-pinned production build", () => {
   for (const inputMode of ["plan", "narrow-openai"])
-    for (const variables of [{}, Object.fromEntries(names.map((name) => [name, ""]))])
-      assert.deepEqual(forwarded(inputMode, variables).browser, {
-        VITE_KOVA_AUTH_MODE: "supabase",
-        VITE_KOVA_GOOGLE_AUTH_ENABLED: "false",
-        VITE_KOVA_AUTH_ORIGIN: "",
+    for (const mode of ["supabase", "dual", "kova", "invalid"]) {
+      const { browser, request } = forwarded(inputMode, {
+        VITE_KOVA_AUTH_MODE: mode,
+        VITE_KOVA_GOOGLE_AUTH_ENABLED: "true",
+        VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid",
       });
-});
-
-test("each explicit protected browser choice reaches the real commit-pinned build request", () => {
-  for (const inputMode of ["plan", "narrow-openai"])
-    for (const mode of ["supabase", "dual", "kova"])
-      for (const google of ["false", "true"])
-        for (const origin of ["", "https://auth.example.invalid"]) {
-          const values = {
-            VITE_KOVA_AUTH_MODE: mode,
-            VITE_KOVA_GOOGLE_AUTH_ENABLED: google,
-            VITE_KOVA_AUTH_ORIGIN: origin,
-          };
-          const { browser, request } = forwarded(inputMode, values);
-          assert.deepEqual(browser, values);
-          assert.equal(
-            request.sourceLocation,
-            `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`,
-          );
-          assert.ok(request.arguments.every(({ isSecret }) => isSecret === false));
-        }
-});
-
-test("server Auth bindings never override missing or explicitly selected browser values", () => {
-  const server = {
-    KOVA_AUTH_MODE: "kova",
-    KOVA_AUTH_ORIGIN: "https://server-auth.example.invalid",
-    KOVA_GOOGLE_AUTH_ENABLED: "true",
-  };
-  for (const inputMode of ["plan", "narrow-openai"])
-    for (const variables of [{}, { VITE_KOVA_AUTH_MODE: "dual" }])
-      assert.deepEqual(
-        forwarded(inputMode, variables, server).browser,
-        forwarded(inputMode, variables).browser,
+      assert.deepEqual(browser, hosted);
+      assert.equal(
+        request.sourceLocation,
+        `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`,
       );
+      assert.ok(request.arguments.every(({ isSecret }) => isSecret === false));
+    }
 });
 
-test("invalid protected browser values still fail before a build request can be made", () => {
-  for (const inputMode of ["plan", "narrow-openai"])
-    for (const variables of [
-      { VITE_KOVA_AUTH_MODE: "auto" },
-      { VITE_KOVA_AUTH_MODE: "dual " },
-      { VITE_KOVA_GOOGLE_AUTH_ENABLED: "1" },
-      { VITE_KOVA_AUTH_ORIGIN: "http://auth.example.invalid" },
-      { VITE_KOVA_AUTH_ORIGIN: "https://user:password@auth.example.invalid" },
-      { VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid/path" },
-    ])
-      assert.throws(
-        () => forwarded(inputMode, variables),
-        /production_candidate_browser_(?:auth_mode|google_auth|auth_origin)_invalid/u,
-      );
+test("server bindings cannot change pinned browser authority", () => {
+  for (const inputMode of ["plan", "narrow-openai"]) {
+    assert.deepEqual(
+      forwarded(
+        inputMode,
+        {},
+        {
+          KOVA_AUTH_MODE: "kova",
+          KOVA_AUTH_ORIGIN: "https://server-auth.example.invalid",
+          KOVA_GOOGLE_AUTH_ENABLED: "true",
+        },
+      ).browser,
+      hosted,
+    );
+  }
 });
 
 test("workflow retains explicit main approval and includes this regression in source CI", () => {

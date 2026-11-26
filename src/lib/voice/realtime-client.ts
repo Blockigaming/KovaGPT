@@ -4,10 +4,12 @@ export async function listenForVoiceTurn({
   signal,
   getToken,
   onListening,
+  onLevel,
 }: {
   signal: AbortSignal;
   getToken: () => Promise<string>;
   onListening: () => void;
+  onLevel?: (level: number) => void;
 }): Promise<string> {
   if (!navigator.mediaDevices?.getUserMedia || typeof AudioWorkletNode === "undefined")
     throw new Error("Live Voice needs a browser with microphone and Web Audio support.");
@@ -106,6 +108,12 @@ export async function listenForVoiceTurn({
         if (connection.bufferedAmount > 128 * 1024) {
           fail("Your connection is too slow for Live Voice. Try again.");
           return;
+        }
+        if (onLevel && data.byteLength > 0) {
+          const pcm = new Int16Array(data);
+          let energy = 0;
+          for (const sample of pcm) energy += (sample / 32768) ** 2;
+          onLevel(Math.sqrt(energy / pcm.length));
         }
         const bytes = new Uint8Array(data);
         connection.send(

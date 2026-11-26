@@ -112,6 +112,42 @@ const sendFixture = () => {
   return f;
 };
 
+test("the first spoken turn creates the normal chat and carries its voice scope", async () => {
+  const f = sendFixture();
+  f.context.activeId = null;
+  f.context.nextPromptScopeRef.current = {
+    ...f.context.nextPromptScopeRef.current,
+    conversationId: null,
+  };
+  const session = { scope: f.context.nextPromptScopeRef.current };
+  f.context.composerVoiceSessionRef = { current: session };
+  f.context.lastLoadedDraftRef = { current: null };
+  f.context.pendingDraftLoadRef = { current: null };
+  f.context.attachmentDraftsRef = { current: new Map() };
+  f.context.draftStorageKey = (owner, chat) => owner + ":" + chat;
+  const audio = new AbortController();
+  const pending = f.context.send(
+    "my first voice prompt",
+    [],
+    null,
+    0,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    { signal: audio.signal },
+  );
+  await settle();
+  assert.equal(f.requests.length, 1);
+  const payload = JSON.parse(f.requests[0].args.body);
+  assert.ok(payload.chatId);
+  assert.equal(session.scope.conversationId, payload.chatId);
+  assert.match(f.context.lastLoadedDraftRef.current, new RegExp(payload.chatId + "$"));
+  audio.abort();
+  f.requests[0].reject(new DOMException("cancelled", "AbortError"));
+  await pending;
+});
+
 test("voice uses actual chat submission and returns only its exact successful assistant identity while preserving typed draft and attachments", async () => {
   const f = sendFixture();
   const audio = new AbortController();
@@ -287,7 +323,7 @@ function bridgeFixture({ active = null } = {}) {
       state.sends.push(args);
       return state.turn;
     },
-    awaitSavedComposerVoiceTurn: async (options) => {
+    finishComposerVoiceTurn: async (_realtime, _historyEvent, options) => {
       state.waits.push(options);
       return { ...options.turn, contentSha256: "a".repeat(64) };
     },
@@ -305,7 +341,7 @@ function bridgeFixture({ active = null } = {}) {
     },
   };
   context.voiceTurnModule = Promise.resolve({
-    awaitSavedComposerVoiceTurn: context.awaitSavedComposerVoiceTurn,
+    finishComposerVoiceTurn: context.finishComposerVoiceTurn,
   });
   vm.runInNewContext(
     js(
@@ -316,22 +352,18 @@ function bridgeFixture({ active = null } = {}) {
   return { state, context };
 }
 
-test("opening voice precreates the stable conversation and carries the existing draft before microphone Start", () => {
+test("opening and stopping voice on Home leaves the chat list and draft untouched", () => {
   const f = bridgeFixture();
   f.context.change("voice");
   assert.equal(f.state.mode, "voice");
-  assert.equal(f.state.items.length, 1);
-  assert.equal(f.state.activeId, f.state.items[0].id);
-  assert.equal(f.state.items[0].messages.length, 0);
-  assert.equal(f.state.items[0].skill.installationId, "skill-a");
-  assert.equal(f.context.lastLoadedDraftRef.current, "owner-a:new-chat-1");
-  assert.equal(
-    f.context.attachmentDraftsRef.current.get("owner-a:new-chat-1"),
-    f.context.composerDraftRef.current.attachments,
-  );
+  assert.equal(f.state.items.length, 0);
+  assert.equal(f.state.activeId, undefined);
+  assert.equal(f.context.composerVoiceSessionRef.current.scope.conversationId, null);
   assert.equal(f.context.composerDraftRef.current.text, "existing typed draft");
   assert.equal(f.state.sends.length, 0);
-  assert.equal(f.context.composerVoiceSessionRef.current.scope.conversationId, f.state.activeId);
+  f.context.change(null);
+  assert.equal(f.state.items.length, 0);
+  assert.equal(f.context.composerVoiceSessionRef.current, null);
 });
 
 test("Dictate and an existing voice chat do not create or submit another conversation", () => {
@@ -476,7 +508,7 @@ test("Voice waits for the same initialized history boundary as Send before openi
   assert.equal(f.context.composerVoiceEligible, true);
   f.context.change("voice");
   assert.equal(f.state.mode, "voice");
-  assert.equal(f.state.items.length, 1);
+  assert.equal(f.state.items.length, 0);
   assert.equal(f.state.sends.length, 0, "Opening never submits a provider request");
   assert.equal(f.context.composerVoiceSessionRef.current.ownerId, "owner-a");
 });
@@ -538,7 +570,7 @@ for (const change of ["owner", "chat", "abort"]) {
         conversationId: "chat-b",
       };
     } else controller.abort();
-    loading.resolve({ awaitSavedComposerVoiceTurn: f.context.awaitSavedComposerVoiceTurn });
+    loading.resolve({ finishComposerVoiceTurn: f.context.finishComposerVoiceTurn });
     await assert.rejects(pending, (error) => error.name === "AbortError");
     assert.equal(f.state.waits.length, 0);
     assert.equal(f.state.saves.length, 0);

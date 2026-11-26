@@ -22,13 +22,19 @@ test("response actions use compact desktop geometry and 44px coarse targets", ()
       rule.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
     );
     const coarse = rule.parent.type === "atrule";
-    if (coarse) assert.match(rule.parent.params, /^\(width < 1024px\)$/);
+    if (coarse) assert.equal(rule.parent.params, "(width < 1024px), (pointer: coarse)");
     for (const key of ["width", "height", "min-width", "min-height", "flex-basis"])
       assert.equal(values[key], coarse ? "44px" : "28px");
     if (!coarse) assert.equal(values["border-radius"], "8px");
     assert.ok(!rule.nodes.some((node) => node.important));
   }
   assert.match(styles, /stroke-linecap: round/);
+  const assistant = postcss.parse(readFileSync("src/styles/assistant.css", "utf8"));
+  const tokenRules = [];
+  assistant.walkDecls("--chat-message-action", (decl) => {
+    if (decl.value === "44px") tokenRules.push(decl.parent.parent.params);
+  });
+  assert.deepEqual(tokenRules, ["(width < 1024px), (pointer: coarse)"]);
 });
 
 test("assistant and Images retain bottom account access without duplicate top avatars", () => {

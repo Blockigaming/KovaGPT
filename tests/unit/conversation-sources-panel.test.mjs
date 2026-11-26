@@ -4,7 +4,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 let inventory = { web: [], memory: [], attachments: [], browser: [] };
-const jsx = (type, props) => ({ type, props: props ?? {} });
+const jsx = (type, props) => {
+  if (type === exports.ConversationInputRows) return type(props);
+  return { type, props: props ?? {} };
+};
 const modules = {
   "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
   "./ResponseSourceIcon": { ResponseSourceIcon: "response-source-icon" },

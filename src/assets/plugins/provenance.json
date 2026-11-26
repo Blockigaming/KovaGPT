@@ -1,6 +1,6 @@
 {
   "retrievedAt": "2026-10-17",
-  "method": "Read-only HTTPS download from official npm registry; archive SHA-512 integrity checked against registry metadata. No package installation or browser.",
+  "method": "Pinned npm archives are verified against registry integrity metadata. Provider site, app listing, and SVGL art is stored as local PNG with source URLs and checksums recorded.",
   "trademarkNotice": "Package copyright licenses do not grant trademark rights. Marks identify their corresponding integrations; no affiliation or endorsement implied.",
   "assets": [
     {
@@ -194,6 +194,279 @@
       "sha256": "5e3d32c06f065e541829e34c2d2429b1fee686a49020b1974b3fec228916f55e",
       "modifications": "Unchanged SVG geometry; explicit brand color from same package metadata.",
       "note": "Sprocket mark selected instead of wide wordmark for legibility in compact integration icons."
+    },
+    {
+      "id": "android-health-connect",
+      "file": "android-health-connect.png",
+      "sourceUrl": "https://developer.android.com/health-and-fitness/health-connect/ui/guidelines",
+      "assetUrl": "https://developer.android.com/static/downloads/assets/health_connect_logo.png",
+      "sourceSha256": "f0a04c920d6871fe132d6d333bc7627b985ad8ec3242df0f4f54a1a13b9f000e",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "448aa310c0e92ffa3fb35d106d05b5a4c0615d360060c842c2a95cf06ec18288"
+    },
+    {
+      "id": "apple-health",
+      "file": "apple-health.png",
+      "sourceUrl": "https://apps.apple.com/us/app/apple-health/id1242545199",
+      "assetUrl": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/14/09/64/140964d1-8ae2-d48a-902b-9942410fa862/Placeholder.mill/200x200Icon.ApSiOS01-75.webp",
+      "sourceSha256": "e82babdd9e79c224e66248b6d72e67fc0a46edfc4661d7419e79b3f3bb4e8dc6",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "73552c0db1ba093f7924d60c55c32ef79e3e23962839943d468975b42d8f5060"
+    },
+    {
+      "id": "box",
+      "file": "box.svg",
+      "sourcePackage": "@iconify-json/logos",
+      "version": "1.2.20",
+      "icon": "box",
+      "sourceUrl": "https://github.com/gilbarbara/logos",
+      "archiveUrl": "https://registry.npmjs.org/@iconify-json/logos/-/logos-1.2.20.tgz",
+      "archiveIntegrity": "sha512-HDSte2/+sgGNn9i/eYMiIRDbdigWxZe6EFauQGtxfRG/4sUtUBFgLIdxotKQysKNsFJlLYDFzPILOs3mh9viRQ==",
+      "archiveMember": "package/icons.json:icons.box",
+      "license": "CC0-1.0",
+      "modifications": "SVG wrapper constructed from package dimensions and unchanged body.",
+      "sha256": "a25e3174435a6031a72780553172dab9d1d425685d77e4151501d19256e3e176"
+    },
+    {
+      "id": "calendly",
+      "file": "calendly.png",
+      "sourceUrl": "https://svgl.app/",
+      "assetUrl": "https://svgl.app/library/calendly.svg",
+      "sourceSha256": "1f976341f4ed6a63b688330a734cbb5c6c8c4caab17976e5e89195f82570bf4e",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sourcePackage": "svgl",
+      "upstreamRepository": "https://github.com/pheralb/svgl",
+      "sha256": "842c1bebc71a4b00d3bc5e4795328c6047143a6375c0496f1ab4cd59209537af"
+    },
+    {
+      "id": "canva",
+      "file": "canva.png",
+      "sourceUrl": "https://svgl.app/",
+      "assetUrl": "https://raw.githubusercontent.com/pheralb/svgl/main/static/library/canva.svg",
+      "sourceSha256": "242bb82ed2be97ce4213a3197bbeee558c49d268552372a85b5b9b40bf73b049",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sourcePackage": "svgl",
+      "upstreamRepository": "https://github.com/pheralb/svgl",
+      "sha256": "66f0185e029ccb4006b46049a28f290f8cee30db140edcdc54b1fdfc8c18a1d1"
+    },
+    {
+      "id": "custom-mcp",
+      "file": "custom-mcp.png",
+      "sourceUrl": "https://modelcontextprotocol.io/",
+      "assetUrl": "https://modelcontextprotocol.io/mintlify-assets/_mintlify/favicons/mcp/ebiVJzri-bsiCfVZ/_generated/favicon/android-chrome-192x192.png",
+      "sourceSha256": "6157492751a00108601a9227297fa4c2db97f6070484dd08166a0774ce84a057",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "b041c7db020ba51ea4fc2f7b455b6f3de91565f51cfbf00c363365677d71ff9c"
+    },
+    {
+      "id": "etoro",
+      "file": "etoro.png",
+      "sourceUrl": "https://www.etoro.com/",
+      "assetUrl": "https://www.etoro.com/wp-content/uploads/favicons/favicon.svg",
+      "sourceSha256": "879aaa50ae8cd43d315fbb1b54628ab3e9a6f69fcfe3c2d904769acef8dfb3a2",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "14545593fefc48ad2922bac94862a28bd41ce977d23698052dab0b02c7401778"
+    },
+    {
+      "id": "excalidraw",
+      "file": "excalidraw.svg",
+      "sourcePackage": "simple-icons",
+      "version": "16.38.1",
+      "icon": "excalidraw",
+      "sourceUrl": "https://excalidraw.com",
+      "archiveUrl": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.38.1.tgz",
+      "archiveIntegrity": "sha512-q4JnGp1cgeASp4jzEsmSh/7BD/e2y7aYO8XST+QBEvOJ5wzZ/9WRmKsI+QUwkfPUSiXC+sfh2+QetD38zl3N0g==",
+      "archiveMember": "package/icons/excalidraw.svg",
+      "license": "CC0-1.0",
+      "modifications": "Unchanged SVG geometry with brand color from package metadata.",
+      "sha256": "397d6adac0f7d40aea16f598392b9087bf8cee7f73863047cdbbcf6af3b01925"
+    },
+    {
+      "id": "figma",
+      "file": "figma.svg",
+      "sourcePackage": "@iconify-json/logos",
+      "version": "1.2.20",
+      "icon": "figma",
+      "sourceUrl": "https://github.com/gilbarbara/logos",
+      "archiveUrl": "https://registry.npmjs.org/@iconify-json/logos/-/logos-1.2.20.tgz",
+      "archiveIntegrity": "sha512-HDSte2/+sgGNn9i/eYMiIRDbdigWxZe6EFauQGtxfRG/4sUtUBFgLIdxotKQysKNsFJlLYDFzPILOs3mh9viRQ==",
+      "archiveMember": "package/icons.json:icons.figma",
+      "license": "CC0-1.0",
+      "modifications": "SVG wrapper constructed from package dimensions and unchanged body.",
+      "sha256": "275575dab1f51240ed4ae560dbef27db7dacb339b117b4c93434e62410cebc33"
+    },
+    {
+      "id": "gamma",
+      "file": "gamma.png",
+      "sourceUrl": "https://gamma.app/",
+      "assetUrl": "https://static.gamma.app/favicons/apple-touch-icon.png",
+      "sourceSha256": "5b0607f9aace88ab521d1b39935000b79f49165d9b201f7e1ba9f81fe99ac40f",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "a4b128ebc13316f9c347c56c0c06e9e24cc7ea17232de7b566e32759b05dae18"
+    },
+    {
+      "id": "google-bigquery",
+      "file": "google-bigquery.svg",
+      "sourcePackage": "simple-icons",
+      "version": "16.38.1",
+      "icon": "googlebigquery",
+      "sourceUrl": "https://cloud.google.com/icons",
+      "archiveUrl": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.38.1.tgz",
+      "archiveIntegrity": "sha512-q4JnGp1cgeASp4jzEsmSh/7BD/e2y7aYO8XST+QBEvOJ5wzZ/9WRmKsI+QUwkfPUSiXC+sfh2+QetD38zl3N0g==",
+      "archiveMember": "package/icons/googlebigquery.svg",
+      "license": "CC0-1.0",
+      "modifications": "Unchanged SVG geometry with brand color from package metadata.",
+      "sha256": "64b8a8e4a82d5e4f82631e3248732c04d1b1534fa4113c7ba6837de947d52843"
+    },
+    {
+      "id": "granola",
+      "file": "granola.png",
+      "sourceUrl": "https://svgl.app/",
+      "assetUrl": "https://svgl.app/library/granola-light.svg",
+      "sourceSha256": "82826bd3a435a4c244b8e2e04f114bc30aab9117df704e48abb56f9060128fe4",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sourcePackage": "svgl",
+      "upstreamRepository": "https://github.com/pheralb/svgl",
+      "sha256": "1d3dd65ee6514b3cb114a1d823582ed3b38d466014ff70426c3e3bd0ec8bb381"
+    },
+    {
+      "id": "hyperframes-heygen",
+      "file": "hyperframes-heygen.png",
+      "sourceUrl": "https://hyperframes.heygen.com/",
+      "assetUrl": "https://hyperframes.heygen.com/favicon.svg",
+      "sourceSha256": "5bed6eb94316737b9902da80cb7981b47ea778fdc3bac63d7009a30cd8a5c594",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "7cc33b756afa487cf5eb276b9756bce2ba0c0f4256ef8a3cc197f324f0ffc7e6"
+    },
+    {
+      "id": "interactive-brokers",
+      "file": "interactive-brokers.png",
+      "sourceUrl": "https://www.interactivebrokers.com/",
+      "assetUrl": "https://www.interactivebrokers.com/images/web/favicons/home-screen-icon-192x192.png",
+      "sourceSha256": "5c658db5247eccd8ecda0e8fe17434b9cb4e999a501677e35910504fd0419261",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "9d7166dcec67c3cf3a1ce01a098cf4c467c930da98909f87a50331b0b5e250b2"
+    },
+    {
+      "id": "meltwater",
+      "file": "meltwater.png",
+      "sourceUrl": "https://www.meltwater.com/",
+      "assetUrl": "https://www.meltwater.com/apple-touch-icon.png?v=Nmb79JPw70",
+      "sourceSha256": "423b928e7a14a0ada0c8c2893578ef8ea0ebab829d02ce996e998baa4e0d32a8",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "429a544eed54be1c06196b0ece5c94f7e69f1aefb8a14e70599befbe46c57b51"
+    },
+    {
+      "id": "mixpanel",
+      "file": "mixpanel.svg",
+      "sourcePackage": "@iconify-json/logos",
+      "version": "1.2.20",
+      "icon": "mixpanel",
+      "sourceUrl": "https://github.com/gilbarbara/logos",
+      "archiveUrl": "https://registry.npmjs.org/@iconify-json/logos/-/logos-1.2.20.tgz",
+      "archiveIntegrity": "sha512-HDSte2/+sgGNn9i/eYMiIRDbdigWxZe6EFauQGtxfRG/4sUtUBFgLIdxotKQysKNsFJlLYDFzPILOs3mh9viRQ==",
+      "archiveMember": "package/icons.json:icons.mixpanel",
+      "license": "CC0-1.0",
+      "modifications": "SVG wrapper constructed from package dimensions and unchanged body.",
+      "sha256": "4accb79f15e4927efe07a7a4ee79d78163ffd6253f8767e5317d118cdc0762a4"
+    },
+    {
+      "id": "oura",
+      "file": "oura.png",
+      "sourceUrl": "https://ouraring.com/",
+      "assetUrl": "https://ouraring.com/assets/icons/apple-touch-icon.png",
+      "sourceSha256": "62e0ec5ff982740054980366b38255f3e41ec3bd6e254330675163f53c452ace",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "48160359830c996a941cb2d0c7d3f1eb8abe233e6ef6d2319374319feadd86d1"
+    },
+    {
+      "id": "outlook-calendar",
+      "file": "outlook-calendar.png",
+      "sourceUrl": "https://svgl.app/",
+      "assetUrl": "https://svgl.app/library/microsoft-outlook.svg",
+      "sourceSha256": "334bf1a0ef366570a80d62faa0dc9c34de094cbc18c4935f2ceb26a140875d5b",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sourcePackage": "svgl",
+      "upstreamRepository": "https://github.com/pheralb/svgl",
+      "sha256": "d14e0baaf69009a5dc4dcea71ceae3f4c11b91e7bba3f746ffbd063cf90500be"
+    },
+    {
+      "id": "plaid",
+      "file": "plaid.png",
+      "sourceUrl": "https://plaid.com/",
+      "assetUrl": "https://plaid.com/assets/img/favicons/apple-touch-icon.png",
+      "sourceSha256": "f9a98e98c41212eb89e1d92e9f2318349570001e497e1fb1cc32bc39eb2f1016",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "01c92a497b9430dc84b1667a48e3e2d7159c8e75f3c7e08c54ccd6212863c519"
+    },
+    {
+      "id": "sp-global",
+      "file": "sp-global.png",
+      "sourceUrl": "https://www.spglobal.com/",
+      "assetUrl": "https://www.spglobal.com/content/dam/spglobal/global-assets/en/images/general/spg_favicon_wht_192x192.png",
+      "sourceSha256": "12f1573458a16d43feba40780d9d0372e955e1d7228208a04b94772c35b94552",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "fafb833bbbc918c0e62ef25df19008260a71778dd55791f400efc061f4445c93"
+    },
+    {
+      "id": "stripe",
+      "file": "stripe.svg",
+      "sourcePackage": "@iconify-json/logos",
+      "version": "1.2.20",
+      "icon": "stripe",
+      "sourceUrl": "https://github.com/gilbarbara/logos",
+      "archiveUrl": "https://registry.npmjs.org/@iconify-json/logos/-/logos-1.2.20.tgz",
+      "archiveIntegrity": "sha512-HDSte2/+sgGNn9i/eYMiIRDbdigWxZe6EFauQGtxfRG/4sUtUBFgLIdxotKQysKNsFJlLYDFzPILOs3mh9viRQ==",
+      "archiveMember": "package/icons.json:icons.stripe",
+      "license": "CC0-1.0",
+      "modifications": "SVG wrapper constructed from package dimensions and unchanged body.",
+      "sha256": "ef89101a335f8bfd92e1460319b279a1a132ccbb85ec43712b4bcd16fcea27ff"
+    },
+    {
+      "id": "tana",
+      "file": "tana.png",
+      "sourceUrl": "https://tana.inc/",
+      "assetUrl": "https://tana.inc/apple-touch-icon-tana.png",
+      "sourceSha256": "ed676a15f2031049991a5d382453cf4dcb5e520b8797633f3652e8184cb66aee",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "193b6498dfe11851d60df07db325d8e7a739f86fd54a41f2a90c865e42be42a5"
+    },
+    {
+      "id": "vercel",
+      "file": "vercel.svg",
+      "sourcePackage": "@iconify-json/logos",
+      "version": "1.2.20",
+      "icon": "vercel-icon",
+      "sourceUrl": "https://github.com/gilbarbara/logos",
+      "archiveUrl": "https://registry.npmjs.org/@iconify-json/logos/-/logos-1.2.20.tgz",
+      "archiveIntegrity": "sha512-HDSte2/+sgGNn9i/eYMiIRDbdigWxZe6EFauQGtxfRG/4sUtUBFgLIdxotKQysKNsFJlLYDFzPILOs3mh9viRQ==",
+      "archiveMember": "package/icons.json:icons.vercel-icon",
+      "license": "CC0-1.0",
+      "modifications": "SVG wrapper constructed from package dimensions and unchanged body.",
+      "sha256": "81af6c1bbf9fa5105cd60057d2ca5cc7c531f50e33361d42afa7631b8de79790"
+    },
+    {
+      "id": "webull",
+      "file": "webull.png",
+      "sourceUrl": "https://www.webull.com/",
+      "assetUrl": "https://wbstatic.webullfintech.com/app/picture/10013412eaf600e19ce46544f91cb5d8.png",
+      "sourceSha256": "82ccf64580b8feeef52f0e5da504d9f7d521330f00fe33fc1bf26d1bec4f0d64",
+      "modifications": "Re-encoded as local PNG, retaining original aspect ratio and artwork.",
+      "sha256": "ad4191f59b90c00733ea56553278b42346cba2f37d7a1598c417b065cbb89154"
+    },
+    {
+      "id": "wix",
+      "file": "wix.svg",
+      "sourcePackage": "@iconify-json/logos",
+      "version": "1.2.20",
+      "icon": "wix",
+      "sourceUrl": "https://github.com/gilbarbara/logos",
+      "archiveUrl": "https://registry.npmjs.org/@iconify-json/logos/-/logos-1.2.20.tgz",
+      "archiveIntegrity": "sha512-HDSte2/+sgGNn9i/eYMiIRDbdigWxZe6EFauQGtxfRG/4sUtUBFgLIdxotKQysKNsFJlLYDFzPILOs3mh9viRQ==",
+      "archiveMember": "package/icons.json:icons.wix",
+      "license": "CC0-1.0",
+      "modifications": "SVG wrapper constructed from package dimensions and unchanged body.",
+      "sha256": "ccc05258885049e4ac120a4cf1e4f39e50f021b1a9820952ab7b696e2fe444c7"
     }
   ]
 }

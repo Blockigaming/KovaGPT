@@ -127,8 +127,9 @@ function cleanAssistantText(text: string): string {
 }
 
 function ChatMessageInner({
-  message,
-  streaming,
+  message: originalMessage,
+  streaming: generating,
+  voiceReveal,
   onFollowUp,
   interactiveDisabledReason,
   onDraftPrompt,
@@ -153,6 +154,7 @@ function ChatMessageInner({
   message: Message;
   showAdvertisement?: boolean;
   streaming?: boolean;
+  voiceReveal?: { ownerId: string; chatId: string; messageId: string; fraction: number } | null;
   /** Request start time survives chat navigation while the response remains active. */
   /** Executes an explicit editor improvement request. */
   onFollowUp?: (prompt: string) => boolean | void;
@@ -189,6 +191,21 @@ function ChatMessageInner({
     attachment: Exclude<NonNullable<Message["attachments"]>[number], { kind: "image" }>,
   ) => boolean;
 }) {
+  const reveal =
+    voiceReveal?.ownerId === userKey &&
+    voiceReveal?.chatId === chatId &&
+    voiceReveal?.messageId === originalMessage.id
+      ? voiceReveal
+      : null;
+  const voiceRevealing = Boolean(reveal);
+  const streaming = generating || voiceRevealing;
+  const words = reveal ? (originalMessage.content.match(/\S+\s*/gu) ?? []) : [];
+  const message = reveal
+    ? {
+        ...originalMessage,
+        content: words.slice(0, Math.ceil(words.length * reveal.fraction)).join(""),
+      }
+    : originalMessage;
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
   principalRef.current = principal;
@@ -967,6 +984,7 @@ function ChatMessageInner({
               ref={bodyRef}
               className="prose-chat"
               data-waiting-for-response={waitingForFirstToken || undefined}
+              data-voice-reveal={voiceRevealing && !waitingForFirstToken ? true : undefined}
             >
               {message.pendingImage && !message.content ? (
                 <ChatLoadingIndicator label="Generating image" />
@@ -1051,9 +1069,10 @@ function ChatMessageInner({
                   return markdown;
                 })()
               )}
-              {streaming && message.content && replySegments?.at(-1)?.kind !== "group" && (
-                <span className="cursor-blink" />
-              )}
+              {streaming &&
+                !voiceRevealing &&
+                message.content &&
+                replySegments?.at(-1)?.kind !== "group" && <span className="cursor-blink" />}
             </div>
             {!streaming && message.generationStatus === "stopped" && (
               <div

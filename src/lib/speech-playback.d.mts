@@ -14,6 +14,8 @@ export type SpeechInput = {
 export function createBrowserSpeechSink(options: {
   signal: AbortSignal;
   onPlaying: () => void;
+  onLevel?: (level: number) => void;
+  onProgress?: (elapsed: number, duration: number) => void;
   onEnded: () => void;
   onError: () => void;
 }): { write(bytes: Uint8Array): Promise<void>; end(): Promise<void>; dispose(): void };

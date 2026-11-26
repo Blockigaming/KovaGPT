@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
-import * as landing from "../../src/lib/kova-recovery-landing.mjs";
-import * as result from "../../src/lib/kova-recovery-result.mjs";
 
-const token = "A".repeat(43);
 const owner = "10000000-0000-4000-8000-000000000001";
 const defer = () => {
   let resolve;
@@ -15,19 +12,12 @@ const defer = () => {
 };
 
 function fixture({
-  href = `https://kova.test/reset-password#token=${token}`,
-  mode = "kova",
-  delay,
-  response = Response.json({
-    session: {
-      accountId: owner,
-      sessionId: "20000000-0000-4000-8000-000000000002",
-      email: "fixture-owner@example.test",
-      emailVerified: true,
-      assuranceLevel: "aal1",
-    },
-  }),
+  href = "https://kova.test/reset-password?code=recovery-code",
+  updateDelay,
+  updateError = null,
   callback,
+  callbackError = false,
+  sessionOwner = owner,
 } = {}) {
   const calls = [],
     redirects = [],
@@ -42,11 +32,12 @@ function fixture({
     auth: {
       async getSession() {
         calls.push("session");
-        return { data: { session: { user: { id: owner } } }, error: null };
+        return { data: { session: { user: { id: sessionOwner } } }, error: null };
       },
       async updateUser(input) {
         calls.push(["update", input]);
-        return { error: null };
+        if (updateDelay) await updateDelay;
+        return { error: updateError };
       },
       async signOut(input) {
         calls.push(["signOut", input]);
@@ -68,17 +59,6 @@ function fixture({
           return context;
         },
       },
-      "@/lib/kova-auth-browser": {
-        browserKovaAuthEnabled: () => mode !== "supabase",
-        browserKovaAuthMode: () => mode,
-        async kovaPublicAuthJson(path, body) {
-          calls.push([path, body]);
-          if (delay) await delay;
-          return response;
-        },
-      },
-      "@/lib/kova-recovery-landing.mjs": landing,
-      "@/lib/kova-recovery-result.mjs": result,
       "@/lib/oauth-session": {
         hasOAuthResponseInUrl: () => url.searchParams.has("code"),
         hasRecentPasswordRecoveryFlow: () => false,
@@ -96,7 +76,10 @@ function fixture({
         async completeOAuthSessionFromUrl(_source, signal, options) {
           assert.equal(options.recoveryOnly, true);
           calls.push("callback");
+          url.search = "";
+          url.hash = "";
           if (callback) await callback;
+          if (callbackError) throw new Error("invalid_recovery");
           signal.throwIfAborted();
           return { user: { id: owner } };
         },
@@ -152,88 +135,73 @@ function fixture({
   };
 }
 
-test("actual owned recovery form scrubs the URL before accepting a password and only submits the captured fragment", async () => {
+test("Supabase recovery waits for authorization and updates only the recovered account", async () => {
   const f = fixture();
   await f.flush();
-  assert.equal(f.url().hash, "");
-  assert.equal(f.calls[0], "scrub");
+  assert.equal(f.calls.filter((v) => v === "callback").length, 1);
+  assert.equal(f.url().search, "");
   await f.input("new-pw", "a secure test password");
   await f.input("confirm-pw", "a secure test password");
   await f.submit();
+  assert.deepEqual(JSON.parse(JSON.stringify(f.calls.filter(Array.isArray))), [
+    ["update", { password: "a secure test password" }],
+    ["signOut", { scope: "others" }],
+  ]);
+  assert.ok(f.messages.some(([kind]) => kind === "success"));
+  assert.equal(f.redirects.length, 1);
+});
+
+test("invalid recovery authorization never exposes a reset form", async () => {
+  const f = fixture({ callbackError: true });
   await f.flush();
-  const request = f.calls.find((v) => Array.isArray(v));
-  assert.equal(request[0], "/api/auth/recovery/reset");
-  assert.equal(request[1].token, token);
+  assert.match(f.text(), /invalid or has expired/u);
+  assert.equal(f.nodes().filter((n) => n.type === "form").length, 0);
   assert.ok(!f.calls.includes("legacy"));
-  assert.deepEqual(f.redirects, ["/"]);
 });
-for (const href of [
-  `https://kova.test/reset-password?token=${token}`,
-  `https://kova.test/reset-password#token=${token}&token=${token}`,
-  "https://kova.test/reset-password#token=invalid",
-  "https://kova.test/reset-password?code=legacy-code",
-])
-  test(`owned recovery rejects unsafe/legacy landing ${href.split("reset-password")[1].slice(0, 18)}`, async () => {
-    const f = fixture({ href });
+
+test("recovery does not change a different session owner or invalidated authority", async () => {
+  for (const changed of [false, true]) {
+    const f = fixture({ sessionOwner: changed ? "different-user" : owner });
     await f.flush();
-    assert.equal(f.nodes().filter((n) => n.type === "form").length, 0);
-    assert.equal(f.url().search, "");
-    assert.equal(f.url().hash, "");
-    assert.ok(!f.calls.includes("legacy"));
-    assert.ok(!f.calls.includes("callback"));
-  });
-test("an unconfirmed 200 preserves the in-memory draft without claiming success or replaying", async () => {
-  const f = fixture({ response: Response.json({}) });
+    await f.input("new-pw", "a secure test password");
+    await f.input("confirm-pw", "a secure test password");
+    if (!changed) f.invalidate();
+    await f.submit();
+    assert.ok(!f.calls.some(Array.isArray));
+    assert.deepEqual(f.redirects, []);
+  }
+});
+
+test("Supabase update errors do not claim success or revoke other sessions", async () => {
+  const f = fixture({ updateError: new Error("provider_failure") });
   await f.flush();
   await f.input("new-pw", "a secure test password");
   await f.input("confirm-pw", "a secure test password");
   await f.submit();
-  await f.flush();
-  assert.equal(
-    f.find("input", (n) => n.props.id === "new-pw").props.value,
-    "a secure test password",
-  );
-  assert.equal(
-    f.find("input", (n) => n.props.id === "confirm-pw").props.value,
-    "a secure test password",
-  );
-  assert.deepEqual(f.redirects, []);
-  assert.equal(f.calls.filter((v) => Array.isArray(v)).length, 1);
+  assert.equal(f.calls.filter(Array.isArray).length, 1);
   assert.ok(!f.messages.some(([kind]) => kind === "success"));
+  assert.deepEqual(f.redirects, []);
 });
-test("owned reset cannot duplicate a pending mutation or redirect after unmount", async () => {
-  const gate = defer(),
-    f = fixture({ delay: gate.promise });
+
+test("pending reset mutation is not duplicated and cannot redirect after unmount", async () => {
+  const gate = defer();
+  const f = fixture({ updateDelay: gate.promise });
   await f.flush();
   await f.input("new-pw", "a secure test password");
   await f.input("confirm-pw", "a secure test password");
   const first = f.submit();
   const second = f.submit();
+  while (!f.calls.some(Array.isArray)) await new Promise((r) => setImmediate(r));
   f.unmount();
   gate.resolve();
   await Promise.all([first, second]);
-  assert.equal(f.calls.filter((v) => Array.isArray(v)).length, 1);
-  assert.deepEqual(f.redirects, []);
-  assert.deepEqual(f.messages, []);
-});
-test("dual legacy recovery waits for its single callback and cannot modify a changed authority", async () => {
-  const f = fixture({ mode: "dual", href: "https://kova.test/reset-password?code=legacy-code" });
-  await f.flush();
-  assert.equal(f.calls.filter((v) => v === "callback").length, 1);
-  await f.input("new-pw", "a secure test password");
-  await f.input("confirm-pw", "a secure test password");
-  f.invalidate();
-  await f.submit();
-  assert.ok(!f.calls.some((v) => Array.isArray(v)));
+  assert.equal(f.calls.filter(Array.isArray).length, 1);
   assert.deepEqual(f.redirects, []);
 });
-test("timed-out legacy recovery cannot make a late callback usable", async () => {
-  const gate = defer(),
-    f = fixture({
-      mode: "dual",
-      href: "https://kova.test/reset-password?code=legacy-code",
-      callback: gate.promise,
-    });
+
+test("timed-out recovery cannot make a late callback usable", async () => {
+  const gate = defer();
+  const f = fixture({ callback: gate.promise });
   await f.flush();
   f.timers[0]();
   gate.resolve();

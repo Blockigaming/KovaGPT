@@ -13,7 +13,8 @@ test("launch directory exposes planned details without unsupported connect actio
   );
   assert.doesNotMatch(route, /setCategory\(/);
   assert.match(route, /!configured\s*\? "Coming soon"/);
-  assert.match(route, /selectedReview.permissions.map/);
+  assert.match(route, /selectedProfile.read.map/);
+  assert.match(route, /selectedProfile.write.map/);
   assert.doesNotMatch(route, /google.com\/s2\/favicons|label.slice\(0, 2\)/);
   assert.doesNotMatch(route, /PluginConnectionPreview|plugin-preview/);
 });

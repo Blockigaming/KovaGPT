@@ -132,7 +132,7 @@ const compiled = ts.transpileModule(
   globalThis.setSelectedTool = ${arrow("setSelectedTool")};
   globalThis.reconcileQuotaDrafts = ${quotaScopeEffect};
   globalThis.readQuotaDrafts = () => ${initializer("visibleQuotaRejectedDrafts").getText(ast)};
-  globalThis.renderQuotaDrafts = () => ${initializer("quotaRejectedDraftPanel").getText(ast)};
+  globalThis.renderQuotaDrafts = () => (${initializer("quotaRejectedDraftPanel").getText(ast)}).map((shell) => QuotaRejectedDraftPreview(shell.props.children.props));
   globalThis.readComposerPromptPanel = () => ${initializer("composerPromptPanel").getText(ast)};`,
   { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } },
 ).outputText;
@@ -275,12 +275,17 @@ function fixture() {
     createMemorySourceUpdater: () => () => {},
     normalizeResponseSources: (value) => value,
     chatRequestMessages: (prior, user) => [...prior, user],
-    chatResponseError: async (response) => response.error,
-    cloudBrowserErrorKind,
     chatBrowserDestination,
     CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
+      chatResponseError: async (response) => response.error,
+      cloudBrowserErrorKind,
+      consumeChatSse: (body, args) => {
+        const d = deferred();
+        streams.push({ ...d, args });
+        return d.promise;
+      },
       completedChatReply,
       chatRequestHeaders,
       createChatHistoryPayload: async (messages) => ({ messages }),
@@ -291,11 +296,6 @@ function fixture() {
         return d.promise;
       },
     }),
-    consumeChatSse: (body, args) => {
-      const d = deferred();
-      streams.push({ ...d, args });
-      return d.promise;
-    },
     toast: { error: (...value) => errors.push(value) },
     window: {
       setTimeout: (callback, delay) => {
@@ -474,7 +474,10 @@ test("transient failure keeps partial output and a newer draft until one explici
   await settle();
   assert.equal(f.context.requestNotice, null);
   assert.equal(f.requests.length, 2);
-  assert.equal(f.requests[1].args.headers["Idempotency-Key"], firstRequestId);
+  assert.equal(
+    f.requests[1].args.headers["Idempotency-Key"],
+    `${firstRequestId}:${f.context.conversations[0].messages[1].id}`,
+  );
   assert.deepEqual(JSON.parse(f.requests[1].args.body), originalPayload);
   const resentTurn = f.context.conversations[0].messages;
   assert.equal(
@@ -606,7 +609,10 @@ test("manual Retry is single use, reuses the original ID and rejects an A to B t
   f.timers[0]();
   await settle();
   assert.equal(f.requests.length, 2);
-  assert.equal(f.requests[1].args.headers["Idempotency-Key"], requestId);
+  assert.equal(
+    f.requests[1].args.headers["Idempotency-Key"],
+    `${requestId}:${f.context.conversations[0].messages[1].id}`,
+  );
   await f.fail(Object.assign(new Error("Temporary error"), { status: 503, retryable: true }));
   const currentAction = f.errors.at(-1)[1].action;
   const original = f.context.nextPromptScopeRef.current;
@@ -664,7 +670,7 @@ test("new-chat creation is an authorized retry scope transition", async () => {
   assert.equal(f.requests.length, 2);
   assert.equal(
     f.requests[1].args.headers["Idempotency-Key"],
-    f.requests[0].args.headers["Idempotency-Key"],
+    `${f.requests[0].args.headers["Idempotency-Key"]}:${f.context.conversations[0].messages[1].id}`,
   );
   await f.respond();
 });
@@ -1038,7 +1044,7 @@ test("no rejected or queued draft leaves the ordinary streaming composer hint av
     source,
     /const composer = \(\s*<ChatInput[\s\S]*?nextPromptPanel=\{composerPromptPanel\}/,
   );
-  assert.equal((source.match(/\{composer\}/g) ?? []).length, 2);
+  assert.equal((source.match(/\{composer\}/g) ?? []).length, 1);
 });
 
 test("kept-version previews are bounded while Restore retains exact full text and all attachment references", async () => {

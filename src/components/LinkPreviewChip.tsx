@@ -150,6 +150,10 @@ export function LinkPreviewChip({
         <button
           type="button"
           className="kova-link-preview-remove"
+          onPointerDown={(event) => {
+            // Keep the focused composer and keyboard geometry stable until click.
+            if (event.isPrimary && event.button === 0) event.preventDefault();
+          }}
           onClick={onRemove}
           title="Remove this link"
           aria-label={`Remove linked page from message: ${title}`}

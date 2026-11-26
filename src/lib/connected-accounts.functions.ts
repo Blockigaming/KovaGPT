@@ -6,6 +6,40 @@ import {
   runConnectionAccountSearch,
 } from "@/integrations/connected-tools.server";
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
+import { logOperationalEvent } from "@/lib/structured-log.server";
+
+const providerReadErrors = new Map([
+  ["connection_reauthorization_required", "The provider session expired. Reconnect this account."],
+  [
+    "connection_permission_required",
+    "The provider denied read access. Check the account permissions.",
+  ],
+  ["connection_rate_limited", "The read limit was reached. Try again in a minute."],
+  [
+    "connection_changed_or_expired",
+    "The connection changed or expired. Refresh its status and try again.",
+  ],
+  [
+    "outlook_default_calendar_unavailable",
+    "Microsoft could not find a default calendar for this account.",
+  ],
+  ["onedrive_default_drive_unavailable", "Microsoft could not find a OneDrive for this account."],
+  [
+    "invalid_connection_response",
+    "The provider returned an unexpected response. Try again shortly.",
+  ],
+  ["connection_account_not_allowed", "The selected account no longer grants this read."],
+  ["invalid_connection_query", "This connector does not support that query."],
+  [
+    "connection_status_unavailable",
+    "Account status is temporarily unavailable. Try again shortly.",
+  ],
+  [
+    "connection_protection_unavailable",
+    "Connection reads are temporarily unavailable. Try again shortly.",
+  ],
+  ["connection_read_failed", "The provider could not complete this search. Try again shortly."],
+]);
 
 export const searchConnectedAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -36,9 +70,24 @@ export const searchConnectedAccount = createServerFn({ method: "POST" })
         },
         binding,
       );
-    } catch {
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      const message = providerReadErrors.get(code);
+      const status = error instanceof Error ? error.cause : undefined;
+      const reference = crypto.randomUUID();
+      logOperationalEvent({
+        correlationId: reference,
+        category: "connections",
+        operation: flow.tool,
+        metadata: {
+          code: message ? code : "connection_read_unavailable",
+          ...(message && typeof status === "number" && status >= 400 && status <= 599
+            ? { status }
+            : {}),
+        },
+      });
       return {
-        error: "This account could not be read. Refresh its status or reconnect and try again.",
+        error: `${message ?? "This account could not be read. Refresh its status and try again."} Reference ${reference}.`,
       };
     }
   });

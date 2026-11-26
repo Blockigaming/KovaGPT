@@ -1,9 +1,25 @@
+import type { MouseEventHandler } from "react";
+import { Button } from "@/components/ui/button";
 import type { NextPrompt } from "@/lib/chat-send-next";
 
 /** Usage-limit preview text loads only when a rejected draft has been retained. */
-export function QuotaRejectedDraftPreview({ draft }: { draft: NextPrompt }) {
+export function QuotaRejectedDraftPreview({
+  draft,
+  restoreDisabled,
+  onRestore,
+  onDiscard,
+}: {
+  draft: NextPrompt;
+  restoreDisabled: boolean;
+  onRestore: MouseEventHandler<HTMLButtonElement>;
+  onDiscard: MouseEventHandler<HTMLButtonElement>;
+}) {
   return (
-    <>
+    <section
+      aria-label="Message kept after usage limit"
+      className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
+      data-testid="quota-rejected-draft"
+    >
       <p role="status">Your message was not sent because of a usage limit. This version is kept.</p>
       <p className="max-h-32 overflow-auto whitespace-pre-wrap break-words">
         {draft.text ? draft.text.slice(0, 400) : "Attached material"}
@@ -34,6 +50,18 @@ export function QuotaRejectedDraftPreview({ draft }: { draft: NextPrompt }) {
         Kept only while this chat stays open. Up to three versions can be kept; restore or discard
         one before sending more.
       </p>
-    </>
+      <Button
+        variant="outline"
+        size="sm"
+        type="button"
+        disabled={restoreDisabled}
+        onClick={onRestore}
+      >
+        Restore message
+      </Button>
+      <Button variant="outline" size="sm" type="button" onClick={onDiscard}>
+        Discard kept version
+      </Button>
+    </section>
   );
 }

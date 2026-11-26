@@ -13,20 +13,20 @@ import { createVoiceHandler } from "../../src/lib/voice/handler.server.mjs";
 // Synthetic mappings are fixtures, not product defaults or owner choices.
 const catalog = [
   {
-    id: "basic",
+    id: "jessica",
     label: "Fixture Basic",
     providerVoiceId: "providerFixtureA",
     allowedPlans: ["free", "plus", "pro"],
   },
   {
-    id: "premium",
+    id: "lauren",
     label: "Fixture Premium",
     providerVoiceId: "providerFixtureB",
     allowedPlans: ["plus", "pro"],
     showWhenLocked: true,
   },
   {
-    id: "private",
+    id: "river",
     label: "Fixture Private",
     providerVoiceId: "providerFixtureC",
     allowedPlans: ["pro"],
@@ -46,8 +46,8 @@ const env =
 test("public catalog exposes only safe metadata and explicit visible locked options", () => {
   const free = readVoiceCatalog(env(), "free");
   assert.deepEqual(publicVoiceCatalog(free), [
-    { id: "basic", label: "Fixture Basic", available: true },
-    { id: "premium", label: "Fixture Premium", available: false },
+    { id: "jessica", label: "Fixture Basic", available: true },
+    { id: "lauren", label: "Fixture Premium", available: false },
   ]);
   const serialized = JSON.stringify(publicVoiceConfiguration(voiceConfiguration(env(), "free")));
   const capabilities = publicVoiceConfiguration(voiceConfiguration(env(), "free"));
@@ -60,16 +60,16 @@ test("public catalog exposes only safe metadata and explicit visible locked opti
 test("Free Plus Pro enforce exact owner-configured plan lists", () => {
   for (const tier of ["free", "plus", "pro"]) {
     const value = readVoiceCatalog(env(), tier);
-    assert.equal(selectCatalogVoice(value, "basic").providerVoiceId, "providerFixtureA");
-    assert.equal("providerVoiceId" in selectCatalogVoice(value, "premium"), tier !== "free");
-    assert.equal("providerVoiceId" in selectCatalogVoice(value, "private"), tier === "pro");
+    assert.equal(selectCatalogVoice(value, "jessica").providerVoiceId, "providerFixtureA");
+    assert.equal("providerVoiceId" in selectCatalogVoice(value, "lauren"), tier !== "free");
+    assert.equal("providerVoiceId" in selectCatalogVoice(value, "river"), tier === "pro");
   }
   const nonhierarchical = readVoiceCatalog(
     env({ KOVA_VOICE_CATALOG: JSON.stringify([{ ...catalog[0], allowedPlans: ["free"] }]) }),
     "pro",
   );
   assert.equal(nonhierarchical.defaultVoiceId, null);
-  assert.equal(selectCatalogVoice(nonhierarchical, "basic").status, 403);
+  assert.equal(selectCatalogVoice(nonhierarchical, "jessica").status, 403);
 });
 test("invalid catalog fails closed even with valid legacy provider voice", () => {
   for (const raw of [
@@ -94,12 +94,12 @@ test("invalid catalog fails closed even with valid legacy provider voice", () =>
 });
 test("default prefers configured eligible entry, falls back only within eligible entries", () => {
   assert.equal(
-    readVoiceCatalog(env({ KOVA_VOICE_DEFAULT_ID: "premium" }), "free").defaultVoiceId,
-    "basic",
+    readVoiceCatalog(env({ KOVA_VOICE_DEFAULT_ID: "lauren" }), "free").defaultVoiceId,
+    "jessica",
   );
   assert.equal(
-    readVoiceCatalog(env({ KOVA_VOICE_DEFAULT_ID: "premium" }), "plus").defaultVoiceId,
-    "premium",
+    readVoiceCatalog(env({ KOVA_VOICE_DEFAULT_ID: "lauren" }), "plus").defaultVoiceId,
+    "lauren",
   );
   assert.equal(readVoiceCatalog(env({ KOVA_VOICE_DEFAULT_ID: "absent" }), "pro").valid, false);
 });
@@ -160,11 +160,11 @@ const request = (voiceId, tier = "pro") =>
   });
 test("handler uses verified tier, denies paidvoice before quota and ignores client claimed plan", async () => {
   const free = fixture("free");
-  assert.equal((await free.run(request("premium", "pro"))).status, 403);
+  assert.equal((await free.run(request("lauren", "pro"))).status, 403);
   assert.equal(free.charged, 0);
   assert.deepEqual(free.executed, []);
   const plus = fixture("plus");
-  const response = await plus.run(request("premium", "free"));
+  const response = await plus.run(request("lauren", "free"));
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true });
   assert.equal(plus.charged, 1);
@@ -172,7 +172,7 @@ test("handler uses verified tier, denies paidvoice before quota and ignores clie
 });
 test("selection rechecked for every request including downgrade and stale IDs", async () => {
   const downgraded = fixture("free");
-  assert.equal((await downgraded.run(request("private"))).status, 403);
+  assert.equal((await downgraded.run(request("river"))).status, 403);
   assert.equal((await downgraded.run(request("removed"))).status, 400);
   assert.equal(downgraded.charged, 0);
 });
@@ -182,11 +182,11 @@ test("explicit model allowlist and legacy default are server owned", () => {
       env({ KOVA_VOICE_CATALOG: JSON.stringify([{ ...catalog[0], modelId }]) }),
       "free",
     );
-    assert.equal(selectCatalogVoice(value, "basic").modelId, modelId);
+    assert.equal(selectCatalogVoice(value, "jessica").modelId, modelId);
     assert.ok(!JSON.stringify(publicVoiceCatalog(value)).includes(modelId));
   }
   assert.equal(
-    selectCatalogVoice(readVoiceCatalog(env(), "free"), "basic").modelId,
+    selectCatalogVoice(readVoiceCatalog(env(), "free"), "jessica").modelId,
     "eleven_multilingual_v2",
   );
   assert.equal(
@@ -212,7 +212,7 @@ test("unsupported configured models fail before quota; client overrides cannot s
         throw new Error("must not execute");
       },
     });
-    assert.equal((await run(request("basic"))).status, 503);
+    assert.equal((await run(request("jessica"))).status, 503);
     assert.equal(charged, 0);
   }
   const events = [];
@@ -239,12 +239,12 @@ test("unsupported configured models fail before quota; client overrides cannot s
       return Response.json({ ok: true });
     },
   });
-  const req = request("premium");
+  const req = request("lauren");
   const hostile = new Request(req, {
     body: JSON.stringify({
       action: "tts",
       text: "fixture",
-      voiceId: "premium",
+      voiceId: "lauren",
       modelId: "eleven_v4",
       model_id: "evil",
       providerVoiceId: "evil",
@@ -252,4 +252,54 @@ test("unsupported configured models fail before quota; client overrides cannot s
   });
   assert.equal((await run(hostile)).status, 200);
   assert.deepEqual(events, ["quota", "execute"]);
+});
+
+test("plan rule: Free gets Jessica, Plus gets Jarnathan/Jessica/Lauren, Pro gets every voice", () => {
+  const ids = ["jarnathan", "jessica", "lauren", "river", "sam"];
+  const all = ids.map((id) => ({
+    id,
+    label: id,
+    providerVoiceId: `fixture-${id}`,
+    allowedPlans: ["free", "plus", "pro"],
+    showWhenLocked: true,
+  }));
+  const withCatalog = env({ KOVA_VOICE_CATALOG: JSON.stringify(all) });
+  const available = (tier) =>
+    readVoiceCatalog(withCatalog, tier)
+      .entries.filter((entry) => entry.available)
+      .map((entry) => entry.id);
+  assert.deepEqual(available("free"), ["jessica"]);
+  assert.deepEqual(available("plus"), ["jarnathan", "jessica", "lauren"]);
+  assert.deepEqual(available("pro"), ids);
+  // The realtime flag no longer reshuffles access by catalog position.
+  const realtime = env({
+    KOVA_VOICE_CATALOG: JSON.stringify(all),
+    KOVA_VOICE_REALTIME_ENABLED: "true",
+  });
+  assert.deepEqual(
+    readVoiceCatalog(realtime, "free")
+      .entries.filter((entry) => entry.available)
+      .map((entry) => entry.id),
+    ["jessica"],
+  );
+  // Locked voices stay visible but unavailable and cannot be selected.
+  const free = readVoiceCatalog(withCatalog, "free");
+  assert.equal(publicVoiceCatalog(free).filter((voice) => !voice.available).length, 4);
+  assert.equal(selectCatalogVoice(free, "jarnathan").status, 403);
+  assert.equal(readVoiceCatalog(withCatalog, "free").defaultVoiceId, "jessica");
+});
+
+test("an entry's own allowedPlans can narrow the plan rule but never widen it", () => {
+  const widened = readVoiceCatalog(
+    env({
+      KOVA_VOICE_CATALOG: JSON.stringify([
+        { id: "jessica", label: "J", providerVoiceId: "a", allowedPlans: ["pro"] },
+        { id: "river", label: "R", providerVoiceId: "b", allowedPlans: ["free", "plus", "pro"] },
+      ]),
+    }),
+    "free",
+  );
+  const byId = Object.fromEntries(widened.entries.map((entry) => [entry.id, entry.available]));
+  assert.deepEqual(byId, { jessica: false, river: false });
+  assert.equal(widened.defaultVoiceId, null);
 });

@@ -31,6 +31,9 @@ const review = load("src/lib/plugin-review-catalog.ts", {
   "@/integrations/connection-flows.mjs": flows,
   "./connectors-catalog": original,
   "./connector-master-list.mjs": master,
+  "./connector-write-actions": load("src/lib/connector-write-actions.ts", {
+    "@/integrations/connection-flows.mjs": flows,
+  }),
   ...assetModules,
 });
 const expected = [
@@ -65,20 +68,25 @@ test("master directory contains the 31 requested services and seven retained ser
   assert.equal(master.USER_REQUESTED_MASTER_CONNECTORS.length, 31);
   assert.equal(master.MASTER_CONNECTORS.length, 38);
   const ids = review.MASTER_PLUGIN_REVIEW_CATALOG.map((item) => item.connector.id);
-  assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS].sort());
-  assert.equal(new Set(ids).size, 38);
+  assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS, "google-docs"].sort());
+  assert.equal(new Set(ids).size, 39);
+  assert.equal(review.getPluginReview("whoop"), undefined);
+  assert.equal(original.getConnector("whoop"), undefined);
   for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     assert.equal(item.connector, original.getConnector(item.connector.id));
+    if (item.connector.id === "google-docs") {
+      assert.equal(item.availability, "planned");
+      assert.deepEqual(item.permissions, []);
+      continue;
+    }
+    assert.equal(item.availability, "implemented", item.connector.id);
+    assert.ok(
+      item.permissions.some(
+        ({ access, verification }) => access === "read" && verification === "source_contract",
+      ),
+      item.connector.id,
+    );
     if (!expected.includes(item.connector.id)) {
-      // These ship verified read-only access beyond the launch twelve.
-      if (["outlook-calendar", "box", "canva", "figma"].includes(item.connector.id)) {
-        assert.equal(item.availability, "implemented");
-        assert.equal(item.permissions.length, 1);
-        assert.equal(item.permissions[0].verification, "source_contract");
-        assert.equal(item.permissions[0].access, "read");
-      } else assert.deepEqual(item.permissions, []);
-      assert.equal(item.brandAsset.status, "generic_placeholder");
-      assert.equal(item.brandAsset.src, "");
       assert.equal(item.connector.status === "live", false);
     }
   }
@@ -90,7 +98,10 @@ test("master directory contains the 31 requested services and seven retained ser
     assert.ok(master.masterConnectorSearchText(id).includes(alias));
   }
   assert.equal(master.masterConnectorSearchText("unknown"), "");
-  assert.match(review.getPluginPreviewProvider("apple-health").availabilityNote, /native mobile/);
+  assert.match(
+    review.getPluginPreviewProvider("apple-health").availabilityNote,
+    /requires a signed iPhone app/,
+  );
   assert.match(review.getPluginPreviewProvider("plaid").availabilityNote, /Finances/);
 });
 
@@ -115,7 +126,7 @@ test("planned provider permissions are explicitly unconfirmed and carry no inven
 });
 
 test("source-backed capabilities name existing local code and never imply granted authorization", () => {
-  for (const item of review.LAUNCH_PLUGIN_REVIEW_CATALOG) {
+  for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     for (const permission of item.permissions.filter(
       (permission) => permission.verification === "source_contract",
     )) {
@@ -127,18 +138,44 @@ test("source-backed capabilities name existing local code and never imply grante
       /account grants and action approval/,
     );
   }
-  assert.equal(
-    review
-      .getPluginReview("google-drive")
-      .permissions.find((permission) => permission.access === "write").verification,
-    "proposal_unconfirmed",
-  );
+  for (const id of [
+    "box",
+    "calendly",
+    "canva",
+    "figma",
+    "google-bigquery",
+    "google-drive",
+    "hubspot",
+    "meltwater",
+    "ms-teams",
+    "notion",
+    "salesforce",
+    "sharepoint",
+    "slack",
+    "vercel",
+  ]) {
+    assert.ok(
+      review
+        .getPluginReview(id)
+        .permissions.some(
+          ({ access, verification }) => access === "write" && verification === "source_contract",
+        ),
+      id,
+    );
+  }
   assert.equal(review.getPluginPreviewProvider("unknown"), undefined);
 });
 
-test("all launch marks use verified local assets with preserved package provenance", () => {
-  assert.equal(Object.keys(review.PLUGIN_BRAND_ASSET_URLS).length, 12);
-  for (const item of review.LAUNCH_PLUGIN_REVIEW_CATALOG) {
+test("all 38 connector marks use verified local assets with recorded provenance", () => {
+  assert.deepEqual(
+    Object.keys(review.PLUGIN_BRAND_ASSET_URLS).sort(),
+    [...master.MASTER_CONNECTOR_IDS].sort(),
+  );
+  for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
+    if (item.connector.id === "google-docs") {
+      assert.equal(item.brandAsset.status, "generic_placeholder");
+      continue;
+    }
     const asset = provenance.assets.find(
       (asset) =>
         asset.id === item.connector.id ||
@@ -148,11 +185,14 @@ test("all launch marks use verified local assets with preserved package provenan
     assert.equal(item.brandAsset.status, "verified_local_asset");
     assert.equal(item.brandAsset.src, `/local-assets/${asset.file}`);
     assert.equal(item.brandAsset.src, review.PLUGIN_BRAND_ASSET_URLS[item.connector.id]);
+    assert.match(item.brandAsset.accent, /^#[0-9a-f]{6}$/u, item.connector.id);
     assert.equal(item.brandAsset.provenance, "src/assets/plugins/provenance.json");
     const bytes = readFileSync(`src/assets/plugins/${asset.file}`);
     assert.equal(createHash("sha256").update(bytes).digest("hex"), asset.sha256);
   }
   assert.equal(review.PLUGIN_BRAND_ASSET_URLS["ms-teams"], "/local-assets/microsoft-teams.svg");
+  assert.equal(review.getPluginReview("github").brandAsset.accent, "#000000");
+  assert.equal(review.getPluginReview("gmail").brandAsset.accent, "#e26558");
   const source = readFileSync("src/lib/plugin-review-catalog.ts", "utf8");
   assert.doesNotMatch(source, /fetch\(|https?:\/\/|localStorage|sessionStorage/);
 });

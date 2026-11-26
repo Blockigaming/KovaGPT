@@ -8,6 +8,11 @@ import { plaidConfiguration } from "./plaid-request.server.mjs";
 import { opaqueFinanceId, type VerifiedFinanceEvent } from "./plaid-webhook.server.mjs";
 import { readFinanceSnapshot } from "./finance-read.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import {
+  connectorWriteAllowed,
+  connectorWriteTargets,
+  saveConnectorWritePreference,
+} from "@/lib/connector-write-policy.server";
 
 async function financeAccess(
   caller: AuthedCaller,
@@ -36,7 +41,6 @@ function financeReadsConfigured() {
     return false;
   }
 }
-
 export function financeConfigured(readsConfigured = financeReadsConfigured()) {
   if (!readsConfigured) return false;
   try {
@@ -152,28 +156,102 @@ export async function listFinanceConnections(caller: AuthedCaller) {
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) throw new Error("finance_connection_enumeration_failed");
+  const connections = data ?? [];
+  const writeTargets = await connectorWriteTargets(
+    caller.userId,
+    "plaid",
+    connections.map(({ id }) => id),
+  );
   const readsConfigured = financeReadsConfigured();
   return {
     configured: financeConfigured(readsConfigured),
     readsConfigured,
-    connections: data ?? [],
+    connections: connections.map((connection) => ({
+      ...connection,
+      maintenanceAllowed: writeTargets.has(connection.id),
+    })),
   };
+}
+
+function lookupConnectedPlaidItem(caller: AuthedCaller, id: string) {
+  const db = caller.supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
+  return db
+    .from("financial_connections")
+    .select("id,item_reference_ciphertext,status,country")
+    .eq("id", id)
+    .eq("owner_id", caller.userId)
+    .eq("provider", "plaid")
+    .eq("status", "connected")
+    .is("deleted_at", null)
+    .maybeSingle();
+}
+
+export async function setPlaidMaintenance(caller: AuthedCaller, id: string, enabled: boolean) {
+  await financeRateLimit(caller.userId);
+  const connection = await lookupConnectedPlaidItem(caller, id);
+  if (connection.error || !connection.data) throw new Error("finance_connection_not_found");
+  if (enabled) {
+    if (!financeConfigured()) throw new Error("plaid_not_configured");
+    await financeAccess(caller, "connector_write");
+  } else if (caller.revalidateSession && !(await caller.revalidateSession())) {
+    throw new Error("finance_session_expired");
+  }
+  await saveConnectorWritePreference(caller.userId, "plaid", id, enabled);
+  return { maintenanceAllowed: enabled };
+}
+
+export async function restorePlaidWebhook(caller: AuthedCaller, id: string) {
+  await financeAccess(caller, "connector_write");
+  await financeRateLimit(caller.userId);
+  if (!(await connectorWriteAllowed(caller.userId, "plaid", id)))
+    throw new Error("finance_maintenance_required");
+  const connection = await lookupConnectedPlaidItem(caller, id);
+  if (connection.error || !connection.data) throw new Error("finance_connection_not_found");
+  const credential = JSON.parse(
+    await decryptCredential(connection.data.item_reference_ciphertext),
+  ) as {
+    access_token?: string;
+    item_id?: string;
+  };
+  if (
+    !credential.access_token ||
+    !credential.item_id ||
+    opaqueFinanceId("plaid-item", credential.item_id) !== id
+  )
+    throw new Error("finance_connection_credential_invalid");
+  const webhook = financeLinkRequest(caller.userId, connection.data.country).webhook;
+  const current = await lookupConnectedPlaidItem(caller, id);
+  if (
+    current.error ||
+    current.data?.item_reference_ciphertext !== connection.data.item_reference_ciphertext
+  )
+    throw new Error("finance_connection_changed");
+  await financeAccess(caller, "connector_write");
+  if (!(await connectorWriteAllowed(caller.userId, "plaid", id)))
+    throw new Error("finance_maintenance_required");
+  const result = await call<{ item?: { item_id?: string; webhook?: string } }>(
+    "/item/webhook/update",
+    { access_token: credential.access_token, webhook },
+  );
+  if (result.item?.item_id !== credential.item_id || result.item.webhook !== webhook)
+    throw new Error("plaid_response_rejected");
+  const db = caller.supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
+  const audit = await db.from("account_audit_entries").insert({
+    user_id: caller.userId,
+    event_type: "financial_connection_write",
+    safe_description: "Restored KovaGPT webhook for a linked bank",
+    result: "success",
+    metadata: { provider: "plaid", connectionId: id },
+  } as never);
+  if (audit.error) throw new Error("finance_audit_unavailable");
+  return { restored: true };
 }
 
 export async function readFinanceConnection(caller: AuthedCaller, id: string) {
   await financeAccess(caller, "connector_read");
   await financeRateLimit(caller.userId);
   const db = caller.supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
-  const lookup = () =>
-    db
-      .from("financial_connections")
-      .select("id,item_reference_ciphertext,status")
-      .eq("id", id)
-      .eq("owner_id", caller.userId)
-      .eq("provider", "plaid")
-      .eq("status", "connected")
-      .is("deleted_at", null)
-      .maybeSingle();
+  const lookup = () => lookupConnectedPlaidItem(caller, id);
   const { data: connection, error } = await lookup();
   if (error || !connection) throw new Error("finance_connection_not_found");
   const credential = JSON.parse(await decryptCredential(connection.item_reference_ciphertext)) as {

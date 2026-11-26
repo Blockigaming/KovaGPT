@@ -3,6 +3,8 @@ import { deriveTitle } from "./chat-store.ts";
 import { boundedSummaryText } from "./chat-summary-text.mjs";
 import { enqueueMemoryWrite } from "./memory-write-coordinator.mjs";
 
+export { chatResponseError, cloudBrowserErrorKind, consumeChatSse } from "./chat-sse-client.mjs";
+
 async function digestMessages(messages) {
   const bytes = new TextEncoder().encode(
     JSON.stringify({

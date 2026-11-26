@@ -899,7 +899,6 @@ function ProjectsPage() {
           icon={FolderKanban}
           title="Projects"
           reference="claude.projects.header"
-          readingTitle
           titleId="projects-title"
           description="Keep related chats, files, and instructions together."
           actions={
@@ -1128,18 +1127,13 @@ function ProjectsPage() {
             />
           </div>
         ) : projects.length === 0 ? (
-          <EmptyState
-            icon={FolderKanban}
-            title="No projects yet"
-            description="Create a project to keep related chats, files, and instructions together."
-            tip="Create one project for each long-running goal or team workspace."
-            action={
-              <Button onClick={(event) => openCreate(event.currentTarget)}>
-                <Plus className="w-4 h-4" />
-                Create project
-              </Button>
-            }
-          />
+          <div className="kova-projects-empty">
+            <EmptyState
+              icon={FolderKanban}
+              title="No projects yet"
+              description="Create a project to keep related chats, files, and instructions together."
+            />
+          </div>
         ) : (
           (() => {
             const q = query.trim().toLowerCase();

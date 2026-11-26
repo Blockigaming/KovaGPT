@@ -99,6 +99,7 @@ function fixture({
   connectedModel = null,
   connectedMode = "instant",
   hostedFreeMode = null,
+  finalizeGate = null,
 } = {}) {
   const ownerId = acceptance?.plan.ownerId ?? "owner-a";
   const chatId = acceptance?.plan.chatId ?? "123e4567-e89b-42d3-a456-426614174000";
@@ -214,6 +215,7 @@ function fixture({
         return { eventId: "fixture-event" };
       },
       finalizeGeneration: async (input) => {
+        if (finalizeGate) await finalizeGate;
         finalizations.push(input);
       },
       hashGuestIp: () => {
@@ -541,6 +543,38 @@ test("application route → actual repaired adapter → incremental client compl
   assert.doesNotMatch(JSON.stringify(f.logs), /fixture-key-only/);
 });
 
+test("chat completion waits for the previous generation reservation to settle", async () => {
+  let release;
+  const finalizeGate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const f = fixture({ finalizeGate });
+  const response = await f.post();
+  assert.equal(response.status, 200);
+  let visible = "";
+  let completed = false;
+  const consuming = consumeChatSse(response.body, {
+    onEvent: (event) => {
+      visible += event.choices?.[0]?.delta?.content ?? "";
+    },
+  }).then(() => {
+    completed = true;
+  });
+  try {
+    await waitFor(() => visible === "Visible ", "first content arrives before completion");
+    f.finish();
+    await waitFor(() => visible === "Visible completion.", "final content arrives before DONE");
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(completed, false, "DONE must wait for accounting");
+    assert.equal(f.finalizations.length, 0);
+  } finally {
+    release();
+    await consuming;
+  }
+  assert.equal(completed, true);
+  assert.equal(f.finalizations[0].status, "completed");
+});
+
 test("session rejection stops the application before usage/provider work", async () => {
   const f = fixture({ denied: true });
   assert.equal((await f.post()).status, 401);
@@ -756,6 +790,9 @@ function composer(f) {
       assert.equal(name, "@/lib/chat-summary-snapshot.mjs");
       return {
         withResponsePresentation,
+        chatResponseError,
+        cloudBrowserErrorKind,
+        consumeChatSse,
         completedChatReply,
         chatRequestHeaders,
         createChatHistoryPayload: async (messages) => ({ messages }),

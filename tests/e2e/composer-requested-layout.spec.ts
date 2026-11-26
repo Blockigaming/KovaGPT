@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { fixture, functionNames, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { composerResourceTrigger, openComposerAddMenu, usesSidebarDrawer } from "./current-ui";
@@ -271,7 +272,7 @@ test("requested: connected plugin rows come only from current account status", a
   await expect(page.getByRole("button", { name: "Remove plugin Gmail" })).toBeVisible();
 });
 
-test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attachment", async ({
+test("requested: drawing supports history, discard, PNG attachments and Excalidraw file exchange", async ({
   page,
 }, info) => {
   await start(page);
@@ -320,6 +321,18 @@ test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attac
   await expect(dialog.getByRole("button", { name: "Attach drawing", exact: true })).toBeDisabled();
   await dialog.getByRole("button", { name: "Redo", exact: true }).click();
   expect(await png()).toBe(drawn);
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialog.getByRole("button", { name: "Download Excalidraw file" }).click(),
+  ]);
+  const sceneFile = download.suggestedFilename();
+  expect(sceneFile).toMatch(/^Drawing-.*\.excalidraw$/);
+  const scene = await readFile(await download.path());
+  expect(JSON.parse(scene.toString())).toMatchObject({
+    type: "excalidraw",
+    version: 2,
+    elements: [{ type: "freedraw", isDeleted: false, points: expect.any(Array) }],
+  });
   await dialog.getByRole("button", { name: "Eraser", exact: true }).click();
   await expect(dialog.getByRole("button", { name: "Eraser", exact: true })).toHaveAttribute(
     "aria-pressed",
@@ -336,6 +349,14 @@ test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attac
   await expect(page.getByRole("button", { name: /^Inspect Drawing-.*\.png$/ })).toBeVisible();
   await expect(input).toHaveValue("Review this drawing");
   await expect(input).toBeFocused();
+  await page.getByLabel("Choose files", { exact: true }).setInputFiles({
+    name: sceneFile,
+    mimeType: "application/octet-stream",
+    buffer: scene,
+  });
+  await expect(
+    page.getByRole("button", { name: `Inspect ${sceneFile}.extracted.txt`, exact: true }),
+  ).toBeVisible();
 });
 
 test("desktop app control opens installation options directly when browser installation is unavailable", async ({
@@ -372,7 +393,7 @@ test("slash commands are selectable by keyboard and show the account model menu"
   await expect(page.getByRole("button", { name: /remove study/i })).toBeVisible();
 });
 
-test("empty chat opens the Voice screen directly while connecting", async ({ page }) => {
+test("empty chat starts Voice inline and keeps the composer visible", async ({ page }) => {
   await start(page);
   let release: () => void = () => {};
   const connecting = new Promise<void>((resolve) => {
@@ -390,11 +411,14 @@ test("empty chat opens the Voice screen directly while connecting", async ({ pag
     const button = page.getByTestId("voice-button");
     await expect(button).toBeEnabled();
     await button.click();
-    const voice = page.getByRole("dialog", { name: "Voice", exact: true });
-    await expect(voice.getByRole("heading", { name: "Starting Voice…" })).toBeVisible();
+    const voice = page.locator("#kova-inline-voice");
+    await expect(voice.getByRole("status")).toHaveText("Starting Voice…");
+    await expect(page.locator(".kova-empty-chat")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Voice", exact: true })).toHaveCount(0);
     await expect(page.locator("[data-chat-transcript-loading]")).toHaveCount(0);
     await expect(page.getByText("Original", { exact: true })).toHaveCount(0);
-    await voice.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("button", { name: "Stop voice", exact: true }).click();
     await expect(voice).toHaveCount(0);
     await expect(button).toBeFocused();
   } finally {

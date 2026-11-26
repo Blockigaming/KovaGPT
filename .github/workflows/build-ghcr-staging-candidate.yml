@@ -1,0 +1,145 @@
+name: Build private GHCR staging candidate
+on:
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: >
+      github.repository == 'Blockigaming/KovaGPT' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.label.name == 'build-staging-image'
+    environment: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: ghcr-staging-candidate
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+      IMAGE_REPOSITORY: ghcr.io/blockigaming/kovagpt-web
+      PRODUCTION_PROJECT_REF: mfbycmbjygcfkrsuepxf
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Build and verify the isolated staging image
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_KOVA_AUTH_MODE: ${{ vars.STAGING_AUTH_MODE || 'supabase' }}
+          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+        run: |
+          set -euo pipefail
+          staging_url="$VITE_SUPABASE_URL"
+          if [[ ! "$staging_url" =~ ^https://([a-z0-9]{20})\.supabase\.co/?$ ]]; then
+            echo "::error::An isolated staging Supabase project URL is required."
+            exit 1
+          fi
+          staging_project_ref="${BASH_REMATCH[1]}"
+          if [[ "$staging_project_ref" == "$PRODUCTION_PROJECT_REF" || ! "$VITE_SUPABASE_PUBLISHABLE_KEY" =~ ^sb_publishable_[A-Za-z0-9_-]{16,}$ ]]; then
+            echo "::error::A staging publishable key and a nonproduction project are required."
+            exit 1
+          fi
+          auth_origin=""
+          case "$VITE_KOVA_AUTH_MODE" in
+            supabase) ;;
+            dual|kova)
+              auth_origin="${STAGING_BASE_URL%/}"
+              if [[ ! "$auth_origin" =~ ^https://(staging\.kovagpt\.com|ca-kovagpt-staging\.[a-z0-9-]+\.[a-z0-9-]+\.azurecontainerapps\.io)$ ]]; then
+                echo "::error::Kova auth requires the verified staging app origin."
+                exit 1
+              fi
+              ;;
+            *) echo "::error::Invalid staging auth mode."; exit 1 ;;
+          esac
+
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          context="$RUNNER_TEMP/kova-staging-source"
+          scripts/azure/prepare-verified-build-context.sh "$context"
+          image="$IMAGE_REPOSITORY:staging-$SOURCE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          docker build --platform linux/amd64 --tag "$image" \
+            --label com.kovagpt.image.environment=staging \
+            --build-arg KOVA_SOURCE_CONTEXT=git-archive \
+            --build-arg KOVA_SOURCE_SHA="$SOURCE_SHA" \
+            --build-arg KOVA_SOURCE_TREE="$source_tree" \
+            --build-arg KOVA_VERIFY_BROWSER_CONFIG=true \
+            --build-arg KOVA_EXPECTED_SUPABASE_PROJECT_REF="$staging_project_ref" \
+            --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$PRODUCTION_PROJECT_REF" \
+            --build-arg VITE_SUPABASE_URL="https://$staging_project_ref.supabase.co" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY \
+            --build-arg VITE_KOVA_AUTH_MODE \
+            --build-arg VITE_KOVA_AUTH_ORIGIN="$auth_origin" "$context"
+          test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")" = "$SOURCE_SHA"
+          test "$(docker inspect --format '{{index .Config.Labels "com.kovagpt.source.tree"}}' "$image")" = "$source_tree"
+          test "$(docker inspect --format '{{index .Config.Labels "com.kovagpt.browser.config-verified"}}' "$image")" = true
+          docker run --rm -i --network none \
+            --mount "type=bind,src=$context/scripts/post-deploy-smoke.mjs,dst=/app/staging-smoke.mjs,readonly" \
+            --env KOVA_EXPECTED_SHA="$SOURCE_SHA" \
+            --env AZURE_ENVIRONMENT=staging \
+            --env AI_GENERATION_ENABLED=false \
+            --env KOVA_GENERATION_DISABLED=true \
+            --entrypoint sh "$image" -eu -s <<'STAGING_SMOKE'
+          export HOST=127.0.0.1 PORT=3000 KOVA_SMOKE_BASE_URL=http://127.0.0.1:3000
+          export KOVA_EXPECTED_SUPABASE_URL="$(node -p "require(\"./dist/browser-config-provenance.json\").supabaseUrl")"
+          export KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256="$(node -p "require(\"./dist/browser-config-provenance.json\").publishableKeySha256")"
+          node dist/server/index.mjs > /tmp/staging-container.log 2>&1 &
+          server_pid=$!
+          trap "kill $server_pid 2>/dev/null || true" EXIT
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { setTimeout } from "node:timers/promises";
+          const get = (path) => fetch(process.env.KOVA_SMOKE_BASE_URL + path, {
+            redirect: "manual", signal: AbortSignal.timeout(3000),
+          });
+          let health;
+          for (let attempt = 0; attempt < 24; attempt += 1) {
+            try { health = await get("/api/health"); break; }
+            catch { await setTimeout(250); }
+          }
+          assert.equal(health?.status, 200);
+          const data = await health.json();
+          assert.equal(data.build, process.env.KOVA_EXPECTED_SHA);
+          assert.equal(data.environment, "staging");
+          const tana = await get("/.well-known/tana-mcp-client.json");
+          assert.equal(tana.status, 200);
+          assert.equal((await tana.json()).client_id, "https://kovagpt.com/.well-known/tana-mcp-client.json");
+          assert.equal((await get("/api/admin/diagnostics")).status, 401);
+          assert.equal((await get("/api/integrations/accounts")).status, 401);
+          NODE
+          node /app/staging-smoke.mjs
+          STAGING_SMOKE
+      - name: Publish and record the verified staging digest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api /users/Blockigaming/packages/container/kovagpt-web --jq .visibility)" = private
+          umask 077
+          export DOCKER_CONFIG="$RUNNER_TEMP/ghcr-staging-auth"
+          mkdir -p "$DOCKER_CONFIG"
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username Blockigaming --password-stdin
+          image="$IMAGE_REPOSITORY:staging-$SOURCE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          docker push "$image"
+          docker pull "$image"
+          reference="$(docker inspect --format '{{index .RepoDigests 0}}' "$image")"
+          [[ "$reference" =~ ^ghcr\.io/blockigaming/kovagpt-web@sha256:[a-f0-9]{64}$ ]]
+          test "$(docker inspect --format '{{index .Config.Labels "com.kovagpt.image.environment"}}' "$reference")" = staging
+          test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$reference")" = "$SOURCE_SHA"
+          test "$(gh api /users/Blockigaming/packages/container/kovagpt-web --jq .visibility)" = private
+          {
+            printf 'Staging commit: %s\n\n' "$SOURCE_SHA"
+            printf 'Private image: %s\n\n' "$reference"
+            printf 'The image is ready for deployment to the isolated staging app.\n'
+          } >> "$GITHUB_STEP_SUMMARY"

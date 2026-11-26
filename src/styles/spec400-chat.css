@@ -2033,3 +2033,70 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     animation: kova-chat-loading-shimmer 1.8s ease-in-out infinite;
   }
 }
+
+.kova-inline-voice {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  padding: 0.25rem 0.875rem 0.5rem;
+  min-height: 2rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+.kova-inline-voice-picker {
+  max-width: min(15rem, 100%);
+  width: auto;
+  margin-inline-start: auto;
+}
+
+.kova-inline-voice-glow {
+  --voice-level: 0;
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: auto 2% -0.75rem;
+  height: clamp(8rem, 29dvh, 17rem);
+  background:
+    radial-gradient(ellipse 37% 50% at 32% 84%, var(--voice-glow-a, #7974ec), transparent 100%),
+    radial-gradient(ellipse 37% 47% at 67% 84%, var(--voice-glow-b, #b060b0), transparent 100%),
+    radial-gradient(ellipse 49% 38% at 50% 89%, var(--voice-glow-c, #5966ec), transparent 100%);
+  filter: blur(clamp(1.1rem, 3vw, 2.5rem));
+  opacity: calc(0.13 + var(--voice-level) * 0.55);
+  transform-origin: center bottom;
+  transform: scale(calc(0.89 + var(--voice-level) * 0.11), calc(0.61 + var(--voice-level) * 0.46));
+  mask-image: radial-gradient(ellipse 51% 83% at 50% 83%, black 22%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-inline-voice-glow {
+    opacity: 0.35;
+    transform: none;
+  }
+}
+
+/* The glow extends into the conversation above the composer. */
+@media (min-height: 501px) {
+  .spec400-composer-dock > .spec400-chat-input[data-voice-active] {
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .prose-chat[data-voice-reveal] {
+    animation: kova-voice-text-appear 240ms ease-out both;
+  }
+  @keyframes kova-voice-text-appear {
+    from {
+      opacity: 0;
+      translate: 0 0.12rem;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+}

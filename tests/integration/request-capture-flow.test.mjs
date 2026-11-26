@@ -582,10 +582,11 @@ for (const [name, method, body] of [
 
 const speechMocks = {
   "@tanstack/react-router": ["createFileRoute"],
-  "@/lib/api-auth.server": ["requireVerifiedUser", "getCallerTier"],
+  "@/lib/api-auth.server": ["requireVerifiedUser", "getCallerTier", "enforceQuota"],
   "@/lib/distributed-rate-limit.server": ["consumeApplicationRateLimit"],
   "@/lib/runtime-env.server": ["runtimeEnv"],
   "@/lib/speech.server.mjs": ["createSpeechHandler", "speechConfiguration"],
+  "@/lib/voice/elevenlabs.server.mjs": ["voiceConfiguration"],
   "@/lib/multimodal/image-source.server.mjs": ["assertImagePrincipal"],
   "@/lib/generation-acceptance-runtime.server": ["generationAcceptance"],
 };
@@ -628,6 +629,7 @@ for (const captureMode of ["true", "invalid-nonfalse-value"]) {
       "@/lib/api-auth.server": {
         requireVerifiedUser: denied("speech-authenticate"),
         getCallerTier: denied("speech-tier-read"),
+        enforceQuota: denied("speech-quota"),
       },
       "@/lib/distributed-rate-limit.server": {
         consumeApplicationRateLimit: denied("speech-rate-limit"),
@@ -642,6 +644,9 @@ for (const captureMode of ["true", "invalid-nonfalse-value"]) {
       "@/lib/speech.server.mjs": {
         createSpeechHandler: denied("speech-handler-construction"),
         speechConfiguration: denied("speech-configuration"),
+      },
+      "@/lib/voice/elevenlabs.server.mjs": {
+        voiceConfiguration: denied("speech-voice-configuration"),
       },
       "@/lib/multimodal/image-source.server.mjs": {
         assertImagePrincipal: denied("speech-principal"),

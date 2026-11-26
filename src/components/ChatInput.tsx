@@ -226,7 +226,7 @@ const SLASH_COMMANDS = [
 type SlashCommand = (typeof SLASH_COMMANDS)[number]["id"];
 
 const TEXT_LIKE_EXT =
-  /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
+  /\.(txt|md|markdown|csv|tsv|json|jsonl|excalidraw|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
 const MAX_IMAGE_FILE_BYTES = 3 * 1024 * 1024; // bounded for inline vision requests and device history
 
@@ -299,8 +299,10 @@ export function ChatInput({
   latestAssistantText = "",
   latestAssistantReply,
   voiceMode,
+  voiceSessionContext,
   onVoiceModeChange,
   onVoiceSubmit,
+  onVoicePlaybackProgress,
 }: {
   activityComposerRef?: Ref<ChatActivityComposer>;
   value: string;
@@ -368,9 +370,11 @@ export function ChatInput({
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   /** Controlled by the chat route so opening a new voice chat survives layout changes. */
   voiceMode?: "dictate" | "voice" | null;
+  voiceSessionContext?: string;
   onVoiceModeChange?: (mode: "dictate" | "voice" | null) => void;
   /** Uses the existing chat/history path and returns only a confirmed saved reply. */
   onVoiceSubmit?: ComposerVoiceSubmit;
+  onVoicePlaybackProgress?: (fraction: number | null) => void;
   responseSettings?: Pick<Settings, "responseLength" | "responseFormat" | "responseTone">;
   onResponseSettingsChange?: (
     change: Partial<Pick<Settings, "responseLength" | "responseFormat" | "responseTone">>,
@@ -584,7 +588,7 @@ export function ChatInput({
       voiceModeRef.current = null;
     };
   }, []);
-  const voiceContextKey = attachmentContext ?? "composer";
+  const voiceContextKey = voiceSessionContext ?? attachmentContext ?? "composer";
   const voiceIdentityRef = useRef({
     isLoaded,
     userId: user?.id ?? null,
@@ -627,6 +631,7 @@ export function ChatInput({
   const voiceReturnUrlRef = useRef<string | undefined>(undefined);
   const voiceDraftAppliedRef = useRef(false);
   const setVoiceOpenMode = (next: "dictate" | "voice" | null) => {
+    if (voiceModeRef.current === "voice" && next !== "voice") onVoicePlaybackProgress?.(null);
     voiceModeRef.current = next;
     setLocalVoiceMode(next);
     voiceCallbacksRef.current.onVoiceModeChange?.(next);
@@ -1141,7 +1146,8 @@ export function ChatInput({
       const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
 
       for (const f of files.slice(0, availableSlots)) {
-        const isImage = f.type.startsWith("image/");
+        const isExcalidraw = /\.excalidraw$/iu.test(f.name);
+        const isImage = !isExcalidraw && f.type.startsWith("image/");
         const isTextLike =
           f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
 
@@ -1277,6 +1283,11 @@ export function ChatInput({
                 documentReadsRef.current.delete(controller);
                 documentReadIdsRef.current.delete(uploading.clientId!);
               }
+            } else if (isExcalidraw) {
+              const { summarizeExcalidrawScene } = await import("@/lib/excalidraw-scene.mjs");
+              if (!currentRead()) return false;
+              textContent = summarizeExcalidrawScene(await f.text());
+              extractionNote = "Attached the diagram's text and layout summary.";
             } else textContent = await f.text();
             if (!currentRead()) return false;
             nextAttachments = composerStateRef.current.attachments;
@@ -1287,7 +1298,7 @@ export function ChatInput({
               extractionNote: extractionNote || undefined,
               pdf,
               status: "complete",
-              ...(isDocument
+              ...(isDocument || isExcalidraw
                 ? {
                     name: `${f.name}.extracted.txt`,
                     fileType: "text/plain",
@@ -2421,6 +2432,7 @@ export function ChatInput({
     <div
       className="spec400-chat-input"
       data-composer-surface={surface}
+      data-voice-active={activeVoiceMode === "voice" || undefined}
       data-signed-in={isLoaded && user ? "true" : undefined}
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
@@ -2460,6 +2472,44 @@ export function ChatInput({
           onEditingChange={setGoalEditing}
         />
       )}
+      <ComposerVoiceDialog
+        open={activeVoiceMode !== null}
+        inlineDictation
+        autoStartVoice
+        mode={activeVoiceMode ?? "dictate"}
+        onOpenChange={(open) => {
+          if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)
+            setVoiceOpenMode(null);
+        }}
+        userId={isLoaded ? (user?.id ?? null) : null}
+        contextKey={voiceContextKey}
+        disabled={disabled || !online}
+        isStreaming={isStreaming}
+        latestAssistantText={latestAssistantText}
+        latestAssistantReply={latestAssistantReply}
+        conversationModelControl={
+          <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
+        }
+        onTranscript={acceptVoiceTranscript}
+        onVoiceSubmit={onVoiceSubmit ? submitVoiceTranscript : undefined}
+        onVoicePlaybackProgress={onVoicePlaybackProgress}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (
+            !voiceMountedRef.current ||
+            voiceIdentityRef.current !== voiceScope ||
+            voiceCallbacksRef.current.disabled
+          )
+            return;
+          const invoker = voiceTriggerRef.current;
+          restoreDialogFocus(
+            voiceDraftAppliedRef.current || invoker?.hidden
+              ? ref.current
+              : (invoker ?? ref.current),
+            voiceReturnUrlRef.current,
+          );
+        }}
+      />
       <div
         ref={composerAnchorRef}
         className="spec400-composer"
@@ -2496,8 +2546,9 @@ export function ChatInput({
                 setSlashIndex(0);
                 updateComposerText(event.target.value, event.target.selectionStart);
               }}
-              onKeyDown={handleKey}
+              onKeyDown={activeVoiceMode === "voice" ? undefined : handleKey}
               disabled={disabled}
+              readOnly={activeVoiceMode === "voice"}
               onCompositionStart={() => {
                 composingRef.current = true;
               }}
@@ -2608,7 +2659,7 @@ export function ChatInput({
               aria-label="Choose files"
               disabled={disabled || isStreaming || !isLoaded || !user}
               type="file"
-              accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+              accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.excalidraw,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
               multiple
               hidden
               onChange={onFileChange}
@@ -2762,7 +2813,9 @@ export function ChatInput({
                 aria-label="Type with voice"
                 aria-controls="kova-inline-dictation"
                 aria-expanded={activeVoiceMode === "dictate"}
-                disabled={disabled || isStreaming || !isLoaded || !online}
+                disabled={
+                  disabled || isStreaming || !isLoaded || !online || activeVoiceMode === "voice"
+                }
                 title="Type with voice"
                 onClick={(event) => openVoice("dictate", event.currentTarget)}
               >
@@ -2773,30 +2826,40 @@ export function ChatInput({
                 type="button"
                 data-testid="voice-button"
                 className="spec400-send-button spec400-primary-voice"
-                hidden={hasDraft || isStreaming}
-                aria-label="Voice"
-                aria-haspopup="dialog"
+                hidden={activeVoiceMode !== "voice" && (hasDraft || isStreaming)}
+                aria-label={activeVoiceMode === "voice" ? "Stop voice" : "Voice"}
+                aria-controls={activeVoiceMode === "voice" ? "kova-inline-voice" : undefined}
                 aria-expanded={activeVoiceMode === "voice"}
                 disabled={
-                  disabled ||
-                  isStreaming ||
-                  !isLoaded ||
-                  !user ||
-                  !online ||
-                  !onVoiceSubmit ||
-                  voiceOpeningBlocked
+                  activeVoiceMode !== "voice" &&
+                  (disabled ||
+                    isStreaming ||
+                    !isLoaded ||
+                    !user ||
+                    !online ||
+                    !onVoiceSubmit ||
+                    voiceOpeningBlocked)
                 }
                 title={
-                  onVoiceSubmit
-                    ? "Start a voice conversation"
-                    : "Voice conversations require a saved chat"
+                  activeVoiceMode === "voice"
+                    ? "Stop voice"
+                    : onVoiceSubmit
+                      ? "Start a voice conversation"
+                      : "Voice conversations require a saved chat"
                 }
-                onClick={(event) => openVoice("voice", event.currentTarget)}
+                onClick={(event) => {
+                  if (activeVoiceMode === "voice") setVoiceOpenMode(null);
+                  else openVoice("voice", event.currentTarget);
+                }}
               >
-                <AudioLines aria-hidden="true" />
-                <span className="sr-only">Voice</span>
+                {activeVoiceMode === "voice" ? (
+                  <Square aria-hidden="true" />
+                ) : (
+                  <AudioLines aria-hidden="true" />
+                )}
+                {activeVoiceMode === "voice" && <span>Stop</span>}
               </button>
-              {isStreaming ? (
+              {activeVoiceMode === "voice" ? null : isStreaming ? (
                 <button
                   type="button"
                   onPointerDown={(event) => {
@@ -3079,43 +3142,6 @@ export function ChatInput({
           {blockedAttachmentMessage}
         </p>
       )}
-      <ComposerVoiceDialog
-        open={activeVoiceMode !== null}
-        inlineDictation
-        autoStartVoice
-        mode={activeVoiceMode ?? "dictate"}
-        onOpenChange={(open) => {
-          if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)
-            setVoiceOpenMode(null);
-        }}
-        userId={isLoaded ? (user?.id ?? null) : null}
-        contextKey={voiceContextKey}
-        disabled={disabled || !online}
-        isStreaming={isStreaming}
-        latestAssistantText={latestAssistantText}
-        latestAssistantReply={latestAssistantReply}
-        conversationModelControl={
-          <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
-        }
-        onTranscript={acceptVoiceTranscript}
-        onVoiceSubmit={onVoiceSubmit ? submitVoiceTranscript : undefined}
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          if (
-            !voiceMountedRef.current ||
-            voiceIdentityRef.current !== voiceScope ||
-            voiceCallbacksRef.current.disabled
-          )
-            return;
-          const invoker = voiceTriggerRef.current;
-          restoreDialogFocus(
-            voiceDraftAppliedRef.current || invoker?.hidden
-              ? ref.current
-              : (invoker ?? ref.current),
-            voiceReturnUrlRef.current,
-          );
-        }}
-      />
       {nextPromptPanel}
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent

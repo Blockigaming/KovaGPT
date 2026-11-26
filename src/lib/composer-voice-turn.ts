@@ -29,6 +29,36 @@ type SavedVoiceTurnOptions = {
   timeoutMs?: number;
 };
 
+export async function finishComposerVoiceTurn(
+  realtime: boolean | undefined,
+  historyEvent: string,
+  options: SavedVoiceTurnOptions,
+): Promise<ComposerVoiceTurn> {
+  const { turn, isCurrent } = options;
+  if (realtime) {
+    const contentSha256 = await hashVoiceReply(turn.content);
+    if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
+    return { ...turn, contentSha256 };
+  }
+  return awaitSavedComposerVoiceTurn({
+    ...options,
+    subscribeHistory: (notify) => {
+      const changed = (event: Event) => {
+        if ((event as CustomEvent).detail?.ownerId === turn.ownerId) notify();
+      };
+      window.addEventListener(historyEvent, changed);
+      return () => window.removeEventListener(historyEvent, changed);
+    },
+  });
+}
+
+async function hashVoiceReply(content: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(content));
+  return Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join(
+    "",
+  );
+}
+
 const object = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -201,19 +231,12 @@ export async function awaitSavedComposerVoiceTurn({
       await pause(250);
     }
     check();
-    const digest = await guarded(
-      crypto.subtle.digest("SHA-256", new TextEncoder().encode(turn.content)),
-    );
+    const contentSha256 = await guarded(hashVoiceReply(turn.content));
     check();
     const matching = getConversations().filter((conversation) => conversation.id === turn.chatId);
     if (matching.length !== 1 || !matchesReply(matching[0], turn))
       throw new Error("voice_reply_changed");
-    return {
-      ...turn,
-      contentSha256: Array.from(new Uint8Array(digest), (value) =>
-        value.toString(16).padStart(2, "0"),
-      ).join(""),
-    };
+    return { ...turn, contentSha256 };
   } finally {
     clearTimeout(deadline);
     if (pauseTimer !== null) clearTimeout(pauseTimer);

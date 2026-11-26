@@ -7,17 +7,38 @@ import {
 import type { AppleHealthAnalytics, AppleHealthDay } from "./apple-health-export.mjs";
 
 const updateEvent = "kova-health-update-v1";
-type Bridge = {
-  postMessage: (message: {
-    action: "start" | "resume" | "stop" | "disconnect";
-    id: string;
-    owner?: string;
-  }) => void;
+type BridgeMessage = {
+  action: "start" | "resume" | "stop" | "disconnect" | "record_steps";
+  id: string;
+  owner?: string;
+  count?: string;
+  start?: string;
+  end?: string;
 };
-export function getAppleHealthBridge() {
-  return (window as Window & { webkit?: { messageHandlers?: { kovaHealth?: Bridge } } }).webkit
-    ?.messageHandlers?.kovaHealth;
+type HealthPlatform = "apple" | "android";
+function getNativeHealthBridge() {
+  if (typeof window === "undefined") return undefined;
+  const nativeWindow = window as Window & {
+    webkit?: {
+      messageHandlers?: { kovaHealth?: { postMessage: (message: BridgeMessage) => void } };
+    };
+    kovaAndroidHealth?: { postMessage: (message: string) => void };
+  };
+  const apple = nativeWindow.webkit?.messageHandlers?.kovaHealth;
+  if (apple)
+    return {
+      platform: "apple" as const,
+      post: (message: BridgeMessage) => apple.postMessage(message),
+    };
+  const android = nativeWindow.kovaAndroidHealth;
+  if (android)
+    return {
+      platform: "android" as const,
+      post: (message: BridgeMessage) => android.postMessage(JSON.stringify(message)),
+    };
 }
+
+const androidMetrics = new Set(["StepCount", "SleepAnalysis", "HeartRate"]);
 
 function dayTime(date: unknown) {
   if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return NaN;
@@ -25,7 +46,7 @@ function dayTime(date: unknown) {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === date ? time : NaN;
 }
 
-function parseSnapshot(detail: unknown): AppleHealthAnalytics | null {
+function parseSnapshot(detail: unknown, platform: HealthPlatform): AppleHealthAnalytics | null {
   if (!detail || typeof detail !== "object") return null;
   const { asOf, metrics } = detail as { asOf?: unknown; metrics?: Record<string, unknown> };
   const end = dayTime(asOf);
@@ -33,6 +54,7 @@ function parseSnapshot(detail: unknown): AppleHealthAnalytics | null {
     return null;
   const report: AppleHealthAnalytics = { asOf, metrics: {} };
   for (const { id, signed } of APPLE_HEALTH_METRICS) {
+    if (platform === "android" && !androidMetrics.has(id)) continue;
     const entries = metrics[id];
     if (!Array.isArray(entries) || entries.length > APPLE_HEALTH_HISTORY_DAYS) continue;
     const days = new Map<string, AppleHealthDay>();
@@ -51,16 +73,34 @@ function parseSnapshot(detail: unknown): AppleHealthAnalytics | null {
         continue;
       days.set(entry.date, { date: entry.date, value });
     }
-    if (days.size) report.metrics[id] = [{ name: "Apple Health", days: [...days.values()] }];
+    if (days.size)
+      report.metrics[id] = [
+        {
+          name: platform === "apple" ? "Apple Health" : "Health Connect",
+          days: [...days.values()],
+        },
+      ];
   }
   return report;
 }
 
+const writeMessages = {
+  saved: "Steps saved on this device.",
+  cancelled: "Step entry cancelled.",
+  permission_required: "Allow step writing in your device’s health permissions, then try again.",
+  invalid: "Enter a valid step count and a time range that has already ended.",
+  error: "This device could not save the step entry.",
+};
+
 const empty = { report: null, updatedAt: null, status: "" };
 
-export function useAppleHealthLive(ownerId: string | null) {
-  const [available, setAvailable] = useState(false);
+export function useNativeHealthLive(ownerId: string | null) {
+  const [platform, setPlatform] = useState<HealthPlatform | null>(null);
   const [connected, setConnected] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [canWriteSteps, setCanWriteSteps] = useState(false);
+  const [writingSteps, setWritingSteps] = useState(false);
+  const [stepWriteStatus, setStepWriteStatus] = useState("");
   const active = useRef<string | null>(null);
   const [reading, setReading] = useState<{
     report: AppleHealthAnalytics | null;
@@ -72,64 +112,90 @@ export function useAppleHealthLive(ownerId: string | null) {
     if (active.current) {
       const id = active.current;
       active.current = null;
-      getAppleHealthBridge()?.postMessage({ action, id });
+      getNativeHealthBridge()?.post({ action, id });
     }
   }, []);
   const stop = useCallback(() => {
     closeBridge();
+    setCanWriteSteps(false);
+    setWritingSteps(false);
+    setStepWriteStatus("");
     setConnected(false);
+    setPending(false);
     setReading(empty);
   }, [closeBridge]);
 
   const connect = useCallback(
     (action: "start" | "resume") => {
-      const bridge = getAppleHealthBridge();
+      const bridge = getNativeHealthBridge();
       if (!ownerId || !bridge || active.current) return;
       const id = crypto.randomUUID();
       active.current = id;
-      setConnected(true);
-      setReading({ ...empty, status: "Connecting to Apple Health…" });
-      bridge.postMessage({ action, id, owner: ownerId });
+      setPending(true);
+      const label = bridge.platform === "apple" ? "Apple Health" : "Health Connect";
+      setReading({ ...empty, status: `Connecting to ${label}…` });
+      bridge.post({ action, id, owner: ownerId });
     },
     [ownerId],
   );
 
   useEffect(() => {
-    setAvailable(Boolean(ownerId && getAppleHealthBridge()));
-    if (!ownerId) {
+    const bridge = getNativeHealthBridge();
+    setPlatform(bridge?.platform ?? null);
+    if (!ownerId || !bridge) {
       stop();
       return;
     }
+    stop();
+    const label = bridge.platform === "apple" ? "Apple Health" : "Health Connect";
     const onUpdate = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (!active.current || detail?.id !== active.current) return;
-      const report = parseSnapshot(detail.report);
+      if (Object.hasOwn(writeMessages, detail.stepWriteState)) {
+        setWritingSteps(false);
+        setStepWriteStatus(writeMessages[detail.stepWriteState as keyof typeof writeMessages]);
+        return;
+      }
+      const report = parseSnapshot(detail.report, bridge.platform);
       if (!report) {
         if (detail.state === "not_connected") {
           stop();
+        } else if (detail.state === "paused") {
+          setReading({ ...empty, status: "Live updates are paused." });
+        } else if (detail.state === "unavailable") {
+          stop();
+          setReading({ ...empty, status: `${label} is unavailable on this device.` });
+        } else if (detail.state === "permission_required") {
+          stop();
+          setReading({
+            ...empty,
+            status: `Allow at least one read permission in ${label} to connect.`,
+          });
         } else if (detail.state === "error") {
           stop();
           setReading({
             ...empty,
-            status: "Live updates are unavailable. Check Apple Health permissions and try again.",
+            status: `Live updates are unavailable. Check ${label} permissions and try again.`,
           });
         }
         return;
       }
+      setPending(false);
+      setConnected(true);
+      setCanWriteSteps(detail.canWriteSteps === true);
       const hasData = Object.keys(report.metrics).length > 0;
       setReading({
         report: hasData ? report : null,
         updatedAt: hasData ? Date.now() : null,
         status: hasData
           ? "Live updates are on"
-          : "Waiting for readings from Apple Health. Check permissions in the Health app.",
+          : `No readable data from ${label} yet. Check the device permissions.`,
       });
     };
     window.addEventListener(updateEvent, onUpdate);
     window.addEventListener("pagehide", stop);
     const resume = () => connect("resume");
-    const bridge = getAppleHealthBridge();
-    if (bridge) resume();
+    resume();
     window.addEventListener("pageshow", resume);
     return () => {
       closeBridge();
@@ -141,9 +207,54 @@ export function useAppleHealthLive(ownerId: string | null) {
 
   function disconnect() {
     closeBridge("disconnect");
-    setConnected(false);
-    setReading(empty);
+    stop();
   }
 
-  return { available, connected, ...reading, start: () => connect("start"), disconnect };
+  function recordSteps(count: number, start: number, end: number) {
+    const bridge = getNativeHealthBridge();
+    const id = active.current;
+    if (!bridge || !id || !connected || !canWriteSteps || writingSteps) return;
+    if (
+      !Number.isSafeInteger(count) ||
+      count < 1 ||
+      count > 1_000_000 ||
+      !Number.isSafeInteger(start) ||
+      !Number.isSafeInteger(end) ||
+      start <= 0 ||
+      start >= end ||
+      end > Date.now()
+    ) {
+      setStepWriteStatus(writeMessages.invalid);
+      return;
+    }
+    setWritingSteps(true);
+    setStepWriteStatus("");
+    try {
+      bridge.post({
+        action: "record_steps",
+        id,
+        count: String(count),
+        start: String(start),
+        end: String(end),
+      });
+    } catch {
+      setWritingSteps(false);
+      setStepWriteStatus(writeMessages.error);
+    }
+  }
+
+  return {
+    platform,
+    pending,
+    connected,
+    ...reading,
+    canWriteSteps,
+    writingSteps,
+    stepWriteStatus,
+    recordSteps,
+    start: () => connect("start"),
+    disconnect,
+  };
 }
+
+export type NativeHealthLive = ReturnType<typeof useNativeHealthLive>;

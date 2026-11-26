@@ -432,3 +432,34 @@ test("direct Azure custom canonical keeps worker and scheduler on the single con
   });
   assert.deepEqual(calls, ["https://kovagpt.com/api/internal/email-dispatch"]);
 });
+
+test("Supabase-only production dispatch preserves account notices without any owned-auth sends", async () => {
+  const hosted = {
+    ...env(),
+    KOVA_AUTH_MODE: "supabase",
+    KOVA_AUTH_EMAIL_DISPATCH_ENABLED: "false",
+    KOVA_EMAIL_QUEUE_ENABLED: "false",
+  };
+  const config = productionEmailWorkerConfiguration(hosted);
+  assert.equal(config.authEnabled, false);
+  assert.equal(config.accountEnabled, true);
+  const d = dependencies();
+  const summary = await runProductionEmailWorker(run, config, d);
+  assert.equal(summary.auth, null);
+  assert.equal(summary.attempted, 1);
+  assert.deepEqual(
+    d.calls.map(([name]) => name),
+    [
+      "kova_email_claim_worker_run",
+      "kova_email_worker_scope",
+      "account",
+      "kova_email_finish_worker_run",
+    ],
+  );
+  for (const flag of ["KOVA_AUTH_EMAIL_DISPATCH_ENABLED", "KOVA_EMAIL_QUEUE_ENABLED"]) {
+    assert.throws(
+      () => productionEmailWorkerConfiguration({ ...hosted, [flag]: "true" }),
+      /owned_auth_disabled/u,
+    );
+  }
+});

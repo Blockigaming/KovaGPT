@@ -280,7 +280,7 @@ if (scope === "public") {
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       await expect.poll(() => heldModules).toBeGreaterThan(0);
-      await expect(page.locator("[data-chat-transcript-loading]")).toBeVisible();
+      await expect(page.locator("[data-chat-transcript-loading]:visible").first()).toBeVisible();
       await expect(
         page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
       ).toBeVisible();
@@ -302,7 +302,10 @@ if (scope === "public") {
       test(`${theme} workspace fits: ${route}`, async ({ page }, info) => {
         const errors = watchErrors(page);
         await coreFixture(page, theme, "plus");
-        await page.goto(route, { waitUntil: "domcontentloaded" });
+        const url = route.startsWith("/settings/")
+          ? `/?settings=${route.slice("/settings/".length)}`
+          : route;
+        await page.goto(url, { waitUntil: "domcontentloaded" });
         await waitForKovaHydration(page);
         await expectContained(page, route);
         expect(errors, `${route}: client exceptions`).toEqual([]);
@@ -319,7 +322,7 @@ if (scope === "public") {
     page,
   }, info) => {
     await coreFixture(page, "dark", "plus");
-    await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
+    await page.goto("/?settings=appearance", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const size = page.getByRole("slider", {
       name: "Interface size",

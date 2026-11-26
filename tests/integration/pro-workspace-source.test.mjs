@@ -13,7 +13,10 @@ test("workspace sources remain authorized while chat history stays searchable in
   assert.match(home, /loadConversations/);
   assert.match(sidebar, /searchConversations/);
   assert.match(sidebar, /aria-labelledby="sidebar-chats-heading"/);
-  assert.match(sidebar, /<h2\s+id="sidebar-chats-heading"[\s\S]*?>\s*Recent chats\s*<\/h2>/);
+  assert.match(
+    sidebar,
+    /<h2\s+id="sidebar-chats-heading"[\s\S]*?>\s*\{t\("Recent chats"\)\}\s*<\/h2>/,
+  );
   assert.match(palette, /searchConversations/);
 });
 test("Memory Center supports real edit delete merge and source explanations", () => {
