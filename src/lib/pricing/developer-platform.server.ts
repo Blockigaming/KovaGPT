@@ -21,6 +21,7 @@ import { withDeveloperBilling } from "./developer-billing.server";
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
 import { pricingRegistryIds } from "./pricing-administration.mjs";
 import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
+import { summarizeDeveloperUsage } from "./developer-usage-summary.mjs";
 import { developerFileReferences } from "./developer-file-policy.mjs";
 import { loadDeveloperFileContent } from "./developer-file-content.server";
 import {
@@ -374,6 +375,7 @@ export async function handleDeveloperConsole(request: Request) {
       const params = new URL(request.url).searchParams;
       const limitsPage = Number(params.get("limitsPage") ?? 0);
       const usagePage = Number(params.get("usagePage") ?? 0);
+      const summaryRequested = params.get("usageSummary") === "1";
       if (
         [limitsPage, usagePage].some(
           (page) => !Number.isSafeInteger(page) || page < 0 || page > 10000,
@@ -401,6 +403,7 @@ export async function handleDeveloperConsole(request: Request) {
           limitsHasMore: false,
           usagePage,
           usageHasMore: false,
+          ...(summaryRequested ? { summary: summarizeDeveloperUsage([]), summaryReadAt: new Date().toISOString() } : {}),
         });
       const usageAccount = params.get("usageAccount");
       const usageProject = params.get("usageProject");
@@ -421,6 +424,8 @@ export async function handleDeveloperConsole(request: Request) {
       const from = dateBound("usageFrom");
       const through = dateBound("usageThrough");
       if (from && through && from > through) throw new Error("developer_input_invalid");
+      if (summaryRequested && (!from || !through || +through - +from > 92 * 86400000))
+        throw new Error("developer_summary_range_invalid");
       if (usageAccount && !ids.includes(developerUuid(usageAccount)))
         throw new Error("developer_owner_required");
       if (usageProject) developerUuid(usageProject);
@@ -450,6 +455,34 @@ export async function handleDeveloperConsole(request: Request) {
       if (through) {
         through.setUTCDate(through.getUTCDate() + 1);
         usageQuery = usageQuery.lt("created_at", through.toISOString());
+      }
+      if (summaryRequested) {
+        // Fixed cutoff and stable ordering prevent new incoming requests from
+        // moving the observed window. Settlement changes can still occur while
+        // reading; the ledger remains the billing authority.
+        const cutoff = new Date().toISOString();
+        const batchSize = 250;
+        const maximumRows = 5000;
+        const history = [];
+        const query = usageQuery
+          .lte("created_at", cutoff)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false });
+        for (let offset = 0; offset <= maximumRows; offset += batchSize) {
+          const page = await query
+            .range(offset, offset + batchSize - 1)
+            .abortSignal(AbortSignal.timeout(10000));
+          if (page.error || !page.data) throw new Error("developer_storage_unavailable");
+          if (history.length + page.data.length > maximumRows)
+            throw new Error("developer_summary_range_too_large");
+          history.push(...page.data);
+          if (page.data.length < batchSize)
+            return developerJson({
+              summary: summarizeDeveloperUsage(history),
+              summaryReadAt: cutoff,
+            });
+        }
+        throw new Error("developer_summary_range_too_large");
       }
       const rows = await Promise.all([
         db.from("developer_projects").select("id,account_id,name").in("account_id", ids).limit(100),
