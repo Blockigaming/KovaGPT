@@ -177,12 +177,12 @@
 }
 .kova-settings-reference .kova-settings-nav .kova-settings-nav-item:hover {
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--settings-surface);
 }
 .kova-settings-reference .kova-settings-nav .kova-settings-nav-item[aria-selected="true"] {
   border-radius: 999px;
   background: var(--settings-surface);
-  box-shadow: inset 0 0 0 1px var(--border-strong);
+  box-shadow: none;
   font-weight: 600;
 }
 .kova-settings-reference .kova-settings-no-results {

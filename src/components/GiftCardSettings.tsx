@@ -161,9 +161,9 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                 <Button
                   key={option.name}
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   aria-pressed={design === option}
-                  className="aria-pressed:border-current"
+                  className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
                   onClick={() => setDesign(option)}
                 >
                   <span
@@ -185,9 +185,9 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                 <Button
                   key={option}
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   aria-pressed={amount === option}
-                  className="aria-pressed:border-current"
+                  className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
                   onClick={() => setAmount(option)}
                 >
                   {option === "custom" ? "Other" : `$${option}`}
@@ -215,10 +215,10 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                 <Button
                   key={option}
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   aria-pressed={delivery === option}
                   disabled={checkoutEnabled && option !== "self" && !deliveryAvailability[option]}
-                  className="aria-pressed:border-current"
+                  className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
                   onClick={() => setDelivery(option)}
                 >
                   <Icon aria-hidden="true" /> {label}
