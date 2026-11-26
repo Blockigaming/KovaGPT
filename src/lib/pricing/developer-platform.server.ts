@@ -371,8 +371,14 @@ export async function handleDeveloperConsole(request: Request) {
   const db = developerDatabase();
   try {
     if (request.method === "GET") {
-      const limitsPage = Number(new URL(request.url).searchParams.get("limitsPage") ?? 0);
-      if (!Number.isSafeInteger(limitsPage) || limitsPage < 0 || limitsPage > 10000)
+      const params = new URL(request.url).searchParams;
+      const limitsPage = Number(params.get("limitsPage") ?? 0);
+      const usagePage = Number(params.get("usagePage") ?? 0);
+      if (
+        [limitsPage, usagePage].some(
+          (page) => !Number.isSafeInteger(page) || page < 0 || page > 10000,
+        )
+      )
         throw new Error("developer_page_invalid");
       const accounts = await db
         .from("developer_account_owners")
@@ -393,7 +399,58 @@ export async function handleDeveloperConsole(request: Request) {
           balances: [],
           limitsPage,
           limitsHasMore: false,
+          usagePage,
+          usageHasMore: false,
         });
+      const usageAccount = params.get("usageAccount");
+      const usageProject = params.get("usageProject");
+      const usageKey = params.get("usageKey");
+      const usageModel = params.get("usageModel");
+      const usageService = params.get("usageService");
+      const usageStatus = params.get("usageStatus");
+      const dateBound = (key: string) => {
+        const value = params.get(key);
+        if (!value) return null;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
+          throw new Error("developer_input_invalid");
+        const date = new Date(value + "T00:00:00.000Z");
+        if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)
+          throw new Error("developer_input_invalid");
+        return date;
+      };
+      const from = dateBound("usageFrom");
+      const through = dateBound("usageThrough");
+      if (from && through && from > through) throw new Error("developer_input_invalid");
+      if (usageAccount && !ids.includes(developerUuid(usageAccount)))
+        throw new Error("developer_owner_required");
+      if (usageProject) developerUuid(usageProject);
+      if (usageKey) developerUuid(usageKey);
+      if (usageModel && !/^[a-zA-Z0-9._:-]{1,100}$/.test(usageModel))
+        throw new Error("developer_input_invalid");
+      if (usageService && !/^[a-zA-Z0-9_-]{1,80}$/.test(usageService))
+        throw new Error("developer_input_invalid");
+      if (
+        usageStatus &&
+        !["reserved", "dispatched", "settled", "uncertain", "reconciliation_required", "rejected"].includes(usageStatus)
+      )
+        throw new Error("developer_input_invalid");
+      let usageQuery = db
+        .from("developer_api_requests")
+        .select(
+          "id,account_id,project_id,api_key_id,public_model,capability,currency,settlement_state,maximum_reserved_charge,final_customer_charge,created_at",
+        )
+        .in("account_id", ids);
+      if (usageAccount) usageQuery = usageQuery.eq("account_id", usageAccount);
+      if (usageProject) usageQuery = usageQuery.eq("project_id", usageProject);
+      if (usageKey) usageQuery = usageQuery.eq("api_key_id", usageKey);
+      if (usageModel) usageQuery = usageQuery.eq("public_model", usageModel);
+      if (usageService) usageQuery = usageQuery.eq("capability", usageService);
+      if (usageStatus) usageQuery = usageQuery.eq("settlement_state", usageStatus);
+      if (from) usageQuery = usageQuery.gte("created_at", from.toISOString());
+      if (through) {
+        through.setUTCDate(through.getUTCDate() + 1);
+        usageQuery = usageQuery.lt("created_at", through.toISOString());
+      }
       const rows = await Promise.all([
         db.from("developer_projects").select("id,account_id,name").in("account_id", ids).limit(100),
         db
@@ -413,14 +470,10 @@ export async function handleDeveloperConsole(request: Request) {
           .order("scope_type")
           .order("scope_id")
           .range(limitsPage * 100, limitsPage * 100 + 100),
-        db
-          .from("developer_api_requests")
-          .select(
-            "id,account_id,public_model,capability,currency,settlement_state,maximum_reserved_charge,final_customer_charge,created_at",
-          )
-          .in("account_id", ids)
+        usageQuery
           .order("created_at", { ascending: false })
-          .limit(100),
+          .order("id", { ascending: false })
+          .range(usagePage * 100, usagePage * 100 + 100),
         db
           .from("developer_credit_accounts")
           .select("id,organization_id,currency,available_amount,reserved_amount,suspended_at")
@@ -435,7 +488,9 @@ export async function handleDeveloperConsole(request: Request) {
         limits: rows[2].data?.slice(0, 100),
         limitsPage,
         limitsHasMore: (rows[2].data?.length ?? 0) > 100,
-        usage: rows[3].data,
+        usage: rows[3].data?.slice(0, 100),
+        usagePage,
+        usageHasMore: (rows[3].data?.length ?? 0) > 100,
         balances: rows[4].data,
       });
     }
@@ -469,7 +524,7 @@ export async function handleDeveloperConsole(request: Request) {
           body.name.length > 80 ||
           !Array.isArray(body.scopes) ||
           !body.scopes.length ||
-          body.scopes.length > 4 ||
+          body.scopes.length > DEVELOPER_SCOPES.length ||
           body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value)))
         )
           throw new Error("developer_key_invalid");
