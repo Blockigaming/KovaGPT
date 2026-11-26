@@ -1,3 +1,4 @@
+import { CreditHoldReview } from "@/components/CreditHoldReview";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,12 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
   return (
     <section className="kova-settings-section space-y-4">
       <h3>{gift ? "Gift card checkout" : "Credit wallet"}</h3>
+      {!gift && (
+        <CreditHoldReview
+          ownerId={ownerId}
+          onReconciled={() => setRevision((value) => value + 1)}
+        />
+      )}
       {wallet === undefined ? (
         <Button variant="outline" type="button" onClick={() => setRevision((value) => value + 1)}>
           Refresh wallet

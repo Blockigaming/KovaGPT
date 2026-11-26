@@ -233,3 +233,15 @@ begin
 end $$;
 revoke all on function public.kova_reconcile_stale_credit_spend(uuid,uuid,numeric,text) from public,anon,authenticated;
 grant execute on function public.kova_reconcile_stale_credit_spend(uuid,uuid,numeric,text) to service_role;
+
+create function public.kova_stale_credit_holds()
+returns table(event_id uuid,request_id text,model text,created_at timestamptz,maximum_micros bigint)
+language sql stable security definer set search_path='' as $$
+  select e.id,e.request_id,e.provider_model,e.created_at,s.maximum_micros
+    from kova_private.usage_credit_spends s
+    join public.ai_usage_events e on e.id=s.event_id
+    where s.settled_micros is null and e.status='stale' and e.actual_cost_usd is null
+    order by e.created_at,e.id limit 50;
+$$;
+revoke all on function public.kova_stale_credit_holds() from public,anon,authenticated;
+grant execute on function public.kova_stale_credit_holds() to service_role;
