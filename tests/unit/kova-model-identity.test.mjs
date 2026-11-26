@@ -132,5 +132,8 @@ test("hosted identity is conditional even on the first turn", () => {
     hasAssistantHistory: false,
   });
   assert.match(prompt, /introduce yourself only if asked or directly relevant/);
-  assert.match(prompt, /Never volunteer model names in greetings, tool failures, or routine replies/);
+  assert.match(
+    prompt,
+    /Never volunteer model names in greetings, tool failures, or routine replies/,
+  );
 });
