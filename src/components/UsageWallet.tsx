@@ -41,7 +41,12 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
       ) : (
         <>
           <p className="text-sm text-muted-foreground">Stripe sandbox. Test payments only.</p>
-          {!gift && <p>Test balance {usd.format(wallet.fundedCents / 100)}</p>}
+          {!gift && (
+            <p>
+              Test balance{" "}
+              {usd.format(Math.max(0, wallet.fundedCents / 100 - wallet.spentMicros / 1_000_000))}
+            </p>
+          )}
           {!gift && (
             <form
               className="flex flex-wrap items-end gap-2"
@@ -111,6 +116,30 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
                 Redeem
               </Button>
             </form>
+          )}
+          {!gift && (
+            <div>
+              <h4 className="font-medium">Credit spending</h4>
+              {wallet.spending.length ? (
+                <ul className="divide-y divide-border">
+                  {wallet.spending.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="flex flex-wrap justify-between gap-2 py-2 text-sm"
+                    >
+                      <time dateTime={entry.date}>{new Date(entry.date).toLocaleDateString()}</time>
+                      <span>{entry.model}</span>
+                      <span>
+                        {usd.format(entry.micros / 1_000_000)}
+                        {entry.pending ? " reserved" : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No credit spending recorded.</p>
+              )}
+            </div>
           )}
           <div>
             <h4 className="font-medium">{gift ? "Gift history" : "Credit purchase history"}</h4>

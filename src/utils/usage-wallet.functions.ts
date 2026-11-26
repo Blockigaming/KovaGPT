@@ -16,6 +16,8 @@ import {
 
 export type UsageWallet = {
   fundedCents: number;
+  spentMicros: number;
+  spending: { id: string; model: string; date: string; micros: number; pending: boolean }[];
   delivery: { email: boolean; text: boolean };
   orders: {
     id: string;
@@ -40,7 +42,19 @@ export const getMyUsageWallet = createServerFn({ method: "GET" })
       .rpc("kova_credit_wallet", { p_user: context.userId, p_env: environment })
       .abortSignal(AbortSignal.timeout(10_000));
     if (result.error || !result.data) throw new Error("Credit wallet unavailable.");
-    return { ...result.data, delivery: giftDeliveryAvailability() } as UsageWallet;
+    const spending = await loose(supabaseAdmin)
+      .rpc("kova_credit_spending_history", {
+        p_user: context.userId,
+        p_env: environment,
+      })
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (spending.error || !spending.data) throw new Error("Credit spending unavailable.");
+    return {
+      ...result.data,
+      spentMicros: spending.data.spentMicros,
+      spending: spending.data.entries,
+      delivery: giftDeliveryAvailability(),
+    } as UsageWallet;
   });
 
 export const createUsageCreditCheckout = createServerFn({ method: "POST" })
