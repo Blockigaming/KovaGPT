@@ -381,11 +381,13 @@ export async function handleDeveloperConsole(request: Request) {
         const page = Number(params.get("creditPage") ?? 0);
         if (!Number.isSafeInteger(page) || page < 0 || page > 4000)
           throw new Error("developer_page_invalid");
-        const wallet = await db.rpc("developer_credit_wallet_status_v2", {
-          p_owner: caller.userId,
-          p_account: accountId,
-          p_offset: page * 25,
-        }).abortSignal(AbortSignal.timeout(10000));
+        const wallet = await db
+          .rpc("developer_credit_wallet_status_v2", {
+            p_owner: caller.userId,
+            p_account: accountId,
+            p_offset: page * 25,
+          })
+          .abortSignal(AbortSignal.timeout(10000));
         if (wallet.error?.code === "42501") throw new Error("developer_owner_required");
         if (wallet.error) throw new Error("developer_storage_unavailable");
         return developerJson({ enabled: true, wallet: wallet.data, page });
@@ -411,8 +413,11 @@ export async function handleDeveloperConsole(request: Request) {
       const ids = (accounts.data ?? []).map((row) => row.account_id);
       let consumerCreditSharing = false;
       if (workspaceV2) {
-        const preference = await db.from("developer_credit_sharing_preferences")
-          .select("allow_consumer_usage").eq("owner_id", caller.userId).maybeSingle();
+        const preference = await db
+          .from("developer_credit_sharing_preferences")
+          .select("allow_consumer_usage")
+          .eq("owner_id", caller.userId)
+          .maybeSingle();
         if (preference.error) throw new Error("developer_storage_unavailable");
         consumerCreditSharing = preference.data?.allow_consumer_usage === true;
       }
@@ -431,7 +436,9 @@ export async function handleDeveloperConsole(request: Request) {
           limitsHasMore: false,
           usagePage,
           usageHasMore: false,
-          ...(summaryRequested ? { summary: summarizeDeveloperUsage([]), summaryReadAt: new Date().toISOString() } : {}),
+          ...(summaryRequested
+            ? { summary: summarizeDeveloperUsage([]), summaryReadAt: new Date().toISOString() }
+            : {}),
           ...(exportRequested ? { exportRows: [], exportReadAt: new Date().toISOString() } : {}),
         });
       const usageAccount = params.get("usageAccount");
@@ -443,8 +450,7 @@ export async function handleDeveloperConsole(request: Request) {
       const dateBound = (key: string) => {
         const value = params.get(key);
         if (!value) return null;
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
-          throw new Error("developer_input_invalid");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("developer_input_invalid");
         const date = new Date(value + "T00:00:00.000Z");
         if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)
           throw new Error("developer_input_invalid");
@@ -453,7 +459,10 @@ export async function handleDeveloperConsole(request: Request) {
       const from = dateBound("usageFrom");
       const through = dateBound("usageThrough");
       if (from && through && from > through) throw new Error("developer_input_invalid");
-      if ((summaryRequested || exportRequested) && (!from || !through || +through - +from > 92 * 86400000))
+      if (
+        (summaryRequested || exportRequested) &&
+        (!from || !through || +through - +from > 92 * 86400000)
+      )
         throw new Error("developer_summary_range_invalid");
       if (usageAccount && !ids.includes(developerUuid(usageAccount)))
         throw new Error("developer_owner_required");
@@ -465,7 +474,14 @@ export async function handleDeveloperConsole(request: Request) {
         throw new Error("developer_input_invalid");
       if (
         usageStatus &&
-        !["reserved", "dispatched", "settled", "uncertain", "reconciliation_required", "rejected"].includes(usageStatus)
+        ![
+          "reserved",
+          "dispatched",
+          "settled",
+          "uncertain",
+          "reconciliation_required",
+          "rejected",
+        ].includes(usageStatus)
       )
         throw new Error("developer_input_invalid");
       let usageQuery = db
@@ -487,12 +503,23 @@ export async function handleDeveloperConsole(request: Request) {
       }
       const publicUsage = (row: Record<string, unknown>) => {
         const { authoritative_usage, ...rest } = row;
-        const usage = authoritative_usage && typeof authoritative_usage === "object" ? authoritative_usage as Record<string, unknown> : {};
+        const usage =
+          authoritative_usage && typeof authoritative_usage === "object"
+            ? (authoritative_usage as Record<string, unknown>)
+            : {};
         const dimension = (name: string) => {
           const value = usage[name];
-          return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+          return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+            ? value
+            : null;
         };
-        return { ...rest, input_tokens: dimension("input_tokens"), cached_input_tokens: dimension("cached_input_tokens"), image_input_tokens: dimension("image_input_tokens"), output_tokens: dimension("output_tokens") };
+        return {
+          ...rest,
+          input_tokens: dimension("input_tokens"),
+          cached_input_tokens: dimension("cached_input_tokens"),
+          image_input_tokens: dimension("image_input_tokens"),
+          output_tokens: dimension("output_tokens"),
+        };
       };
       if (summaryRequested || exportRequested) {
         // Fixed cutoff and stable ordering prevent new incoming requests from
@@ -516,13 +543,17 @@ export async function handleDeveloperConsole(request: Request) {
             throw new Error("developer_summary_range_too_large");
           history.push(...page.data);
           if (page.data.length < batchSize)
-            return developerJson(exportRequested ? {
-              exportRows: history.map(publicUsage),
-              exportReadAt: cutoff,
-            } : {
-              summary: summarizeDeveloperUsage(history),
-              summaryReadAt: cutoff,
-            });
+            return developerJson(
+              exportRequested
+                ? {
+                    exportRows: history.map(publicUsage),
+                    exportReadAt: cutoff,
+                  }
+                : {
+                    summary: summarizeDeveloperUsage(history),
+                    summaryReadAt: cutoff,
+                  },
+            );
         }
         throw new Error("developer_summary_range_too_large");
       }
@@ -576,10 +607,12 @@ export async function handleDeveloperConsole(request: Request) {
     if (operation === "refresh_credit_wallet") {
       if (runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") !== "true")
         throw new Error("developer_workspace_upgrade_unavailable");
-      const wallet = await db.rpc("developer_refresh_wallet_v2", {
-        p_owner: caller.userId,
-        p_account: developerUuid(body.accountId),
-      }).abortSignal(AbortSignal.timeout(10000));
+      const wallet = await db
+        .rpc("developer_refresh_wallet_v2", {
+          p_owner: caller.userId,
+          p_account: developerUuid(body.accountId),
+        })
+        .abortSignal(AbortSignal.timeout(10000));
       if (wallet.error?.code === "42501") throw new Error("developer_owner_required");
       if (wallet.error?.message === "developer_credit_legacy_reconciliation_required")
         throw new Error("developer_credit_legacy_reconciliation_required");
@@ -588,7 +621,11 @@ export async function handleDeveloperConsole(request: Request) {
     }
     let input: Record<string, unknown>;
     let secret: string | undefined;
-    if (["ensure_workspace", "create_project", "rename_project", "set_credit_sharing"].includes(operation)) {
+    if (
+      ["ensure_workspace", "create_project", "rename_project", "set_credit_sharing"].includes(
+        operation,
+      )
+    ) {
       if (!workspaceV2) throw new Error("developer_workspace_upgrade_unavailable");
       if (operation === "set_credit_sharing" && typeof body.enabled !== "boolean")
         throw new Error("developer_input_invalid");
@@ -597,14 +634,14 @@ export async function handleDeveloperConsole(request: Request) {
           ? {}
           : operation === "set_credit_sharing"
             ? { enabled: body.enabled }
-          : {
-              accountId: developerUuid(body.accountId),
-              projectId: developerUuid(body.projectId),
-              name:
-                typeof body.name === "string" && body.name.trim() && body.name.length <= 80
-                  ? body.name.trim()
-                  : null,
-            };
+            : {
+                accountId: developerUuid(body.accountId),
+                projectId: developerUuid(body.projectId),
+                name:
+                  typeof body.name === "string" && body.name.trim() && body.name.length <= 80
+                    ? body.name.trim()
+                    : null,
+              };
       if ("name" in input && !input.name) throw new Error("developer_input_invalid");
       const result = await db.rpc("manage_developer_workspace_v2", {
         p_owner: caller.userId,

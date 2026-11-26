@@ -80,11 +80,17 @@ async function fixture(options = {}) {
         if (table === "developer_api_requests") {
           rows = rows.filter((row) =>
             filters.every(([operator, column, value]) =>
-              operator === "in" ? value.includes(row[column]) :
-              operator === "eq" ? row[column] === value :
-              operator === "gte" ? row[column] >= value :
-              operator === "lt" ? row[column] < value :
-              operator === "lte" ? row[column] <= value : true,
+              operator === "in"
+                ? value.includes(row[column])
+                : operator === "eq"
+                  ? row[column] === value
+                  : operator === "gte"
+                    ? row[column] >= value
+                    : operator === "lt"
+                      ? row[column] < value
+                      : operator === "lte"
+                        ? row[column] <= value
+                        : true,
             ),
           );
         }
@@ -414,8 +420,11 @@ test("console filters owner-scoped API history before pagination and rejects for
   assert.equal(last.usageHasMore, false);
   assert.equal(last.usage[0].id, 100);
   assert.ok(first.usage.every((item) => item.account_id === account));
-  assert.ok(f.state.queries.filter((query) => query.table === "developer_api_requests")
-    .every((query) => query.orders.join() === "created_at,id"));
+  assert.ok(
+    f.state.queries
+      .filter((query) => query.table === "developer_api_requests")
+      .every((query) => query.orders.join() === "created_at,id"),
+  );
   assert.equal((await page({ usageAccount: other })).status, 403);
   assert.equal((await page({ usageFrom: "2026-02-30" })).status, 400);
   assert.equal((await page({ usagePage: "-1" })).status, 400);
@@ -445,9 +454,12 @@ test("usage summary includes all filtered records beyond one page without exposi
     ],
   };
   const response = await f.module.handleDeveloperConsole(
-    new Request("https://kovagpt.com/api/developer/console?usageSummary=1&usageFrom=2026-11-01&usageThrough=2026-11-02", {
-      headers: { "x-kova-expected-user": "owner-a" },
-    }),
+    new Request(
+      "https://kovagpt.com/api/developer/console?usageSummary=1&usageFrom=2026-11-01&usageThrough=2026-11-02",
+      {
+        headers: { "x-kova-expected-user": "owner-a" },
+      },
+    ),
   );
   assert.equal(response.status, 200);
   const { summary } = await response.json();

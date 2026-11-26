@@ -12,11 +12,20 @@ const row = {
 
 test("usage aggregation preserves decimal charges and separates currencies and missing meters", () => {
   const summary = summarizeDeveloperUsage([
-    { ...row, final_customer_charge: "0.1", authoritative_usage: { input_tokens: 4, cached_input_tokens: 2, output_tokens: 1 } },
+    {
+      ...row,
+      final_customer_charge: "0.1",
+      authoritative_usage: { input_tokens: 4, cached_input_tokens: 2, output_tokens: 1 },
+    },
     { ...row, final_customer_charge: "0.2" },
     { ...row, final_customer_charge: 1e-8 },
     { ...row, currency: "EUR", final_customer_charge: "2.00000000" },
-    { ...row, settlement_state: "reserved", final_customer_charge: null, maximum_reserved_charge: 99 },
+    {
+      ...row,
+      settlement_state: "reserved",
+      final_customer_charge: null,
+      maximum_reserved_charge: 99,
+    },
   ]);
   assert.equal(summary.requests, 5);
   assert.equal(summary.measuredRequests, 1);
@@ -25,7 +34,10 @@ test("usage aggregation preserves decimal charges and separates currencies and m
     { currency: "USD", amount: "0.30000001" },
   ]);
   assert.deepEqual(summary.tokens, {
-    input_tokens: 4, cached_input_tokens: 2, image_input_tokens: 0, output_tokens: 1,
+    input_tokens: 4,
+    cached_input_tokens: 2,
+    image_input_tokens: 0,
+    output_tokens: 1,
   });
   assert.equal(summary.models[0].requests, 5);
   assert.equal(summary.days[0].label, "2026-11-01");

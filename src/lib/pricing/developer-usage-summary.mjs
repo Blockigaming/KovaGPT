@@ -50,12 +50,17 @@ function group(map, key, row) {
 function finish(totals) {
   return {
     ...totals,
-    charges: Object.entries(totals.charges).sort(([a], [b]) => a.localeCompare(b))
+    charges: Object.entries(totals.charges)
+      .sort(([a], [b]) => a.localeCompare(b))
       .map(([currency, amount]) => ({ currency, amount: formatTicks(amount) })),
   };
 }
 export function summarizeDeveloperUsage(rows) {
-  const total = newTotals(), days = new Map(), models = new Map(), services = new Map(), statuses = new Map();
+  const total = newTotals(),
+    days = new Map(),
+    models = new Map(),
+    services = new Map(),
+    statuses = new Map();
   for (const row of rows) {
     add(total, row);
     group(days, String(row.created_at).slice(0, 10), row);
@@ -63,7 +68,8 @@ export function summarizeDeveloperUsage(rows) {
     group(services, String(row.capability), row);
     group(statuses, String(row.settlement_state), row);
   }
-  const entries = (map, sort) => [...map].sort(sort).map(([label, totals]) => ({ label, ...finish(totals) }));
+  const entries = (map, sort) =>
+    [...map].sort(sort).map(([label, totals]) => ({ label, ...finish(totals) }));
   const alphabetic = ([a], [b]) => a.localeCompare(b);
   const byCount = ([a, av], [b, bv]) => bv.requests - av.requests || a.localeCompare(b);
   return {

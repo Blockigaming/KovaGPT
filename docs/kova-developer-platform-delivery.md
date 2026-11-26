@@ -32,17 +32,17 @@ Owner clarification, 2026-11-26: purchased API credits expire one year after pur
 
 ## Required independently navigable product surfaces
 
-| Group | Pages |
-| --- | --- |
-| Workspace | Overview, organization switcher, project switcher, project settings |
-| Playground | Text/Responses, images, audio, agents, saved prompts |
-| Models | Searchable catalog, model details, supported reasoning levels, capabilities and pricing |
-| Development | API keys, service accounts, projects, logs, request details, webhooks |
-| Resources | Files, vector stores, containers, agent runs, browser sessions |
-| Usage | Spend, requests, tokens and per-service meters; filter by project, model, key and date |
-| Billing | Balance, included Pro allowance and renewal date, purchased credits and lot expiry, KovaGPT usage opt-in, auto-reload, payment methods, invoices, transaction history, limits |
-| Settings | Profile, organization, members, roles, permissions, security |
-| Documentation | Overview, quickstart, authentication, API reference by service, guides, SDKs, examples, errors, limits, pricing, status, changelog |
+| Group         | Pages                                                                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace     | Overview, organization switcher, project switcher, project settings                                                                                                           |
+| Playground    | Text/Responses, images, audio, agents, saved prompts                                                                                                                          |
+| Models        | Searchable catalog, model details, supported reasoning levels, capabilities and pricing                                                                                       |
+| Development   | API keys, service accounts, projects, logs, request details, webhooks                                                                                                         |
+| Resources     | Files, vector stores, containers, agent runs, browser sessions                                                                                                                |
+| Usage         | Spend, requests, tokens and per-service meters; filter by project, model, key and date                                                                                        |
+| Billing       | Balance, included Pro allowance and renewal date, purchased credits and lot expiry, KovaGPT usage opt-in, auto-reload, payment methods, invoices, transaction history, limits |
+| Settings      | Profile, organization, members, roles, permissions, security                                                                                                                  |
+| Documentation | Overview, quickstart, authentication, API reference by service, guides, SDKs, examples, errors, limits, pricing, status, changelog                                            |
 
 First increment: dedicated responsive console shell and real existing account/project/key/recent-call metrics, with anchors to already implemented controls. Do not advertise the anchors as separate completed pages. Follow with real routes, loading/error/empty states, accessible navigation, server-backed actions and responsive visual acceptance. Use the main Kova typography and existing light/dark theme tokens. Do not populate dashboards with fabricated spend or request data.
 

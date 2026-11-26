@@ -176,18 +176,28 @@ export async function processDeveloperFunding(attemptId?: string): Promise<boole
     }
     const verified = verifiedFundingReceipt(attempt, session, charge, dispute, transactions);
     const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
-    if (creditLots && verified.receipt && (!charge || !Number.isSafeInteger(charge.created) || charge.created <= 0))
+    if (
+      creditLots &&
+      verified.receipt &&
+      (!charge || !Number.isSafeInteger(charge.created) || charge.created <= 0)
+    )
       throw new Error("developer_credit_purchase_time_unverified");
-    const complete = await rpc<boolean>(creditLots ? "complete_developer_funding_v2" : "complete_developer_funding", {
-      p_attempt: attempt.id,
-      p_lease: attempt.lease_token,
-      p_revision: attempt.revision,
-      p_session: { id: session.id, state: verified.state, url: verified.url ?? null },
-      p_receipt: verified.receipt,
-      ...(creditLots ? {
-        p_paid_at: verified.receipt && charge ? new Date(charge.created * 1000).toISOString() : null,
-      } : {}),
-    });
+    const complete = await rpc<boolean>(
+      creditLots ? "complete_developer_funding_v2" : "complete_developer_funding",
+      {
+        p_attempt: attempt.id,
+        p_lease: attempt.lease_token,
+        p_revision: attempt.revision,
+        p_session: { id: session.id, state: verified.state, url: verified.url ?? null },
+        p_receipt: verified.receipt,
+        ...(creditLots
+          ? {
+              p_paid_at:
+                verified.receipt && charge ? new Date(charge.created * 1000).toISOString() : null,
+            }
+          : {}),
+      },
+    );
     if (!complete) throw new Error("developer_funding_lease_changed");
     return true;
   } catch (error) {

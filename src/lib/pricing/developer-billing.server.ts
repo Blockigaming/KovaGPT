@@ -83,12 +83,16 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
 export async function recoverDeveloperBilling(): Promise<number> {
   // Retention/accounting maintenance remains available while paid generation is disabled.
   const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
-  const recovered = await rpc<number>(creditLots ? "recover_developer_billing_v2" : "recover_developer_billing", { p_limit: 100 });
+  const recovered = await rpc<number>(
+    creditLots ? "recover_developer_billing_v2" : "recover_developer_billing",
+    { p_limit: 100 },
+  );
   if (creditLots) {
     // Each owner is handled in a separate transaction, so maintenance never
     // holds several owners' locks while waiting for a billing lock.
     const due = await rpc<{ owner_id: string; account_id: string }[]>(
-      "developer_due_wallet_refresh_v2", { p_limit: 5 },
+      "developer_due_wallet_refresh_v2",
+      { p_limit: 5 },
     );
     let failures = 0;
     for (const wallet of due) {
@@ -203,22 +207,27 @@ export async function meterProviderRequest(
     signal: input.signal,
     send: input.send,
     admit: () =>
-      rpc<DeveloperAdmission>(creditLots ? "admit_developer_billing_v2" : "admit_developer_billing", {
-        p_key: current.keyId,
-        p_request_key: `${requestKey}:${call}`,
-        p_fingerprint: fingerprint,
-        p_provider: input.provider,
-        p_model: input.body.model,
-        p_capability: input.capability,
-        p_version: version.id,
-        p_quote: prepared.quote,
-        p_limits: prepared.contract.maximumUsage,
-      }),
+      rpc<DeveloperAdmission>(
+        creditLots ? "admit_developer_billing_v2" : "admit_developer_billing",
+        {
+          p_key: current.keyId,
+          p_request_key: `${requestKey}:${call}`,
+          p_fingerprint: fingerprint,
+          p_provider: input.provider,
+          p_model: input.body.model,
+          p_capability: input.capability,
+          p_version: version.id,
+          p_quote: prepared.quote,
+          p_limits: prepared.contract.maximumUsage,
+        },
+      ),
     dispatch: (admission) =>
       rpc<boolean>(
-        creditLots ? "dispatch_developer_billing_v2" : current.fileBindings?.length
-          ? "dispatch_developer_billing_with_files"
-          : "dispatch_developer_billing",
+        creditLots
+          ? "dispatch_developer_billing_v2"
+          : current.fileBindings?.length
+            ? "dispatch_developer_billing_with_files"
+            : "dispatch_developer_billing",
         {
           p_request: admission.request_id,
           p_lease: admission.lease_token,
@@ -226,12 +235,15 @@ export async function meterProviderRequest(
         },
       ),
     finish: async (admission, outcome, result) => {
-      const ok = await rpc<boolean>(creditLots ? "finish_developer_billing_v2" : "finish_developer_billing", {
-        p_request: admission.request_id,
-        p_lease: admission.lease_token,
-        p_outcome: outcome,
-        p_result: result ?? {},
-      });
+      const ok = await rpc<boolean>(
+        creditLots ? "finish_developer_billing_v2" : "finish_developer_billing",
+        {
+          p_request: admission.request_id,
+          p_lease: admission.lease_token,
+          p_outcome: outcome,
+          p_result: result ?? {},
+        },
+      );
       if (!ok) throw new Error("developer_settlement_unavailable");
     },
   });

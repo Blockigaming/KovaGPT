@@ -361,31 +361,92 @@ test("staged v2 auto-provisioning is repeatable, adopts existing accounts and cr
     await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
     await db.exec("set role service_role");
     const v2 = async (operation, input = {}, user = owner) =>
-      (await db.query("select public.manage_developer_workspace_v2($1,$2,$3) result", [user, operation, input])).rows[0].result;
+      (
+        await db.query("select public.manage_developer_workspace_v2($1,$2,$3) result", [
+          user,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
     const results = await Promise.all([v2("ensure_workspace"), v2("ensure_workspace")]);
     assert.deepEqual(results[0], results[1]);
-    assert.equal((await db.query("select count(*)::int n from developer_credit_accounts")).rows[0].n, 1);
-    assert.equal((await db.query("select available_amount::float8 balance from developer_credit_accounts")).rows[0].balance, 0);
-    const old = await manage(db, "create_account", { name: "Existing workspace", currency: "EUR" }, other);
+    assert.equal(
+      (await db.query("select count(*)::int n from developer_credit_accounts")).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (await db.query("select available_amount::float8 balance from developer_credit_accounts"))
+        .rows[0].balance,
+      0,
+    );
+    const old = await manage(
+      db,
+      "create_account",
+      { name: "Existing workspace", currency: "EUR" },
+      other,
+    );
     assert.deepEqual(await v2("ensure_workspace", {}, other), old);
     const a = results[0];
     const project = { accountId: a.accountId, projectId: id(15), name: "Server application" };
     const first = await v2("create_project", project);
     assert.deepEqual(await v2("create_project", project), first);
-    await assert.rejects(v2("create_project", { ...project, name: "Other name" }), /project_conflict/);
-    await assert.rejects(v2("rename_project", { ...project, name: "Foreign edit" }, other), /owner_required/);
+    await assert.rejects(
+      v2("create_project", { ...project, name: "Other name" }),
+      /project_conflict/,
+    );
+    await assert.rejects(
+      v2("rename_project", { ...project, name: "Foreign edit" }, other),
+      /owner_required/,
+    );
     await v2("rename_project", { ...project, name: "Renamed application" });
-    assert.equal((await db.query("select name from developer_projects where id=$1", [project.projectId])).rows[0].name, "Renamed application");
-    assert.equal((await db.query("select count(*)::int n from developer_credit_sharing_preferences")).rows[0].n, 0);
-    assert.deepEqual(await v2("set_credit_sharing", { enabled: true }), { consumerCreditSharing: true });
-    assert.equal((await db.query("select allow_consumer_usage from developer_credit_sharing_preferences where owner_id=$1", [owner])).rows[0].allow_consumer_usage, true);
+    assert.equal(
+      (await db.query("select name from developer_projects where id=$1", [project.projectId]))
+        .rows[0].name,
+      "Renamed application",
+    );
+    assert.equal(
+      (await db.query("select count(*)::int n from developer_credit_sharing_preferences")).rows[0]
+        .n,
+      0,
+    );
+    assert.deepEqual(await v2("set_credit_sharing", { enabled: true }), {
+      consumerCreditSharing: true,
+    });
+    assert.equal(
+      (
+        await db.query(
+          "select allow_consumer_usage from developer_credit_sharing_preferences where owner_id=$1",
+          [owner],
+        )
+      ).rows[0].allow_consumer_usage,
+      true,
+    );
     await assert.rejects(v2("set_credit_sharing", { enabled: "true" }), /input_invalid/);
     await v2("set_credit_sharing", { enabled: false });
-    assert.equal((await db.query("select allow_consumer_usage from developer_credit_sharing_preferences where owner_id=$1", [owner])).rows[0].allow_consumer_usage, false);
-    assert.equal((await db.query("select count(*)::int n from developer_credit_sharing_preferences where owner_id=$1", [other])).rows[0].n, 0);
+    assert.equal(
+      (
+        await db.query(
+          "select allow_consumer_usage from developer_credit_sharing_preferences where owner_id=$1",
+          [owner],
+        )
+      ).rows[0].allow_consumer_usage,
+      false,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int n from developer_credit_sharing_preferences where owner_id=$1",
+          [other],
+        )
+      ).rows[0].n,
+      0,
+    );
     await db.exec("reset role;set role authenticated");
     await assert.rejects(v2("ensure_workspace"), /permission denied/);
-    await assert.rejects(db.query("select * from developer_credit_sharing_preferences"), /permission denied/);
+    await assert.rejects(
+      db.query("select * from developer_credit_sharing_preferences"),
+      /permission denied/,
+    );
   } finally {
     await db.close();
   }

@@ -65,7 +65,12 @@ export function parseDeveloperInput(kind, input) {
           : fail("developer_operation_invalid");
   if (Object.keys(input).some((key) => ![...common, ...fields].includes(key)))
     fail("developer_field_invalid");
-  if (typeof input.model !== "string" || input.model.length < 2 || input.model.length > 80 || !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model))
+  if (
+    typeof input.model !== "string" ||
+    input.model.length < 2 ||
+    input.model.length > 80 ||
+    !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+  )
     fail("developer_model_invalid");
   const text = (value, max = 32000) => {
     if (

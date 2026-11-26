@@ -102,9 +102,13 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       await action(controller);
     } catch (cause) {
       if (mounted.current) {
-        setError(controller.signal.aborted
-          ? "Request canceled or timed out. If you submitted a paid request, check Logs before trying again."
-          : cause instanceof Error ? cause.message : "API request could not be completed.");
+        setError(
+          controller.signal.aborted
+            ? "Request canceled or timed out. If you submitted a paid request, check Logs before trying again."
+            : cause instanceof Error
+              ? cause.message
+              : "API request could not be completed.",
+        );
       }
     } finally {
       window.clearTimeout(timeout);
@@ -113,54 +117,62 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     }
   };
 
-  const loadModels = () => perform(async (controller) => {
-    resetQuote();
-    setModel("");
-    setModels([]);
-    const result = record(await request("models", controller));
-    const catalog = Array.isArray(result.data) ? result.data.flatMap((entry): Model[] => {
-      const row = record(entry);
-      return typeof row.id === "string" && typeof row.capability === "string"
-        ? [{ id: row.id, capability: row.capability }]
+  const loadModels = () =>
+    perform(async (controller) => {
+      resetQuote();
+      setModel("");
+      setModels([]);
+      const result = record(await request("models", controller));
+      const catalog = Array.isArray(result.data)
+        ? result.data.flatMap((entry): Model[] => {
+            const row = record(entry);
+            return typeof row.id === "string" && typeof row.capability === "string"
+              ? [{ id: row.id, capability: row.capability }]
+              : [];
+          })
         : [];
-    }) : [];
-    if (!mounted.current || controller.signal.aborted) return;
-    setModels(catalog);
-    setModel(catalog.find((item) => item.capability === capability[operation])?.id ?? "");
-    if (!catalog.length) setError("No approved models are available for this key.");
-  });
+      if (!mounted.current || controller.signal.aborted) return;
+      setModels(catalog);
+      setModel(catalog.find((item) => item.capability === capability[operation])?.id ?? "");
+      if (!catalog.length) setError("No approved models are available for this key.");
+    });
 
   const eligible = models.filter((item) => item.capability === capability[operation]);
-  const getQuote = () => perform(async (controller) => {
-    resetQuote();
-    const input = operation === "responses"
-      ? { model, input: prompt, max_output_tokens: Number(maxOutput), stream: false }
-      : operation === "images"
-        ? { model, prompt, size, quality, n: 1 }
-        : { model, input: prompt };
-    const requestBody = JSON.stringify(input);
-    const result = record(await request("quotes", controller, JSON.stringify({ operation, input })));
-    if (
-      typeof result.quoteToken !== "string" ||
-      typeof result.currency !== "string" ||
-      !/^[A-Z]{3}$/.test(result.currency) ||
-      typeof result.maximumCharge !== "number" ||
-      !Number.isFinite(result.maximumCharge) ||
-      result.maximumCharge < 0 ||
-      typeof result.expiresAt !== "number" ||
-      result.expiresAt <= Date.now()
-    ) throw new Error("The server did not return a valid price quote.");
-    if (!mounted.current || controller.signal.aborted) return;
-    setQuote({
-      quoteToken: result.quoteToken,
-      currency: result.currency,
-      maximumCharge: result.maximumCharge,
-      expiresAt: result.expiresAt,
-      operation,
-      requestBody,
-      requestKey: crypto.randomUUID(),
+  const getQuote = () =>
+    perform(async (controller) => {
+      resetQuote();
+      const input =
+        operation === "responses"
+          ? { model, input: prompt, max_output_tokens: Number(maxOutput), stream: false }
+          : operation === "images"
+            ? { model, prompt, size, quality, n: 1 }
+            : { model, input: prompt };
+      const requestBody = JSON.stringify(input);
+      const result = record(
+        await request("quotes", controller, JSON.stringify({ operation, input })),
+      );
+      if (
+        typeof result.quoteToken !== "string" ||
+        typeof result.currency !== "string" ||
+        !/^[A-Z]{3}$/.test(result.currency) ||
+        typeof result.maximumCharge !== "number" ||
+        !Number.isFinite(result.maximumCharge) ||
+        result.maximumCharge < 0 ||
+        typeof result.expiresAt !== "number" ||
+        result.expiresAt <= Date.now()
+      )
+        throw new Error("The server did not return a valid price quote.");
+      if (!mounted.current || controller.signal.aborted) return;
+      setQuote({
+        quoteToken: result.quoteToken,
+        currency: result.currency,
+        maximumCharge: result.maximumCharge,
+        expiresAt: result.expiresAt,
+        operation,
+        requestBody,
+        requestKey: crypto.randomUUID(),
+      });
     });
-  });
 
   const run = () => {
     const accepted = quote;
@@ -180,14 +192,23 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       if (!mounted.current || controller.signal.aborted) return;
       if (accepted.operation === "images") {
         const data = record(result).data;
-        const previews = Array.isArray(data) ? data.flatMap((item): string[] => {
-          const encoded = record(item).b64_json;
-          return typeof encoded === "string" && encoded.length <= 30_000_000 &&
-            /^[A-Za-z0-9+/]+={0,2}$/.test(encoded) && encoded.startsWith("iVBOR")
-            ? [`data:image/png;base64,${encoded}`] : [];
-        }) : [];
+        const previews = Array.isArray(data)
+          ? data.flatMap((item): string[] => {
+              const encoded = record(item).b64_json;
+              return typeof encoded === "string" &&
+                encoded.length <= 30_000_000 &&
+                /^[A-Za-z0-9+/]+={0,2}$/.test(encoded) &&
+                encoded.startsWith("iVBOR")
+                ? [`data:image/png;base64,${encoded}`]
+                : [];
+            })
+          : [];
         setImages(previews);
-        setOutput(previews.length ? "Image generation completed." : "Image response received. This playground only previews PNG image data; use your server integration for other response formats.");
+        setOutput(
+          previews.length
+            ? "Image generation completed."
+            : "Image response received. This playground only previews PNG image data; use your server integration for other response formats.",
+        );
       } else {
         setOutput(JSON.stringify(result, null, 2));
       }
@@ -203,7 +224,11 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           requires a fresh signed quote and explicit confirmation.
         </p>
       </header>
-      {!enabled && <p role="status" className="rounded-lg border border-border p-3 text-sm">Paid API execution is not enabled.</p>}
+      {!enabled && (
+        <p role="status" className="rounded-lg border border-border p-3 text-sm">
+          Paid API execution is not enabled.
+        </p>
+      )}
       <div className="grid min-w-0 gap-3 lg:grid-cols-2">
         <div className="min-w-0 space-y-4 rounded-xl border border-border p-3 sm:p-5">
           <label className="block space-y-1 text-sm">
@@ -224,17 +249,31 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               placeholder="kova_…"
             />
           </label>
-          <p className="text-xs text-muted-foreground">The key is held only in this mounted playground. Never paste it into a third-party website or application.</p>
-          <Button variant="outline" disabled={!enabled || busy || !key.trim()} onClick={() => void loadModels()}>Load available models</Button>
+          <p className="text-xs text-muted-foreground">
+            The key is held only in this mounted playground. Never paste it into a third-party
+            website or application.
+          </p>
+          <Button
+            variant="outline"
+            disabled={!enabled || busy || !key.trim()}
+            onClick={() => void loadModels()}
+          >
+            Load available models
+          </Button>
           <label className="block space-y-1 text-sm">
             <span>Service</span>
-            <select className="block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-base md:text-sm" value={operation} disabled={busy} onChange={(event) => {
-              const next = event.target.value as Operation;
-              setOperation(next);
-              setModel(models.find((item) => item.capability === capability[next])?.id ?? "");
-              setDispatched(false);
-              resetQuote();
-            }}>
+            <select
+              className="block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-base md:text-sm"
+              value={operation}
+              disabled={busy}
+              onChange={(event) => {
+                const next = event.target.value as Operation;
+                setOperation(next);
+                setModel(models.find((item) => item.capability === capability[next])?.id ?? "");
+                setDispatched(false);
+                resetQuote();
+              }}
+            >
               <option value="responses">Text responses</option>
               <option value="images">Image generation</option>
               <option value="embeddings">Embeddings</option>
@@ -242,82 +281,168 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           </label>
           <label className="block space-y-1 text-sm">
             <span>Model</span>
-            <select className="block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-base md:text-sm" value={model} disabled={busy} onChange={(event) => {
-              setModel(event.target.value);
-              setDispatched(false);
-              resetQuote();
-            }}>
+            <select
+              className="block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-base md:text-sm"
+              value={model}
+              disabled={busy}
+              onChange={(event) => {
+                setModel(event.target.value);
+                setDispatched(false);
+                resetQuote();
+              }}
+            >
               <option value="">Select an available model</option>
-              {eligible.map((item) => <option key={item.id} value={item.id}>{item.id}</option>)}
+              {eligible.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.id}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block space-y-1 text-sm">
             <span>{operation === "images" ? "Image prompt" : "Input"}</span>
-            <Textarea rows={6} className="w-full min-w-0 resize-y" disabled={busy} value={prompt} onChange={(event) => {
-              setPrompt(event.target.value);
-              setDispatched(false);
-              resetQuote();
-            }} />
+            <Textarea
+              rows={6}
+              className="w-full min-w-0 resize-y"
+              disabled={busy}
+              value={prompt}
+              onChange={(event) => {
+                setPrompt(event.target.value);
+                setDispatched(false);
+                resetQuote();
+              }}
+            />
           </label>
           {operation === "responses" && (
             <label className="block space-y-1 text-sm">
               <span>Maximum output tokens</span>
-              <Input type="number" min={1} max={32768} value={maxOutput} disabled={busy} onChange={(event) => {
-                setMaxOutput(event.target.value);
-                setDispatched(false);
-                resetQuote();
-              }} />
+              <Input
+                type="number"
+                min={1}
+                max={32768}
+                value={maxOutput}
+                disabled={busy}
+                onChange={(event) => {
+                  setMaxOutput(event.target.value);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              />
             </label>
           )}
           {operation === "images" && (
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <label className="block space-y-1 text-sm">
                 <span>Size</span>
-                <select className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-2 text-base md:text-sm" value={size} disabled={busy} onChange={(event) => {
-                  setSize(event.target.value);
-                  setDispatched(false);
-                  resetQuote();
-                }}>
-                  {["1024x1024", "1024x1536", "1536x1024"].map((value) => <option key={value}>{value}</option>)}
+                <select
+                  className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-2 text-base md:text-sm"
+                  value={size}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setSize(event.target.value);
+                    setDispatched(false);
+                    resetQuote();
+                  }}
+                >
+                  {["1024x1024", "1024x1536", "1536x1024"].map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
                 </select>
               </label>
               <label className="block space-y-1 text-sm">
                 <span>Quality</span>
-                <select className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-2 text-base md:text-sm" value={quality} disabled={busy} onChange={(event) => {
-                  setQuality(event.target.value);
-                  setDispatched(false);
-                  resetQuote();
-                }}>
-                  {["low", "medium", "high"].map((value) => <option key={value}>{value}</option>)}
+                <select
+                  className="block min-h-11 w-full min-w-0 rounded-lg border bg-background px-2 text-base md:text-sm"
+                  value={quality}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setQuality(event.target.value);
+                    setDispatched(false);
+                    resetQuote();
+                  }}
+                >
+                  {["low", "medium", "high"].map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
                 </select>
               </label>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button disabled={!enabled || busy || !model || !prompt.trim() || dispatched} onClick={() => void getQuote()}>Get price quote</Button>
-            {busy && <Button variant="outline" onClick={() => active.current?.abort()}>Cancel request</Button>}
-            {dispatched && !busy && <Button variant="outline" onClick={() => {
-              setDispatched(false);
-              resetQuote();
-            }}>Start another request</Button>}
+            <Button
+              disabled={!enabled || busy || !model || !prompt.trim() || dispatched}
+              onClick={() => void getQuote()}
+            >
+              Get price quote
+            </Button>
+            {busy && (
+              <Button variant="outline" onClick={() => active.current?.abort()}>
+                Cancel request
+              </Button>
+            )}
+            {dispatched && !busy && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              >
+                Start another request
+              </Button>
+            )}
           </div>
           {quote && (
             <div className="space-y-2 rounded-lg border border-border p-3">
-              <p className="text-sm font-medium">Maximum charge: {quote.maximumCharge} {quote.currency} minor units</p>
-              <p className="text-xs text-muted-foreground">Expires at {new Date(quote.expiresAt).toLocaleTimeString()}. Actual settled charges may be lower.</p>
-              <Button disabled={busy || !enabled} onClick={run}>Confirm and run paid request</Button>
+              <p className="text-sm font-medium">
+                Maximum charge: {quote.maximumCharge} {quote.currency} minor units
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Expires at {new Date(quote.expiresAt).toLocaleTimeString()}. Actual settled charges
+                may be lower.
+              </p>
+              <Button disabled={busy || !enabled} onClick={run}>
+                Confirm and run paid request
+              </Button>
             </div>
           )}
         </div>
         <div className="min-w-0 space-y-3 rounded-xl border border-border p-3 sm:p-5">
           <h2 className="font-semibold">Response</h2>
-          {error && <p role="alert" className="break-words text-sm text-destructive">{error}</p>}
-          {busy && <p role="status" className="text-sm text-muted-foreground">Request in progress…</p>}
-          {images.map((src, index) => <img key={index} src={src} alt={`Generated image ${index + 1}`} className="h-auto max-w-full rounded-lg" />)}
-          {output
-            ? <pre className="max-h-[32rem] max-w-full overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted/40 p-3 text-xs">{output}</pre>
-            : !busy && !error && <p className="text-sm text-muted-foreground">Your response will appear here.</p>}
-          {dispatched && <p className="text-xs text-muted-foreground">Check request logs for confirmed settlement before repeating a paid request, especially after an error.</p>}
+          {error && (
+            <p role="alert" className="break-words text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          {busy && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Request in progress…
+            </p>
+          )}
+          {images.map((src, index) => (
+            <img
+              key={index}
+              src={src}
+              alt={`Generated image ${index + 1}`}
+              className="h-auto max-w-full rounded-lg"
+            />
+          ))}
+          {output ? (
+            <pre className="max-h-[32rem] max-w-full overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted/40 p-3 text-xs">
+              {output}
+            </pre>
+          ) : (
+            !busy &&
+            !error && (
+              <p className="text-sm text-muted-foreground">Your response will appear here.</p>
+            )
+          )}
+          {dispatched && (
+            <p className="text-xs text-muted-foreground">
+              Check request logs for confirmed settlement before repeating a paid request,
+              especially after an error.
+            </p>
+          )}
         </div>
       </div>
     </section>

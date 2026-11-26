@@ -149,7 +149,10 @@ export function DeveloperFundingPanel({
           </p>
           <ul className="space-y-3">
             {data?.offers.map((offer) => (
-              <li key={offer.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <li
+                key={offer.id}
+                className="flex min-w-0 flex-wrap items-center justify-between gap-2"
+              >
                 <div>
                   <p>{offer.name}</p>
                   <p className="text-sm text-muted-foreground">
