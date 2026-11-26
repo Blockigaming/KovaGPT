@@ -2188,6 +2188,18 @@ function AppsPage() {
                             reload={otherConnections.reload}
                           />
                         ) : null}
+                        {!isGoogleId(visibleSelectedApp.id) &&
+                          visibleSelectedApp.id !== "oura" &&
+                          (visibleSelectedApp.id === "github" ||
+                            Object.hasOwn(CONNECTION_FLOWS, visibleSelectedApp.id)) &&
+                          stateOf(visibleSelectedApp.id) === "connected" && (
+                            <Button
+                              variant="ghost"
+                              onClick={() => handleUseInChat(visibleSelectedApp)}
+                            >
+                              Use in chat
+                            </Button>
+                          )}
                         <section className="spec400-plugin-detail-section">
                           <h3>Recent activity</h3>
                           {visibleActivity.filter((entry) =>

@@ -1845,7 +1845,9 @@ export const Route = createFileRoute("/api/chat")({
                     (id) =>
                       READ_ONLY_PLUGIN_TOOLS[name] === id ||
                       CONNECTION_FLOWS[id]?.tool === name ||
-                      (id === "hubspot" && CONNECTION_FLOWS["hubspot-contacts"].tool === name),
+                      (id === "hubspot" && CONNECTION_FLOWS["hubspot-contacts"].tool === name) ||
+                      (id === "notion" && CONNECTION_FLOWS["notion-private"].tool === name) ||
+                      (id === "ms-teams" && CONNECTION_FLOWS["ms-teams-messages"].tool === name),
                   ),
                 )
               : permittedTools;

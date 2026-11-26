@@ -1212,7 +1212,8 @@ function KovaGPT() {
       }
       if (
         !("connector" in appContext) ||
-        !["gmail", "google-drive", "google-calendar"].includes(appContext.connector?.id) ||
+        typeof appContext.connector?.id !== "string" ||
+        !/^[a-z][a-z0-9-]{0,63}$/.test(appContext.connector.id) ||
         typeof appContext.connector?.label !== "string"
       )
         throw new Error();
