@@ -782,9 +782,8 @@ function KovaGPT() {
     let resizeFrame: number | null = null;
     let measuredWidth = element.clientWidth;
     const observer = new ResizeObserver(() => {
-      if (resizeFrame !== null || element.clientWidth === measuredWidth) return;
-      // A workspace width update can change descendant layout. Defer the React
-      // update until the next frame, outside ResizeObserver notification delivery.
+      if (resizeFrame !== null) return;
+      // Read geometry and update React outside ResizeObserver notification delivery.
       resizeFrame = window.requestAnimationFrame(() => {
         resizeFrame = null;
         const width = element.clientWidth;
