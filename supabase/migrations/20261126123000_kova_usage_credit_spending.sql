@@ -149,6 +149,16 @@ returns jsonb language sql stable security definer set search_path='' as $$
       from kova_private.usage_credit_spends s where s.order_id=o.id
     ),0))) from kova_private.usage_credit_orders o where o.claimed_by=p_user
       and o.environment=p_env and not o.disputed and o.refunded_cents=0),0),
+    'dailySpending',coalesce((select jsonb_agg(to_jsonb(daily) order by date) from (
+      select (e.created_at at time zone 'UTC')::date as date,sum(s.settled_micros) as micros
+      from kova_private.usage_credit_spends s
+      join kova_private.usage_credit_orders o on o.id=s.order_id
+      join public.ai_usage_events e on e.id=s.event_id
+      where o.claimed_by=p_user and o.environment=p_env and s.settled_micros>0
+        and e.created_at>=(((now() at time zone 'UTC')::date-29)::timestamp at time zone 'UTC')
+        and e.created_at<=now()
+      group by (e.created_at at time zone 'UTC')::date
+    ) daily),'[]'::jsonb),
     'entries',coalesce((select jsonb_agg(to_jsonb(history) order by date desc) from (
       select e.id,e.provider_model as model,e.created_at as date,
         coalesce(s.settled_micros,s.maximum_micros) as micros,s.settled_micros is null as pending,

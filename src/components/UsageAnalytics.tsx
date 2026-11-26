@@ -1,3 +1,4 @@
+import { getMyUsageWallet, type UsageWallet } from "@/utils/usage-wallet.functions";
 import { useEffect, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,11 @@ import { consumerModel } from "@/lib/consumer-model-selection.mjs";
 import { getMyUsageHistory, getMyChatUsageBreakdown } from "@/utils/usage.functions";
 
 type UsageHistory = Awaited<ReturnType<typeof getMyUsageHistory>>;
+const currency = new Intl.NumberFormat(undefined, {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 6,
+});
 const dateLabel = new Intl.DateTimeFormat(undefined, {
   month: "short",
   day: "numeric",
@@ -16,6 +22,22 @@ export function UsageAnalytics({ ownerId }: { ownerId: string }) {
   const [history, setHistory] = useState<UsageHistory | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [creditWallet, setCreditWallet] = useState<UsageWallet | null>();
+  const [creditError, setCreditError] = useState(false);
+  useEffect(() => {
+    let current = true;
+    void getMyUsageWallet({ data: { ownerId } }).then(
+      (wallet) => {
+        if (current) setCreditWallet(wallet);
+      },
+      () => {
+        if (current) setCreditError(true);
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [ownerId]);
   const [range, setRange] = useState<7 | 30>(7);
   const [breakdown, setBreakdown] = useState<{
     days: number;
@@ -51,6 +73,15 @@ export function UsageAnalytics({ ownerId }: { ownerId: string }) {
   }, [ownerId, attempt]);
 
   const days = history?.slice(-range);
+  const creditsByDay = new Map(
+    creditWallet?.dailySpending.map(({ date, micros }) => [date, micros]),
+  );
+  const creditDays = days?.map(({ date }) => ({
+    date,
+    dollars: (creditsByDay.get(date) ?? 0) / 1_000_000,
+  }));
+  const creditTotal = creditDays?.reduce((sum, day) => sum + day.dollars, 0) ?? 0;
+
   const chatTitles = breakdown?.data?.chats.length
     ? new Map(
         [...loadConversations(ownerId), ...loadArchivedConversations(ownerId)].map((chat) => [
@@ -211,6 +242,58 @@ export function UsageAnalytics({ ownerId }: { ownerId: string }) {
             Chat breakdown is unavailable.
           </p>
         ))}
+      {creditError && (
+        <p role="status" className="text-sm">
+          Credit history is temporarily unavailable.
+        </p>
+      )}
+      {creditWallet && creditDays && (
+        <section className="min-w-0 space-y-3 border-t border-border pt-4">
+          <h4 className="font-medium">Credit spending history</h4>
+          <p className="text-sm text-muted-foreground">
+            {creditTotal > 0
+              ? `${currency.format(creditTotal)} settled over ${range} days`
+              : "No settled credit spending in this period."}
+          </p>
+          {creditTotal > 0 && (
+            <>
+              <div className="h-48 min-w-0" aria-hidden="true">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={creditDays}>
+                    <XAxis
+                      dataKey="date"
+                      minTickGap={24}
+                      tickFormatter={(date: string) => dateLabel.format(new Date(date))}
+                    />
+                    <YAxis width={56} tickFormatter={(value: number) => currency.format(value)} />
+                    <Tooltip
+                      labelFormatter={(date) => dateLabel.format(new Date(String(date)))}
+                      formatter={(value) => currency.format(Number(value))}
+                    />
+                    <Bar
+                      dataKey="dollars"
+                      name="Settled credits"
+                      fill="#5379e9"
+                      isAnimationActive={false}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <details>
+                <summary className="cursor-pointer text-sm">Daily credit amounts</summary>
+                <ul className="divide-y divide-border">
+                  {creditDays.map(({ date, dollars }) => (
+                    <li key={date} className="flex justify-between gap-2 py-2 text-sm">
+                      <time dateTime={date}>{dateLabel.format(new Date(date))}</time>
+                      <span>{currency.format(dollars)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </>
+          )}
+        </section>
+      )}
     </section>
   );
 }
