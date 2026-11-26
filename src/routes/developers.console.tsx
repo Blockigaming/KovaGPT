@@ -127,10 +127,12 @@ function DeveloperWorkspace({
   children,
   authenticated = false,
   section = "overview",
+  context,
 }: {
   children: ReactNode;
   authenticated?: boolean;
   section?: WorkspaceSection;
+  context?: ReactNode;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   useEffect(() => setMobileNavOpen(false), [section]);
@@ -195,6 +197,11 @@ function DeveloperWorkspace({
             API<span className="hidden sm:inline"> Platform</span>
           </span>
         </div>
+        {context && (
+          <div className="order-last w-full min-w-0 pb-3 lg:order-none lg:w-auto lg:flex-1 lg:pb-0">
+            {context}
+          </div>
+        )}
         <Link
           to="/"
           aria-label="Back to KovaGPT"
@@ -211,7 +218,7 @@ function DeveloperWorkspace({
         >
           <nav
             aria-label="Developer workspace"
-            className="flex max-h-[70dvh] flex-col gap-1 overflow-y-auto overscroll-contain md:sticky md:top-20 md:max-h-[calc(100dvh-6rem)]"
+            className="flex max-h-[70dvh] flex-col gap-1 overflow-y-auto overscroll-contain md:sticky md:top-36 md:max-h-[calc(100dvh-10rem)] lg:top-20 lg:max-h-[calc(100dvh-6rem)]"
           >
             {navigation.map((group) => {
               const items = group.items.filter((item) => authenticated || item.anchor === "overview");
@@ -610,22 +617,93 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
   const peak = Math.max(1, ...activity.map(([, count]) => count));
   const fieldClass = "mt-1 block w-full min-w-0";
   return (
-    <DeveloperWorkspace authenticated section={section}>
+    <DeveloperWorkspace
+      authenticated
+      section={section}
+      context={
+      <section
+        aria-label="Account and project selection"
+        className="mx-auto grid w-full min-w-0 max-w-[560px] grid-cols-2 gap-2 sm:gap-3"
+      >
+        <div className="min-w-0">
+          <label className="sr-only" htmlFor="developer-console-account">Account</label>
+          <Select
+            disabled={busy || !data}
+            value={account || "__none__"}
+            onValueChange={(value) => {
+              setAccount(value === "__none__" ? "" : value);
+              setRenameId("");
+              setProjectName("");
+              projectCreateId.current = null;
+              setProject("");
+              setSecret("");
+              clearUsageFilters();
+            }}
+          >
+            <SelectTrigger id="developer-console-account" className="bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Select account</SelectItem>
+              {data?.accounts.map((row) => (
+                <SelectItem key={String(row.account_id)} value={String(row.account_id)}>
+                  {row.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-0">
+          <label className="sr-only" htmlFor="developer-console-project">Project</label>
+          <Select
+            disabled={busy || !account}
+            value={project || "__none__"}
+            onValueChange={(value) => {
+              setProject(value === "__none__" ? "" : value);
+              setSecret("");
+              setRenameId("");
+              setProjectName("");
+              projectCreateId.current = null;
+            }}
+          >
+            <SelectTrigger id="developer-console-project" className="bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Select project</SelectItem>
+              {data?.projects
+                .filter((row) => row.account_id === account)
+                .map((row) => (
+                  <SelectItem key={String(row.id)} value={String(row.id)}>
+                    {row.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </section>
+      }
+    >
       <section id="overview" hidden={section !== "overview"} className="scroll-mt-20 space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-medium text-muted-foreground">Workspace / Overview</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Overview</h1>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Overview</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Build and manage your applications with Kova.
             </p>
           </div>
-          <Link
-            to="/developers/connections"
-            className="rounded-full border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
-          >
-            MCP connections
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline">
+              <Link to="/developers/console" search={{ section: "keys" }}>
+                API keys
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/developers/console" search={{ section: "playground" }}>
+                Open playground
+              </Link>
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {(
@@ -991,66 +1069,6 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
             </Button>
           </form>
           <section
-            aria-label="Account and project selection"
-            className="grid min-w-0 gap-4 border-b border-border pb-5 sm:grid-cols-2"
-          >
-            <div className="grid min-w-0 gap-1">
-              <label htmlFor="developer-console-account">Account</label>
-              <Select
-                value={account || "__none__"}
-                onValueChange={(value) => {
-                  setAccount(value === "__none__" ? "" : value);
-                  setRenameId("");
-                  setProjectName("");
-                  projectCreateId.current = null;
-                  setProject("");
-                  setSecret("");
-                  clearUsageFilters();
-                }}
-              >
-                <SelectTrigger id="developer-console-account">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select an account</SelectItem>
-                  {data?.accounts.map((row) => (
-                    <SelectItem key={String(row.account_id)} value={String(row.account_id)}>
-                      {row.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid min-w-0 gap-1">
-              <label htmlFor="developer-console-project">Project</label>
-              <Select
-                value={project || "__none__"}
-                onValueChange={(value) => setProject(value === "__none__" ? "" : value)}
-              >
-                <SelectTrigger id="developer-console-project">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select a project</SelectItem>
-                  {data?.projects
-                    .filter((row) => row.account_id === account)
-                    .map((row) => (
-                      <SelectItem key={String(row.id)} value={String(row.id)}>
-                        {row.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selected && (
-              <p className="text-sm text-muted-foreground sm:col-span-2">
-                Available: {selected.available_amount} {selected.currency} minor units. Reserved:{" "}
-                {selected.reserved_amount}.{" "}
-                {selected.suspended_at ? "This account is suspended." : ""}
-              </p>
-            )}
-          </section>
-          <section
             id="keys"
             hidden={section !== "keys" && section !== "limits"}
             className="min-w-0 scroll-mt-20 space-y-6"
@@ -1243,12 +1261,23 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               <div className="rounded-xl border p-5">
                 <h2 className="text-lg font-semibold">Files</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Select a project in API keys &amp; projects to manage its files.
+                  Select a project in the top navigation to manage its files.
                 </p>
               </div>
             )}
           </section>
-          <section id="billing" hidden={section !== "billing"} className="scroll-mt-4 space-y-3">
+          <section id="billing" hidden={section !== "billing"} className="scroll-mt-20 space-y-6">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Billing</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Manage prepaid API credits and payment history for the selected account.
+              </p>
+            </div>
+            {selected?.suspended_at && (
+              <p role="status" className="text-sm text-destructive">
+                This credit account is suspended.
+              </p>
+            )}
             {section === "billing" && account ? (
               <>
                 <DeveloperCreditWallet
@@ -1266,7 +1295,6 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               </>
             ) : (
               <div className="rounded-xl border p-5">
-                <h2 className="text-lg font-semibold">Billing</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Select a credit account to manage API funding.
                 </p>
