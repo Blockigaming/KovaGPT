@@ -393,10 +393,18 @@ export async function handleDeveloperConsole(request: Request) {
         .limit(10);
       if (accounts.error) throw new Error("developer_storage_unavailable");
       const ids = (accounts.data ?? []).map((row) => row.account_id);
+      let consumerCreditSharing = false;
+      if (workspaceV2) {
+        const preference = await db.from("developer_credit_sharing_preferences")
+          .select("allow_consumer_usage").eq("owner_id", caller.userId).maybeSingle();
+        if (preference.error) throw new Error("developer_storage_unavailable");
+        consumerCreditSharing = preference.data?.allow_consumer_usage === true;
+      }
       if (!ids.length)
         return developerJson({
           enabled: developerEnabled(),
           workspaceV2,
+          consumerCreditSharing,
           accounts: [],
           projects: [],
           keys: [],
@@ -534,6 +542,7 @@ export async function handleDeveloperConsole(request: Request) {
       return developerJson({
         enabled: developerEnabled(),
         workspaceV2,
+        consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,
         keys: rows[1].data,
@@ -550,11 +559,15 @@ export async function handleDeveloperConsole(request: Request) {
     const operation = String(body.operation);
     let input: Record<string, unknown>;
     let secret: string | undefined;
-    if (["ensure_workspace", "create_project", "rename_project"].includes(operation)) {
+    if (["ensure_workspace", "create_project", "rename_project", "set_credit_sharing"].includes(operation)) {
       if (!workspaceV2) throw new Error("developer_workspace_upgrade_unavailable");
+      if (operation === "set_credit_sharing" && typeof body.enabled !== "boolean")
+        throw new Error("developer_input_invalid");
       const input =
         operation === "ensure_workspace"
           ? {}
+          : operation === "set_credit_sharing"
+            ? { enabled: body.enabled }
           : {
               accountId: developerUuid(body.accountId),
               projectId: developerUuid(body.projectId),
