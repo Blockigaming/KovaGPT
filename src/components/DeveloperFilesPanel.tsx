@@ -69,7 +69,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
   return (
     <section
       data-ui-reference="chatgpt-settings-form"
-      className="space-y-3 rounded-2xl border border-border p-5"
+      className="min-w-0 space-y-3 rounded-2xl border border-border p-3 sm:p-5"
     >
       <h2 className="text-lg font-semibold">Developer files</h2>
       <p className="text-sm text-muted-foreground">
@@ -82,7 +82,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
         {data?.data.map((file) => (
           <li
             key={file.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+            className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border p-2.5 sm:p-3"
           >
             <div>
               <p>{file.filename}</p>
@@ -90,7 +90,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
                 {file.byte_size} bytes · Expires {new Date(file.expires_at).toLocaleDateString()}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex max-w-full flex-wrap gap-2">
               <Button variant="outline" disabled={busy} onClick={() => void action(file, false)}>
                 View
               </Button>
@@ -151,7 +151,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
               Close preview
             </Button>
           </div>
-          <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-sm">
+          <pre className="max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-3 text-sm">
             {preview.content}
           </pre>
         </div>
