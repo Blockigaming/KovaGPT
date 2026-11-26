@@ -18,9 +18,11 @@ import {
   CreditCard,
   Folder,
   KeyRound,
+  Layers,
   LayoutDashboard,
   List,
   Menu,
+  Settings,
   SlidersHorizontal,
   Users,
 } from "lucide-react";
@@ -28,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
 import { DeveloperFilesPanel } from "@/components/DeveloperFilesPanel";
+import { KOVA_MODEL_LABELS } from "@/lib/kova-foundation-models.mjs";
 type Row = Record<string, string | number | boolean | null | string[]>;
 type ConsoleData = {
   enabled: boolean;
@@ -46,12 +49,14 @@ const WORKSPACE_SECTIONS = [
   "overview",
   "projects",
   "keys",
+  "models",
   "files",
   "usage",
   "costs",
   "logs",
   "billing",
   "limits",
+  "settings",
 ] as const;
 type WorkspaceSection = (typeof WORKSPACE_SECTIONS)[number];
 
@@ -86,12 +91,14 @@ function DeveloperWorkspace({
     { label: "Overview", anchor: "overview", icon: LayoutDashboard },
     { label: "Projects", anchor: "projects", icon: Users },
     { label: "API keys", anchor: "keys", icon: KeyRound },
+    { label: "Models", anchor: "models", icon: Layers },
     { label: "Files", anchor: "files", icon: Folder },
     { label: "Usage", anchor: "usage", icon: ChartNoAxesColumn },
     { label: "Costs", anchor: "costs", icon: CreditCard },
     { label: "Logs", anchor: "logs", icon: List },
     { label: "Billing", anchor: "billing", icon: CreditCard },
     { label: "Limits", anchor: "limits", icon: SlidersHorizontal },
+    { label: "Settings", anchor: "settings", icon: Settings },
   ] as const;
   return (
     <div data-developer-workspace className="min-h-dvh min-w-0 w-full bg-background text-foreground [overflow-wrap:anywhere]">
@@ -139,12 +146,6 @@ function DeveloperWorkspace({
                   {label}
                 </Link>
               ))}
-            <Link to="/developers/$docSlug" params={{ docSlug: "models" }} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              <BookOpen className="size-4 shrink-0" aria-hidden="true" /> Models
-            </Link>
-            <Link to="/developers/pricing" className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              <CreditCard className="size-4 shrink-0" aria-hidden="true" /> Pricing
-            </Link>
             <Link to="/developers/$docSlug" params={{ docSlug: "docs" }} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
               <BookOpen className="size-4 shrink-0" aria-hidden="true" /> Documentation
             </Link>
@@ -203,6 +204,7 @@ function OwnedDeveloperConsole({
     [scopes, setScopes] = useState<string[]>(["chat"]);
   const [modelFilter, setModelFilter] = useState("");
   const [modelDraft, setModelDraft] = useState("");
+  const [catalogFilter, setCatalogFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -362,6 +364,68 @@ function OwnedDeveloperConsole({
             <p role="status">
               Paid API execution is not enabled. You can prepare your workspace and limits.
             </p>
+          )}
+          {section === "models" && (
+            <section className="min-w-0 space-y-4">
+              <div>
+                <h1 className="text-2xl font-semibold">Models</h1>
+                <p className="mt-2 text-sm text-muted-foreground">Explore the Kova model families. An approved pricing contract and enabled API key are required before a model can be used.</p>
+              </div>
+              <Input aria-label="Search models" placeholder="Search models" value={catalogFilter} onChange={(event) => setCatalogFilter(event.target.value)} />
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {Object.entries(KOVA_MODEL_LABELS).filter(([id, label]) =>
+                  (id + " " + label).toLowerCase().includes(catalogFilter.trim().toLowerCase())
+                ).map(([id, label]) => (
+                  <article key={id} className="min-w-0 space-y-2 rounded-xl border border-border bg-card p-4">
+                    <Layers className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <h2 className="font-semibold">{label}</h2>
+                    <p className="break-all font-mono text-xs text-muted-foreground">{id}</p>
+                    <p className="text-xs text-muted-foreground">Text / reasoning · API availability must be confirmed with GET /api/v1/models.</p>
+                  </article>
+                ))}
+              </div>
+              <Link to="/developers/$docSlug" params={{ docSlug: "models" }} className="inline-flex min-h-10 items-center text-sm underline">Model API documentation</Link>
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold">Other API capabilities</h2>
+                <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+                  {([
+                    ["Image generation", "images"],
+                    ["Embeddings", "api-reference"],
+                    ["Files", "files"],
+                    ["Web search", "search"],
+                    ["Agents", "agents"],
+                    ["Webhooks", "webhooks"],
+                  ] as const).map(([label, slug]) => (
+                    <Link key={slug} to="/developers/$docSlug" params={{ docSlug: slug }} className="min-w-0 rounded-lg border border-border p-3 text-sm hover:bg-muted">
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            </section>
+          )}
+          {section === "settings" && (
+            <section className="min-w-0 space-y-4">
+              <h1 className="text-2xl font-semibold">Settings</h1>
+              <article className="space-y-2 rounded-xl border border-border p-4">
+                <h2 className="font-semibold">Account</h2>
+                <p className="text-sm text-muted-foreground">This workspace uses your existing KovaGPT sign-in. Manage your main account on KovaGPT.</p>
+                <Link to="/" className="inline-flex min-h-10 items-center text-sm underline">Open KovaGPT</Link>
+              </article>
+              <article className="space-y-2 rounded-xl border border-border p-4">
+                <h2 className="font-semibold">Spending and security</h2>
+                <p className="text-sm text-muted-foreground">Manage spending ceilings and scoped credentials.</p>
+                <div className="flex flex-wrap gap-3">
+                  <Link to="/developers/console" search={{ section: "limits" }} className="inline-flex min-h-10 items-center text-sm underline">Spending limits</Link>
+                  <Link to="/developers/console" search={{ section: "keys" }} className="inline-flex min-h-10 items-center text-sm underline">API keys</Link>
+                  <Link to="/developers/connections" className="inline-flex min-h-10 items-center text-sm underline">MCP connections</Link>
+                </div>
+              </article>
+              <article className="space-y-2 rounded-xl border border-border p-4">
+                <h2 className="font-semibold">Data sharing</h2>
+                <p className="text-sm text-muted-foreground">Kova does not offer free API tokens in exchange for training data. The planned Pro monthly API allowance is not tied to data sharing.</p>
+              </article>
+            </section>
           )}
           {section === "projects" && (
             <section className="space-y-3 rounded-xl border border-border p-5">
