@@ -34,13 +34,20 @@ function safeText(value) {
     !text ||
     text.length > 140 ||
     /[\r\n\t<>]/u.test(text) ||
-    /https?:\/\/|@|[0-9]{7,}|(?:password|secret|token|api.key|credential|private.key|ssn|social security|self.harm|suicid|porn|weapon|explosive|bypass|unlock speed)/iu.test(text)
+    /https?:\/\/|@|[0-9]{7,}/iu.test(text) ||
+    /password|secret|token|api.key|credential|private.key|ssn|social security/iu.test(text) ||
+    /self.harm|suicid|porn|weapon|explosive|bypass|unlock speed/iu.test(text)
   )
     return "";
   return text;
 }
 
-export function homePromptSuggestions(draft, conversations = [], memories = [], connectedIds = []) {
+export function homePromptSuggestions(
+  draft,
+  conversations = [],
+  memories = [],
+  connectedIds = [],
+) {
   const prefix = safeText(draft);
   if (!prefix) return [];
   const typed = prefix.toLocaleLowerCase();
@@ -65,8 +72,8 @@ export function homePromptSuggestions(draft, conversations = [], memories = [], 
   }
   for (const memory of memories.slice(0, 40)) add(memory.title, 55);
   for (const id of connectedIds) {
-    if (Object.hasOwn(PLUGIN_PROMPTS, id))
-      for (const prompt of PLUGIN_PROMPTS[id]) add(prompt, 45);
+    if (!Object.hasOwn(PLUGIN_PROMPTS, id)) continue;
+    for (const prompt of PLUGIN_PROMPTS[id]) add(prompt, 45);
   }
   for (const prompt of DEFAULTS) add(prompt, 1);
   return [...candidates.values()]

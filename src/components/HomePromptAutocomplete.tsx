@@ -19,7 +19,8 @@ export default function HomePromptAutocomplete({
   onPick: (draft: string) => void;
 }) {
   const [desktop, setDesktop] = useState(false);
-  const [memory, setMemory] = useState<{ owner: string; titles: { title: string }[] } | null>(null);
+  type MemoryTitles = { owner: string; titles: { title: string }[] };
+  const [memory, setMemory] = useState<MemoryTitles | null>(null);
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px) and (hover: hover) and (pointer: fine)");
     const sync = () => setDesktop(media.matches);
@@ -80,7 +81,7 @@ export default function HomePromptAutocomplete({
   const suggestions = homePromptSuggestions(
     draft,
     owner ? conversations : [],
-    memory?.owner === owner ? memory.titles : [],
+    memory && memory.owner === owner ? memory.titles : [],
     connectedIds,
   );
   if (!desktop || !suggestions.length) return null;
@@ -93,11 +94,12 @@ export default function HomePromptAutocomplete({
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => {
               onPick(suggestion);
-              requestAnimationFrame(() =>
-                document.querySelector<HTMLTextAreaElement>(
+              requestAnimationFrame(() => {
+                const composer = document.querySelector<HTMLTextAreaElement>(
                   '.kova-empty-chat textarea[aria-label="Message KovaGPT"]',
-                )?.focus(),
-              );
+                );
+                composer?.focus();
+              });
             }}
           >
             <span>{suggestion.slice(0, draft.trimEnd().length)}</span>
