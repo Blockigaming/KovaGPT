@@ -330,9 +330,9 @@ body .prose-chat .kova-table-scroll:focus-visible {
 }
 .kova-response-followups {
   display: grid;
-  gap: 6px;
+  gap: 0;
   max-width: 100%;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 .kova-response-followups p {
   margin: 0 0 2px;
@@ -343,8 +343,8 @@ body .prose-chat .kova-table-scroll:focus-visible {
 .kova-response-followups button {
   display: flex;
   align-items: center;
-  min-height: 44px;
-  padding: 10px 12px;
+  min-height: 32px;
+  padding: 4px 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -363,6 +363,11 @@ body .prose-chat .kova-table-scroll:focus-visible {
 .kova-response-followups span {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+@media (pointer: coarse) {
+  .kova-response-followups button {
+    min-height: 40px;
+  }
 }
 
 /* A text cue outside the horizontal scrolling region, never an overlay. */

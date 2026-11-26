@@ -61,6 +61,9 @@ test("follow-up rows are plain text with hover and focus affordances", () => {
   assert.match(rule, /border: 0;/);
   assert.match(rule, /border-radius: 0;/);
   assert.match(rule, /background: transparent;/);
+  assert.match(rule, /padding: 4px 0;/);
+  assert.match(rule, /min-height: 32px;/);
+  assert.match(css, /\.kova-response-followups \{[^}]*gap: 0;/);
   assert.match(css, /\.kova-response-followups button:hover \{\s*background: var\(--accent\)/);
   assert.match(css, /\.kova-response-followups button:focus-visible/);
 });
