@@ -30,6 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
+import { DeveloperCreditWallet } from "@/components/DeveloperCreditWallet";
 import { DeveloperFilesPanel } from "@/components/DeveloperFilesPanel";
 import { DeveloperPlayground } from "@/components/DeveloperPlayground";
 import { KOVA_MODEL_LABELS } from "@/lib/kova-foundation-models.mjs";
@@ -920,12 +921,15 @@ function OwnedDeveloperConsole({
           </section>
           <section id="billing" hidden={section !== "billing"} className="scroll-mt-4 space-y-3">
             {section === "billing" && account ? (
+              <>
+              <DeveloperCreditWallet key={`${userId}:${account}`} userId={userId} accountId={account} revision={JSON.stringify(selected ?? null)} />
               <DeveloperFundingPanel
                 key={`${userId}:${account}`}
                 userId={userId}
                 accountId={account}
                 onBalanceChanged={load}
               />
+              </>
             ) : (
               <div className="rounded-xl border p-5">
                 <h2 className="text-lg font-semibold">Billing</h2>
@@ -935,7 +939,18 @@ function OwnedDeveloperConsole({
           </section>
           <section id="limits" hidden={section !== "limits"} className="min-w-0 scroll-mt-4 space-y-3 rounded-xl border p-3 sm:p-5">
             <h2 className="text-lg font-semibold">Stored spending limits</h2>
-            <div className="max-w-full min-w-0 overflow-x-auto">
+            <div className="grid gap-2 md:hidden" aria-label="Mobile spending limits">
+              {data?.limits.map((row) => (
+                <article key={`${row.account_id}:${row.scope_type}:${row.scope_id}`} className="min-w-0 space-y-2 rounded-lg border border-border p-3">
+                  <p className="break-words text-sm font-medium">{data.accounts.find((a) => a.account_id === row.account_id)?.name}</p>
+                  <p className="text-xs text-muted-foreground">{row.scope_type} · {String(row.scope_id).slice(0, 8)}</p>
+                  <dl className="grid grid-cols-2 gap-2 text-xs">
+                    {([["Per request",row.request_limit],["Per day",row.daily_limit],["Per month",row.monthly_limit],["Concurrent",row.concurrent_limit]] as const).map(([label,value]) => <div key={label} className="min-w-0"><dt className="text-muted-foreground">{label}</dt><dd className="break-words font-medium tabular-nums">{value}</dd></div>)}
+                  </dl>
+                </article>
+              ))}
+            </div>
+            <div className="hidden max-w-full min-w-0 overflow-x-auto md:block">
               <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr>
