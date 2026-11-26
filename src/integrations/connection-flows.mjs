@@ -208,7 +208,7 @@ export const CONNECTION_FLOWS = {
     tool: "outlook_calendar_search",
     label: "Outlook Calendar",
     description:
-      "Find events whose subject starts with your search in your default Outlook calendar. Returns event titles and times, including series masters; recurring instances are not expanded. Read-only.",
+      "Use query \"upcoming\" to list events in the next seven days in the default Outlook calendar, including recurring instances. Use a specific subject prefix to search event titles. Returns at most ten event titles and times. Read-only.",
   },
   onedrive: {
     provider: "microsoft",

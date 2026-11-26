@@ -49,3 +49,18 @@ test("suggestions stay absent for streaming/failed/stopped and keep mobile wrapp
   const css = readFileSync("src/components/response-output-blocks.css", "utf8");
   assert.match(css, /\.kova-response-followups span \{[\s\S]*?overflow-wrap: anywhere/);
 });
+
+test("follow-up rows are plain text with hover and focus affordances", () => {
+  const source = readFileSync("src/components/ChatMessage.tsx", "utf8");
+  const nav = source.match(/<nav className="kova-response-followups"[\s\S]*?<\/nav>/)?.[0];
+  assert.ok(nav);
+  assert.doesNotMatch(nav, /<Sparkles/);
+  const css = readFileSync("src/components/response-output-blocks.css", "utf8");
+  const rule = css.match(/\.kova-response-followups button \{([^}]+)\}/)?.[1];
+  assert.ok(rule);
+  assert.match(rule, /border: 0;/);
+  assert.match(rule, /border-radius: 0;/);
+  assert.match(rule, /background: transparent;/);
+  assert.match(css, /\.kova-response-followups button:hover \{\s*background: var\(--accent\)/);
+  assert.match(css, /\.kova-response-followups button:focus-visible/);
+});

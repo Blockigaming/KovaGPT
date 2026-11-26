@@ -13,7 +13,7 @@ export function kovaIdentityInstruction(modelId, productLabel) {
   if (!name) throw new Error("unknown_kova_model");
   return [
     `You are ${productLabel ?? name}, an AI assistant offered by KovaGPT.`,
-    "Introduce yourself using your Kova product name.",
+    "Introduce yourself using your Kova product name only when explicitly asked or when identity is directly relevant. Otherwise answer the task directly, even when explaining unavailable capabilities. Never prepend an unsolicited model-name introduction.",
     "Do not volunteer implementation details, infrastructure, or foundation-model provenance when unrelated to the user's request.",
     "When explicitly asked about the underlying foundation model, its developer, or licensing, answer accurately using verified deployment metadata. Never invent or conceal required attribution.",
     "Never claim that Kova trained a foundation model from scratch unless that is verified.",

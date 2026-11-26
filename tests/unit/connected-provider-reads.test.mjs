@@ -1358,3 +1358,17 @@ test("eToro uses both keys only for the real account portfolio read and selects 
   );
   assert.doesNotMatch(JSON.stringify(reply), /private|fixture-user-key/);
 });
+
+test("upcoming Outlook events use a bounded seven-day calendar view without a subject filter", () => {
+  const req = connectionReadRequest("outlook-calendar", "upcoming", "fake-token");
+  const url = new URL(req.url);
+  assert.equal(url.origin + url.pathname, "https://graph.microsoft.com/v1.0/me/calendar/calendarView");
+  const start = Date.parse(url.searchParams.get("startDateTime"));
+  const end = Date.parse(url.searchParams.get("endDateTime"));
+  assert.ok(Math.abs(start - Date.now()) < 10_000);
+  assert.equal(end - start, 7 * 24 * 60 * 60 * 1000);
+  assert.equal(url.searchParams.get("$filter"), null);
+  assert.equal(url.searchParams.get("$top"), "10");
+  assert.equal(url.searchParams.get("$select"), "id,subject,start,end,webLink");
+  assert.equal(req.init.method, "GET");
+});

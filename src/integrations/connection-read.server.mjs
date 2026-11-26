@@ -169,8 +169,17 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("$select", "id,subject,from,receivedDateTime,bodyPreview,webLink");
     url.searchParams.set("$top", "10");
   } else if (id === "outlook-calendar") {
-    url = new URL("https://graph.microsoft.com/v1.0/me/calendar/events");
-    url.searchParams.set("$filter", `startsWith(subject,'${query.replaceAll("'", "''")}')`);
+    if (query.toLowerCase() === "upcoming") {
+      const start = new Date();
+      const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+      url = new URL("https://graph.microsoft.com/v1.0/me/calendar/calendarView");
+      url.searchParams.set("startDateTime", start.toISOString());
+      url.searchParams.set("endDateTime", end.toISOString());
+      url.searchParams.set("$orderby", "start/dateTime");
+    } else {
+      url = new URL("https://graph.microsoft.com/v1.0/me/calendar/events");
+      url.searchParams.set("$filter", `startsWith(subject,'${query.replaceAll("'", "''")}')`);
+    }
     url.searchParams.set("$select", "id,subject,start,end,webLink");
     url.searchParams.set("$top", "10");
     headers.Prefer = 'outlook.timezone="UTC"';
@@ -243,7 +252,9 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   const request = connectionReadRequest(id, query, token, options);
   let response = await fetchImpl(request.url, request.init);
   const filterLocally =
-    (id === "outlook-calendar" || id === "onedrive") && [400, 501].includes(response.status);
+    ((id === "outlook-calendar" && query.trim().toLowerCase() !== "upcoming") ||
+      id === "onedrive") &&
+    [400, 501].includes(response.status);
   if (filterLocally) {
     await response.body?.cancel();
     await options.beforeRequest?.();

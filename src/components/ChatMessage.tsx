@@ -42,7 +42,6 @@ import {
   Pencil,
   RefreshCw,
   Share2,
-  Sparkles,
   TextSelect,
   ThumbsDown,
   ThumbsUp,
@@ -1191,7 +1190,6 @@ function ChatMessageInner({
             <p>Suggested follow-ups</p>
             {normalizeResponseFollowups(message.followups).map((suggestion) => (
               <button type="button" key={suggestion} onClick={() => onFollowUp(suggestion)}>
-                <Sparkles aria-hidden="true" />
                 <span>{suggestion}</span>
               </button>
             ))}
