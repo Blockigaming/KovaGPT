@@ -366,7 +366,7 @@ function OwnedDeveloperConsole({
         if (!controller.signal.aborted && ownerRef.current === userId) {
           setAccount(value.accountId);
           setProject(value.projectId);
-          await load();
+          setBusy(false);
         }
       } catch (cause) {
         if (!controller.signal.aborted && ownerRef.current === userId)
@@ -380,7 +380,7 @@ function OwnedDeveloperConsole({
     })();
     return () => { controller.abort(); provisioning.current = false; };
     // The setup RPC is idempotent; it may safely repeat after an interrupted login.
-  }, [shouldProvision, userId, setupAttempt, load]);
+  }, [shouldProvision, userId, setupAttempt]);
   useEffect(() => {
     if (!data || autoSelected.current) return;
     autoSelected.current = true;
@@ -926,8 +926,8 @@ function OwnedDeveloperConsole({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="space-y-1 text-sm">
                 <span>Model ID</span>
-                <div className="flex gap-2">
-                  <Input
+                <div className="flex min-w-0 flex-wrap gap-2 sm:flex-nowrap">
+                  <Input className="min-w-0 flex-1"
                     value={modelDraft}
                     onChange={(event) => setModelDraft(event.target.value)}
                     placeholder="All models"
@@ -943,7 +943,7 @@ function OwnedDeveloperConsole({
                 <select value={serviceFilter} onChange={(event) => {
                   setServiceFilter(event.target.value);
                   setUsagePage(0);
-                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
+                }} className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm">
                   <option value="">All services</option>
                   {["chat", "streaming", "image_generation", "embeddings", "files"].map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
@@ -953,7 +953,7 @@ function OwnedDeveloperConsole({
                 <select value={statusFilter} onChange={(event) => {
                   setStatusFilter(event.target.value);
                   setUsagePage(0);
-                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
+                }} className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm">
                   <option value="">All statuses</option>
                   {["reserved", "dispatched", "settled", "uncertain", "reconciliation_required", "rejected"].map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
@@ -964,7 +964,7 @@ function OwnedDeveloperConsole({
                   setUsageProject(event.target.value);
                   setUsageKey("");
                   setUsagePage(0);
-                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
+                }} className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm">
                   <option value="">All projects</option>
                   {data?.projects.filter((row) => !account || row.account_id === account).map((row) => <option key={String(row.id)} value={String(row.id)}>{row.name}</option>)}
                 </select>
@@ -974,7 +974,7 @@ function OwnedDeveloperConsole({
                 <select value={usageKey} onChange={(event) => {
                   setUsageKey(event.target.value);
                   setUsagePage(0);
-                }} className="block min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-2">
+                }} className="block min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-2 text-base md:text-sm">
                   <option value="">All keys (including revoked)</option>
                   {data?.keys.filter((row) => (!account || row.account_id === account) && (!usageProject || row.project_id === usageProject)).map((row) => <option key={String(row.id)} value={String(row.id)}>{row.name}</option>)}
                 </select>
@@ -1105,7 +1105,19 @@ function OwnedDeveloperConsole({
             )}
             {!usageReady && !error && <p role="status" className="text-sm text-muted-foreground">Loading usage…</p>}
             {usageReady && !visibleUsage.length && <p className="text-sm text-muted-foreground">No matching API calls on this page.</p>}
-            <div className="max-w-full min-w-0 overflow-x-auto">
+            <div className="grid gap-2 md:hidden" aria-label="Mobile request history">
+              {visibleUsage.map((row) => (
+                <article key={String(row.id)} className="min-w-0 space-y-2 rounded-lg border border-border p-3">
+                  <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                    <p className="min-w-0 break-all text-sm font-medium">{row.public_model}</p>
+                    <span className="rounded-md bg-muted px-2 py-1 text-xs">{row.settlement_state}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{row.capability} · {row.created_at}</p>
+                  <p className="text-sm tabular-nums">{row.final_customer_charge ?? `Held: ${row.maximum_reserved_charge}`} {row.currency} minor units</p>
+                </article>
+              ))}
+            </div>
+            <div className="hidden max-w-full min-w-0 overflow-x-auto md:block">
               <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr>
