@@ -6,6 +6,7 @@ import { SettingsNavigationResize } from "@/components/SettingsNavigationResize"
 import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
 import { GiftCardSettings, UsageCredits } from "@/components/GiftCardSettings";
+import { UsageLimitResets } from "@/components/UsageLimitResets";
 import { UsageAnalytics } from "@/components/UsageAnalytics";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
@@ -1997,6 +1998,14 @@ export function SettingsDialog({
                         )}
                       </div>
                     </section>
+                    {userKey && usage && (
+                      <UsageLimitResets
+                        key={userKey}
+                        ownerId={userKey}
+                        tier={usage.tier}
+                        onReset={() => setUsageRetry((value) => value + 1)}
+                      />
+                    )}
                     {userKey && (
                       <UsageCredits
                         tier={usage?.tier ?? subSummary?.effectiveTier}

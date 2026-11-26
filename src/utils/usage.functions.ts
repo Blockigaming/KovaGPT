@@ -235,3 +235,44 @@ export const getMyUsageHistory = createServerFn({ method: "GET" })
       return { date, regular: Math.max(0, (row?.chats ?? 0) - thinking), thinking };
     });
   });
+
+type ChatLimitReset = {
+  id: string;
+  grantedAt: string;
+  expiresAt: string;
+  redeemedAt: string | null;
+  weekly: boolean;
+  fiveHour: boolean;
+  manual: boolean;
+};
+
+export const getMyChatLimitResets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string }) => data)
+  .handler(async ({ context, data }): Promise<ChatLimitReset[]> => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+    const result = await loose(supabaseAdmin).rpc("kova_chat_limit_resets", {
+      p_user: context.userId,
+      p_plan: tier,
+    });
+    if (result.error || !Array.isArray(result.data)) throw new Error("Resets are unavailable.");
+    return result.data as ChatLimitReset[];
+  });
+
+export const redeemMyChatLimitReset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string; id: string; weekly: boolean; fiveHour: boolean }) => data)
+  .handler(async ({ context, data }) => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+    const result = await loose(supabaseAdmin).rpc("kova_redeem_chat_limit_reset", {
+      p_user: context.userId,
+      p_id: data.id,
+      p_plan: tier,
+      p_weekly: data.weekly,
+      p_five_hour: data.fiveHour,
+    });
+    if (result.error || result.data !== true) throw new Error("This reset could not be applied.");
+    return true;
+  });
