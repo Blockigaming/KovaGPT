@@ -353,3 +353,32 @@ test("a full workspace can rotate one key atomically while new growth and stale 
     await db.close();
   }
 });
+
+test("staged v2 auto-provisioning is repeatable, adopts existing accounts and creates no money", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const v2 = async (operation, input = {}, user = owner) =>
+      (await db.query("select public.manage_developer_workspace_v2($1,$2,$3) result", [user, operation, input])).rows[0].result;
+    const results = await Promise.all([v2("ensure_workspace"), v2("ensure_workspace")]);
+    assert.deepEqual(results[0], results[1]);
+    assert.equal((await db.query("select count(*)::int n from developer_credit_accounts")).rows[0].n, 1);
+    assert.equal((await db.query("select available_amount::float8 balance from developer_credit_accounts")).rows[0].balance, 0);
+    const old = await manage(db, "create_account", { name: "Existing workspace", currency: "EUR" }, other);
+    assert.deepEqual(await v2("ensure_workspace", {}, other), old);
+    const a = results[0];
+    const project = { accountId: a.accountId, projectId: id(15), name: "Server application" };
+    const first = await v2("create_project", project);
+    assert.deepEqual(await v2("create_project", project), first);
+    await assert.rejects(v2("create_project", { ...project, name: "Other name" }), /project_conflict/);
+    await assert.rejects(v2("rename_project", { ...project, name: "Foreign edit" }, other), /owner_required/);
+    await v2("rename_project", { ...project, name: "Renamed application" });
+    assert.equal((await db.query("select name from developer_projects where id=$1", [project.projectId])).rows[0].name, "Renamed application");
+    await db.exec("reset role;set role authenticated");
+    await assert.rejects(v2("ensure_workspace"), /permission denied/);
+  } finally {
+    await db.close();
+  }
+});
