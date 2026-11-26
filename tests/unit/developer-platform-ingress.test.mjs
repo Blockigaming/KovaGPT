@@ -83,7 +83,8 @@ async function fixture(options = {}) {
               operator === "in" ? value.includes(row[column]) :
               operator === "eq" ? row[column] === value :
               operator === "gte" ? row[column] >= value :
-              operator === "lt" ? row[column] < value : true,
+              operator === "lt" ? row[column] < value :
+              operator === "lte" ? row[column] <= value : true,
             ),
           );
         }
@@ -102,7 +103,7 @@ async function fixture(options = {}) {
         filters.push(["in", column, ids]);
         return q;
       };
-      for (const method of ["eq", "gte", "lt"]) {
+      for (const method of ["eq", "gte", "lt", "lte"]) {
         q[method] = (column, value) => {
           filters.push([method, column, value]);
           return q;
@@ -143,7 +144,8 @@ async function fixture(options = {}) {
       path === "./developer-platform-policy.mjs" ||
       path === "./pricing-administration.mjs" ||
       path === "./developer-funding-allowance.mjs" ||
-      path === "./developer-file-policy.mjs"
+      path === "./developer-file-policy.mjs" ||
+      path === "./developer-usage-summary.mjs"
     )
       return full.replace(
         JSON.stringify(path),
@@ -417,6 +419,44 @@ test("console filters owner-scoped API history before pagination and rejects for
   assert.equal((await page({ usageAccount: other })).status, 403);
   assert.equal((await page({ usageFrom: "2026-02-30" })).status, 400);
   assert.equal((await page({ usagePage: "-1" })).status, 400);
+});
+
+test("usage summary includes all filtered records beyond one page without exposing another account", async () => {
+  const f = await fixture();
+  globalThis[slot].owner = "owner-a";
+  const account = "11111111-1111-4111-8111-111111111111";
+  const other = "22222222-2222-4222-8222-222222222222";
+  const row = {
+    account_id: account,
+    public_model: "kova-argon-4.6",
+    capability: "chat",
+    settlement_state: "settled",
+    currency: "USD",
+    final_customer_charge: "1.25",
+    authoritative_usage: { input_tokens: 4, cached_input_tokens: 2, output_tokens: 3 },
+    created_at: "2026-11-01T12:00:00.000Z",
+  };
+  f.state.rows = {
+    developer_account_owners: [{ account_id: account, name: "Owner" }],
+    developer_api_requests: [
+      { ...row, account_id: other, id: "foreign" },
+      { ...row, created_at: "2026-10-31T23:59:59.000Z", id: "outside" },
+      ...Array.from({ length: 505 }, (_, id) => ({ ...row, id })),
+    ],
+  };
+  const response = await f.module.handleDeveloperConsole(
+    new Request("https://kovagpt.com/api/developer/console?usageSummary=1&usageFrom=2026-11-01&usageThrough=2026-11-02", {
+      headers: { "x-kova-expected-user": "owner-a" },
+    }),
+  );
+  assert.equal(response.status, 200);
+  const { summary } = await response.json();
+  assert.equal(summary.requests, 505);
+  assert.equal(summary.tokens.input_tokens, 2020);
+  assert.equal(summary.tokens.cached_input_tokens, 1010);
+  assert.deepEqual(summary.charges, [{ currency: "USD", amount: "631.25000000" }]);
+  assert.equal(summary.days.length, 1);
+  assert.equal(summary.models[0].label, "kova-argon-4.6");
 });
 
 test("configured Azure aliases remain identical from accepted quote through meter to outbound provider body", async () => {
