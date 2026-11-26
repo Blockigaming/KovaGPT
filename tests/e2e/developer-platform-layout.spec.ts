@@ -115,3 +115,40 @@ test("320px developer playground quotes before a mocked run and keeps controls i
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   // All provider endpoints above are intercepted; no real paid request is made.
 });
+
+test("320px billing renders real wallet projection without overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await coreFixture(page, "light", "pro");
+  const account = "11111111-1111-4111-8111-111111111111";
+  await page.route("**/api/developer/console?**", async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    if (params.has("creditWallet")) return route.fulfill({ json: {
+      enabled: true,
+      wallet: {
+        tracked: true, currency: "USD", included: 8000, purchased: 2500,
+        held: 0, expired: 0, debt: 0, suspended: false,
+        asOf: "2026-11-26T00:00:00Z", renewalAt: "2026-12-26T00:00:00Z",
+        lots: [{ id: account, kind: "purchased", issued_at: "2026-11-26T00:00:00Z",
+          expires_at: "2027-11-26T00:00:00Z", issued_amount: 2500,
+          available_amount: 2500, held_amount: 0, spent_amount: 0, expired_amount: 0, reversed_amount: 0 }],
+        hasMore: false,
+      },
+    }});
+    return route.fulfill({ json: {
+      enabled: true, accounts: [{ account_id: account, name: "Personal workspace" }],
+      projects: [], keys: [], limits: [], usage: [],
+      balances: [{ id: account, currency: "USD", available_amount: 10500 }],
+      limitsPage: 0, limitsHasMore: false, usagePage: 0, usageHasMore: false,
+    }});
+  });
+  await page.route("**/api/developer/funding?**", (route) => route.fulfill({
+    json: { enabled: false, offers: [], attempts: [], page: 0, hasMore: false },
+  }));
+  await page.goto("/developers/console?section=billing");
+  await waitForKovaHydration(page);
+  await expect(page.getByRole("heading", { name: "API credit balances" })).toBeVisible();
+  await expect(page.getByText("Included Pro", { exact: true })).toBeVisible();
+  await expect(page.getByText("Purchased credit", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  // The fixture supplies illustrative balances. No production allowance or payment is triggered.
+});
