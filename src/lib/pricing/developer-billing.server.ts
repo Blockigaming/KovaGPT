@@ -82,7 +82,8 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
 
 export async function recoverDeveloperBilling(): Promise<number> {
   // Retention/accounting maintenance remains available while paid generation is disabled.
-  const recovered = await rpc<number>("recover_developer_billing", { p_limit: 100 });
+  const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
+  const recovered = await rpc<number>(creditLots ? "recover_developer_billing_v2" : "recover_developer_billing", { p_limit: 100 });
   await rpc<number>("expire_developer_files", { p_limit: 100 });
   await rpc<number>("expire_discovery_usage", { p_limit: 100 });
   const administrators = (runtimeEnv("KOVA_ADMIN_USER_IDS") ?? "")
@@ -106,6 +107,7 @@ export async function meterProviderRequest(
   if (!current) return input.send();
   if (runtimeEnv("KOVA_DEVELOPER_BILLING_ENABLED") !== "true")
     throw new Error("developer_billing_disabled");
+  const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
   const call = current.nextCall++;
   if (call >= 16) throw new Error("developer_call_limit");
   input.signal?.throwIfAborted();
@@ -182,7 +184,7 @@ export async function meterProviderRequest(
     signal: input.signal,
     send: input.send,
     admit: () =>
-      rpc<DeveloperAdmission>("admit_developer_billing", {
+      rpc<DeveloperAdmission>(creditLots ? "admit_developer_billing_v2" : "admit_developer_billing", {
         p_key: current.keyId,
         p_request_key: `${requestKey}:${call}`,
         p_fingerprint: fingerprint,
@@ -195,7 +197,7 @@ export async function meterProviderRequest(
       }),
     dispatch: (admission) =>
       rpc<boolean>(
-        current.fileBindings?.length
+        creditLots ? "dispatch_developer_billing_v2" : current.fileBindings?.length
           ? "dispatch_developer_billing_with_files"
           : "dispatch_developer_billing",
         {
@@ -205,7 +207,7 @@ export async function meterProviderRequest(
         },
       ),
     finish: async (admission, outcome, result) => {
-      const ok = await rpc<boolean>("finish_developer_billing", {
+      const ok = await rpc<boolean>(creditLots ? "finish_developer_billing_v2" : "finish_developer_billing", {
         p_request: admission.request_id,
         p_lease: admission.lease_token,
         p_outcome: outcome,
