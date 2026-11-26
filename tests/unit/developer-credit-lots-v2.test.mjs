@@ -43,12 +43,13 @@ async function fixture() {
       insert into public.developer_account_owners(account_id,owner_id,name) values('${account}','${owner}','Own'),('${foreign}','${other}','Other');
       insert into public.billing_plan_tiers values('live','price_fixture','pro','pro_monthly');
       insert into public.subscriptions(user_id,environment,status,price_id,current_period_start,current_period_end)
-        values('${owner}','live','active','price_fixture','2024-11-01Z','2024-12-01Z');
+        values('${owner}','live','active','price_fixture','2024-11-01T00:00:00Z','2024-12-01T00:00:00Z');
       insert into public.credit_purchases values('${purchase}','${account}',100);
       insert into public.developer_funding_attempts values('${attempt}','${account}','paid');
       insert into public.developer_funding_receipts values('${attempt}','${purchase}','ch_fixture',0);
     `);
     await db.exec(await readFile("supabase/pending/developer_credit_lots_v2.sql","utf8"));
+    await db.query("insert into developer_credit_lot_accounts_v2(account_id) values($1)",[account]);
     await db.exec("set role service_role");
     return db;
   } catch (error) {
@@ -81,7 +82,7 @@ test("one Pro grant per non-overlapping paid period; downgrade expires unused va
     await privileged(db,"update subscriptions set status='active' where user_id=$1",[owner]);
     assert.equal(await refresh(db),id);
     assert.equal(await balance(db,id),0);
-    await privileged(db,"update subscriptions set current_period_start='2024-12-01Z',current_period_end='2025-01-01Z' where user_id=$1",[owner]);
+    await privileged(db,"update subscriptions set current_period_start='2024-12-01T00:00:00Z',current_period_end='2025-01-01T00:00:00Z' where user_id=$1",[owner]);
     const next=await refresh(db,"2024-12-02T12:00:00.000Z");
     assert.notEqual(next,id);
     assert.equal(await balance(db,next),8000);
