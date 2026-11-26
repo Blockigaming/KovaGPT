@@ -16,6 +16,9 @@ create function kova_private.settle_usage_credit_spend()
 returns trigger language plpgsql security definer set search_path='' as $$
 begin
   if new.actual_cost_usd is not null then
+    update kova_private.usage_credit_spends set settled_micros=0
+      where event_id=new.id and settled_micros is null;
+  elsif new.actual_cost_usd is not null then
     update kova_private.usage_credit_spends s
       set settled_micros=least(s.maximum_micros,
         ceil(greatest(new.actual_cost_usd,0)*1000000*o.amount_cents*10000/s.pricing_divisor)::bigint)
@@ -82,7 +85,7 @@ begin
       for funding in
         select id,amount_cents,payment_fee_cents,refunded_cents
         from kova_private.usage_credit_orders
-        where claimed_by=p_user_id and environment='live' and not disputed
+        where claimed_by=p_user_id and environment=current_setting('kova.usage_credit_funding_environment',true) and not disputed
           and payment_fee_cents is not null and refunded_cents=0
         order by claimed_at,id for update
       loop
@@ -167,3 +170,22 @@ begin
 end $$;
 revoke all on function public.acquire_credit_eligible_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz,boolean) from public,anon,authenticated;
 grant execute on function public.acquire_credit_eligible_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz,boolean) to service_role;
+
+
+create function public.kova_fund_credit_order_with_fee(
+  p_id uuid,p_env text,p_session text,p_intent text,p_amount integer,p_refund integer,p_disputed boolean,p_fee integer
+)
+returns boolean language plpgsql security definer set search_path='' as $$
+begin
+  if p_fee is null or p_fee<0 or p_fee>=p_amount then return false; end if;
+  if not public.kova_fund_credit_order(p_id,p_env,p_session,p_intent,p_amount,p_refund,p_disputed) then
+    return false;
+  end if;
+  update kova_private.usage_credit_orders set payment_fee_cents=p_fee
+    where environment=p_env and payment_intent=p_intent and funded_at is not null
+      and p_fee>=0 and p_fee<amount_cents and (payment_fee_cents is null or payment_fee_cents=p_fee);
+  if not found then raise exception 'credit_fee_mismatch'; end if;
+  return true;
+end $$;
+revoke all on function public.kova_fund_credit_order_with_fee(uuid,text,text,text,integer,integer,boolean,integer) from public,anon,authenticated;
+grant execute on function public.kova_fund_credit_order_with_fee(uuid,text,text,text,integer,integer,boolean,integer) to service_role;

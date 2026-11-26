@@ -39,7 +39,7 @@ export async function projectUsageCreditStripeEvent(event: VerifiedStripeEvent, 
     return true;
   const stripe = createStripeClient(env);
   const session = await stripe.checkout.sessions.retrieve(payload.id, {
-    expand: ["payment_intent.latest_charge"],
+    expand: ["payment_intent.latest_charge.balance_transaction"],
   });
   if (session.payment_status !== "paid") return true;
   const intent = session.payment_intent;
@@ -61,7 +61,18 @@ export async function projectUsageCreditStripeEvent(event: VerifiedStripeEvent, 
     charge.amount_captured !== session.amount_total
   )
     throw new Error("Credit payment did not match its checkout.");
-  const { data, error } = await loose(supabaseAdmin).rpc("kova_fund_credit_order", {
+  const transaction = charge.balance_transaction;
+  if (
+    !transaction ||
+    typeof transaction === "string" ||
+    transaction.currency !== "usd" ||
+    transaction.amount !== session.amount_total ||
+    !Number.isSafeInteger(transaction.fee) ||
+    transaction.fee < 0 ||
+    transaction.fee >= session.amount_total
+  )
+    throw new Error("Stripe credit processing fee is unavailable.");
+  const { data, error } = await loose(supabaseAdmin).rpc("kova_fund_credit_order_with_fee", {
     p_id: order,
     p_env: env,
     p_session: session.id,
@@ -69,6 +80,7 @@ export async function projectUsageCreditStripeEvent(event: VerifiedStripeEvent, 
     p_amount: session.amount_total,
     p_refund: charge.amount_refunded,
     p_disputed: charge.disputed,
+    p_fee: transaction.fee,
   });
   if (error || data !== true) throw new Error("Credit fulfillment failed.");
   await deliverFundedGift(order, env);
