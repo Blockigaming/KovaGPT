@@ -454,7 +454,7 @@ test("mobile browser handoff fits its response and opens a contained workspace",
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   const card = page.locator(".kova-response-browser-card");
   await expect(card).toBeVisible();
-  await expect(card.getByText("Open browser", { exact: true })).toBeVisible();
+  await expect(card).toHaveAccessibleName("Open cloud browser");
   const geometry = await card.evaluate((element) => {
     const root = element.getBoundingClientRect();
     return {
