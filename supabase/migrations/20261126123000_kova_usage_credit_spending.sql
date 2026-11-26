@@ -72,9 +72,13 @@ begin
        cost_state.five_hour_used + p_estimated_cost > cost_state.five_hour_allowance then
       exhausted := 'five_hour_cost';
     end if;
+    if current_setting('kova.credit_message_overflow',true)='enabled' then
+      exhausted := coalesce(exhausted,'weekly_cost');
+    end if;
     -- Paid fallback remains dormant until live funding records verified payment fees.
     if exhausted is not null and p_estimated_cost > 0 and p_estimated_cost <= 500
-       and current_setting('kova.usage_credit_spending',true)='enabled' then
+       and current_setting('kova.usage_credit_spending',true)='enabled'
+       and current_setting('kova.credit_generation_eligible',true)='enabled' then
       for funding in
         select id,amount_cents,payment_fee_cents,refunded_cents
         from kova_private.usage_credit_orders
@@ -99,13 +103,13 @@ begin
       where plan=p_plan) into cost_managed;
     -- Private cost-managed plans do not also exhaust fixed token/message counts.
     -- Legacy installations retain their earlier count safeguards.
-    if not cost_managed and not coalesce(p_plan='pro' and p_model='kova-argon-4.6' and p_mode='instant' and p_premium=false,false) then
+    if max_debit is null and not cost_managed and not coalesce(p_plan='pro' and p_model='kova-argon-4.6' and p_mode='instant' and p_premium=false,false) then
     select coalesce(sum(coalesce(actual_billable_tokens,reserved_tokens)),0) into used_day from ai_usage_events where user_id=p_user_id and created_at>=date_trunc('day',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed') and not (plan_tier='pro' and provider_model='kova-argon-4.6' and kova_mode='instant' and premium=false);
     select coalesce(sum(coalesce(actual_billable_tokens,reserved_tokens)),0) into used_month from ai_usage_events where user_id=p_user_id and created_at>=date_trunc('month',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed') and not (plan_tier='pro' and provider_model='kova-argon-4.6' and kova_mode='instant' and premium=false);
     if used_day+p_reserved_tokens>p_daily_limit then return query select null::uuid,'daily_tokens'; return; end if;
     if used_month+p_reserved_tokens>p_monthly_limit then return query select null::uuid,'monthly_tokens'; return; end if;
     end if;
-    if p_premium and not cost_managed then
+    if max_debit is null and p_premium and not cost_managed then
       select count(*) into used_premium from ai_usage_events where user_id=p_user_id and premium and created_at>=p_period_start and created_at<p_period_end and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed');
       if used_premium>=p_premium_limit then return query select null::uuid,'premium_period'; return; end if;
     end if;
@@ -148,3 +152,18 @@ returns jsonb language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function public.kova_credit_spending_history(uuid,text) from public,anon,authenticated;
 grant execute on function public.kova_credit_spending_history(uuid,text) to service_role;
+
+create function public.acquire_credit_eligible_generation(
+  p_request_id text,p_idempotency_key text,p_user_id uuid,p_guest_ip_hash text,p_conversation_id uuid,p_mode text,p_plan text,p_premium boolean,
+  p_model text,p_estimated_input bigint,p_reserved_tokens bigint,p_estimated_cost numeric,p_context_trimmed boolean,
+  p_daily_limit bigint,p_monthly_limit bigint,p_premium_limit integer,p_guest_limit integer,p_global_concurrency integer,p_principal_concurrency integer,p_lease_seconds integer,
+  p_period_start timestamptz,p_period_end timestamptz,p_message_overflow boolean)
+returns table(event_id uuid,decision text) language plpgsql security invoker set search_path='' as $$
+begin
+  perform set_config('kova.credit_generation_eligible','enabled',true);
+  perform set_config('kova.credit_message_overflow',case when p_message_overflow then 'enabled' else 'disabled' end,true);
+  return query select * from public.acquire_ai_generation(
+    p_request_id, p_idempotency_key, p_user_id, p_guest_ip_hash, p_conversation_id, p_mode, p_plan, p_premium, p_model, p_estimated_input, p_reserved_tokens, p_estimated_cost, p_context_trimmed, p_daily_limit, p_monthly_limit, p_premium_limit, p_guest_limit, p_global_concurrency, p_principal_concurrency, p_lease_seconds, p_period_start, p_period_end);
+end $$;
+revoke all on function public.acquire_credit_eligible_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz,boolean) from public,anon,authenticated;
+grant execute on function public.acquire_credit_eligible_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz,boolean) to service_role;

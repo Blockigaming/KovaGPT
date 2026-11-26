@@ -1,3 +1,4 @@
+import { canUseCreditsForModel } from "@/lib/usage-credit-pricing.mjs";
 import { READ_ONLY_PLUGIN_TOOLS } from "@/lib/composer-plugin-usage.mjs";
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 import { MEMORY_TIERS } from "@/lib/memory-tier-policy.mjs";
@@ -1329,6 +1330,18 @@ export const Route = createFileRoute("/api/chat")({
             const browserEvidenceReservation =
               browserUrl && !capture ? "x".repeat(MAX_BROWSER_EVIDENCE_BYTES) : "";
 
+            const creditCandidate =
+              process.env.KOVA_CHAT_CREDIT_FALLBACK === "enabled" &&
+              Boolean(
+                auth &&
+                !capture &&
+                !clientTool &&
+                !browserUrl &&
+                !explicitHostedTool &&
+                !isExplicitWebSearchRequest(lastText) &&
+                canUseCreditsForModel(callerTier, model),
+              );
+            let messageOverflow = false;
             if (auth && !isOwner && !capture) {
               await assertSelectedContextsCurrent(request.signal);
               const quota = await preflight.run("chat_quota", (signal) =>
@@ -1340,7 +1353,8 @@ export const Route = createFileRoute("/api/chat")({
                   { modelId: model, mode: m.id },
                 ),
               );
-              if (quota) {
+              if (quota?.status === 429 && creditCandidate) messageOverflow = true;
+              else if (quota) {
                 if (browserUrl && quota.status === 429)
                   quota.headers.set(CLOUD_BROWSER_USAGE_HEADER, "exhausted");
                 return quota;
@@ -1844,6 +1858,16 @@ export const Route = createFileRoute("/api/chat")({
               : permittedTools;
             const googleBinding = googleContext?.binding ?? undefined;
             let enableTools = availableTools.length > 0;
+            const creditFallback = creditCandidate && !enableTools && !webSources.length;
+            if (messageOverflow && !creditFallback) {
+              return Response.json(
+                {
+                  error: "Your included message allowance has been reached.",
+                  code: "message_window_limit",
+                },
+                { status: 429, headers: { "Cache-Control": "no-store" } },
+              );
+            }
 
             const freeConnectorRequest = enableTools && callerTier === "free";
             let finalMessages = body.messages as unknown as ChatMsg[];
@@ -1943,7 +1967,7 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
             let freeHeadroom: Awaited<ReturnType<typeof getGenerationTokenHeadroom>> | null = null;
-            if (auth && callerTier === "free") {
+            if (auth && callerTier === "free" && !creditFallback) {
               try {
                 freeHeadroom = await preflight.run("usage_headroom", (signal) =>
                   getGenerationTokenHeadroom({
@@ -2116,6 +2140,7 @@ export const Route = createFileRoute("/api/chat")({
                     (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
                   estimatedCostUsd: estimatedCost,
                   contextTrimmed: messages.length > HISTORY_TURNS,
+                  creditFallback: creditFallback ? { messageOverflow } : undefined,
                   signal,
                 }),
               );
