@@ -1,0 +1,35 @@
+.kova-home-autocomplete {
+  width: 100%;
+  max-width: 48rem;
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0 12px;
+}
+.kova-home-autocomplete button {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--foreground);
+  text-align: start;
+  background: transparent;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.kova-home-autocomplete button span {
+  color: var(--muted-foreground);
+}
+.kova-home-autocomplete button:hover {
+  background: var(--accent);
+}
+.kova-home-autocomplete button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+@media (width < 1024px), (pointer: coarse), (hover: none) {
+  .kova-home-autocomplete {
+    display: none;
+  }
+}

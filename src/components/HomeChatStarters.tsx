@@ -1,7 +1,9 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from "react";
 import { ContinueWorking, HomeChatFrame } from "@/components/HomeChatFrame";
 import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
+
+const HomePromptAutocomplete = lazy(() => import("./HomePromptAutocomplete"));
 
 export function HomeWelcome({
   home = true,
@@ -10,6 +12,9 @@ export function HomeWelcome({
   chatId,
   conversations,
   onSelect,
+  draft = "",
+  onDraftChange,
+  personalize = false,
   children,
 }: {
   home?: boolean;
@@ -18,6 +23,9 @@ export function HomeWelcome({
   chatId: string | null;
   conversations: Conversation[];
   onSelect: (id: string) => void;
+  draft?: string;
+  onDraftChange?: (draft: string) => void;
+  personalize?: boolean;
   children: ReactNode;
 }) {
   const greeting = useHomeGreeting(owner, firstName, chatId);
@@ -69,7 +77,17 @@ export function HomeWelcome({
       headingId="chat-greeting"
       heading={greeting}
       recentWork={
-        home && conversations.length ? (
+        home && draft.trim() && onDraftChange ? (
+          <Suspense fallback={null}>
+            <HomePromptAutocomplete
+              key={owner ?? "guest"}
+              owner={personalize ? owner : null}
+              draft={draft}
+              conversations={personalize ? conversations : []}
+              onPick={onDraftChange}
+            />
+          </Suspense>
+        ) : home && conversations.length ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
         ) : null
       }

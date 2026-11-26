@@ -418,11 +418,10 @@ export async function chatRequestUser(settings, cleanTemporaryChat, webSearch, o
 
 export { completedChatReply } from "./response-followups.mjs";
 
-export function chatRequestHeaders(requestId, messageId, voiceRequest) {
+export function chatRequestHeaders(requestId, messageId) {
   return {
     "Content-Type": "application/json",
     "Idempotency-Key": requestId,
     "X-Kova-Assistant-Message-Id": messageId,
-    ...(voiceRequest ? {} : { "X-Kova-Response-Followups": "1" }),
   };
 }

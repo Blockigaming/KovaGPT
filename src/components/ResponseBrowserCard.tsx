@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Globe } from "lucide-react";
+import { ChevronRight, Globe } from "lucide-react";
 import type { Activity } from "@/lib/chat-store";
 import {
   browserActivityIsFresh,
@@ -124,16 +124,12 @@ export function ResponseBrowserCard({
         ref={trigger}
         type="button"
         className="kova-response-browser-card"
+        title={browser.hostname ?? "Active browser session"}
         onClick={() => setOpenSession(browser.sessionId)}
       >
         <Globe className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <span className="kova-response-browser-details">
-          <span className="block text-sm font-medium">Cloud Browser</span>
-          <span className="block break-all text-xs text-muted-foreground">
-            {browser.hostname ?? "Active browser session"}
-          </span>
-        </span>
-        <span className="kova-response-browser-action">Open browser</span>
+        <span className="kova-response-browser-action">Open cloud browser</span>
+        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
       </button>
       {openSession === browser.sessionId && (
         <Suspense fallback={<p role="status">Opening browser…</p>}>

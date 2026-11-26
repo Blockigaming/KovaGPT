@@ -2,7 +2,6 @@ import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { ActivityGroup } from "./ActivityGroup";
 import { segmentReply } from "@/lib/activity-groups.mjs";
 import { LiveThinking } from "./LiveThinking";
-import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
 import { PromptMessage } from "./PromptMessage";
@@ -42,7 +41,6 @@ import {
   Pencil,
   RefreshCw,
   Share2,
-  Sparkles,
   TextSelect,
   ThumbsDown,
   ThumbsUp,
@@ -1224,21 +1222,6 @@ function ChatMessageInner({
           )}
         </div>
       </div>
-      {!isUser &&
-        !streaming &&
-        !message.generationStatus &&
-        onFollowUp &&
-        normalizeResponseFollowups(message.followups).length > 0 && (
-          <nav className="kova-response-followups" aria-label="Suggested follow-ups">
-            <p>Suggested follow-ups</p>
-            {normalizeResponseFollowups(message.followups).map((suggestion) => (
-              <button type="button" key={suggestion} onClick={() => onFollowUp(suggestion)}>
-                <Sparkles aria-hidden="true" />
-                <span>{suggestion}</span>
-              </button>
-            ))}
-          </nav>
-        )}
       {showAdvertisement &&
         !isUser &&
         !streaming &&

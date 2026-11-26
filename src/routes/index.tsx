@@ -3475,6 +3475,9 @@ function KovaGPT() {
               chatId={activeId}
               conversations={isLoaded && isSignedIn ? historyConversations : []}
               onSelect={setActiveId}
+              draft={principalReady ? input : ""}
+              onDraftChange={setInput}
+              personalize={settingsReady && settings.rememberAcross && !tempChat}
             >
               {active && editingMessage?.conversationId === active.id && (
                 <div
