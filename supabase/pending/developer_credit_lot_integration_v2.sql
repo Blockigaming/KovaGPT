@@ -89,10 +89,8 @@ begin
   if a is null then raise exception 'developer_key_unavailable';end if;
   perform pg_advisory_xact_lock(hashtextextended(own::text,20260903204500));
   perform pg_advisory_xact_lock(hashtextextended('developer_billing',0));
-  perform public.developer_enable_credit_lots_v2(a);
-  perform public.developer_credit_expire_v2(a,now_at);
-  perform public.developer_refresh_pro_v2(own,now_at);
-  perform public.developer_sync_credit_lots_v2(a,'pro_and_expiry');
+  perform public.developer_refresh_wallet_v2(own,a);
+  now_at:=clock_timestamp();
   perform set_config('kova.developer_credit_v2',a::text,true);
   r:=public.admit_developer_billing(p_key,p_request_key,p_fingerprint,p_provider,p_model,p_capability,p_version,p_quote,p_limits);
   rid:=(r->>'request_id')::uuid;
@@ -268,7 +266,32 @@ begin
     perform public.developer_credit_expire_v2(a.account_id,at_time);
     perform public.developer_sync_credit_lots_v2(a.account_id,'pro_and_expiry');
   end loop;
+  update public.developer_credit_lot_accounts_v2 t set last_refreshed_at=at_time
+    where exists(select 1 from public.developer_account_owners own where own.account_id=t.account_id and own.owner_id=p_owner);
   return public.developer_credit_wallet_status_v2(p_owner,p_account,0);
-end $$;
+end $;
 revoke all on function public.developer_refresh_wallet_v2(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.developer_refresh_wallet_v2(uuid,uuid) to service_role;
+
+-- Read-only bounded maintenance queue. Each owner must be refreshed in its
+-- own transaction, in owner-before-billing lock order. No bulk grant is
+-- authorized by this queue; the refresh RPC rechecks subscription eligibility.
+alter table public.developer_credit_lot_accounts_v2 add column last_refreshed_at timestamptz;
+create index developer_credit_lot_refresh_due_idx on public.developer_credit_lot_accounts_v2(last_refreshed_at nulls first,account_id);
+create function public.developer_due_wallet_refresh_v2(p_limit integer default 20)
+returns table(owner_id uuid,account_id uuid)
+language sql stable security invoker set search_path='' as $$
+  select q.owner_id,q.account_id from (
+    select distinct on (own.owner_id) own.owner_id,own.account_id,t.last_refreshed_at
+    from public.developer_credit_lot_accounts_v2 t
+    join public.developer_account_owners own on own.account_id=t.account_id
+    where (t.last_refreshed_at is null or t.last_refreshed_at<now()-interval '1 hour')
+      and kova_private.auth_user_exists(own.owner_id)
+      and not exists(select 1 from public.account_deletion_fences f where f.user_id=own.owner_id)
+      and not exists(select 1 from public.banned_users b where b.user_id=own.owner_id)
+    order by own.owner_id,t.last_refreshed_at nulls first,own.account_id
+  ) q order by q.last_refreshed_at nulls first,q.owner_id
+  limit greatest(1,least(coalesce(p_limit,20),20))
+$$;
+revoke all on function public.developer_due_wallet_refresh_v2(integer) from public,anon,authenticated;
+grant execute on function public.developer_due_wallet_refresh_v2(integer) to service_role;
