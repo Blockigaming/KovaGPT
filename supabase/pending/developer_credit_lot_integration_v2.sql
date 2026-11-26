@@ -243,3 +243,32 @@ begin
 end $$;
 revoke all on function public.developer_credit_wallet_status_v2(uuid,uuid,integer) from public,anon,authenticated;
 grant execute on function public.developer_credit_wallet_status_v2(uuid,uuid,integer) to service_role;
+
+-- Owner-bound refresh: called only by the verified console mutation, never a
+-- GET. The clock and current paid subscription are determined by the database.
+-- Refresh every tracked account belonging to that owner so an expired or
+-- downgraded allowance cannot remain in the aggregate of another workspace.
+create function public.developer_refresh_wallet_v2(p_owner uuid,p_account uuid)
+returns jsonb language plpgsql security invoker set search_path='' as $$
+declare a record; at_time timestamptz;
+begin
+  perform pg_advisory_xact_lock(hashtextextended(p_owner::text,20260903204500));
+  if not kova_private.auth_user_exists(p_owner)
+    or exists(select 1 from public.account_deletion_fences where user_id=p_owner)
+    or exists(select 1 from public.banned_users where user_id=p_owner)
+    or not exists(select 1 from public.developer_account_owners where owner_id=p_owner and account_id=p_account)
+    then raise exception 'developer_owner_required' using errcode='42501';end if;
+  perform pg_advisory_xact_lock(hashtextextended('developer_billing',0));
+  at_time:=clock_timestamp();
+  perform public.developer_enable_credit_lots_v2(p_account);
+  perform public.developer_refresh_pro_v2(p_owner,at_time);
+  for a in select own.account_id from public.developer_account_owners own
+    join public.developer_credit_lot_accounts_v2 tracked on tracked.account_id=own.account_id
+    where own.owner_id=p_owner order by own.account_id loop
+    perform public.developer_credit_expire_v2(a.account_id,at_time);
+    perform public.developer_sync_credit_lots_v2(a.account_id,'pro_and_expiry');
+  end loop;
+  return public.developer_credit_wallet_status_v2(p_owner,p_account,0);
+end $$;
+revoke all on function public.developer_refresh_wallet_v2(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.developer_refresh_wallet_v2(uuid,uuid) to service_role;
