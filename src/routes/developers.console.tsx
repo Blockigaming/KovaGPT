@@ -182,6 +182,7 @@ function OwnedDeveloperConsole({
     [concurrent, setConcurrent] = useState("1"),
     [scopes, setScopes] = useState<string[]>(["chat"]);
   const [modelFilter, setModelFilter] = useState("");
+  const [modelDraft, setModelDraft] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -273,6 +274,7 @@ function OwnedDeveloperConsole({
   const visibleUsage = usageReady ? (data?.usage ?? []) : [];
   const clearUsageFilters = () => {
     setModelFilter("");
+    setModelDraft("");
     setServiceFilter("");
     setStatusFilter("");
     setDateFilter("");
@@ -308,7 +310,7 @@ function OwnedDeveloperConsole({
             ["Credit accounts", data?.accounts.length],
             ["Projects", data?.projects.length],
             ["API keys", data?.keys.filter((key) => !key.revoked_at && key.enabled === true).length],
-            ["Recent calls (up to 100)", data?.usage.length],
+            ["Requests in current view", usageReady ? visibleUsage.length : undefined],
           ] as const).map(([label, value]) => (
             <div key={label} className="min-w-0 rounded-xl border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">{label}</p>
@@ -683,10 +685,17 @@ function OwnedDeveloperConsole({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="space-y-1 text-sm">
                 <span>Model ID</span>
-                <Input value={modelFilter} onChange={(event) => {
-                  setModelFilter(event.target.value);
-                  setUsagePage(0);
-                }} placeholder="All models" />
+                <div className="flex gap-2">
+                  <Input
+                    value={modelDraft}
+                    onChange={(event) => setModelDraft(event.target.value)}
+                    placeholder="All models"
+                  />
+                  <Button variant="outline" onClick={() => {
+                    setModelFilter(modelDraft.trim());
+                    setUsagePage(0);
+                  }}>Apply</Button>
+                </div>
               </label>
               <label className="space-y-1 text-sm">
                 <span>Service</span>
@@ -754,7 +763,7 @@ function OwnedDeveloperConsole({
                 const fields = ["id", "account_id", "project_id", "api_key_id", "public_model", "capability", "created_at", "settlement_state", "final_customer_charge", "maximum_reserved_charge", "currency"];
                 const cell = (value: unknown) => {
                   let text = String(value ?? "");
-                  if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = "'" + text;
+                  if (/^[=+@-]/.test(text.trimStart()) || text.startsWith("\t") || text.startsWith("\r") || text.startsWith("\n")) text = "'" + text;
                   return '"' + text.replaceAll('"', '""') + '"';
                 };
                 const csv = [fields.join(","), ...visibleUsage.map((row) => fields.map((field) => cell(row[field])).join(","))].join("\r\n");
