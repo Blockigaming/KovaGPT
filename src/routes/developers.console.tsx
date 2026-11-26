@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   CreditCard,
   Folder,
+  FlaskConical,
   KeyRound,
   Layers,
   LayoutDashboard,
@@ -30,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
 import { DeveloperFilesPanel } from "@/components/DeveloperFilesPanel";
+import { DeveloperPlayground } from "@/components/DeveloperPlayground";
 import { KOVA_MODEL_LABELS } from "@/lib/kova-foundation-models.mjs";
 type Row = Record<string, string | number | boolean | null | string[]>;
 type ConsoleData = {
@@ -47,6 +49,7 @@ type ConsoleData = {
 };
 const WORKSPACE_SECTIONS = [
   "overview",
+  "playground",
   "projects",
   "keys",
   "models",
@@ -89,6 +92,7 @@ function DeveloperWorkspace({
   useEffect(() => setMobileNavOpen(false), [section]);
   const navigation = [
     { label: "Overview", anchor: "overview", icon: LayoutDashboard },
+    { label: "Playground", anchor: "playground", icon: FlaskConical },
     { label: "Projects", anchor: "projects", icon: Users },
     { label: "API keys", anchor: "keys", icon: KeyRound },
     { label: "Models", anchor: "models", icon: Layers },
@@ -107,7 +111,7 @@ function DeveloperWorkspace({
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 md:hidden"
+            className="min-h-11 min-w-11 shrink-0 md:hidden"
             aria-label={mobileNavOpen ? "Close developer navigation" : "Open developer navigation"}
             aria-expanded={mobileNavOpen}
             aria-controls="developer-workspace-navigation"
@@ -130,7 +134,7 @@ function DeveloperWorkspace({
           id="developer-workspace-navigation"
           className={`min-w-0 border-b border-border p-3 md:block md:border-b-0 md:border-r md:p-4 ${mobileNavOpen ? "block" : "hidden"}`}
         >
-          <nav aria-label="Developer workspace" className="flex flex-col gap-1 md:sticky md:top-4">
+          <nav aria-label="Developer workspace" className="flex max-h-[70dvh] flex-col gap-1 overflow-y-auto overscroll-contain md:sticky md:top-4 md:max-h-[calc(100dvh-2rem)]">
             {navigation
               .filter((item) => authenticated || item.anchor === "overview")
               .map(({ label, anchor, icon: Icon }) => (
@@ -140,7 +144,7 @@ function DeveloperWorkspace({
                   search={{ section: anchor }}
                   onClick={() => setMobileNavOpen(false)}
                   aria-current={section === anchor ? "page" : undefined}
-                  className={`flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring ${section === anchor ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                  className={`flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring ${section === anchor ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
                   {label}
@@ -151,7 +155,7 @@ function DeveloperWorkspace({
             </Link>
           </nav>
         </aside>
-        <main id="main-content" tabIndex={-1} data-ui-reference="chatgpt-settings-form" className="w-full min-w-0 space-y-4 px-3 py-5 sm:space-y-6 sm:px-6 sm:py-8 lg:px-8">
+        <main id="main-content" tabIndex={-1} data-ui-reference="chatgpt-settings-form" className="w-full min-w-0 max-w-full space-y-4 px-3 py-5 sm:space-y-6 sm:px-6 sm:py-8 lg:px-8 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:h-auto [&_button]:min-h-10 [&_button]:py-2">
           {children}
         </main>
       </div>
@@ -397,6 +401,7 @@ function OwnedDeveloperConsole({
               Paid API execution is not enabled. You can prepare your workspace and limits.
             </p>
           )}
+          {section === "playground" && <DeveloperPlayground key={userId} enabled={data?.enabled === true} />}
           {section === "models" && (
             <section className="min-w-0 space-y-4">
               <div>
