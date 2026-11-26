@@ -58,7 +58,14 @@ const chartNames = {
   "percent-stacked-bar": "100% stacked bar",
 } as const;
 
-const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
+const DEFAULT_COLORS = ["#3b82f6", "#14b8a6", "#a78bfa", "#f59e0b", "#22c55e", "#ef4444"];
+const CHART_PALETTES = {
+  blue: DEFAULT_COLORS,
+  teal: ["#14b8a6", "#3b82f6", "#22c55e", "#a78bfa", "#f59e0b", "#ef4444"],
+  violet: ["#a78bfa", "#3b82f6", "#14b8a6", "#f59e0b", "#22c55e", "#ef4444"],
+  warm: ["#f59e0b", "#ef4444", "#ec4899", "#a78bfa", "#3b82f6", "#14b8a6"],
+} as const;
+type ChartPalette = keyof typeof CHART_PALETTES | "original";
 
 function ChartHeatmap({ spec, xKey, keys }: { spec: ChartSpec; xKey: string; keys: string[] }) {
   const values = spec.data.flatMap((row) =>
@@ -195,7 +202,14 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   // Picture-in-picture: the chart floats in a corner while the chat scrolls, then returns.
   const [pinned, setPinned] = useState(false);
   const chartTypeId = useId();
-  const colors = spec.colors?.length ? spec.colors : DEFAULT_COLORS;
+  const paletteId = useId();
+  const [palette, setPalette] = useState<ChartPalette>("original");
+  const colors =
+    palette === "original"
+      ? spec.colors?.length
+        ? spec.colors
+        : DEFAULT_COLORS
+      : [...CHART_PALETTES[palette]];
   const circular = type === "pie" || type === "donut";
   const legendLabels = circular
     ? spec.data.map((row, index) => String(row[xKey] ?? `Item ${index + 1}`))
@@ -336,7 +350,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         </div>
       )}
       <figure
-        className="kova-chart my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
+        className="kova-chart my-4 overflow-hidden rounded-2xl bg-card p-3 sm:p-4"
         data-pinned={pinned || undefined}
         aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
       >
@@ -359,6 +373,21 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                     : (item[0].toUpperCase() + item.slice(1)).replaceAll("-", " ")}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <label className="sr-only" htmlFor={paletteId}>
+            Chart colors
+          </label>
+          <Select value={palette} onValueChange={(value) => setPalette(value as ChartPalette)}>
+            <SelectTrigger id={paletteId} className="min-h-11 w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="original">Default colors</SelectItem>
+              <SelectItem value="blue">Blue</SelectItem>
+              <SelectItem value="teal">Teal</SelectItem>
+              <SelectItem value="violet">Violet</SelectItem>
+              <SelectItem value="warm">Warm</SelectItem>
             </SelectContent>
           </Select>
           <button

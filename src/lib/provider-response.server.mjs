@@ -189,7 +189,7 @@ export async function createBoundedProviderStream(source, maxBytes, signal) {
         if (finished) return;
         finished = true;
         cleanup();
-        await reader.cancel("provider_response_rejected").catch(() => undefined);
+        void reader.cancel("provider_response_rejected").catch(() => undefined);
         controller.error(
           error instanceof ProviderResponseError || isTransportInterruption(error)
             ? error
@@ -223,10 +223,10 @@ export async function createBoundedProviderSseStream(source, maxBytes, signal) {
   let pendingText = "";
   let finished = false;
 
-  const reject = async (controller, error) => {
+  const reject = (controller, error) => {
     if (finished) return;
     finished = true;
-    await reader.cancel("provider_sse_rejected").catch(() => undefined);
+    void reader.cancel("provider_sse_rejected").catch(() => undefined);
     controller.error(
       error instanceof ProviderResponseError || isTransportInterruption(error)
         ? error
@@ -249,8 +249,10 @@ export async function createBoundedProviderSseStream(source, maxBytes, signal) {
             if (line.replace(/\r?\n$/u, "") === "data: [DONE]") {
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               finished = true;
-              await reader.cancel("provider_sse_complete").catch(() => undefined);
+              // A provider can leave cancellation pending after its terminal frame.
+              // Completion must not depend on that transport cleanup.
               controller.close();
+              void reader.cancel("provider_sse_complete").catch(() => undefined);
               return;
             }
 
@@ -273,7 +275,7 @@ export async function createBoundedProviderSseStream(source, maxBytes, signal) {
           pendingText += decoder.decode(value, { stream: true });
         }
       } catch (error) {
-        await reject(controller, error);
+        reject(controller, error);
       }
     },
 
