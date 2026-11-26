@@ -117,6 +117,12 @@ function DeveloperWorkspace({
                   {label}
                 </Link>
               ))}
+            <Link to="/developers/$docSlug" params={{ docSlug: "models" }} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+              <BookOpen className="size-4 shrink-0" aria-hidden="true" /> Models
+            </Link>
+            <Link to="/developers/pricing" className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+              <CreditCard className="size-4 shrink-0" aria-hidden="true" /> Pricing
+            </Link>
             <Link to="/developers/$docSlug" params={{ docSlug: "docs" }} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
               <BookOpen className="size-4 shrink-0" aria-hidden="true" /> Documentation
             </Link>
@@ -231,11 +237,15 @@ function OwnedDeveloperConsole({
     monthly: Number(monthly),
     concurrent: Number(concurrent),
   });
+  useEffect(() => {
+    if (section !== "keys" && section !== "limits") setSecret("");
+  }, [section]);
   const selected = data?.balances.find((row) => row.id === account);
   const [modelFilter, setModelFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const accountUsage = (data?.usage ?? []).filter((row) => !account || row.account_id === account);
   const distinct = (field: string) =>
     [...new Set(accountUsage.map((row) => String(row[field] ?? "")).filter(Boolean))].sort();
@@ -243,7 +253,8 @@ function OwnedDeveloperConsole({
     (!modelFilter || row.public_model === modelFilter) &&
     (!serviceFilter || row.capability === serviceFilter) &&
     (!statusFilter || row.settlement_state === statusFilter) &&
-    (!dateFilter || String(row.created_at).slice(0, 10) >= dateFilter)
+    (!dateFilter || String(row.created_at).slice(0, 10) >= dateFilter) &&
+    (!endDateFilter || String(row.created_at).slice(0, 10) <= endDateFilter)
   );
   const settledByCurrency = new Map<string, number>();
   for (const row of visibleUsage) {
@@ -297,6 +308,32 @@ function OwnedDeveloperConsole({
               Paid API execution is not enabled. You can prepare your workspace and limits.
             </p>
           )}
+          {section === "projects" && (
+            <section className="space-y-3 rounded-xl border border-border p-5">
+              <h1 className="text-2xl font-semibold">Projects</h1>
+              <p className="text-sm text-muted-foreground">Projects belong to your developer credit accounts.</p>
+              {data?.projects.length ? (
+                <ul className="divide-y divide-border">
+                  {data.projects.map((row) => (
+                    <li key={String(row.id)} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                      <div>
+                        <p className="font-medium">{row.name}</p>
+                        <p className="text-sm text-muted-foreground">{data.accounts.find((item) => item.account_id === row.account_id)?.name}</p>
+                      </div>
+                      <Button variant="outline" onClick={() => {
+                        setAccount(String(row.account_id));
+                        setProject(String(row.id));
+                        setSecret("");
+                        setModelFilter("");
+                        setServiceFilter("");
+                        setStatusFilter("");
+                      }}>Select project</Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted-foreground">{data ? "No projects yet." : "Loading projects…"}</p>}
+            </section>
+          )}
           <form
             hidden={section !== "projects"}
             className="space-y-4 rounded-xl border p-5"
@@ -340,6 +377,9 @@ function OwnedDeveloperConsole({
                   setAccount(value === "__none__" ? "" : value);
                   setProject("");
                   setSecret("");
+                  setModelFilter("");
+                  setServiceFilter("");
+                  setStatusFilter("");
                 }}
               >
                 <SelectTrigger id="developer-console-account">
@@ -635,7 +675,21 @@ function OwnedDeveloperConsole({
               ))}
               <label className="space-y-1 text-sm">
                 <span>From (UTC)</span>
-                <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
+                <Input
+                  type="date"
+                  value={dateFilter}
+                  max={endDateFilter || undefined}
+                  onChange={(event) => setDateFilter(event.target.value)}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>Through (UTC)</span>
+                <Input
+                  type="date"
+                  value={endDateFilter}
+                  min={dateFilter || undefined}
+                  onChange={(event) => setEndDateFilter(event.target.value)}
+                />
               </label>
             </div>
             <Button variant="outline" onClick={() => {
@@ -643,6 +697,7 @@ function OwnedDeveloperConsole({
               setServiceFilter("");
               setStatusFilter("");
               setDateFilter("");
+              setEndDateFilter("");
             }}>Clear filters</Button>
             {section === "usage" && (
               <div className="grid gap-3 sm:grid-cols-2">
