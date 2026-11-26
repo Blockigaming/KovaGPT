@@ -377,6 +377,8 @@ export async function handleDeveloperConsole(request: Request) {
       const limitsPage = Number(params.get("limitsPage") ?? 0);
       const usagePage = Number(params.get("usagePage") ?? 0);
       const summaryRequested = params.get("usageSummary") === "1";
+      const exportRequested = params.get("usageExport") === "1";
+      if (summaryRequested && exportRequested) throw new Error("developer_input_invalid");
       if (
         [limitsPage, usagePage].some(
           (page) => !Number.isSafeInteger(page) || page < 0 || page > 10000,
@@ -406,6 +408,7 @@ export async function handleDeveloperConsole(request: Request) {
           usagePage,
           usageHasMore: false,
           ...(summaryRequested ? { summary: summarizeDeveloperUsage([]), summaryReadAt: new Date().toISOString() } : {}),
+          ...(exportRequested ? { exportRows: [], exportReadAt: new Date().toISOString() } : {}),
         });
       const usageAccount = params.get("usageAccount");
       const usageProject = params.get("usageProject");
@@ -426,7 +429,7 @@ export async function handleDeveloperConsole(request: Request) {
       const from = dateBound("usageFrom");
       const through = dateBound("usageThrough");
       if (from && through && from > through) throw new Error("developer_input_invalid");
-      if (summaryRequested && (!from || !through || +through - +from > 92 * 86400000))
+      if ((summaryRequested || exportRequested) && (!from || !through || +through - +from > 92 * 86400000))
         throw new Error("developer_summary_range_invalid");
       if (usageAccount && !ids.includes(developerUuid(usageAccount)))
         throw new Error("developer_owner_required");
@@ -458,7 +461,16 @@ export async function handleDeveloperConsole(request: Request) {
         through.setUTCDate(through.getUTCDate() + 1);
         usageQuery = usageQuery.lt("created_at", through.toISOString());
       }
-      if (summaryRequested) {
+      const publicUsage = (row: Record<string, unknown>) => {
+        const { authoritative_usage, ...rest } = row;
+        const usage = authoritative_usage && typeof authoritative_usage === "object" ? authoritative_usage as Record<string, unknown> : {};
+        const dimension = (name: string) => {
+          const value = usage[name];
+          return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+        };
+        return { ...rest, input_tokens: dimension("input_tokens"), cached_input_tokens: dimension("cached_input_tokens"), image_input_tokens: dimension("image_input_tokens"), output_tokens: dimension("output_tokens") };
+      };
+      if (summaryRequested || exportRequested) {
         // Fixed cutoff and stable ordering prevent new incoming requests from
         // moving the observed window. Settlement changes can still occur while
         // reading; the ledger remains the billing authority.
@@ -471,6 +483,7 @@ export async function handleDeveloperConsole(request: Request) {
           .order("created_at", { ascending: false })
           .order("id", { ascending: false });
         for (let offset = 0; offset <= maximumRows; offset += batchSize) {
+          request.signal.throwIfAborted();
           const page = await query
             .range(offset, offset + batchSize - 1)
             .abortSignal(AbortSignal.timeout(10000));
@@ -479,7 +492,10 @@ export async function handleDeveloperConsole(request: Request) {
             throw new Error("developer_summary_range_too_large");
           history.push(...page.data);
           if (page.data.length < batchSize)
-            return developerJson({
+            return developerJson(exportRequested ? {
+              exportRows: history.map(publicUsage),
+              exportReadAt: cutoff,
+            } : {
               summary: summarizeDeveloperUsage(history),
               summaryReadAt: cutoff,
             });
@@ -524,21 +540,7 @@ export async function handleDeveloperConsole(request: Request) {
         limits: rows[2].data?.slice(0, 100),
         limitsPage,
         limitsHasMore: (rows[2].data?.length ?? 0) > 100,
-        usage: rows[3].data?.slice(0, 100).map(({ authoritative_usage, ...row }) => {
-          const dimension = (name: string) => {
-            const value = authoritative_usage?.[name];
-            return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
-              ? value
-              : null;
-          };
-          return {
-            ...row,
-            input_tokens: dimension("input_tokens"),
-            cached_input_tokens: dimension("cached_input_tokens"),
-            image_input_tokens: dimension("image_input_tokens"),
-            output_tokens: dimension("output_tokens"),
-          };
-        }),
+        usage: rows[3].data?.slice(0, 100).map(publicUsage),
         usagePage,
         usageHasMore: (rows[3].data?.length ?? 0) > 100,
         balances: rows[4].data,
