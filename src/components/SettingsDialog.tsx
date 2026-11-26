@@ -2042,7 +2042,7 @@ export function SettingsDialog({
               </TabsContent>
 
               <TabsContent aria-labelledby={currentSectionHeadingId} value="gift-cards">
-                <GiftCardSettings key={userKey ?? "guest"} />
+                <GiftCardSettings key={userKey ?? "guest"} ownerId={userKey ?? undefined} />
                 {userKey && <UsageWallet key={userKey} ownerId={userKey} gift />}
               </TabsContent>
 

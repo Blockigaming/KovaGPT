@@ -39,7 +39,10 @@ export const getMyUsageWallet = createServerFn({ method: "GET" })
 
 export const createUsageCreditCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { ownerId: string; orderId: string; cents: number; gift: boolean }) => data)
+  .validator(
+    (data: { ownerId: string; orderId: string; cents: number; gift: boolean; design?: string }) =>
+      data,
+  )
   .handler(async ({ context, data }) => {
     const environment = creditCheckoutEnvironment();
     if (
@@ -60,13 +63,17 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
       p_gift: data.gift,
     });
     if (prepared.error || prepared.data !== true) throw new Error("Could not prepare checkout.");
+    const design =
+      data.gift && ["Midnight", "Evergreen", "Ember"].includes(data.design ?? "")
+        ? data.design
+        : undefined;
     const section = data.gift ? "gift-cards" : "usage";
     const returnUrl = `https://kovagpt.com/settings/${section}`;
     const session = await createStripeClient(environment).checkout.sessions.create(
       {
         mode: "payment",
         payment_method_types: ["card"],
-        metadata: { kind: CREDIT_ORDER_KIND, order: data.orderId },
+        metadata: { kind: CREDIT_ORDER_KIND, order: data.orderId, ...(design ? { design } : {}) },
         line_items: [
           {
             quantity: 1,
@@ -74,7 +81,9 @@ export const createUsageCreditCheckout = createServerFn({ method: "POST" })
               currency: "usd",
               unit_amount: data.cents,
               product_data: {
-                name: data.gift ? "KovaGPT usage credit gift" : "KovaGPT usage credits",
+                name: data.gift
+                  ? `KovaGPT usage credit gift${design ? ` · ${design}` : ""}`
+                  : "KovaGPT usage credits",
               },
             },
           },

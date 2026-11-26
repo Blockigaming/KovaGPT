@@ -42,45 +42,47 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
         <>
           <p className="text-sm text-muted-foreground">Stripe sandbox. Test payments only.</p>
           {!gift && <p>Test balance {usd.format(wallet.fundedCents / 100)}</p>}
-          <form
-            className="flex flex-wrap items-end gap-2"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              const value = String(new FormData(event.currentTarget).get("amount"));
-              if (!/^\d{1,3}(?:\.\d{1,2})?$/.test(value)) return;
-              setPending(true);
-              try {
-                const url = await createUsageCreditCheckout({
-                  data: {
-                    ownerId,
-                    orderId: crypto.randomUUID(),
-                    cents: Math.round(Number(value) * 100),
-                    gift,
-                  },
-                });
-                window.location.assign(url);
-              } catch {
-                setStatus("Checkout couldn’t be opened.");
-                setPending(false);
-              }
-            }}
-          >
-            <label className="block text-sm">
-              Amount in USD
-              <Input
-                name="amount"
-                type="number"
-                min="5"
-                max="500"
-                step="0.01"
-                defaultValue="25"
-                required
-              />
-            </label>
-            <Button type="submit" disabled={pending}>
-              {gift ? "Buy test gift card" : "Add test credits"}
-            </Button>
-          </form>
+          {!gift && (
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const value = String(new FormData(event.currentTarget).get("amount"));
+                if (!/^\d{1,3}(?:\.\d{1,2})?$/.test(value)) return;
+                setPending(true);
+                try {
+                  const url = await createUsageCreditCheckout({
+                    data: {
+                      ownerId,
+                      orderId: crypto.randomUUID(),
+                      cents: Math.round(Number(value) * 100),
+                      gift,
+                    },
+                  });
+                  window.location.assign(url);
+                } catch {
+                  setStatus("Checkout couldn’t be opened.");
+                  setPending(false);
+                }
+              }}
+            >
+              <label className="block text-sm">
+                Amount in USD
+                <Input
+                  name="amount"
+                  type="number"
+                  min="5"
+                  max="500"
+                  step="0.01"
+                  defaultValue="25"
+                  required
+                />
+              </label>
+              <Button type="submit" disabled={pending}>
+                {gift ? "Buy test gift card" : "Add test credits"}
+              </Button>
+            </form>
+          )}
           {gift && (
             <form
               className="flex flex-wrap items-end gap-2"
@@ -126,14 +128,32 @@ export function UsageWallet({ ownerId, gift = false }: { ownerId: string; gift?:
                       <p>Refunded {usd.format(order.refundedCents / 100)}</p>
                     )}
                     {order.shareable && order.giftCode && (
-                      <label className="block">
-                        Share this gift code
-                        <Input
-                          readOnly
-                          value={order.giftCode}
-                          onFocus={(event) => event.currentTarget.select()}
-                        />
-                      </label>
+                      <div className="space-y-2">
+                        <label className="block">
+                          Share this gift code
+                          <Input
+                            readOnly
+                            value={order.giftCode}
+                            onFocus={(event) => event.currentTarget.select()}
+                          />
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" asChild>
+                            <a
+                              href={`mailto:?subject=${encodeURIComponent("KovaGPT test gift card")}&body=${encodeURIComponent(`Redeem this test gift code in KovaGPT Settings → Gift cards: ${order.giftCode}`)}`}
+                            >
+                              Send by email
+                            </a>
+                          </Button>
+                          <Button size="sm" variant="outline" asChild>
+                            <a
+                              href={`sms:?body=${encodeURIComponent(`KovaGPT test gift code: ${order.giftCode}`)}`}
+                            >
+                              Send by text
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </li>
                 ))}
