@@ -10,7 +10,8 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
-import { PublicPageView } from "@/components/public/PublicSite";
+import type { ReactNode } from "react";
+import { BookOpen, ChartNoAxesColumn, ChevronLeft, CreditCard, Folder, KeyRound, LayoutDashboard, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
@@ -36,20 +37,63 @@ export const Route = createFileRoute("/developers/console")({
     ],
   }),
 });
+function DeveloperWorkspace({ children }: { children: ReactNode }) {
+  const navigation = [
+    { label: "Overview", anchor: "overview", icon: LayoutDashboard },
+    { label: "API keys & projects", anchor: "keys", icon: KeyRound },
+    { label: "Files", anchor: "files", icon: Folder },
+    { label: "Usage", anchor: "usage", icon: ChartNoAxesColumn },
+    { label: "Billing", anchor: "billing", icon: CreditCard },
+    { label: "Limits", anchor: "limits", icon: SlidersHorizontal },
+  ];
+  return (
+    <div className="min-h-dvh bg-background text-foreground">
+      <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border px-4 sm:px-6">
+        <div className="flex items-center gap-3">
+          <Link to="/developers" className="text-lg font-semibold tracking-tight">
+            Kova
+          </Link>
+          <span aria-hidden="true" className="text-muted-foreground">/</span>
+          <span className="text-sm font-medium">API Platform</span>
+        </div>
+        <Link to="/" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          <ChevronLeft className="size-4" aria-hidden="true" /> KovaGPT
+        </Link>
+      </header>
+      <div className="mx-auto grid min-w-0 max-w-[1600px] md:grid-cols-[224px_minmax(0,1fr)]">
+        <aside className="min-w-0 border-b border-border p-3 md:border-b-0 md:border-r md:p-4">
+          <nav aria-label="Developer workspace" className="flex flex-wrap gap-1 md:sticky md:top-4 md:flex-col">
+            {navigation.map(({ label, anchor, icon: Icon }) => (
+              <a key={anchor} href={`#${anchor}`} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                <Icon className="size-4 shrink-0" aria-hidden="true" />
+                {label}
+              </a>
+            ))}
+            <Link to="/developers/$docSlug" params={{ docSlug: "docs" }} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+              <BookOpen className="size-4 shrink-0" aria-hidden="true" /> Documentation
+            </Link>
+          </nav>
+        </aside>
+        <main id="main-content" tabIndex={-1} data-ui-reference="chatgpt-settings-form" className="min-w-0 space-y-6 px-4 py-6 sm:px-8 sm:py-10">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
 function DeveloperConsole() {
   const { isSignedIn, user } = useUser();
   if (isSignedIn && user?.id) return <OwnedDeveloperConsole key={user.id} userId={user.id} />;
   return (
-    <PublicPageView
-      reference="chatgpt-settings-form"
-      eyebrow="Developers"
-      title="Developer console"
-      summary="Manage your developer workspace."
-    >
-      <SignInButton mode="modal">
-        <Button>Sign in to continue</Button>
-      </SignInButton>
-    </PublicPageView>
+    <DeveloperWorkspace>
+      <section id="overview" className="space-y-4 rounded-xl border border-border p-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Developer workspace</h1>
+        <p className="text-sm text-muted-foreground">Sign in with your existing KovaGPT account to manage your API projects.</p>
+        <SignInButton mode="modal">
+          <Button>Sign in to continue</Button>
+        </SignInButton>
+      </section>
+    </DeveloperWorkspace>
   );
 }
 function OwnedDeveloperConsole({ userId }: { userId: string }) {
@@ -133,15 +177,32 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
   const selected = data?.balances.find((row) => row.id === account);
   const fieldClass = "mt-1 block w-full";
   return (
-    <PublicPageView
-      reference="chatgpt-settings-form"
-      eyebrow="Developers"
-      title="Developer console"
-      summary="Manage scoped keys, spending limits, and prepaid API usage."
-    >
-      <Link to="/developers/connections" className="text-sm underline">
-        Manage MCP client connections
-      </Link>
+    <DeveloperWorkspace>
+      <section id="overview" className="scroll-mt-4 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Workspace / Overview</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Overview</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Build and manage your applications with Kova.</p>
+          </div>
+          <Link to="/developers/connections" className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">
+            MCP connections
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            ["Credit accounts", data?.accounts.length],
+            ["Projects", data?.projects.length],
+            ["API keys", data?.keys.filter((key) => !key.revoked_at && key.enabled === true).length],
+            ["Recent calls (up to 100)", data?.usage.length],
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0 rounded-xl border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">{label}</p>
+              <p className="mt-3 text-2xl font-semibold tabular-nums">{value ?? "—"}</p>
+            </div>
+          ))}
+        </div>
+      </section>
       {!isSignedIn ? (
         <SignInButton mode="modal">
           <Button>Sign in to continue</Button>
@@ -191,7 +252,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               Create empty account
             </Button>
           </form>
-          <section className="space-y-4 rounded-xl border p-5">
+          <section id="keys" className="scroll-mt-4 space-y-4 rounded-xl border p-5">
             <h2 className="text-lg font-semibold">Keys and spending limits</h2>
             <div className="grid gap-1">
               <label htmlFor="developer-console-account">Account</label>
@@ -401,18 +462,32 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
                 ))}
             </ul>
           </section>
-          {project && (
-            <DeveloperFilesPanel key={`${userId}:${project}`} userId={userId} projectId={project} />
-          )}
-          {account && (
-            <DeveloperFundingPanel
-              key={`${userId}:${account}`}
-              userId={userId}
-              accountId={account}
-              onBalanceChanged={load}
-            />
-          )}
-          <section className="space-y-3 rounded-xl border p-5">
+          <section id="files" className="scroll-mt-4 space-y-3">
+            {project ? (
+              <DeveloperFilesPanel key={`${userId}:${project}`} userId={userId} projectId={project} />
+            ) : (
+              <div className="rounded-xl border p-5">
+                <h2 className="text-lg font-semibold">Files</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Select a project in API keys &amp; projects to manage its files.</p>
+              </div>
+            )}
+          </section>
+          <section id="billing" className="scroll-mt-4 space-y-3">
+            {account ? (
+              <DeveloperFundingPanel
+                key={`${userId}:${account}`}
+                userId={userId}
+                accountId={account}
+                onBalanceChanged={load}
+              />
+            ) : (
+              <div className="rounded-xl border p-5">
+                <h2 className="text-lg font-semibold">Billing</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Select a credit account to manage API funding.</p>
+              </div>
+            )}
+          </section>
+          <section id="limits" className="scroll-mt-4 space-y-3 rounded-xl border p-5">
             <h2 className="text-lg font-semibold">Stored spending limits</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -460,7 +535,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               </Button>
             </div>
           </section>
-          <section className="rounded-xl border p-5">
+          <section id="usage" className="scroll-mt-4 rounded-xl border p-5">
             <h2 className="text-lg font-semibold">Latest 100 API calls</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -493,6 +568,6 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
           </Link>
         </>
       )}
-    </PublicPageView>
+    </DeveloperWorkspace>
   );
 }
