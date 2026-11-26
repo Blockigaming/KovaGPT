@@ -370,6 +370,7 @@ export async function handleDeveloperConsole(request: Request) {
   });
   if (!rate.allowed) return developerJson({ error: "developer_rate_limit" }, 429);
   const db = developerDatabase();
+  const workspaceV2 = runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") === "true";
   try {
     if (request.method === "GET") {
       const params = new URL(request.url).searchParams;
@@ -393,6 +394,7 @@ export async function handleDeveloperConsole(request: Request) {
       if (!ids.length)
         return developerJson({
           enabled: developerEnabled(),
+          workspaceV2,
           accounts: [],
           projects: [],
           keys: [],
@@ -515,6 +517,7 @@ export async function handleDeveloperConsole(request: Request) {
       if (rows.some((row) => row.error)) throw new Error("developer_storage_unavailable");
       return developerJson({
         enabled: developerEnabled(),
+        workspaceV2,
         accounts: accounts.data,
         projects: rows[0].data,
         keys: rows[1].data,
@@ -545,6 +548,33 @@ export async function handleDeveloperConsole(request: Request) {
     const operation = String(body.operation);
     let input: Record<string, unknown>;
     let secret: string | undefined;
+    if (["ensure_workspace", "create_project", "rename_project"].includes(operation)) {
+      if (!workspaceV2) throw new Error("developer_workspace_upgrade_unavailable");
+      const input =
+        operation === "ensure_workspace"
+          ? {}
+          : {
+              accountId: developerUuid(body.accountId),
+              projectId: developerUuid(body.projectId),
+              name:
+                typeof body.name === "string" && body.name.trim() && body.name.length <= 80
+                  ? body.name.trim()
+                  : null,
+            };
+      if ("name" in input && !input.name) throw new Error("developer_input_invalid");
+      const result = await db.rpc("manage_developer_workspace_v2", {
+        p_owner: caller.userId,
+        p_operation: operation,
+        p_input: input,
+      });
+      if (result.error) {
+        if (result.error.code === "42501") throw new Error("developer_owner_required");
+        if (result.error.message === "developer_project_conflict")
+          throw new Error("developer_project_conflict");
+        throw new Error("developer_change_unavailable");
+      }
+      return developerJson(result.data);
+    }
     if (operation === "create_account") {
       if (
         typeof body.name !== "string" ||
