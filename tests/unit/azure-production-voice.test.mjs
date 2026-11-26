@@ -58,3 +58,22 @@ test("multi-voice deployment configuration is opt-in and preserves single voice 
   );
   assert.doesNotMatch(bicep, /allowedPlans: \[/);
 });
+
+test("streaming speech model is an optional allowlisted setting; catalog and model allowlist wiring is untouched", () => {
+  assert.equal(params.voiceStreamTtsModel.value, "");
+  assert.match(bicep, /param voiceStreamTtsModel string = ''/);
+  assert.match(
+    bicep,
+    /@allowed\(\[\s*''\s*'eleven_flash_v2_5'\s*'eleven_v4_turbo'\s*\]\)\s*param voiceStreamTtsModel/,
+  );
+  assert.match(
+    bicep,
+    /!empty\(voiceStreamTtsModel\) \? \[\{\s*name: 'KOVA_VOICE_STREAM_TTS_MODEL'\s*value: voiceStreamTtsModel/,
+  );
+  // The production catalog and foundation model allowlist stay opt-in parameters.
+  assert.match(bicep, /name: 'KOVA_VOICE_CATALOG'\s*value: string\(voiceCatalog\)/);
+  assert.match(
+    bicep,
+    /name: 'KOVA_VOICE_OPENAI_MODELS_JSON'\s*value: string\(voiceOpenAiModelIds\)/,
+  );
+});

@@ -27,7 +27,7 @@ import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversati
 import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
-import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
+import type { ComposerVoiceTurn, VoiceTurnEvents } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
@@ -1818,7 +1818,7 @@ function KovaGPT() {
       voiceRequest?: {
         signal: AbortSignal;
         onAssistant?: (chatId: string, messageId: string) => void;
-      },
+      } & VoiceTurnEvents,
       quickAnswer = false,
       requestWebSearch?: boolean,
       { preserveDraft = false } = {},
@@ -1941,6 +1941,13 @@ function KovaGPT() {
       };
 
       voiceRequest?.onAssistant?.(nextConvId, assistantMsg.id);
+      // Hints only: they choose which acknowledgment may play. They never change
+      // the selected model, reasoning effort or plan limits.
+      if (voiceRequest) {
+        if (requestWebSearch) voiceRequest.onDelay?.("search");
+        else if (["thinking", "high", "extra_high", "max", "ultra"].includes(requestMode))
+          voiceRequest.onDelay?.("reasoning");
+      }
 
       // Keep the exact submitted draft in this request's mounted scope. Attachment
       // objects/payloads are retained by reference; they are never re-uploaded here.
@@ -2242,6 +2249,24 @@ function KovaGPT() {
                 voiceModelReceipt: delta.receipt as string,
               }));
             }
+            if (
+              voiceRequest &&
+              delta?.kind === "voice_segment" &&
+              Number.isSafeInteger(delta.index) &&
+              typeof delta.text === "string" &&
+              delta.text.length > 0 &&
+              delta.text.length <= 1000 &&
+              typeof delta.receipt === "string" &&
+              /^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u.test(delta.receipt)
+            )
+              voiceRequest.onSegment?.({
+                chatId: nextConvId,
+                messageId: assistantMsg.id,
+                index: delta.index as number,
+                text: delta.text,
+                receipt: delta.receipt,
+              });
+            if (delta?.kind === "activity" && delta?.label) voiceRequest?.onDelay?.("search");
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
               updateAssistantMessage((message) => ({
@@ -2712,6 +2737,7 @@ function KovaGPT() {
     text: string,
     signal: AbortSignal,
     realtime?: boolean,
+    events?: VoiceTurnEvents,
   ): Promise<ComposerVoiceTurn> => {
     const session = composerVoiceSessionRef.current;
     let requestEpoch: number | null = null;
@@ -2732,6 +2758,7 @@ function KovaGPT() {
       throw new Error("voice_turn_cancelled");
     const pending = send(text, [], null, 0, undefined, undefined, undefined, undefined, {
       signal,
+      ...events,
       onAssistant: (chatId, messageId) => {
         if (session?.ownerId)
           setVoiceReveal({ ownerId: session.ownerId, chatId, messageId, fraction: 0 });

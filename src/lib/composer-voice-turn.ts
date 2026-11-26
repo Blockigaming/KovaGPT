@@ -10,10 +10,27 @@ export type ComposerVoiceTurn = {
   voiceModelReceipt: string;
 };
 
+/** One signed, speakable piece of the reply, delivered while the model is still generating. */
+export type VoiceSegmentEvent = {
+  chatId: string;
+  messageId: string;
+  index: number;
+  text: string;
+  receipt: string;
+};
+
+/** Live signals from the chat stream used to start speech early and cover real delays. */
+export type VoiceTurnEvents = {
+  onSegment?: (segment: VoiceSegmentEvent) => void;
+  /** A search/tool step or extended reasoning is genuinely delaying the reply. */
+  onDelay?: (kind: "search" | "reasoning") => void;
+};
+
 export type ComposerVoiceSubmit = (
   text: string,
   signal: AbortSignal,
   realtime?: boolean,
+  events?: VoiceTurnEvents,
 ) => Promise<ComposerVoiceTurn>;
 
 type PendingVoiceTurn = Omit<ComposerVoiceTurn, "contentSha256">;

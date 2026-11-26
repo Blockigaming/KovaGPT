@@ -1,3 +1,7 @@
+import { createAckCache } from "../../src/lib/voice/acknowledgments.mjs";
+import { createBargeInDetector } from "../../src/lib/voice/barge-in.mjs";
+import { createStreamingVoicePlayback } from "../../src/lib/voice/streaming-playback.mjs";
+import { createVoiceLatencyTracker } from "../../src/lib/voice/voice-latency.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -302,6 +306,10 @@ function fixture(initial = {}, options = {}) {
       safeBrowserStorage: (area) => principalStorage.safeBrowserStorage(area, fakeWindow),
     },
     "@/lib/voice/speech-pause.mjs": { createVoiceSilenceGate },
+    "@/lib/voice/acknowledgments.mjs": { createAckCache },
+    "@/lib/voice/barge-in.mjs": { createBargeInDetector },
+    "@/lib/voice/streaming-playback.mjs": { createStreamingVoicePlayback },
+    "@/lib/voice/voice-latency.mjs": { createVoiceLatencyTracker },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
         const pending = deferred();

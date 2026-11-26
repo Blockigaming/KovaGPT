@@ -45,6 +45,8 @@ export function createSpeechHandler(deps: {
   };
   fetchImpl?: typeof fetch;
   quota?(auth: HttpAuthedCaller, signal: AbortSignal): Promise<Response | null>;
+  streamModelId?: string;
+  now?: () => number;
   admit?(input: {
     request: Request;
     ownerId: string;

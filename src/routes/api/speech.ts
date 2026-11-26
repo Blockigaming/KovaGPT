@@ -5,11 +5,21 @@ import { runtimeEnv } from "@/lib/runtime-env.server";
 import { createSpeechHandler, speechConfiguration } from "@/lib/speech.server.mjs";
 import { assertImagePrincipal } from "@/lib/multimodal/image-source.server.mjs";
 import { voiceConfiguration } from "@/lib/voice/elevenlabs.server.mjs";
+import { STREAM_TTS_MODEL_IDS } from "@/lib/voice/catalog.server.mjs";
 import { voiceModelPolicy } from "@/lib/voice/openai-model-eligibility.server.mjs";
 
 // Reuse the existing live-session/deletion-fence check; no new Auth implementation.
+// Streaming speech model. Defaults to Flash v2.5 so nothing changes (and no plan
+// upgrade is implied) until the owner confirms Eleven v4 Turbo is available and
+// sets KOVA_VOICE_STREAM_TTS_MODEL=eleven_v4_turbo. Unknown values fall back.
+const streamModel = () => {
+  const configured = runtimeEnv("KOVA_VOICE_STREAM_TTS_MODEL");
+  return configured && STREAM_TTS_MODEL_IDS.includes(configured) ? configured : "eleven_flash_v2_5";
+};
+
 const speechPost = () =>
   createSpeechHandler({
+    streamModelId: streamModel(),
     authenticate: requireVerifiedUser,
     rateLimit: consumeApplicationRateLimit,
     revalidate: assertImagePrincipal,
