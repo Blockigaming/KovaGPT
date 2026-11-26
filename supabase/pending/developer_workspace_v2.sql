@@ -1,6 +1,15 @@
 -- Staged source. Materialize with the repository migration tooling before
 -- enabling KOVA_DEVELOPER_WORKSPACE_V2. Never apply directly to production.
 -- Reuse existing owner and global billing locks. No account funding occurs.
+create table public.developer_credit_sharing_preferences (
+  owner_id uuid primary key references auth.users(id) on delete cascade,
+  allow_consumer_usage boolean not null default false,
+  updated_at timestamptz not null default clock_timestamp()
+);
+alter table public.developer_credit_sharing_preferences enable row level security;
+revoke all on public.developer_credit_sharing_preferences from public,anon,authenticated;
+grant select,insert,update,delete on public.developer_credit_sharing_preferences to service_role;
+
 create or replace function public.manage_developer_workspace_v2(
   p_owner uuid, p_operation text, p_input jsonb
 ) returns jsonb language plpgsql security invoker set search_path='' as $$
@@ -18,6 +27,16 @@ begin
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('developer_billing',0));
   if p_input is null or jsonb_typeof(p_input)<>'object' or pg_column_size(p_input)>8192
     then raise exception 'developer_input_invalid'; end if;
+
+  if p_operation='set_credit_sharing' then
+    if jsonb_typeof(p_input->'enabled') is distinct from 'boolean'
+      then raise exception 'developer_input_invalid'; end if;
+    insert into public.developer_credit_sharing_preferences(owner_id,allow_consumer_usage)
+      values(p_owner,(p_input->>'enabled')::boolean)
+      on conflict(owner_id) do update set allow_consumer_usage=excluded.allow_consumer_usage,
+        updated_at=clock_timestamp();
+    return jsonb_build_object('consumerCreditSharing',(p_input->>'enabled')::boolean);
+  end if;
 
   if p_operation='ensure_workspace' then
     -- Adopt an existing account instead of creating a parallel wallet. The
