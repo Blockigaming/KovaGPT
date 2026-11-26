@@ -327,6 +327,17 @@ function OwnedDeveloperConsole({
     if (Number.isFinite(amount))
       settledByCurrency.set(currency, (settledByCurrency.get(currency) ?? 0) + amount);
   }
+  const tokenDimensions = ["input_tokens", "cached_input_tokens", "image_input_tokens", "output_tokens"] as const;
+  const tokenTotals = Object.fromEntries(tokenDimensions.map((dimension) => [
+    dimension,
+    visibleUsage.reduce((total, row) => {
+      const value = row[dimension];
+      return total + (typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0);
+    }, 0),
+  ]));
+  const measuredRequests = visibleUsage.filter((row) => tokenDimensions.some(
+    (dimension) => typeof row[dimension] === "number",
+  )).length;
   const activityByDay = new Map<string, number>();
   for (const row of visibleUsage) {
     const day = String(row.created_at).slice(0, 10);
@@ -873,7 +884,7 @@ function OwnedDeveloperConsole({
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={clearUsageFilters}>Clear filters</Button>
               <Button variant="outline" disabled={!usageReady || !visibleUsage.length} onClick={() => {
-                const fields = ["id", "account_id", "project_id", "api_key_id", "public_model", "capability", "created_at", "settlement_state", "final_customer_charge", "maximum_reserved_charge", "currency"];
+                const fields = ["id", "account_id", "project_id", "api_key_id", "public_model", "capability", "created_at", "settled_at", "settlement_state", ...tokenDimensions, "final_customer_charge", "maximum_reserved_charge", "currency"];
                 const cell = (value: unknown) => {
                   let text = String(value ?? "");
                   if (/^[=+@-]/.test(text.trimStart()) || text.startsWith("\t") || text.startsWith("\r") || text.startsWith("\n")) text = "'" + text;
@@ -901,6 +912,25 @@ function OwnedDeveloperConsole({
                   )) : <p className="text-sm text-muted-foreground">No final charges in this view.</p>}
                 </div>
               </div>
+            )}
+            {section === "usage" && usageReady && (
+              <section className="min-w-0 space-y-3 rounded-lg border border-border p-3">
+                <h2 className="text-sm font-medium">Recorded token usage (current page)</h2>
+                <p className="text-xs text-muted-foreground">{measuredRequests} of {visibleUsage.length} requests have authoritative token measurements. Cached tokens are separated from uncached input tokens.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ["Uncached input", "input_tokens"],
+                    ["Cached input", "cached_input_tokens"],
+                    ["Image input", "image_input_tokens"],
+                    ["Output", "output_tokens"],
+                  ] as const).map(([label, field]) => (
+                    <div key={field} className="min-w-0 rounded-md bg-muted/40 p-2.5">
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className="mt-1 text-lg font-semibold tabular-nums">{measuredRequests ? tokenTotals[field].toLocaleString() : "—"}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
             {section === "usage" && usageReady && activity.length > 0 && (
               <section className="min-w-0 rounded-lg border border-border p-3" aria-label="Requests by UTC day, current page">
