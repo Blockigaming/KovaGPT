@@ -87,10 +87,13 @@ test("home has one content layout while viewport panels retain bounded shared co
   panelRadius(expanded);
 });
 
-test("spec400 failures retry only through a guarded explicit action using the original idempotency identity", () => {
+test("spec400 retries retain the user message and use a distinct guarded attempt", () => {
   const route = readFileSync("src/routes/index.tsx", "utf8");
   assert.match(route, /id: requestId \?\? newId\(\)/);
-  assert.match(route, /headers: chatRequestHeaders\(userMsg\.id, assistantMsg\.id, voiceRequest\)/);
+  assert.match(
+    route,
+    /headers: chatRequestHeaders\(\s*requestId \? `\$\{userMsg\.id\}:\$\{assistantMsg\.id\}` : userMsg\.id,/,
+  );
   assert.equal(
     chatRequestHeaders("original-request", "assistant")["Idempotency-Key"],
     "original-request",

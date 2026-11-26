@@ -51,6 +51,8 @@ test("full ChatMessage control → actual speech route → ownership → playbac
       "@tanstack/react-router": { createFileRoute: () => (value) => value },
       "@/lib/api-auth.server": {
         getCallerTier: async () => "free",
+        // Every spoken reply spends the plan's daily voice allowance first.
+        enforceQuota: async () => null,
         requireVerifiedUser: async () =>
           state.deny
             ? Response.json({ error: "unauthorized" }, { status: 401 })
@@ -71,6 +73,7 @@ test("full ChatMessage control → actual speech route → ownership → playbac
             KOVA_GENERATION_ACCEPTANCE_ENABLED: state.acceptanceMode ? "true" : "false",
             ELEVENLABS_API_KEY: "mock-key-never-live",
             ELEVENLABS_VOICE_ID: "fixtureVoice",
+            KOVA_VOICE_DAILY_REQUEST_LIMIT: "10",
           })[name],
       },
       "@/lib/speech.server.mjs": speech,

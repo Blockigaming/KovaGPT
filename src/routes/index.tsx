@@ -779,20 +779,27 @@ function KovaGPT() {
   useEffect(() => {
     const element = workspaceRef.current;
     if (!element) return;
-    // Defer the state update so observer callbacks never change layout in the
-    // same frame (avoids "ResizeObserver loop completed with undelivered notifications").
-    let frame = 0;
+    let resizeFrame: number | null = null;
+    let measuredWidth = element.clientWidth;
     const observer = new ResizeObserver(() => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => setWorkspaceWidth(element.clientWidth));
+      if (resizeFrame !== null || element.clientWidth === measuredWidth) return;
+      // A workspace width update can change descendant layout. Defer the React
+      // update until the next frame, outside ResizeObserver notification delivery.
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        const width = element.clientWidth;
+        if (width === measuredWidth) return;
+        measuredWidth = width;
+        setWorkspaceWidth(width);
+      });
     });
     observer.observe(element);
-    setWorkspaceWidth(element.clientWidth);
+    setWorkspaceWidth(measuredWidth);
     const saved = Number(safeBrowserStorage("localStorage")?.getItem("kova-result-pane-ratio"));
     if (Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8) setPaneRatio(saved);
     return () => {
-      window.cancelAnimationFrame(frame);
       observer.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
     };
   }, []);
   useEffect(() => {
@@ -2159,7 +2166,11 @@ function KovaGPT() {
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: chatRequestHeaders(userMsg.id, assistantMsg.id, voiceRequest),
+          headers: chatRequestHeaders(
+            requestId ? `${userMsg.id}:${assistantMsg.id}` : userMsg.id,
+            assistantMsg.id,
+            voiceRequest,
+          ),
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,
