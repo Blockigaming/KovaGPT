@@ -107,6 +107,8 @@ import {
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 
+const browserTools = new Set(["browser_interact", "browser_open_request"]);
+
 const ResponseBrowserCard = lazy(() =>
   import("./ResponseBrowserCard").then(({ ResponseBrowserCard }) => ({
     default: ResponseBrowserCard,
@@ -238,24 +240,15 @@ function ChatMessageInner({
     };
   }, [principal, message.id, message.content]);
   const isUser = message.role === "user";
-  const hasLiveBrowser = useSyncExternalStore(
+  const live = useSyncExternalStore(
     subscribeToLiveBrowserActivity,
-    () => {
-      const live = getLiveBrowserActivity();
-      return Boolean(
-        userKey &&
-          live?.principal === userKey &&
-          live.conversationId === chatId &&
-          live.messageId === message.id,
-      );
-    },
-    () => false,
+    getLiveBrowserActivity,
+    () => null,
   );
-  const hasBrowserActivity =
-    hasLiveBrowser ||
-    message.activities?.some(
-      (row) => row.tool === "browser_interact" || row.tool === "browser_open_request",
-    );
+  const browserForChat = live?.principal === userKey && live?.conversationId === chatId;
+  const hasLiveBrowser = Boolean(userKey && browserForChat && live?.messageId === message.id);
+  const hasBrowserRequest = message.activities?.some((row) => browserTools.has(row.tool));
+  const hasBrowserActivity = hasLiveBrowser || hasBrowserRequest;
   const imageAttachments = isUser
     ? message.attachments?.filter((attachment) => attachment.kind === "image")
     : undefined;
