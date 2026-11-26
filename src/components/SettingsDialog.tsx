@@ -8,7 +8,6 @@ import { PublicShareLinks } from "@/components/PublicShareLinks";
 import { GiftCardSettings, UsageCredits } from "@/components/GiftCardSettings";
 import { UsageLimitResets } from "@/components/UsageLimitResets";
 import { UsageWallet } from "@/components/UsageWallet";
-import { UsageAnalytics } from "@/components/UsageAnalytics";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
 import { BillingWorkspace, BillingSubscriptionFacts } from "@/components/BillingWorkspace";
@@ -94,6 +93,8 @@ import {
   useMemo,
   useRef,
   useState,
+  lazy,
+  Suspense,
   type MouseEvent as ReactMouseEvent,
   type ComponentProps,
 } from "react";
@@ -328,6 +329,10 @@ function SettingsPageContent({ children, className }: ComponentProps<typeof Dial
     </section>
   );
 }
+
+const UsageAnalytics = lazy(() =>
+  import("@/components/UsageAnalytics").then((module) => ({ default: module.UsageAnalytics })),
+);
 
 export function SettingsDialog({
   open,
@@ -2031,7 +2036,9 @@ export function SettingsDialog({
                   </TabsContent>
                   <TabsContent value="analytics">
                     {userKey ? (
-                      <UsageAnalytics key={userKey} ownerId={userKey} />
+                      <Suspense fallback={<p role="status">Loading usage analytics…</p>}>
+                        <UsageAnalytics key={userKey} ownerId={userKey} />
+                      </Suspense>
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         Sign in to see your usage history.
