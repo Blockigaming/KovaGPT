@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CONSUMER_MODELS } from "@/lib/consumer-model-selection.mjs";
+import { canBuyUsageCredits } from "@/lib/usage-credit-pricing.mjs";
 import type { BillingTier } from "@/lib/billing-plans";
 
 const amounts = ["25", "50", "100", "custom"] as const;
@@ -42,7 +43,9 @@ export function UsageCredits({
         </div>
       )}
       <p className="text-sm text-muted-foreground">
-        Credit purchases and gift card redemption are coming soon.
+        {canBuyUsageCredits(tier)
+          ? "Usage credits are coming soon. They cover extra usage on models included in your plan, after your included usage runs out."
+          : "Usage credit purchases require Kova Plus or Pro."}
       </p>
       <Button type="button" variant="outline" onClick={onOpenGiftCards}>
         <Gift aria-hidden="true" />
