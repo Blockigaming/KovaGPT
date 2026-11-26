@@ -125,7 +125,7 @@ export function DeveloperCreditWallet({
   if (data?.enabled === false && !loading && !error) return null;
   const wallet = data?.wallet;
   return (
-    <section className="min-w-0 space-y-3 rounded-xl border border-border p-3 sm:p-5">
+    <section className="min-w-0 space-y-5 border-b border-border pb-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">API credit balances</h2>
         <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export function DeveloperCreditWallet({
               This credit account is suspended. The amounts below are not currently spendable.
             </p>
           )}
-          <div className="grid min-w-0 grid-cols-2 gap-2">
+          <div className="grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-4">
             {(
               [
                 ["Included Pro", wallet.included],
@@ -180,7 +180,7 @@ export function DeveloperCreditWallet({
                 ["Expired", wallet.expired],
               ] as const
             ).map(([label, amount]) => (
-              <div key={label} className="min-w-0 rounded-lg bg-muted/40 p-2.5 sm:p-4">
+              <div key={label} className="min-w-0 rounded-lg border border-border p-4 sm:p-5">
                 <p className="text-xs text-muted-foreground">{label}</p>
                 <p className="mt-1 break-words text-lg font-semibold tabular-nums sm:text-2xl">
                   {money(amount, wallet.currency)}
@@ -201,9 +201,9 @@ export function DeveloperCreditWallet({
             </p>
           )}
           <h3 className="font-medium">Credit lots</h3>
-          <div className="grid gap-2">
+          <div className="grid gap-3">
             {wallet.lots?.map((lot) => (
-              <article key={lot.id} className="min-w-0 rounded-lg border border-border p-3">
+              <article key={lot.id} className="min-w-0 border-b border-border py-4">
                 <div className="flex flex-wrap justify-between gap-2">
                   <p className="text-sm font-medium">
                     {lot.kind === "included_pro" ? "Included Pro allowance" : "Purchased credit"}
@@ -215,7 +215,7 @@ export function DeveloperCreditWallet({
                 <p className="mt-1 text-xs text-muted-foreground">
                   Issued {date(lot.issued_at)} · Expires {date(lot.expires_at)} (UTC)
                 </p>
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   {(
                     [
                       ["Original", lot.issued_amount],
