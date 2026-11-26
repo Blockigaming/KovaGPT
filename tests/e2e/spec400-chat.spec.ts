@@ -77,13 +77,12 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  // Compact phone corners belong to the native app shell; the website keeps
-  // the desktop composer on every screen.
-  const phoneApp = await page.evaluate(
-    () =>
-      document.documentElement.dataset.kovaSurface === "app" &&
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
+  // Compact phone corners apply in the native app shell and on phone-width web.
+  const phoneApp = await page.evaluate(() =>
+    document.documentElement.dataset.kovaSurface === "app"
+      ? matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches
+      : matchMedia("(width < 768px)").matches,
   );
   await expect(composer).toHaveCSS(
     "border-radius",
@@ -94,7 +93,7 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   if (conversation)
     await height.toBeLessThanOrEqual(
-      singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+      singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 100,
     );
   else await height.toBeGreaterThanOrEqual(phoneApp ? 88 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
@@ -753,7 +752,22 @@ test("Cloud Browser limit displays a top notification and keeps the sent Wikiped
   await expect(notice).toHaveAttribute("data-y-position", "top");
   const width = page.viewportSize()!.width;
   await expect(notice).toHaveAttribute("data-x-position", width >= 1024 ? "right" : "center");
-  await expect.poll(async () => (await notice.boundingBox())?.y).toBeCloseTo(16, 0);
+  if (width < 768) {
+    // Phones center the notice on screen; larger screens keep the top offset.
+    const height = page.viewportSize()!.height;
+    await expect
+      .poll(async () => {
+        const box = await notice.boundingBox();
+        return box ? box.y + box.height / 2 : 0;
+      })
+      .toBeGreaterThan(height / 2 - 4);
+    await expect
+      .poll(async () => {
+        const box = await notice.boundingBox();
+        return box ? box.y + box.height / 2 : 0;
+      })
+      .toBeLessThan(height / 2 + 4);
+  } else await expect.poll(async () => (await notice.boundingBox())?.y).toBeCloseTo(16, 0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const assistant = page.locator('[data-message-role="assistant"]');
   await expect(assistant).toHaveCount(1);

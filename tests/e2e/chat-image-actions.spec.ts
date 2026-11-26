@@ -135,7 +135,13 @@ for (const role of ["user", "assistant"] as const) {
       const viewport = page.viewportSize()!;
       // Assert the first visible frame, while the opening animation is active.
       // Transitioning Radix's available width briefly clips narrow phone menus.
-      expect(await menu.evaluate((node) => getComputedStyle(node).transitionProperty)).toBe("none");
+      // Only the brief pointer-events arming guard may transition; no layout property.
+      expect(
+        (await menu.evaluate((node) => getComputedStyle(node).transitionProperty))
+          .split(",")
+          .map((property) => property.trim())
+          .filter((property) => property !== "none" && property !== "pointer-events"),
+      ).toEqual([]);
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.y).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);

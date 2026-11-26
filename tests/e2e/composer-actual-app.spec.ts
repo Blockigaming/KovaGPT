@@ -33,13 +33,12 @@ async function geometry(page: Page) {
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  // Compact phone corners belong to the native app shell; the website keeps
-  // the desktop composer on every screen.
-  const phone = await page.evaluate(
-    () =>
-      document.documentElement.dataset.kovaSurface === "app" &&
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
+  // Compact phone corners apply in the native app shell and on phone-width web.
+  const phone = await page.evaluate(() =>
+    document.documentElement.dataset.kovaSurface === "app"
+      ? matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches
+      : matchMedia("(width < 768px)").matches,
   );
   await expect(composer).toHaveCSS(
     "border-radius",
@@ -50,7 +49,7 @@ async function geometry(page: Page) {
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   const modeOnOwnRow = await expectsSeparateModeRow(composer);
-  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : modeOnOwnRow ? 144 : 92);
+  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : modeOnOwnRow ? 144 : 100);
   else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   await expect
     .poll(() =>

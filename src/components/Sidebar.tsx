@@ -1409,7 +1409,7 @@ export function Sidebar({
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();
-          onOpenSettings("appearance");
+          onOpenSettings();
         }}
       >
         <SettingsIcon aria-hidden="true" />
@@ -2148,7 +2148,7 @@ export function Sidebar({
                     aria-label="Settings"
                     onClick={() => {
                       closeAfterMobileNavigation();
-                      onOpenSettings("general");
+                      onOpenSettings();
                     }}
                   >
                     {icon(SettingsGlyph)}
