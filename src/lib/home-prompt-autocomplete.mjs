@@ -42,12 +42,7 @@ function safeText(value) {
   return text;
 }
 
-export function homePromptSuggestions(
-  draft,
-  conversations = [],
-  memories = [],
-  connectedIds = [],
-) {
+export function homePromptSuggestions(draft, conversations = [], memories = [], connectedIds = []) {
   const prefix = safeText(draft);
   if (!prefix) return [];
   const typed = prefix.toLocaleLowerCase();

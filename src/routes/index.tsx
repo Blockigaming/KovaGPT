@@ -1,7 +1,7 @@
 import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
-import type { CSSProperties } from "react";
+import type { ComponentType, CSSProperties } from "react";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
   resolveConsumerModelChoice,
@@ -88,80 +88,68 @@ import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
 import { type Settings, DEFAULT_SETTINGS, settingsTabForSection } from "@/lib/settings-types";
 
-const FreeOfferButton = lazy(() =>
-  import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function named<K extends string, M extends Record<K, ComponentType<any>>>(
+  load: () => Promise<M>,
+  key: K,
+) {
+  return lazy(() => load().then((m) => ({ default: m[key] })));
+}
+
+const FreeOfferButton = named(() => import("@/components/FreeOfferButton"), "FreeOfferButton");
+const ConversationHeaderActions = named(
+  () => import("@/components/ConversationHeaderActions"),
+  "ConversationHeaderActions",
 );
-const ConversationHeaderActions = lazy(() =>
-  import("@/components/ConversationHeaderActions").then((module) => ({
-    default: module.ConversationHeaderActions,
-  })),
-);
-const CommandPalette = lazy(() =>
-  import("@/components/CommandPalette").then((module) => ({ default: module.CommandPalette })),
-);
-const ActiveChatTranscript = lazy(() =>
-  import("@/components/ActiveChatTranscript").then((module) => ({
-    default: module.ActiveChatTranscript,
-  })),
+const CommandPalette = named(() => import("@/components/CommandPalette"), "CommandPalette");
+const ActiveChatTranscript = named(
+  () => import("@/components/ActiveChatTranscript"),
+  "ActiveChatTranscript",
 );
 
-const QuotaRejectedDraftPreview = lazy(() =>
-  import("@/components/QuotaRejectedDraftPreview").then((module) => ({
-    default: module.QuotaRejectedDraftPreview,
-  })),
+const QuotaRejectedDraftPreview = named(
+  () => import("@/components/QuotaRejectedDraftPreview"),
+  "QuotaRejectedDraftPreview",
 );
-const WorkspacePaneDivider = lazy(() =>
-  import("@/components/WorkspacePaneDivider").then((m) => ({ default: m.WorkspacePaneDivider })),
+const WorkspacePaneDivider = named(
+  () => import("@/components/WorkspacePaneDivider"),
+  "WorkspacePaneDivider",
 );
 const DesktopChatToolbar = lazy(() => import("@/components/DesktopChatToolbar"));
 const NextChatPromptPanel = lazy(() => import("@/components/NextChatPromptPanel"));
 const ChatRequestStatus = lazy(() => import("@/components/ChatRequestStatus"));
-const WorkspaceResultContent = lazy(() =>
-  import("@/components/WorkspaceResultContent").then((module) => ({
-    default: module.WorkspaceResultContent,
-  })),
+const WorkspaceResultContent = named(
+  () => import("@/components/WorkspaceResultContent"),
+  "WorkspaceResultContent",
 );
-const SignUpPrompt = lazy(() =>
-  import("@/components/SignUpPrompt").then((module) => ({ default: module.SignUpPrompt })),
-);
-const ReviewedMemoryDialog = lazy(() =>
-  import("@/components/ReviewedMemoryDialog").then((module) => ({
-    default: module.ReviewedMemoryDialog,
-  })),
+const SignUpPrompt = named(() => import("@/components/SignUpPrompt"), "SignUpPrompt");
+const ReviewedMemoryDialog = named(
+  () => import("@/components/ReviewedMemoryDialog"),
+  "ReviewedMemoryDialog",
 );
 
-const ChatWorkspaceControls = lazy(() =>
-  import("@/components/ChatWorkspaceControls").then((module) => ({
-    default: module.ChatWorkspaceControls,
-  })),
+const ChatWorkspaceControls = named(
+  () => import("@/components/ChatWorkspaceControls"),
+  "ChatWorkspaceControls",
 );
-const SettingsDialog = lazy(() =>
-  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
+const SettingsDialog = named(() => import("@/components/SettingsDialog"), "SettingsDialog");
+const OnboardingDialog = named(() => import("@/components/OnboardingDialog"), "OnboardingDialog");
+const LimitReachedNotice = named(
+  () => import("@/components/LimitReachedNotice"),
+  "LimitReachedNotice",
 );
-const OnboardingDialog = lazy(() =>
-  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
-);
-const LimitReachedNotice = lazy(() =>
-  import("@/components/LimitReachedNotice").then((m) => ({ default: m.LimitReachedNotice })),
-);
-const ShareChatDialog = lazy(() =>
-  import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
-);
-const ChatWorkspaceDialog = lazy(() =>
-  import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
+const ShareChatDialog = named(() => import("@/components/ShareChatDialog"), "ShareChatDialog");
+const ChatWorkspaceDialog = named(
+  () => import("@/components/ChatWorkspaceDialog"),
+  "ChatWorkspaceDialog",
 );
 const loadTemporaryChatControls = () => import("@/components/TemporaryChatStartDialog");
-const TemporaryChatStartDialog = lazy(() =>
-  loadTemporaryChatControls().then((m) => ({
-    default: m.TemporaryChatStartDialog,
-  })),
-);
+const TemporaryChatStartDialog = named(loadTemporaryChatControls, "TemporaryChatStartDialog");
 
-const TemporaryChatBanner = lazy(() =>
-  loadTemporaryChatControls().then((m) => ({
-    default: m.TemporaryChatBanner,
-  })),
-);
+const TemporaryChatBanner = named(loadTemporaryChatControls, "TemporaryChatBanner");
+
+const focusedElement = () =>
+  document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
 function clearRetryTimer(timer: { current: number | null }) {
   if (timer.current === null) return;
@@ -533,8 +521,7 @@ function KovaGPT() {
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = useCallback((tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    settingsReturnFocusRef.current = focusedElement();
     setSettingsTab(tab);
     setSettingsOpen(true);
   }, []);
@@ -574,8 +561,7 @@ function KovaGPT() {
   const workspaceReturnFocusRef = useRef<HTMLElement | null>(null);
   const workspaceReturnUrlRef = useRef<string | undefined>(undefined);
   const openChatWorkspace = (target?: HTMLElement | null) => {
-    workspaceReturnFocusRef.current =
-      target ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    workspaceReturnFocusRef.current = target ?? focusedElement();
     workspaceReturnUrlRef.current = window.location.href;
     setWorkspaceOpen(true);
   };
@@ -890,8 +876,7 @@ function KovaGPT() {
     resultScopeRef.current = scope;
     resultDraftsRef.current.set(scope, descriptor);
     const origin = {
-      target:
-        trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null),
+      target: trigger ?? focusedElement(),
       url: window.location.href,
       scope: nextPromptScopeRef.current,
       generation: storageGenerationRef.current,
@@ -1704,8 +1689,7 @@ function KovaGPT() {
   }, [active, conversations, isStreaming, setConversations, userKey]);
 
   const openCommandPalette = useCallback((trigger?: HTMLElement) => {
-    commandReturnFocusRef.current =
-      trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    commandReturnFocusRef.current = trigger ?? focusedElement();
     setCommandOpen(true);
   }, []);
   useEffect(() => {
