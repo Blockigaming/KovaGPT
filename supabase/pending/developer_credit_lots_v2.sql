@@ -107,6 +107,7 @@ returns uuid language plpgsql security invoker set search_path='' as $$
 declare a uuid; l uuid; start_at timestamptz; end_at timestamptz;
 begin
   perform pg_advisory_xact_lock(hashtextextended('developer_billing',0));
+  if p_at is null or not isfinite(p_at) then raise exception 'developer_credit_date_invalid';end if;
   if not kova_private.auth_user_exists(p_owner)
     or exists(select 1 from public.account_deletion_fences where user_id=p_owner)
     or exists(select 1 from public.banned_users where user_id=p_owner)
