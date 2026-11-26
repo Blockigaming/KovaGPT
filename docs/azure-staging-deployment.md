@@ -4,31 +4,13 @@ This staging template creates a low-cost Azure Container Apps environment for a 
 
 ## Build for the existing staging app
 
-Add the `build-staging-image` label to the reviewed same-repository pull request targeting `main`. The staging GitHub environment provides `STAGING_SUPABASE_URL` and `STAGING_SUPABASE_PUBLISHABLE_KEY` for a disposable project. For Kova or dual auth, it also provides `STAGING_AUTH_MODE` and `STAGING_BASE_URL` as environment variables. The workflow builds the exact PR commit, verifies the compiled staging configuration and source labels, and records the digest published to the existing private GitHub Container Registry package. The build uses a GitHub-hosted runner and creates no Azure resources. The production project is rejected even if its URL or key is present in the staging environment.
+Add the `build-staging-image` label to the reviewed same-repository pull request targeting `main`. The staging GitHub environment provides `STAGING_SUPABASE_URL` and `STAGING_SUPABASE_PUBLISHABLE_KEY` for a disposable project. The image is pinned to Supabase Auth; the retired Kova-owned authentication mode is not available. The workflow builds the exact PR commit, verifies the compiled staging configuration and source labels, and records the digest published to the existing private GitHub Container Registry package. The build uses a GitHub-hosted runner and creates no Azure resources. The production project is rejected even if its URL or key is present in the staging environment.
 
 Stage only the recorded digest on `ca-kovagpt-staging`. The app needs a read-only private GHCR pull credential referenced by name. Set the server's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to the same staging project and key compiled into the browser build. The server also needs its own staging `SUPABASE_SERVICE_ROLE_KEY` secret reference. Before starting staging, confirm the disposable database is active and the required connector settings are present. Keep zero minimum and one maximum replica for the test window, and verify the app is stopped after testing.
 
-## Existing app: owned-auth preflight
+## Authentication
 
-For the existing `ca-kovagpt-staging` app in `rg-kovagpt-staging`, use the read-only validator `scripts/azure/owned-auth-staging-preflight.mjs`. It creates no infrastructure, resolves no secret, runs no workflow, and deploys nothing. It does not use or start `ca-kovagpt-auth-rehearsal`.
-
-Copy `infra/azure/staging/owned-auth-preflight.example.json` to a private path outside the repository. The example deliberately fails until real observations and existing approval replace its placeholders. Set:
-
-| Field                     | Required evidence                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `subscriptionId`          | Verified existing Azure subscription UUID.                                                                                                                                                                                                                                                                                                                                  |
-| `sourceSha`, `sourceTree` | Exact reviewed 40-character commit and tree identifiers.                                                                                                                                                                                                                                                                                                                    |
-| `imageReference`          | Existing private `ghcr.io/blockigaming/kovagpt-web@sha256:<64 hex>` reference. Legacy Azure registry digests remain valid for the existing snapshot check.                                                                                                                                                                                                                  |
-| `publicOrigin`            | Exact approved HTTPS staging origin, matching the app's ingress hostname or a configured custom domain.                                                                                                                                                                                                                                                                     |
-| `app`                     | Private existing-app Azure snapshot, or a reviewed copy with only the proposed update applied. It must contain `id`, `name`, `type`, ingress, secret names and container image/environment. Keep the entire snapshot private; do not print environment values.                                                                                                              |
-| `browserProvenance`       | Provenance extracted from that exact immutable image, with matching source/tree, bundle hash, verified source context, and `authMode: "kova"`. A runtime `VITE_KOVA_AUTH_MODE` value is not browser evidence.                                                                                                                                                               |
-| `approval`                | Existing owner approval bound to the same target ID, source SHA and image: `environment: "staging"`, `deployAuthorized: true`, `attempts: 1`, ISO currency, nonnegative integer `maximumCostMinor` and `quotedMaximumCostMinor`, future ISO `stopAt`, and independently verified `stopSafeguardVerified: true`. A zero ceiling permits only a verified zero-cost operation. |
-
-```bash
-node scripts/azure/owned-auth-staging-preflight.mjs /private/path/owned-auth-preflight.json
-```
-
-The checker requires server `KOVA_AUTH_MODE=kova`, matching compiled browser mode, HTTPS origins, key fingerprints and signing-key ID, configured secret references for the private signing/encryption and service-role keys, enabled email queue, and disabled generation. Errors contain fixed codes only. A pass verifies configuration consistency and authorization bounds; it does not establish database schema, actual key usability/import, email-worker delivery, green exact-source CI, or successful deployed signup/reset/revocation. Verify those independently before activation. Review original approval, price evidence and automatic stop evidence; writing `true` into a packet does not create authority. A proposed-state snapshot also does not prove the configuration is deployed.
+Use Supabase Auth exclusively. Keep the existing staging project isolated from production. The self-hosted authentication rehearsal Container App was retired on November 26, 2026. Do not recreate it or use an old owned-auth preflight packet. The separate Supabase rehearsal project is retained until its staging dependencies and account data have been reconciled.
 
 ## Security model
 
@@ -62,7 +44,7 @@ az bicep build --file infra/azure/staging/main.bicep
 az deployment group what-if   --resource-group <staging-resource-group>   --template-file infra/azure/staging/main.bicep   --parameters @infra/azure/staging/main.parameters.approved.json
 ```
 
-Do not run `az deployment group create` until the Bicep build, `what-if`, database rehearsal, auth rehearsal, exact-image verification, and rollback plan all pass.
+Do not run `az deployment group create` until the Bicep build, `what-if`, database rehearsal, hosted authentication acceptance, exact-image verification, and rollback plan all pass.
 
 ## Post-deployment evidence
 

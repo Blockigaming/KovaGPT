@@ -18,8 +18,13 @@ export function resolveKovaAuthMode(env = process.env) {
   const raw = env?.[KOVA_AUTH_MODE_ENV];
   if (raw == null || raw === "") return "supabase";
   if (KOVA_AUTH_MODES.includes(raw)) {
-    // Production authority is retired independently of obsolete Azure settings.
-    if (env.AZURE_ENVIRONMENT === "production" || env.CONTAINER_APP_NAME === "kovagpt-prod-web")
+    // Deployed production and staging must not restore retired owned authority.
+    if (
+      env.AZURE_ENVIRONMENT === "production" ||
+      env.AZURE_ENVIRONMENT === "staging" ||
+      env.CONTAINER_APP_NAME === "kovagpt-prod-web" ||
+      env.CONTAINER_APP_NAME === "ca-kovagpt-staging"
+    )
       return "supabase";
     return raw;
   }
