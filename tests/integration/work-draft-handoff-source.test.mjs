@@ -4,6 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 import {
   consumePrincipalHandoff,
+  workHandoffPrompt,
   writePrincipalHandoff,
 } from "../../src/lib/principal-browser-storage.mjs";
 
@@ -68,9 +69,13 @@ test("chat recovers both legacy task and prepared drafts without starting backgr
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText;
   const exports = {};
-  new Function("exports", "setInput", code)(exports, (value) => {
-    draft = value;
-  });
+  new Function("exports", "setInput", "workHandoffPrompt", code)(
+    exports,
+    (value) => {
+      draft = value;
+    },
+    workHandoffPrompt,
+  );
   for (const value of [
     {
       objective: "Review a report",

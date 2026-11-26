@@ -1,3 +1,4 @@
+import { observeElementWidth } from "@/lib/observe-element-width";
 import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
@@ -212,6 +213,8 @@ import { toast } from "sonner";
 import { useTier } from "@/hooks/useTier";
 import {
   consumePrincipalHandoff,
+  contextPackHandoffPrompt,
+  workHandoffPrompt,
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   safeBrowserStorage,
@@ -782,28 +785,10 @@ function KovaGPT() {
   useEffect(() => {
     const element = workspaceRef.current;
     if (!element) return;
-    let resizeFrame: number | null = null;
-    let measuredWidth = element.clientWidth;
-    const observer = new ResizeObserver(() => {
-      if (resizeFrame !== null || element.clientWidth === measuredWidth) return;
-      // A workspace width update can change descendant layout. Defer the React
-      // update until the next frame, outside ResizeObserver notification delivery.
-      resizeFrame = window.requestAnimationFrame(() => {
-        resizeFrame = null;
-        const width = element.clientWidth;
-        if (width === measuredWidth) return;
-        measuredWidth = width;
-        setWorkspaceWidth(width);
-      });
-    });
-    observer.observe(element);
-    setWorkspaceWidth(measuredWidth);
+    setWorkspaceWidth(element.clientWidth);
     const saved = Number(safeBrowserStorage("localStorage")?.getItem("kova-result-pane-ratio"));
     if (Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8) setPaneRatio(saved);
-    return () => {
-      observer.disconnect();
-      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
-    };
+    return observeElementWidth(element, setWorkspaceWidth);
   }, []);
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem("kova-result-pane-ratio", String(paneRatio));
@@ -1162,20 +1147,8 @@ function KovaGPT() {
       name: string;
       items: { title: string; content: string }[];
     }>("kova-active-context-pack", (pack) => {
-      if (
-        typeof pack?.name !== "string" ||
-        !Array.isArray(pack.items) ||
-        !pack.items.every(
-          (item) => typeof item?.title === "string" && typeof item?.content === "string",
-        )
-      ) {
-        throw new Error();
-      }
-      const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
-      return () =>
-        setInput(
-          `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `,
-        );
+      const prompt = contextPackHandoffPrompt(pack);
+      return () => setInput(prompt);
     });
 
     for (const key of ["kova-work-context", "kova-work-draft"]) {
@@ -1185,19 +1158,8 @@ function KovaGPT() {
         steps?: { text: string; done?: boolean; approval?: boolean }[];
         plan?: string[];
       }>(key, (task) => {
-        const steps: { text: string; done?: boolean }[] | undefined =
-          task.steps ?? task.plan?.map((text) => ({ text }));
-        if (
-          typeof task?.objective !== "string" ||
-          typeof task.context !== "string" ||
-          !Array.isArray(steps) ||
-          !steps.every((step) => typeof step?.text === "string")
-        )
-          throw new Error();
-        return () =>
-          setInput(
-            `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
-          );
+        const prompt = workHandoffPrompt(task);
+        return () => setInput(prompt);
       });
     }
 
