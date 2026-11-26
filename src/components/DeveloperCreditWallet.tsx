@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 
@@ -46,6 +46,31 @@ export function DeveloperCreditWallet({ userId, accountId, revision }: { userId:
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
+  const mutation = useRef<AbortController | null>(null);
+  const [updating, setUpdating] = useState(false);
+  useEffect(() => () => mutation.current?.abort(), []);
+  const refreshAllowance = async () => {
+    if (mutation.current) return;
+    const controller = new AbortController();
+    mutation.current = controller;
+    setUpdating(true);
+    setError("");
+    try {
+      const response = await fetchWithTimeoutAuthenticated("/api/developer/console", {
+        method: "POST", signal: controller.signal,
+        headers: { "Content-Type": "application/json", "X-Kova-Expected-User": userId },
+        body: JSON.stringify({ operation: "refresh_credit_wallet", accountId }),
+      });
+      const value = await response.json();
+      if (!response.ok || !value.wallet) throw new Error(value.error?.code === "developer_credit_legacy_reconciliation_required" ? "Existing credit history needs reconciliation before this account can use the new credit ledger." : "Credit renewal could not be verified.");
+      if (!controller.signal.aborted) { setData(value); setPage(0); setRefresh((n) => n + 1); }
+    } catch (cause) {
+      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Credit refresh failed.");
+    } finally {
+      if (mutation.current === controller) mutation.current = null;
+      if (!controller.signal.aborted) setUpdating(false);
+    }
+  };
   const load = useCallback(async (signal: AbortSignal) => {
     const response = await fetchWithTimeoutAuthenticated(
       `/api/developer/console?creditWallet=${encodeURIComponent(accountId)}&creditPage=${page}`,
@@ -72,12 +97,15 @@ export function DeveloperCreditWallet({ userId, accountId, revision }: { userId:
     <section className="min-w-0 space-y-3 rounded-xl border border-border p-3 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">API credit balances</h2>
-        <Button variant="outline" disabled={loading} onClick={() => setRefresh((value) => value + 1)}>Refresh</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={loading || updating} onClick={() => setRefresh((value) => value + 1)}>Refresh view</Button>
+          {data?.enabled && <Button variant="outline" disabled={loading || updating} onClick={() => void refreshAllowance()}>{updating ? "Checking…" : "Check allowance and expiry"}</Button>}
+        </div>
       </div>
       {loading && <p role="status" className="text-sm text-muted-foreground">Loading verified balances…</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {!loading && !error && wallet && !wallet.tracked && (
-        <p className="text-sm text-muted-foreground">This account is not yet using the individual credit-lot ledger. No included or expiring balance is shown until its accounting is verified.</p>
+        <p className="text-sm text-muted-foreground">This account is not yet using the individual credit-lot ledger. Check allowance and expiry to verify eligibility and initialize an empty account. Existing paid balances require reconciliation first.</p>
       )}
       {!loading && !error && wallet?.tracked && (
         <>
