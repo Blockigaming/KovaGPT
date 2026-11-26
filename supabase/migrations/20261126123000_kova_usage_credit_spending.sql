@@ -16,9 +16,6 @@ create function kova_private.settle_usage_credit_spend()
 returns trigger language plpgsql security definer set search_path='' as $$
 begin
   if new.actual_cost_usd is not null then
-    update kova_private.usage_credit_spends set settled_micros=0
-      where event_id=new.id and settled_micros is null;
-  elsif new.actual_cost_usd is not null then
     update kova_private.usage_credit_spends s
       set settled_micros=least(s.maximum_micros,
         ceil(greatest(new.actual_cost_usd,0)*1000000*o.amount_cents*10000/s.pricing_divisor)::bigint)
