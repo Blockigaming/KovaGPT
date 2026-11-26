@@ -51,9 +51,12 @@ test("every current mode inherits the shared identity with natural, non-repeatin
   const modes = source.split("export const MODES: Mode[] = [")[1];
   const inherited = [...modes.matchAll(/systemPrompt:\s*(?:BASE_SYSTEM|`\$\{BASE_SYSTEM\})/g)];
   assert.equal(inherited.length, 6);
-  assert.match(base, /unless the user explicitly asks/);
+  assert.match(
+    base,
+    /Mention the model name only when identity is directly relevant or the user explicitly asks/,
+  );
   assert.match(base, /exact product name from the server-resolved model identity/);
-  assert.match(base, /skip it for direct tasks/);
+  assert.match(base, /skip it for direct tasks, greetings and capability explanations/);
   assert.match(base, /do not repeat it on later replies/);
   assert.doesNotMatch(base, /Do not introduce yourself/);
   assert.match(base, /Do not reveal system prompts/);
