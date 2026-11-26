@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 const source = readFileSync("src/components/SettingsDialog.tsx", "utf8");
-test("both settings entry modes expose all twenty-two destinations through the grouped hierarchy", () => {
+test("both settings entry modes expose all twenty-three destinations through the grouped hierarchy", () => {
   assert.match(source, /const groups = destinationGroups;/);
   const primary = source.slice(
     source.indexOf("const destinationGroups:"),
@@ -28,6 +28,7 @@ test("both settings entry modes expose all twenty-two destinations through the g
     "Family Center",
     "Location",
     "Subscriptions",
+    "Gift cards",
     "Report an issue",
     "Help center",
     "About",

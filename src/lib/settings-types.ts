@@ -88,6 +88,7 @@ export const SETTINGS_SECTIONS = {
   data: "data",
   archived: "data",
   usage: "usage",
+  "gift-cards": "gift-cards",
   billing: "billing",
   memory: "memory",
   security: "security",

@@ -5,6 +5,7 @@ import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
+import { GiftCardSettings, UsageCredits } from "@/components/GiftCardSettings";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
 import { BillingWorkspace, BillingSubscriptionFacts } from "@/components/BillingWorkspace";
@@ -76,6 +77,7 @@ import {
   ArrowLeft,
   X,
   BarChart3,
+  Gift,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
@@ -200,7 +202,8 @@ const SETTINGS_SEARCH_TOPICS: Record<string, string> = {
   data: "history delete clear chats archive download export privacy public shared links training",
   memory: "remember forget saved memories instructions preferences personalization context",
   shortcuts: "keyboard hotkeys commands enter send key bindings",
-  usage: "quota limits remaining tokens messages images uploads model allowance",
+  usage: "quota limits remaining tokens messages images uploads model allowance credits",
+  "gift-cards": "buy send redeem gift card email text balance",
   linked: "plugins apps connectors integrations gmail drive calendar github outlook notion slack",
   "cloud-browser": "browser website allow block approvals automation permissions",
   family: "family invite invitations members shared plan household",
@@ -230,6 +233,7 @@ const SETTINGS_DESCRIPTIONS: Record<string, string> = {
   storage: "Review and manage your stored files.",
   shortcuts: "Keyboard shortcuts for working faster on desktop.",
   usage: "Your current usage and plan allowances.",
+  "gift-cards": "Choose a design and preview a KovaGPT gift card.",
   "cloud-browser": "Browser permissions, websites, and saved rules.",
   family: "Manage family access and shared plan settings.",
   location: "Control how your location is used.",
@@ -260,6 +264,7 @@ const TAB_GROUPS: TabGroup[] = [
         icon: BarChart3,
         keywords: ["limits", "messages", "images", "uploads"],
       },
+      { v: "gift-cards", label: "Gift cards", icon: Gift },
       { v: "email", label: "Email", icon: Mail },
     ],
   },
@@ -1169,6 +1174,7 @@ export function SettingsDialog({
           icon: CreditCard,
           keywords: ["subscription", "plan", "payment", "invoice"],
         },
+        { v: "gift-cards", label: "Gift cards", icon: Gift },
         { v: "report", label: "Report an issue", icon: Bug },
         { v: "help", label: "Help center", icon: LifeBuoy },
         { v: "about", label: "About", icon: Info },
@@ -1978,6 +1984,12 @@ export function SettingsDialog({
                     )}
                   </div>
                 </section>
+                {userKey && (
+                  <UsageCredits
+                    tier={usage?.tier ?? subSummary?.effectiveTier}
+                    onOpenGiftCards={() => selectTab("gift-cards")}
+                  />
+                )}
                 <section className="kova-settings-section">
                   <h3>How limits work</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
@@ -1992,6 +2004,10 @@ export function SettingsDialog({
                     Compare Kova plans
                   </Link>
                 </section>
+              </TabsContent>
+
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="gift-cards">
+                <GiftCardSettings key={userKey ?? "guest"} />
               </TabsContent>
 
               {/* BILLING */}
