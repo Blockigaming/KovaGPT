@@ -67,7 +67,7 @@
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
     --chat-composer-corner: 26px;
-    padding-block: 6px 4px;
+    padding-block: 5px;
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     min-height: 0 !important;
