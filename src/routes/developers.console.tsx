@@ -135,18 +135,33 @@ function DeveloperWorkspace({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   useEffect(() => setMobileNavOpen(false), [section]);
   const navigation = [
-    { label: "Overview", anchor: "overview", icon: LayoutDashboard },
-    { label: "Playground", anchor: "playground", icon: FlaskConical },
-    { label: "Projects", anchor: "projects", icon: Users },
-    { label: "API keys", anchor: "keys", icon: KeyRound },
-    { label: "Models", anchor: "models", icon: Layers },
-    { label: "Files", anchor: "files", icon: Folder },
-    { label: "Usage", anchor: "usage", icon: ChartNoAxesColumn },
-    { label: "Costs", anchor: "costs", icon: CreditCard },
-    { label: "Logs", anchor: "logs", icon: List },
-    { label: "Billing", anchor: "billing", icon: CreditCard },
-    { label: "Limits", anchor: "limits", icon: SlidersHorizontal },
-    { label: "Settings", anchor: "settings", icon: Settings },
+    {
+      label: "Workspace",
+      items: [
+        { label: "Overview", anchor: "overview", icon: LayoutDashboard },
+        { label: "Playground", anchor: "playground", icon: FlaskConical },
+        { label: "Models", anchor: "models", icon: Layers },
+        { label: "Files", anchor: "files", icon: Folder },
+      ],
+    },
+    {
+      label: "Analytics",
+      items: [
+        { label: "Usage", anchor: "usage", icon: ChartNoAxesColumn },
+        { label: "Costs", anchor: "costs", icon: CreditCard },
+        { label: "Logs", anchor: "logs", icon: List },
+      ],
+    },
+    {
+      label: "Manage",
+      items: [
+        { label: "Projects", anchor: "projects", icon: Users },
+        { label: "API keys", anchor: "keys", icon: KeyRound },
+        { label: "Billing", anchor: "billing", icon: CreditCard },
+        { label: "Limits", anchor: "limits", icon: SlidersHorizontal },
+        { label: "Settings", anchor: "settings", icon: Settings },
+      ],
+    },
   ] as const;
   return (
     <div
@@ -198,21 +213,32 @@ function DeveloperWorkspace({
             aria-label="Developer workspace"
             className="flex max-h-[70dvh] flex-col gap-1 overflow-y-auto overscroll-contain md:sticky md:top-20 md:max-h-[calc(100dvh-6rem)]"
           >
-            {navigation
-              .filter((item) => authenticated || item.anchor === "overview")
-              .map(({ label, anchor, icon: Icon }) => (
-                <Link
-                  key={anchor}
-                  to="/developers/console"
-                  search={{ section: anchor }}
-                  onClick={() => setMobileNavOpen(false)}
-                  aria-current={section === anchor ? "page" : undefined}
-                  className={`flex min-h-11 items-center gap-3 rounded-[var(--kova-radius-sidebar)] px-3 text-sm transition-colors md:min-h-9 focus-visible:ring-2 focus-visible:ring-ring ${section === anchor ? "bg-sidebar-active font-medium text-foreground" : "text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"}`}
-                >
-                  <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  {label}
-                </Link>
-              ))}
+            {navigation.map((group) => {
+              const items = group.items.filter((item) => authenticated || item.anchor === "overview");
+              if (items.length === 0) return null;
+              return (
+                <div key={group.label} className="mb-4 flex min-w-0 flex-col gap-1">
+                  {authenticated && (
+                    <p className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                      {group.label}
+                    </p>
+                  )}
+                  {items.map(({ label, anchor, icon: Icon }) => (
+                    <Link
+                      key={anchor}
+                      to="/developers/console"
+                      search={{ section: anchor }}
+                      onClick={() => setMobileNavOpen(false)}
+                      aria-current={section === anchor ? "page" : undefined}
+                      className={`flex min-h-11 items-center gap-3 rounded-[var(--kova-radius-sidebar)] px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring md:min-h-9 ${section === anchor ? "bg-sidebar-active font-medium text-foreground" : "text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"}`}
+                    >
+                      <Icon className="size-4 shrink-0" aria-hidden="true" />
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              );
+            })}
             <Link
               to="/developers/$docSlug"
               params={{ docSlug: "docs" }}
