@@ -80,7 +80,7 @@ import {
   ArrowLeft,
   X,
   BarChart3,
-  Gift,
+  PackageOpen as Gift,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";

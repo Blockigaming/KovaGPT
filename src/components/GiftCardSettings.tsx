@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Gift, Mail, Smartphone, UserRound } from "lucide-react";
+import { PackageOpen as Gift, Mail, MessageSquare as Smartphone, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
