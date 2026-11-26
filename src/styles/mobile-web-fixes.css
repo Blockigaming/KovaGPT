@@ -1,0 +1,346 @@
+/* Mobile web: same phone layout the app shell uses.
+   - Greeting + logo centered, composer docked at the bottom.
+   - Compact action row: add + model chip on the left, mic + voice/send on the right.
+   - Popups open in the middle of the screen instead of anchoring to their trigger.
+   - Header icon buttons keep their highlight inside the button (no offset box). */
+@media (width < 768px) {
+  /* ---- Home: logo + greeting centered, composer pinned to the bottom ---- */
+  .kova-assistant section.kova-empty-chat {
+    padding-block: 0;
+  }
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+    flex: 1 0 auto;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 100%;
+    padding-block: 0 !important;
+  }
+  .kova-assistant .kova-empty-chat-content .kova-greeting {
+    margin-block: auto;
+    align-items: center;
+  }
+  .kova-assistant .kova-empty-chat .kova-greeting h1 {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 14px;
+    max-width: none;
+    text-align: center;
+  }
+  .kova-greeting .kova-home-greeting-text {
+    display: block;
+  }
+  .kova-greeting .kova-home-welcome-logo {
+    display: block;
+    width: clamp(48px, 16vw, 72px);
+    height: auto;
+    opacity: 1;
+  }
+  .kova-assistant .kova-empty-composer {
+    position: sticky;
+    z-index: 2;
+    inset-block-end: 0;
+    margin-block-start: auto;
+    padding-block: 8px max(8px, var(--safe-bottom));
+    background: var(--background);
+  }
+  .kova-assistant .kova-empty-chat-content > .spec400-recent-work {
+    display: none;
+  }
+
+  /* ---- Composer action row ---- */
+  .kova-assistant .kova-empty-composer .kova-composer-tray {
+    display: none !important;
+  }
+  /* A selected project stays visible (and removable) above the writing area. */
+  .kova-assistant .spec400-inline-project-context[data-desktop-tray="true"] {
+    display: flex;
+  }
+  .kova-assistant .spec400-composer {
+    --composer-text-inset: 10px;
+    --composer-action-inset: 8px;
+    --chat-composer-corner: 21px;
+    min-height: 0 !important;
+    padding: 10px 8px 6px;
+    gap: 2px;
+    border-radius: var(--chat-composer-corner);
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
+    --chat-composer-corner: 26px;
+    padding-block: 5px;
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
+    min-height: 0 !important;
+    padding-block-start: 10px;
+    /* Matches the app shell's 19px writing inset (8px padding + 1px border + 10px). */
+    --composer-text-inset: 10px;
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-input,
+  .kova-assistant .spec400-composer .spec400-input-region {
+    min-height: 32px !important;
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-toolbar {
+    margin-top: 0;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-input {
+    padding: 4px 0 0 !important;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-toolbar {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px 4px;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-trailing {
+    display: contents !important;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-tools {
+    order: 0;
+    flex: none;
+  }
+  .kova-assistant
+    .spec400-composer
+    .spec400-composer-trailing
+    > :not(.spec400-composer-speech-actions) {
+    order: 1;
+    flex: 0 0 auto;
+    max-inline-size: 100%;
+    min-width: 0;
+    justify-self: auto;
+  }
+  /* The full model name always shows: when it cannot fit beside the speech
+     controls, those controls wrap to their own row instead of truncating it. */
+  .kova-assistant .spec400-composer .kova-consumer-model-trigger,
+  .kova-assistant .spec400-composer .kova-thinking-toggle {
+    min-width: 0;
+    flex-shrink: 0;
+  }
+  .kova-assistant .spec400-composer .kova-consumer-model-pill {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+    max-inline-size: 100%;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-speech-actions {
+    order: 2;
+    flex: none;
+    margin-inline-start: auto;
+  }
+
+  /* ---- Header icon buttons: highlight stays centered on the icon ---- */
+  .kova-mobile-home-actions > * {
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 9999px;
+  }
+  .kova-mobile-home-actions > * > svg {
+    translate: none !important;
+  }
+
+  /* The tray is hidden on phones, so its project, files and plugins actions
+     live in the + menu (the app shell already shows them there). */
+  .kova-phone-resource-actions {
+    display: grid;
+    gap: 2px;
+    margin-block-start: 6px;
+    padding-block-start: 6px;
+    border-block-start: 1px solid var(--border);
+  }
+  .kova-phone-resource-actions .kova-composer-action {
+    min-height: 44px;
+  }
+
+  /* ---- Popups open centered ---- */
+  [data-radix-popper-content-wrapper]:has(
+    > :is(
+      [data-slot="popover-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="select-content"],
+      [role="menu"],
+      [role="listbox"]
+    )
+  ) {
+    position: fixed !important;
+    inset: 0 !important;
+    transform: none !important;
+    margin: auto !important;
+    width: max-content !important;
+    height: max-content !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 2rem) !important;
+    max-height: calc(100dvh - 2rem) !important;
+  }
+  [data-radix-popper-content-wrapper]
+    > :is(
+      [data-slot="popover-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="select-content"],
+      [role="menu"],
+      [role="listbox"]
+    ) {
+    box-shadow:
+      0 0 0 100vmax rgb(0 0 0 / 0.4),
+      var(--shadow-floating);
+    /* A centered popup opens under the finger that opened it. Ignore pointer
+       input briefly so the release of that tap cannot select an item. */
+    pointer-events: auto;
+    transition: pointer-events 0s 0.35s allow-discrete;
+    @starting-style {
+      pointer-events: none;
+    }
+  }
+
+  /* Voice dialog: centered card, not a full-height bottom sheet */
+  [role="dialog"].kova-voice-dialog,
+  [role="dialog"].kova-voice-dialog:not([data-voice-availability="ready"]) {
+    top: 50%;
+    bottom: auto;
+    width: calc(100% - 2rem);
+    height: auto;
+    max-height: calc(100dvh - 2rem) !important;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* Notifications: borderless everywhere, centered on phones */
+[data-sonner-toast] {
+  border: 0 !important;
+}
+@media (width < 768px) {
+  [data-sonner-toaster][data-y-position="top"] {
+    top: 50% !important;
+    bottom: auto !important;
+    transform: none !important;
+  }
+  /* Sonner anchors a toast's top edge; pull it up by half its own height. */
+  [data-sonner-toaster][data-y-position="top"] [data-sonner-toast] {
+    margin-top: calc(var(--initial-height, 0px) / -2);
+  }
+}
+
+/* Header buttons: one centered 44px circle; press highlight sits exactly on the icon */
+@media (width < 1024px) {
+  .kova-topbar button,
+  .kova-topbar .kova-free-offer {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overflow: visible;
+    clip-path: none;
+    border-radius: 9999px;
+    outline: none;
+  }
+  .kova-topbar button:not(.kova-auth-primary):not(.kova-auth-sign-up),
+  .kova-topbar .kova-free-offer {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+  }
+  .kova-topbar .kova-action:active,
+  .kova-topbar button:active {
+    transform: none;
+    background: var(--accent);
+  }
+  .kova-topbar button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+  .kova-topbar button > svg {
+    translate: none;
+    margin: 0;
+  }
+  .kova-mobile-home-actions,
+  .kova-mobile-conversation-tools {
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+}
+
+/* Menu rows with a description: icon, label, description stacked in one tidy column */
+@media (width < 768px) {
+  .kova-composer-full-menu .kova-composer-action:has(> small) {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 1px;
+    align-items: center;
+    text-align: start;
+  }
+  .kova-composer-full-menu .kova-composer-action:has(> small) > :is(svg, span:first-child) {
+    grid-row: span 2;
+  }
+  .kova-composer-full-menu .kova-composer-action:has(> small) > small {
+    grid-column: 2;
+    margin: 0;
+    white-space: normal;
+  }
+}
+
+/* Smallest phones (320px): fit "+", the model name, mic and voice on one row.
+   Touch targets stay 44px. */
+@media (width < 350px) {
+  .kova-assistant .spec400-composer {
+    --composer-action-inset: 4px;
+    padding-inline: 5px;
+  }
+  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
+    --composer-text-inset: 13px;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-toolbar {
+    gap: 8px 0;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-speech-actions {
+    gap: 0;
+  }
+  .kova-assistant .spec400-composer .kova-consumer-model-pill {
+    padding-inline: 10px 8px;
+    gap: 4px;
+    font-size: 0.8125rem;
+  }
+  .kova-assistant .spec400-composer .kova-consumer-model-pill .text-muted-foreground {
+    display: none;
+  }
+}
+
+/* While voice is running the dictation mic is disabled; free its space */
+@media (width < 768px) {
+  .spec400-chat-input[data-voice-active] .kova-dictation-button {
+    display: none;
+  }
+}
+
+/* Phones: the model + effort popup sits directly above the chat bar at the
+   same width, with the composer's rounded corners. */
+@media (width < 768px) {
+  [data-radix-popper-content-wrapper]:has(> .kova-consumer-model-menu, > .kova-effort-popover) {
+    position: fixed !important;
+    inset: auto var(--kova-composer-right, 16px)
+      calc(100dvh - var(--kova-composer-top, 60dvh) + 8px) var(--kova-composer-left, 16px) !important;
+    margin: 0 !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  [data-radix-popper-content-wrapper] > .kova-consumer-model-menu,
+  [data-radix-popper-content-wrapper] > .kova-effort-popover {
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: var(--kova-composer-radius, var(--chat-composer-corner, 21px));
+  }
+  /* Settings rows: fully rounded on hover, press and focus. */
+  .kova-settings-reference .kova-settings-nav .kova-settings-nav-item {
+    border-radius: 20px;
+  }
+  .kova-settings-reference .kova-settings-nav .kova-settings-nav-item:hover,
+  .kova-settings-reference .kova-settings-nav .kova-settings-nav-item:active,
+  .kova-settings-reference .kova-settings-nav .kova-settings-nav-item:focus-visible {
+    border-radius: 20px;
+  }
+}

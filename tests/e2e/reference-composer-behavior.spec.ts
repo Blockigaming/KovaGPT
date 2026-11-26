@@ -27,12 +27,13 @@ for (const theme of ["light", "dark"] as const) {
       ));
     await expect(composer).toHaveCSS("display", "flex");
     const compactHeight = (await composer.boundingBox())!.height;
-    // The compact phone frame belongs to the native app shell only.
-    const phone = await page.evaluate(
-      () =>
-        document.documentElement.dataset.kovaSurface === "app" &&
-        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-          .matches,
+    // The compact phone frame applies in the native app shell and on phone-width web.
+    const phone = await page.evaluate(() =>
+      document.documentElement.dataset.kovaSurface === "app"
+        ? matchMedia(
+            "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+          ).matches
+        : matchMedia("(width < 768px)").matches,
     );
     expect(compactHeight).toBeGreaterThanOrEqual(phone ? 88 : 128);
     if (phone) expect(compactHeight).toBeLessThanOrEqual(108);
