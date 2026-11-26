@@ -101,3 +101,16 @@ test("spending ceilings require ordered positive limits and bounded integral con
   ])
     assert.throws(() => parseDeveloperLimits({ ...limits, ...patch }), /limits_invalid/);
 });
+
+test("versioned Kova model identifiers are accepted but URLs and malformed versions are rejected", () => {
+  for (const model of ["kova-argon-4.6", "kova-neon-4.5", "kova-xenon-6.1", "kova-xenon-5"]) {
+    const result = parseDeveloperInput("responses", { model, input: "test", max_output_tokens: 10 });
+    assert.equal(result.publicModel, model);
+  }
+  for (const model of ["https://example.com", "../kova", "kova..4", "kova.", "a".repeat(81)]) {
+    assert.throws(
+      () => parseDeveloperInput("responses", { model, input: "test", max_output_tokens: 10 }),
+      /developer_model_invalid/,
+    );
+  }
+});
