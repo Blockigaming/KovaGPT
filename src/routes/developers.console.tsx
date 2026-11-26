@@ -11,7 +11,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import type { ReactNode } from "react";
-import { BookOpen, ChartNoAxesColumn, ChevronLeft, CreditCard, Folder, KeyRound, LayoutDashboard, SlidersHorizontal } from "lucide-react";
+import {
+  BookOpen,
+  ChartNoAxesColumn,
+  ChevronLeft,
+  CreditCard,
+  Folder,
+  KeyRound,
+  LayoutDashboard,
+  List,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
@@ -28,7 +39,26 @@ type ConsoleData = {
   limitsPage: number;
   limitsHasMore: boolean;
 };
+const WORKSPACE_SECTIONS = [
+  "overview",
+  "projects",
+  "keys",
+  "files",
+  "usage",
+  "logs",
+  "billing",
+  "limits",
+] as const;
+type WorkspaceSection = (typeof WORKSPACE_SECTIONS)[number];
+
 export const Route = createFileRoute("/developers/console")({
+  validateSearch: (search: Record<string, unknown>): {
+    section?: WorkspaceSection;
+    funding?: "returned" | "canceled";
+  } => ({
+    section: WORKSPACE_SECTIONS.find((section) => section === search.section),
+    funding: search.funding === "returned" || search.funding === "canceled" ? search.funding : undefined,
+  }),
   component: DeveloperConsole,
   head: () => ({
     meta: [
@@ -37,15 +67,25 @@ export const Route = createFileRoute("/developers/console")({
     ],
   }),
 });
-function DeveloperWorkspace({ children, authenticated = false }: { children: ReactNode; authenticated?: boolean }) {
+function DeveloperWorkspace({
+  children,
+  authenticated = false,
+  section = "overview",
+}: {
+  children: ReactNode;
+  authenticated?: boolean;
+  section?: WorkspaceSection;
+}) {
   const navigation = [
     { label: "Overview", anchor: "overview", icon: LayoutDashboard },
-    { label: "API keys & projects", anchor: "keys", icon: KeyRound },
+    { label: "Projects", anchor: "projects", icon: Users },
+    { label: "API keys", anchor: "keys", icon: KeyRound },
     { label: "Files", anchor: "files", icon: Folder },
     { label: "Usage", anchor: "usage", icon: ChartNoAxesColumn },
+    { label: "Logs", anchor: "logs", icon: List },
     { label: "Billing", anchor: "billing", icon: CreditCard },
     { label: "Limits", anchor: "limits", icon: SlidersHorizontal },
-  ];
+  ] as const;
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border px-4 sm:px-6">
@@ -63,12 +103,20 @@ function DeveloperWorkspace({ children, authenticated = false }: { children: Rea
       <div className="mx-auto grid min-w-0 max-w-[1600px] md:grid-cols-[224px_minmax(0,1fr)]">
         <aside className="min-w-0 border-b border-border p-3 md:border-b-0 md:border-r md:p-4">
           <nav aria-label="Developer workspace" className="flex flex-wrap gap-1 md:sticky md:top-4 md:flex-col">
-            {navigation.filter((item) => authenticated || item.anchor === "overview").map(({ label, anchor, icon: Icon }) => (
-              <a key={anchor} href={`#${anchor}`} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-                <Icon className="size-4 shrink-0" aria-hidden="true" />
-                {label}
-              </a>
-            ))}
+            {navigation
+              .filter((item) => authenticated || item.anchor === "overview")
+              .map(({ label, anchor, icon: Icon }) => (
+                <Link
+                  key={anchor}
+                  to="/developers/console"
+                  search={{ section: anchor }}
+                  aria-current={section === anchor ? "page" : undefined}
+                  className={`flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring ${section === anchor ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  {label}
+                </Link>
+              ))}
             <Link to="/developers/$docSlug" params={{ docSlug: "docs" }} className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
               <BookOpen className="size-4 shrink-0" aria-hidden="true" /> Documentation
             </Link>
@@ -83,7 +131,10 @@ function DeveloperWorkspace({ children, authenticated = false }: { children: Rea
 }
 function DeveloperConsole() {
   const { isSignedIn, user } = useUser();
-  if (isSignedIn && user?.id) return <OwnedDeveloperConsole key={user.id} userId={user.id} />;
+  const search = Route.useSearch();
+  const section = search.section ?? (search.funding ? "billing" : "overview");
+  if (isSignedIn && user?.id)
+    return <OwnedDeveloperConsole key={user.id} userId={user.id} section={section} />;
   return (
     <DeveloperWorkspace>
       <section id="overview" className="space-y-4 rounded-xl border border-border p-6">
@@ -96,7 +147,13 @@ function DeveloperConsole() {
     </DeveloperWorkspace>
   );
 }
-function OwnedDeveloperConsole({ userId }: { userId: string }) {
+function OwnedDeveloperConsole({
+  userId,
+  section,
+}: {
+  userId: string;
+  section: WorkspaceSection;
+}) {
   const isSignedIn = true;
   const ownerRef = useRef<string | null>(userId);
   const [limitsPage, setLimitsPage] = useState(0);
@@ -110,7 +167,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
   const [account, setAccount] = useState(""),
     [project, setProject] = useState(""),
     [name, setName] = useState(""),
-    [currency, setCurrency] = useState("");
+    [currency, setCurrency] = useState("USD");
   const [requestLimit, setRequestLimit] = useState(""),
     [daily, setDaily] = useState(""),
     [monthly, setMonthly] = useState(""),
@@ -175,10 +232,31 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
     concurrent: Number(concurrent),
   });
   const selected = data?.balances.find((row) => row.id === account);
+  const [modelFilter, setModelFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const accountUsage = (data?.usage ?? []).filter((row) => !account || row.account_id === account);
+  const distinct = (field: string) =>
+    [...new Set(accountUsage.map((row) => String(row[field] ?? "")).filter(Boolean))].sort();
+  const visibleUsage = accountUsage.filter((row) =>
+    (!modelFilter || row.public_model === modelFilter) &&
+    (!serviceFilter || row.capability === serviceFilter) &&
+    (!statusFilter || row.settlement_state === statusFilter) &&
+    (!dateFilter || String(row.created_at).slice(0, 10) >= dateFilter)
+  );
+  const settledByCurrency = new Map<string, number>();
+  for (const row of visibleUsage) {
+    if (row.final_customer_charge == null) continue;
+    const amount = Number(row.final_customer_charge);
+    const currency = String(row.currency);
+    if (Number.isFinite(amount))
+      settledByCurrency.set(currency, (settledByCurrency.get(currency) ?? 0) + amount);
+  }
   const fieldClass = "mt-1 block w-full";
   return (
-    <DeveloperWorkspace authenticated>
-      <section id="overview" className="scroll-mt-4 space-y-4">
+    <DeveloperWorkspace authenticated section={section}>
+      <section id="overview" hidden={section !== "overview"} className="scroll-mt-4 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-medium text-muted-foreground">Workspace / Overview</p>
@@ -190,12 +268,12 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[
+          {([
             ["Credit accounts", data?.accounts.length],
             ["Projects", data?.projects.length],
             ["API keys", data?.keys.filter((key) => !key.revoked_at && key.enabled === true).length],
             ["Recent calls (up to 100)", data?.usage.length],
-          ].map(([label, value]) => (
+          ] as const).map(([label, value]) => (
             <div key={label} className="min-w-0 rounded-xl border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">{label}</p>
               <p className="mt-3 text-2xl font-semibold tabular-nums">{value ?? "—"}</p>
@@ -220,6 +298,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
             </p>
           )}
           <form
+            hidden={section !== "projects"}
             className="space-y-4 rounded-xl border p-5"
             onSubmit={(event) => {
               event.preventDefault();
@@ -252,8 +331,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               Create empty account
             </Button>
           </form>
-          <section id="keys" className="scroll-mt-4 space-y-4 rounded-xl border p-5">
-            <h2 className="text-lg font-semibold">Keys and spending limits</h2>
+          <section aria-label="Account and project selection" className="grid gap-4 rounded-xl border border-border p-4 sm:grid-cols-2">
             <div className="grid gap-1">
               <label htmlFor="developer-console-account">Account</label>
               <Select
@@ -305,6 +383,9 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
                 </SelectContent>
               </Select>
             </div>
+          </section>
+          <section id="keys" hidden={section !== "keys" && section !== "limits"} className="scroll-mt-4 space-y-4 rounded-xl border p-5">
+            <h2 className="text-lg font-semibold">Keys and spending limits</h2>
             <p>
               Enter spending limits in the account currency’s minor units. Organization, project,
               and key limits all apply.
@@ -462,8 +543,8 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
                 ))}
             </ul>
           </section>
-          <section id="files" className="scroll-mt-4 space-y-3">
-            {project ? (
+          <section id="files" hidden={section !== "files"} className="scroll-mt-4 space-y-3">
+            {section === "files" && project ? (
               <DeveloperFilesPanel key={`${userId}:${project}`} userId={userId} projectId={project} />
             ) : (
               <div className="rounded-xl border p-5">
@@ -472,8 +553,8 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               </div>
             )}
           </section>
-          <section id="billing" className="scroll-mt-4 space-y-3">
-            {account ? (
+          <section id="billing" hidden={section !== "billing"} className="scroll-mt-4 space-y-3">
+            {section === "billing" && account ? (
               <DeveloperFundingPanel
                 key={`${userId}:${account}`}
                 userId={userId}
@@ -487,7 +568,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               </div>
             )}
           </section>
-          <section id="limits" className="scroll-mt-4 space-y-3 rounded-xl border p-5">
+          <section id="limits" hidden={section !== "limits"} className="scroll-mt-4 space-y-3 rounded-xl border p-5">
             <h2 className="text-lg font-semibold">Stored spending limits</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -535,23 +616,66 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               </Button>
             </div>
           </section>
-          <section id="usage" className="scroll-mt-4 rounded-xl border p-5">
-            <h2 className="text-lg font-semibold">Latest 100 API calls</h2>
+          <section id="usage" hidden={section !== "usage" && section !== "logs"} className="scroll-mt-4 space-y-4 rounded-xl border p-5">
+            <h1 className="text-2xl font-semibold">{section === "logs" ? "Request logs" : "Usage"}</h1>
+            <p className="text-sm text-muted-foreground">Filters and totals cover only the latest 100 API calls returned by the server. They are not full-period billing totals.</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {([
+                ["Model", "public_model", modelFilter, setModelFilter],
+                ["Service", "capability", serviceFilter, setServiceFilter],
+                ["Status", "settlement_state", statusFilter, setStatusFilter],
+              ] as const).map(([label, field, value, setter]) => (
+                <label key={field} className="space-y-1 text-sm">
+                  <span>{label}</span>
+                  <select value={value} onChange={(event) => setter(event.target.value)} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                    <option value="">All</option>
+                    {distinct(field).map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+              ))}
+              <label className="space-y-1 text-sm">
+                <span>From (UTC)</span>
+                <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
+              </label>
+            </div>
+            <Button variant="outline" onClick={() => {
+              setModelFilter("");
+              setServiceFilter("");
+              setStatusFilter("");
+              setDateFilter("");
+            }}>Clear filters</Button>
+            {section === "usage" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm text-muted-foreground">Matching requests</p>
+                  <p className="text-2xl font-semibold">{data ? visibleUsage.length : "—"}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm text-muted-foreground">Recorded final charges (minor units)</p>
+                  {settledByCurrency.size ? [...settledByCurrency].map(([currency, amount]) => (
+                    <p key={currency} className="text-xl font-semibold tabular-nums">{amount.toLocaleString(undefined, { maximumFractionDigits: 8 })} {currency}</p>
+                  )) : <p className="text-sm text-muted-foreground">No final charges in this view.</p>}
+                </div>
+              </div>
+            )}
+            {data && !visibleUsage.length && <p className="text-sm text-muted-foreground">No matching API calls.</p>}
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr>
                     <th className="p-2">Model</th>
+                    <th className="p-2">Service</th>
+                    <th className="p-2">Time (UTC)</th>
                     <th className="p-2">Status</th>
                     <th className="p-2">Charge (minor units)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data?.usage
-                    .filter((row) => !account || row.account_id === account)
-                    .map((row) => (
+                  {visibleUsage.map((row) => (
                       <tr key={String(row.id)}>
                         <td className="p-2">{row.public_model}</td>
+                        <td className="p-2">{row.capability}</td>
+                        <td className="p-2">{row.created_at}</td>
                         <td className="p-2">{row.settlement_state}</td>
                         <td className="p-2">
                           {row.final_customer_charge ?? `Held: ${row.maximum_reserved_charge}`}{" "}
