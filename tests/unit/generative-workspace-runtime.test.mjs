@@ -31,6 +31,10 @@ function find(root, predicate) {
 }
 const route = parse("src/routes/index.tsx");
 const message = parse("src/components/ChatMessage.tsx");
+const focusedElement = find(
+  route,
+  (node) => ts.isVariableDeclaration(node) && node.name.getText(route) === "focusedElement",
+).initializer.getText(route);
 const openResult = find(
   route,
   (node) => ts.isVariableDeclaration(node) && node.name.getText(route) === "openResult",
@@ -65,6 +69,7 @@ const routeCanvasOpener = find(
 ).initializer.expression.getText(route);
 const compiled = ts.transpileModule(
   `
+globalThis.focusedElement = ${focusedElement};
 globalThis.bindOpenResult = (nextPromptScope) => (${openResult});
 globalThis.bindRouteCanvasOpener = () => (${routeCanvasOpener});
 globalThis.bindMessageCanvasOpener = (message, index, part) => (${widgetAttribute(message, "onOpenCanvas", "onOpenCanvas")});
@@ -196,9 +201,12 @@ test("fragment editors have a separate source identity and never inherit a widge
     fence({ version: 1, type: "document", title: "Project", content: "Original" }),
   );
   const part = f.openWidget(latest);
+  const activeElement = new f.context.HTMLElement();
+  f.context.document.activeElement = activeElement;
   const widgetIdentity = f.context.resultRef.current.canvasSourceKey;
   f.context.bindMessageEditorOpener(latest, 0, part)("Edited fragment", "writing", "Project");
   const descriptor = f.context.resultRef.current;
+  assert.equal(f.context.resultReturnRef.current.target, activeElement);
   assert.equal(descriptor.widget, undefined);
   assert.equal(descriptor.initialContent, "Edited fragment");
   assert.equal(descriptor.canvasSourceKey, `${widgetIdentity}:editor`);
