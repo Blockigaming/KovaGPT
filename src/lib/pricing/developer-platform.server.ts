@@ -573,6 +573,19 @@ export async function handleDeveloperConsole(request: Request) {
     }
     const body = await readBoundedJsonObject(request, 8192);
     const operation = String(body.operation);
+    if (operation === "refresh_credit_wallet") {
+      if (runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") !== "true")
+        throw new Error("developer_workspace_upgrade_unavailable");
+      const wallet = await db.rpc("developer_refresh_wallet_v2", {
+        p_owner: caller.userId,
+        p_account: developerUuid(body.accountId),
+      }).abortSignal(AbortSignal.timeout(10000));
+      if (wallet.error?.code === "42501") throw new Error("developer_owner_required");
+      if (wallet.error?.message === "developer_credit_legacy_reconciliation_required")
+        throw new Error("developer_credit_legacy_reconciliation_required");
+      if (wallet.error) throw new Error("developer_storage_unavailable");
+      return developerJson({ enabled: true, wallet: wallet.data, page: 0 });
+    }
     let input: Record<string, unknown>;
     let secret: string | undefined;
     if (["ensure_workspace", "create_project", "rename_project", "set_credit_sharing"].includes(operation)) {
