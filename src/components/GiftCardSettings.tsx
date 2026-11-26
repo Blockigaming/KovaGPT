@@ -152,7 +152,13 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
           >
             {showLogo && (
               <figcaption className="mb-auto flex items-center gap-2 text-sm font-semibold">
-                <img src="/kova-logo.png" alt="" className="size-7 object-contain" />
+                <img
+                  src="/kova-favicon-20260807.png"
+                  alt=""
+                  width={22}
+                  height={22}
+                  className="shrink-0 object-contain"
+                />
                 KovaGPT
               </figcaption>
             )}
@@ -160,8 +166,8 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
               {validAmount ? usd.format(Number(value)) : "Gift card"}
             </p>
           </figure>
-          <fieldset className="min-w-0 rounded-2xl bg-muted/40 p-3 sm:p-4">
-            <legend className="px-2 text-sm font-medium">Card design</legend>
+          <fieldset className="min-w-0">
+            <legend className="mb-2 text-sm font-medium">Card design</legend>
             <div className="flex flex-wrap gap-2">
               {designs.map((option) => (
                 <Button
@@ -169,7 +175,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                   type="button"
                   variant="ghost"
                   aria-pressed={design === option}
-                  className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+                  className="min-h-11 rounded-xl bg-muted/70 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
                   onClick={() => setDesign(option)}
                 >
                   <span
@@ -188,8 +194,8 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
           </fieldset>
         </div>
         <div className="min-w-0 space-y-4">
-          <fieldset className="min-w-0 rounded-2xl bg-muted/40 p-3 sm:p-4">
-            <legend className="px-2 text-sm font-medium">Amount (USD)</legend>
+          <fieldset className="min-w-0">
+            <legend className="mb-2 text-sm font-medium">Amount (USD)</legend>
             <div className="flex flex-wrap gap-2">
               {amounts.map((option) => (
                 <Button
@@ -197,7 +203,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                   type="button"
                   variant="ghost"
                   aria-pressed={amount === option}
-                  className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+                  className="min-h-11 rounded-xl bg-muted/70 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
                   onClick={() => setAmount(option)}
                 >
                   {option === "custom" ? "Other" : `$${option}`}
@@ -216,8 +222,8 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
               </label>
             )}
           </fieldset>
-          <fieldset className="min-w-0 rounded-2xl bg-muted/40 p-3 sm:p-4">
-            <legend className="px-2 text-sm font-medium">
+          <fieldset className="min-w-0">
+            <legend className="mb-2 text-sm font-medium">
               {checkoutEnabled ? "Delivery" : "Delivery preview"}
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -228,7 +234,7 @@ export function GiftCardSettings({ ownerId }: { ownerId?: string }) {
                   variant="ghost"
                   aria-pressed={delivery === option}
                   disabled={checkoutEnabled && option !== "self" && !deliveryAvailability[option]}
-                  className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+                  className="min-h-11 rounded-xl bg-muted/70 aria-pressed:bg-primary aria-pressed:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:aria-pressed:text-primary-foreground"
                   onClick={() => setDelivery(option)}
                 >
                   <Icon aria-hidden="true" /> {label}
