@@ -47,7 +47,21 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  getLiveBrowserActivity,
+  subscribeToLiveBrowserActivity,
+} from "@/lib/message-activity-list.mjs";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { ResponseSpeechButton } from "./ResponseSpeechButton";
 import { useLayout } from "@/hooks/use-mobile";
@@ -224,6 +238,19 @@ function ChatMessageInner({
     };
   }, [principal, message.id, message.content]);
   const isUser = message.role === "user";
+  const hasLiveBrowser = useSyncExternalStore(
+    subscribeToLiveBrowserActivity,
+    () => {
+      const live = getLiveBrowserActivity();
+      return Boolean(
+        userKey &&
+          live?.principal === userKey &&
+          live.conversationId === chatId &&
+          live.messageId === message.id,
+      );
+    },
+    () => false,
+  );
   const imageAttachments = isUser
     ? message.attachments?.filter((attachment) => attachment.kind === "image")
     : undefined;
@@ -1083,9 +1110,10 @@ function ChatMessageInner({
             {isSignedIn &&
               principalResolved &&
               userKey &&
-              message.activities?.some(
-                (row) => row.tool === "browser_interact" || row.tool === "browser_open_request",
-              ) && (
+              (hasLiveBrowser ||
+                message.activities?.some(
+                  (row) => row.tool === "browser_interact" || row.tool === "browser_open_request",
+                )) && (
                 <Suspense fallback={null}>
                   <ResponseBrowserCard
                     key={`${userKey}:${message.id}`}
