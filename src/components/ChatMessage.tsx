@@ -251,6 +251,11 @@ function ChatMessageInner({
     },
     () => false,
   );
+  const hasBrowserActivity =
+    hasLiveBrowser ||
+    message.activities?.some(
+      (row) => row.tool === "browser_interact" || row.tool === "browser_open_request",
+    );
   const imageAttachments = isUser
     ? message.attachments?.filter((attachment) => attachment.kind === "image")
     : undefined;
@@ -1107,23 +1112,17 @@ function ChatMessageInner({
                 message.content &&
                 replySegments?.at(-1)?.kind !== "group" && <span className="cursor-blink" />}
             </div>
-            {isSignedIn &&
-              principalResolved &&
-              userKey &&
-              (hasLiveBrowser ||
-                message.activities?.some(
-                  (row) => row.tool === "browser_interact" || row.tool === "browser_open_request",
-                )) && (
-                <Suspense fallback={null}>
-                  <ResponseBrowserCard
-                    key={`${userKey}:${message.id}`}
-                    activities={message.activities}
-                    ownerId={userKey}
-                    chatId={chatId}
-                    messageId={message.id}
-                  />
-                </Suspense>
-              )}
+            {isSignedIn && principalResolved && userKey && hasBrowserActivity && (
+              <Suspense fallback={null}>
+                <ResponseBrowserCard
+                  key={`${userKey}:${message.id}`}
+                  activities={message.activities}
+                  ownerId={userKey}
+                  chatId={chatId}
+                  messageId={message.id}
+                />
+              </Suspense>
+            )}
             {!streaming && message.generationStatus === "stopped" && (
               <div
                 className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"
