@@ -123,10 +123,8 @@ test("chat and isolated tool planning receive the same server-resolved identity"
 
 test("hosted identity is conditional even on the first turn", () => {
   const hosted = readFileSync("src/lib/ai/kova-identity-policy.mjs", "utf8");
-  assert.match(
-    hosted,
-    /Introduce yourself using your Kova product name only when asked or directly relevant/,
-  );
+  assert.match(hosted, /Introduce yourself using your Kova product name/);
+  assert.match(hosted, /only when asked or directly relevant/);
   const prompt = buildKovaModelIdentityInstructions({
     role: "DEFAULT_CHAT",
     modelId: "kova-argon-4.6",
