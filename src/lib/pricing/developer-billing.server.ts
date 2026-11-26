@@ -84,6 +84,25 @@ export async function recoverDeveloperBilling(): Promise<number> {
   // Retention/accounting maintenance remains available while paid generation is disabled.
   const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
   const recovered = await rpc<number>(creditLots ? "recover_developer_billing_v2" : "recover_developer_billing", { p_limit: 100 });
+  if (creditLots) {
+    // Each owner is handled in a separate transaction, so maintenance never
+    // holds several owners' locks while waiting for a billing lock.
+    const due = await rpc<{ owner_id: string; account_id: string }[]>(
+      "developer_due_wallet_refresh_v2", { p_limit: 5 },
+    );
+    let failures = 0;
+    for (const wallet of due) {
+      try {
+        await rpc("developer_refresh_wallet_v2", {
+          p_owner: wallet.owner_id,
+          p_account: wallet.account_id,
+        });
+      } catch {
+        failures++;
+      }
+    }
+    if (failures) console.warn("[developer-billing] credit refresh failed", { failures });
+  }
   await rpc<number>("expire_developer_files", { p_limit: 100 });
   await rpc<number>("expire_discovery_usage", { p_limit: 100 });
   const administrators = (runtimeEnv("KOVA_ADMIN_USER_IDS") ?? "")
