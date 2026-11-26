@@ -310,7 +310,9 @@ export async function getAvailableGoogleTools(
     const accountId = health.id;
     await Promise.all(
       (["gmail", "google-calendar"] as const).map(async (connector) => {
-        if (await connectorWriteAllowed(userId, connector, accountId)) writeAccess.add(connector);
+        // Write policy availability must not hide independently authorized read tools.
+        const allowed = await connectorWriteAllowed(userId, connector, accountId).catch(() => false);
+        if (allowed) writeAccess.add(connector);
       }),
     );
   }
