@@ -38,6 +38,8 @@ type ConsoleData = {
   balances: Row[];
   limitsPage: number;
   limitsHasMore: boolean;
+  usagePage?: number;
+  usageHasMore?: boolean;
 };
 const WORKSPACE_SECTIONS = [
   "overview",
@@ -179,26 +181,52 @@ function OwnedDeveloperConsole({
     [monthly, setMonthly] = useState(""),
     [concurrent, setConcurrent] = useState("1"),
     [scopes, setScopes] = useState<string[]>(["chat"]);
+  const [modelFilter, setModelFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [usageProject, setUsageProject] = useState("");
+  const [usageKey, setUsageKey] = useState("");
+  const [usagePage, setUsagePage] = useState(0);
+  const [loadedUsageQuery, setLoadedUsageQuery] = useState<string | null>(null);
+  const usageParams = new URLSearchParams({ usagePage: String(usagePage) });
+  for (const [key, value] of [
+    ["usageAccount", account],
+    ["usageProject", usageProject],
+    ["usageKey", usageKey],
+    ["usageModel", modelFilter.trim()],
+    ["usageService", serviceFilter.trim()],
+    ["usageStatus", statusFilter],
+    ["usageFrom", dateFilter],
+    ["usageThrough", endDateFilter],
+  ]) {
+    if (value) usageParams.set(key, value);
+  }
+  const usageQuery = usageParams.toString();
   const load = useCallback(
     async (signal?: AbortSignal) => {
       const owner = ownerRef.current;
       if (owner !== userId) return;
       const version = ++loadVersion.current;
       const response = await fetchWithTimeoutAuthenticated(
-        `/api/developer/console?limitsPage=${limitsPageRef.current}`,
+        `/api/developer/console?limitsPage=${limitsPageRef.current}&${usageQuery}`,
         { signal, headers: { "X-Kova-Expected-User": userId } },
       );
       const value = await response.json();
       if (!response.ok)
         throw new Error(value.error?.message ?? "Could not load your developer workspace.");
-      if (!signal?.aborted && owner === ownerRef.current && version === loadVersion.current)
+      if (!signal?.aborted && owner === ownerRef.current && version === loadVersion.current) {
         setData(value);
+        setLoadedUsageQuery(usageQuery);
+      }
     },
-    [userId],
+    [userId, usageQuery],
   );
   useEffect(() => {
     ownerRef.current = userId;
     const controller = new AbortController();
+    setError("");
     load(controller.signal).catch((cause) => {
       if (!controller.signal.aborted) setError(cause.message);
     });
@@ -241,21 +269,18 @@ function OwnedDeveloperConsole({
     if (section !== "keys" && section !== "limits") setSecret("");
   }, [section]);
   const selected = data?.balances.find((row) => row.id === account);
-  const [modelFilter, setModelFilter] = useState("");
-  const [serviceFilter, setServiceFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
-  const [endDateFilter, setEndDateFilter] = useState("");
-  const accountUsage = (data?.usage ?? []).filter((row) => !account || row.account_id === account);
-  const distinct = (field: string) =>
-    [...new Set(accountUsage.map((row) => String(row[field] ?? "")).filter(Boolean))].sort();
-  const visibleUsage = accountUsage.filter((row) =>
-    (!modelFilter || row.public_model === modelFilter) &&
-    (!serviceFilter || row.capability === serviceFilter) &&
-    (!statusFilter || row.settlement_state === statusFilter) &&
-    (!dateFilter || String(row.created_at).slice(0, 10) >= dateFilter) &&
-    (!endDateFilter || String(row.created_at).slice(0, 10) <= endDateFilter)
-  );
+  const usageReady = loadedUsageQuery === usageQuery;
+  const visibleUsage = usageReady ? (data?.usage ?? []) : [];
+  const clearUsageFilters = () => {
+    setModelFilter("");
+    setServiceFilter("");
+    setStatusFilter("");
+    setDateFilter("");
+    setEndDateFilter("");
+    setUsageProject("");
+    setUsageKey("");
+    setUsagePage(0);
+  };
   const settledByCurrency = new Map<string, number>();
   for (const row of visibleUsage) {
     if (row.final_customer_charge == null) continue;
@@ -324,9 +349,7 @@ function OwnedDeveloperConsole({
                         setAccount(String(row.account_id));
                         setProject(String(row.id));
                         setSecret("");
-                        setModelFilter("");
-                        setServiceFilter("");
-                        setStatusFilter("");
+                        clearUsageFilters();
                       }}>Select project</Button>
                     </li>
                   ))}
@@ -377,9 +400,7 @@ function OwnedDeveloperConsole({
                   setAccount(value === "__none__" ? "" : value);
                   setProject("");
                   setSecret("");
-                  setModelFilter("");
-                  setServiceFilter("");
-                  setStatusFilter("");
+                  clearUsageFilters();
                 }}
               >
                 <SelectTrigger id="developer-console-account">
@@ -658,28 +679,63 @@ function OwnedDeveloperConsole({
           </section>
           <section id="usage" hidden={section !== "usage" && section !== "logs"} className="scroll-mt-4 space-y-4 rounded-xl border p-5">
             <h1 className="text-2xl font-semibold">{section === "logs" ? "Request logs" : "Usage"}</h1>
-            <p className="text-sm text-muted-foreground">Filters and totals cover only the latest 100 API calls returned by the server. They are not full-period billing totals.</p>
+            <p className="text-sm text-muted-foreground">Filter your API request history on the server. Totals below cover the current page of up to 100 matching records, not the full billing period.</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {([
-                ["Model", "public_model", modelFilter, setModelFilter],
-                ["Service", "capability", serviceFilter, setServiceFilter],
-                ["Status", "settlement_state", statusFilter, setStatusFilter],
-              ] as const).map(([label, field, value, setter]) => (
-                <label key={field} className="space-y-1 text-sm">
-                  <span>{label}</span>
-                  <select value={value} onChange={(event) => setter(event.target.value)} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
-                    <option value="">All</option>
-                    {distinct(field).map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
-                </label>
-              ))}
+              <label className="space-y-1 text-sm">
+                <span>Model ID</span>
+                <Input value={modelFilter} onChange={(event) => {
+                  setModelFilter(event.target.value);
+                  setUsagePage(0);
+                }} placeholder="All models" />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>Service</span>
+                <select value={serviceFilter} onChange={(event) => {
+                  setServiceFilter(event.target.value);
+                  setUsagePage(0);
+                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                  <option value="">All services</option>
+                  {["chat", "streaming", "image_generation", "embeddings", "files"].map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>Status</span>
+                <select value={statusFilter} onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setUsagePage(0);
+                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                  <option value="">All statuses</option>
+                  {["reserved", "dispatched", "settled", "uncertain", "reconciliation_required", "rejected"].map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>Project</span>
+                <select value={usageProject} onChange={(event) => {
+                  setUsageProject(event.target.value);
+                  setUsageKey("");
+                  setUsagePage(0);
+                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                  <option value="">All projects</option>
+                  {data?.projects.filter((row) => !account || row.account_id === account).map((row) => <option key={String(row.id)} value={String(row.id)}>{row.name}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>API key</span>
+                <select value={usageKey} onChange={(event) => {
+                  setUsageKey(event.target.value);
+                  setUsagePage(0);
+                }} className="block min-h-10 w-full rounded-md border border-border bg-background px-2">
+                  <option value="">All keys (including revoked)</option>
+                  {data?.keys.filter((row) => (!account || row.account_id === account) && (!usageProject || row.project_id === usageProject)).map((row) => <option key={String(row.id)} value={String(row.id)}>{row.name}</option>)}
+                </select>
+              </label>
               <label className="space-y-1 text-sm">
                 <span>From (UTC)</span>
                 <Input
                   type="date"
                   value={dateFilter}
                   max={endDateFilter || undefined}
-                  onChange={(event) => setDateFilter(event.target.value)}
+                  onChange={(event) => { setDateFilter(event.target.value); setUsagePage(0); }}
                 />
               </label>
               <label className="space-y-1 text-sm">
@@ -688,22 +744,33 @@ function OwnedDeveloperConsole({
                   type="date"
                   value={endDateFilter}
                   min={dateFilter || undefined}
-                  onChange={(event) => setEndDateFilter(event.target.value)}
+                  onChange={(event) => { setEndDateFilter(event.target.value); setUsagePage(0); }}
                 />
               </label>
             </div>
-            <Button variant="outline" onClick={() => {
-              setModelFilter("");
-              setServiceFilter("");
-              setStatusFilter("");
-              setDateFilter("");
-              setEndDateFilter("");
-            }}>Clear filters</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={clearUsageFilters}>Clear filters</Button>
+              <Button variant="outline" disabled={!usageReady || !visibleUsage.length} onClick={() => {
+                const fields = ["id", "account_id", "project_id", "api_key_id", "public_model", "capability", "created_at", "settlement_state", "final_customer_charge", "maximum_reserved_charge", "currency"];
+                const cell = (value: unknown) => {
+                  let text = String(value ?? "");
+                  if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = "'" + text;
+                  return '"' + text.replaceAll('"', '""') + '"';
+                };
+                const csv = [fields.join(","), ...visibleUsage.map((row) => fields.map((field) => cell(row[field])).join(","))].join("\r\n");
+                const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `kova-api-usage-page-${usagePage + 1}.csv`;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}>Export current page</Button>
+            </div>
             {section === "usage" && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border p-4">
-                  <p className="text-sm text-muted-foreground">Matching requests</p>
-                  <p className="text-2xl font-semibold">{data ? visibleUsage.length : "—"}</p>
+                  <p className="text-sm text-muted-foreground">Requests on this page</p>
+                  <p className="text-2xl font-semibold">{usageReady ? visibleUsage.length : "—"}</p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">Recorded final charges (minor units)</p>
@@ -713,7 +780,8 @@ function OwnedDeveloperConsole({
                 </div>
               </div>
             )}
-            {data && !visibleUsage.length && <p className="text-sm text-muted-foreground">No matching API calls.</p>}
+            {!usageReady && !error && <p role="status" className="text-sm text-muted-foreground">Loading usage…</p>}
+            {usageReady && !visibleUsage.length && <p className="text-sm text-muted-foreground">No matching API calls on this page.</p>}
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
@@ -740,6 +808,11 @@ function OwnedDeveloperConsole({
                     ))}
                 </tbody>
               </table>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" disabled={usagePage === 0 || !usageReady} onClick={() => setUsagePage((page) => Math.max(0, page - 1))}>Previous</Button>
+              <span className="text-sm">Page {usagePage + 1}</span>
+              <Button variant="outline" disabled={!usageReady || !data?.usageHasMore || usagePage >= 10000} onClick={() => setUsagePage((page) => page + 1)}>Next</Button>
             </div>
           </section>
           <Link to="/developers/$docSlug" params={{ docSlug: "quickstart" }} className="underline">
