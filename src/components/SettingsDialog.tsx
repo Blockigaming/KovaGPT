@@ -6,6 +6,7 @@ import { SettingsNavigationResize } from "@/components/SettingsNavigationResize"
 import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
 import { GiftCardSettings, UsageCredits } from "@/components/GiftCardSettings";
+import { UsageAnalytics } from "@/components/UsageAnalytics";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
 import { BillingWorkspace, BillingSubscriptionFacts } from "@/components/BillingWorkspace";
@@ -1949,61 +1950,84 @@ export function SettingsDialog({
 
               {/* USAGE */}
               <TabsContent aria-labelledby={currentSectionHeadingId} value="usage">
-                <section className="space-y-3">
-                  <div
-                    ref={usageStatusRef}
-                    className="kova-settings-usage-summary"
-                    role="region"
-                    aria-label="Usage status"
-                    tabIndex={-1}
-                    aria-busy={usageLoading}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <h3>Current usage</h3>
-                      {(usage || subSummary) && (
-                        <span className="kova-settings-current-plan capitalize">
-                          {usage?.tier ?? subSummary?.effectiveTier}
-                        </span>
-                      )}
-                    </div>
-                    {!userKey ? (
-                      <p className="text-sm text-muted-foreground">Sign in to see your usage.</p>
-                    ) : (!usageLoaded || usageLoading) && !usage ? (
-                      <div className="text-sm text-muted-foreground" role="status">
-                        Loading usage…
+                <Tabs defaultValue="overview">
+                  <TabsList aria-label="Usage views" className="mb-4 rounded-full">
+                    <TabsTrigger value="overview" className="rounded-full">
+                      Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="analytics" className="rounded-full">
+                      Analytics
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="overview">
+                    <section className="space-y-3">
+                      <div
+                        ref={usageStatusRef}
+                        className="kova-settings-usage-summary"
+                        role="region"
+                        aria-label="Usage status"
+                        tabIndex={-1}
+                        aria-busy={usageLoading}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <h3>Current usage</h3>
+                          {(usage || subSummary) && (
+                            <span className="kova-settings-current-plan capitalize">
+                              {usage?.tier ?? subSummary?.effectiveTier}
+                            </span>
+                          )}
+                        </div>
+                        {!userKey ? (
+                          <p className="text-sm text-muted-foreground">
+                            Sign in to see your usage.
+                          </p>
+                        ) : (!usageLoaded || usageLoading) && !usage ? (
+                          <div className="text-sm text-muted-foreground" role="status">
+                            Loading usage…
+                          </div>
+                        ) : usage ? (
+                          <PlanUsageBars usage={usage} />
+                        ) : (
+                          <div className="kova-settings-inline-error" role="alert">
+                            <p>Usage data isn't available right now.</p>
+                            <button type="button" onClick={retryUsage}>
+                              Retry usage
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    ) : usage ? (
-                      <PlanUsageBars usage={usage} />
-                    ) : (
-                      <div className="kova-settings-inline-error" role="alert">
-                        <p>Usage data isn't available right now.</p>
-                        <button type="button" onClick={retryUsage}>
-                          Retry usage
-                        </button>
-                      </div>
+                    </section>
+                    {userKey && (
+                      <UsageCredits
+                        tier={usage?.tier ?? subSummary?.effectiveTier}
+                        onOpenGiftCards={() => selectTab("gift-cards")}
+                      />
                     )}
-                  </div>
-                </section>
-                {userKey && (
-                  <UsageCredits
-                    tier={usage?.tier ?? subSummary?.effectiveTier}
-                    onOpenGiftCards={() => selectTab("gift-cards")}
-                  />
-                )}
-                <section className="kova-settings-section">
-                  <h3>How limits work</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat
-                    limit. Each meter shows its next reset or refresh.
-                  </p>
-                  <Link
-                    to="/pricing"
-                    onClick={closeForNavigation}
-                    className="mt-4 inline-flex min-h-11 items-center font-medium underline underline-offset-4"
-                  >
-                    Compare Kova plans
-                  </Link>
-                </section>
+                    <section className="kova-settings-section">
+                      <h3>How limits work</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly
+                        chat limit. Each meter shows its next reset or refresh.
+                      </p>
+                      <Link
+                        to="/pricing"
+                        onClick={closeForNavigation}
+                        className="mt-4 inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+                      >
+                        Compare Kova plans
+                      </Link>
+                    </section>
+                  </TabsContent>
+                  <TabsContent value="analytics">
+                    {userKey ? (
+                      <UsageAnalytics key={userKey} ownerId={userKey} />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Sign in to see your usage history.
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
 
               <TabsContent aria-labelledby={currentSectionHeadingId} value="gift-cards">

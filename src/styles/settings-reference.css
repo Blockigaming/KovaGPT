@@ -175,10 +175,12 @@
 .kova-settings-reference .kova-settings-nav-copy > span {
   display: block;
 }
-.kova-settings-reference .kova-settings-nav-item:hover {
+.kova-settings-reference .kova-settings-nav .kova-settings-nav-item:hover {
+  border-radius: 999px;
   box-shadow: inset 0 0 0 1px var(--border);
 }
-.kova-settings-reference .kova-settings-nav-item[aria-selected="true"] {
+.kova-settings-reference .kova-settings-nav .kova-settings-nav-item[aria-selected="true"] {
+  border-radius: 999px;
   background: var(--settings-surface);
   box-shadow: inset 0 0 0 1px var(--border-strong);
   font-weight: 600;

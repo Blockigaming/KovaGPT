@@ -1,7 +1,13 @@
-export const USAGE_CREDIT_TIERS = Object.freeze(["plus", "pro"]);
+import { consumerModel } from "./consumer-model-selection.mjs";
+
+const USAGE_CREDIT_TIERS = Object.freeze(["free", "plus", "pro"]);
 
 export function canBuyUsageCredits(tier) {
   return USAGE_CREDIT_TIERS.includes(tier);
+}
+
+export function canUseCreditsForModel(tier, modelId) {
+  return canBuyUsageCredits(tier) && Boolean(consumerModel(modelId)?.tiers.includes(tier));
 }
 
 export const DEFAULT_USAGE_CREDIT_MARGIN_BPS = 1_000;

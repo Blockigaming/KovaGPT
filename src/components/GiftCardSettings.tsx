@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CONSUMER_MODELS } from "@/lib/consumer-model-selection.mjs";
-import { canBuyUsageCredits } from "@/lib/usage-credit-pricing.mjs";
+import { canBuyUsageCredits, canUseCreditsForModel } from "@/lib/usage-credit-pricing.mjs";
 import type { BillingTier } from "@/lib/billing-plans";
 
 const amounts = ["25", "50", "100", "custom"] as const;
@@ -34,18 +34,20 @@ export function UsageCredits({
         <div>
           <h4 className="text-sm font-medium">Models on your plan</h4>
           <ul className="mt-2 flex flex-wrap gap-2" aria-label="Models on your plan">
-            {CONSUMER_MODELS.filter((model) => model.tiers.includes(tier)).map((model) => (
-              <li key={model.id} className="rounded-full bg-muted px-3 py-1 text-sm">
-                {model.label}
-              </li>
-            ))}
+            {CONSUMER_MODELS.filter((model) => canUseCreditsForModel(tier, model.id)).map(
+              (model) => (
+                <li key={model.id} className="rounded-full bg-muted px-3 py-1 text-sm">
+                  {model.label}
+                </li>
+              ),
+            )}
           </ul>
         </div>
       )}
       <p className="text-sm text-muted-foreground">
         {canBuyUsageCredits(tier)
           ? "Usage credits are coming soon. They cover extra usage on models included in your plan, after your included usage runs out."
-          : "Usage credit purchases require Kova Plus or Pro."}
+          : "Usage credits are coming soon."}
       </p>
       <Button type="button" variant="outline" onClick={onOpenGiftCards}>
         <Gift aria-hidden="true" />
@@ -68,7 +70,8 @@ export function GiftCardSettings() {
   return (
     <section className="kova-settings-section space-y-5">
       <p className="text-sm text-muted-foreground">
-        Preview a KovaGPT gift card. Checkout and delivery are coming soon.
+        Gift cards will be available to send on every Kova plan, including Free. Checkout and
+        delivery are coming soon.
       </p>
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <div className="min-w-0 space-y-4">

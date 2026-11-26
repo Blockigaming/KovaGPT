@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canBuyUsageCredits, quoteUsageCreditDebit } from "../../src/lib/usage-credit-pricing.mjs";
+import {
+  canBuyUsageCredits,
+  canUseCreditsForModel,
+  quoteUsageCreditDebit,
+} from "../../src/lib/usage-credit-pricing.mjs";
 
 const inputs = {
   costMicros: 1_000_000,
@@ -9,12 +13,21 @@ const inputs = {
   targetMarginBps: 1_000,
 };
 
-test("only paid consumer tiers can purchase usage credits", () => {
+test("signed-in consumer tiers can purchase usage credits", () => {
+  assert.equal(canBuyUsageCredits("free"), true);
   assert.equal(canBuyUsageCredits("plus"), true);
   assert.equal(canBuyUsageCredits("pro"), true);
-  for (const tier of ["free", "guest", "unknown", undefined]) {
+  for (const tier of ["guest", "unknown", undefined]) {
     assert.equal(canBuyUsageCredits(tier), false);
   }
+});
+
+test("usage credits follow the current plan model entitlement", () => {
+  assert.equal(canUseCreditsForModel("free", "kova-argon-4.6"), true);
+  assert.equal(canUseCreditsForModel("free", "kova-xenon-6.1"), false);
+  assert.equal(canUseCreditsForModel("plus", "kova-xenon-6.1"), true);
+  assert.equal(canUseCreditsForModel("plus", "unknown"), false);
+  assert.equal(canUseCreditsForModel("guest", "kova-argon-4.6"), false);
 });
 
 test("the minimum debit covers direct costs, allocated payment fees and the selected gross margin", () => {
