@@ -37,6 +37,7 @@ import type { DeveloperUsageSummary } from "@/lib/pricing/developer-usage-summar
 type Row = Record<string, string | number | boolean | null | string[]>;
 type ConsoleData = {
   enabled: boolean;
+  workspaceV2?: boolean;
   accounts: Row[];
   projects: Row[];
   keys: Row[];
@@ -198,6 +199,9 @@ function OwnedDeveloperConsole({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [secret, setSecret] = useState("");
+  const [projectName, setProjectName] = useState("");
+  const [renameId, setRenameId] = useState("");
+  const projectCreateId = useRef<string | null>(null);
   const [account, setAccount] = useState(""),
     [project, setProject] = useState(""),
     [name, setName] = useState(""),
@@ -312,9 +316,14 @@ function OwnedDeveloperConsole({
         throw new Error(value.error?.message ?? "The change could not be confirmed.");
       if (owner !== ownerRef.current) return;
       if (value.secret) setSecret(value.secret);
-      if (body.operation === "create_account" && typeof value.accountId === "string") {
+      if (["create_account", "create_project", "ensure_workspace"].includes(String(body.operation)) && typeof value.accountId === "string") {
         setAccount(value.accountId);
         if (typeof value.projectId === "string") setProject(value.projectId);
+      }
+      if (body.operation === "create_project" || body.operation === "rename_project") {
+        setProjectName("");
+        setRenameId("");
+        projectCreateId.current = null;
       }
       await load();
     } catch (cause) {
@@ -334,6 +343,44 @@ function OwnedDeveloperConsole({
     if (section !== "keys" && section !== "limits") setSecret("");
   }, [section]);
   const autoSelected = useRef(false);
+  const provisioning = useRef(false);
+  const [setupAttempt, setSetupAttempt] = useState(0);
+  const shouldProvision = data?.workspaceV2 === true && data.accounts.length === 0;
+  useEffect(() => {
+    if (!shouldProvision || provisioning.current) return;
+    const controller = new AbortController();
+    provisioning.current = true;
+    setBusy(true);
+    setError("");
+    void (async () => {
+      try {
+        const response = await fetchWithTimeoutAuthenticated("/api/developer/console", {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json", "X-Kova-Expected-User": userId },
+          body: JSON.stringify({ operation: "ensure_workspace" }),
+        });
+        const value = await response.json();
+        if (!response.ok || typeof value.accountId !== "string" || typeof value.projectId !== "string")
+          throw new Error(value.error?.message ?? "Workspace setup could not be confirmed.");
+        if (!controller.signal.aborted && ownerRef.current === userId) {
+          setAccount(value.accountId);
+          setProject(value.projectId);
+          await load();
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted && ownerRef.current === userId)
+          setError(cause instanceof Error ? cause.message : "Workspace setup failed.");
+      } finally {
+        if (!controller.signal.aborted) {
+          provisioning.current = false;
+          setBusy(false);
+        }
+      }
+    })();
+    return () => { controller.abort(); provisioning.current = false; };
+    // The setup RPC is idempotent; it may safely repeat after an interrupted login.
+  }, [shouldProvision, userId, setupAttempt, load]);
   useEffect(() => {
     if (!data || autoSelected.current) return;
     autoSelected.current = true;
@@ -427,7 +474,11 @@ function OwnedDeveloperConsole({
             <section className="min-w-0 rounded-xl border border-border p-4">
               <h2 className="font-semibold">Set up your developer workspace</h2>
               <p className="mt-2 text-sm text-muted-foreground">You are already signed in to KovaGPT. Your developer credit account has not been created yet.</p>
-              <Button disabled={busy} className="mt-4" onClick={() => void mutate({ operation: "create_account", name: "Personal workspace", currency: "USD" })}>Create workspace</Button>
+              {data.workspaceV2 ? (
+                <Button disabled={busy} className="mt-4" onClick={() => setSetupAttempt((attempt) => attempt + 1)}>{busy ? "Preparing workspace…" : "Retry workspace setup"}</Button>
+              ) : (
+                <Button disabled={busy} className="mt-4" onClick={() => void mutate({ operation: "create_account", name: "Personal workspace", currency: "USD" })}>Create workspace</Button>
+              )}
             </section>
           )}
           {data && !data.enabled && (
@@ -499,32 +550,56 @@ function OwnedDeveloperConsole({
             </section>
           )}
           {section === "projects" && (
-            <section className="space-y-3 rounded-xl border border-border p-5">
+            <section className="min-w-0 space-y-3 rounded-xl border border-border p-3 sm:p-5">
               <h1 className="text-2xl font-semibold">Projects</h1>
               <p className="text-sm text-muted-foreground">Projects belong to your developer credit accounts.</p>
               {data?.projects.length ? (
                 <ul className="divide-y divide-border">
                   {data.projects.map((row) => (
                     <li key={String(row.id)} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                      <div>
+                      <div className="min-w-0 flex-1 break-words">
                         <p className="font-medium">{row.name}</p>
                         <p className="text-sm text-muted-foreground">{data.accounts.find((item) => item.account_id === row.account_id)?.name}</p>
                       </div>
+                      <div className="flex max-w-full flex-wrap gap-2">
                       <Button variant="outline" onClick={() => {
                         setAccount(String(row.account_id));
                         setProject(String(row.id));
                         setSecret("");
                         clearUsageFilters();
                       }}>Select project</Button>
+                      {data.workspaceV2 && <Button variant="outline" disabled={busy} onClick={() => {
+                        setAccount(String(row.account_id));
+                        setProject(String(row.id));
+                        setRenameId(String(row.id));
+                        setProjectName(String(row.name));
+                        projectCreateId.current = null;
+                        clearUsageFilters();
+                      }}>Rename</Button>}
+                      </div>
                     </li>
                   ))}
                 </ul>
               ) : <p className="text-sm text-muted-foreground">{data ? "No projects yet." : "Loading projects…"}</p>}
             </section>
           )}
+          {section === "projects" && data?.workspaceV2 && account && (
+            <form className="min-w-0 space-y-3 rounded-xl border border-border p-3 sm:p-5" onSubmit={(event) => {
+              event.preventDefault();
+              if (!projectCreateId.current) projectCreateId.current = crypto.randomUUID();
+              void mutate({ operation: renameId ? "rename_project" : "create_project", accountId: account, projectId: renameId || projectCreateId.current, name: projectName });
+            }}>
+              <h2 className="font-semibold">{renameId ? "Rename project" : "Create project"}</h2>
+              <label className="block space-y-1 text-sm">Project name<Input required maxLength={80} value={projectName} disabled={busy} onChange={(event) => { setProjectName(event.target.value); projectCreateId.current = null; }} /></label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" disabled={busy || !projectName.trim()}>{renameId ? "Save name" : "Create project"}</Button>
+                {renameId && <Button type="button" variant="outline" disabled={busy} onClick={() => { setRenameId(""); setProjectName(""); projectCreateId.current = null; }}>Cancel</Button>}
+              </div>
+            </form>
+          )}
           <form
             hidden={section !== "projects"}
-            className="space-y-4 rounded-xl border p-5"
+            className="min-w-0 space-y-4 rounded-xl border p-3 sm:p-5"
             onSubmit={(event) => {
               event.preventDefault();
               void mutate({ operation: "create_account", name, currency });
@@ -563,6 +638,9 @@ function OwnedDeveloperConsole({
                 value={account || "__none__"}
                 onValueChange={(value) => {
                   setAccount(value === "__none__" ? "" : value);
+                  setRenameId("");
+                  setProjectName("");
+                  projectCreateId.current = null;
                   setProject("");
                   setSecret("");
                   clearUsageFilters();
