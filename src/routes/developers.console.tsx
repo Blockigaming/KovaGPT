@@ -13,14 +13,14 @@ import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import type { ReactNode } from "react";
 import {
   BookOpen,
-  ChartNoAxesColumn,
+  BarChart3,
   ChevronLeft,
   CreditCard,
   Folder,
   FlaskConical,
   KeyRound,
-  Layers,
-  LayoutDashboard,
+  Layers3,
+  Grid2X2,
   List,
   Menu,
   Settings,
@@ -140,16 +140,16 @@ function DeveloperWorkspace({
     {
       label: "Workspace",
       items: [
-        { label: "Overview", anchor: "overview", icon: LayoutDashboard },
+        { label: "Overview", anchor: "overview", icon: Grid2X2 },
         { label: "Playground", anchor: "playground", icon: FlaskConical },
-        { label: "Models", anchor: "models", icon: Layers },
+        { label: "Models", anchor: "models", icon: Layers3 },
         { label: "Files", anchor: "files", icon: Folder },
       ],
     },
     {
       label: "Analytics",
       items: [
-        { label: "Usage", anchor: "usage", icon: ChartNoAxesColumn },
+        { label: "Usage", anchor: "usage", icon: BarChart3 },
         { label: "Costs", anchor: "costs", icon: CreditCard },
         { label: "Logs", anchor: "logs", icon: List },
       ],
@@ -809,7 +809,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                       key={id}
                       className="min-w-0 space-y-2 rounded-[var(--kova-radius-card)] border border-border bg-background p-5"
                     >
-                      <Layers className="size-5 text-muted-foreground" aria-hidden="true" />
+                      <Layers3 className="size-5 text-muted-foreground" aria-hidden="true" />
                       <h2 className="font-semibold">{label}</h2>
                       <p className="break-all font-mono text-xs text-muted-foreground">{id}</p>
                       <p className="text-xs text-muted-foreground">
