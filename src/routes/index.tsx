@@ -782,13 +782,16 @@ function KovaGPT() {
     const minimum = 420 / usableWidth;
     setPaneRatio(Math.max(minimum, Math.min(1 - minimum, next)));
   };
+  const needsWorkspaceWidth = Boolean(activeId || result);
   useEffect(() => {
     const element = workspaceRef.current;
-    if (!element) return;
+    if (!element || !needsWorkspaceWidth) return;
     setWorkspaceWidth(element.clientWidth);
+    return observeElementWidth(element, setWorkspaceWidth);
+  }, [needsWorkspaceWidth]);
+  useEffect(() => {
     const saved = Number(safeBrowserStorage("localStorage")?.getItem("kova-result-pane-ratio"));
     if (Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8) setPaneRatio(saved);
-    return observeElementWidth(element, setWorkspaceWidth);
   }, []);
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem("kova-result-pane-ratio", String(paneRatio));
