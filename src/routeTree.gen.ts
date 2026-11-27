@@ -152,6 +152,7 @@ import { Route as ApiDeveloperConsoleRouteImport } from './routes/api/developer/
 import { Route as ApiDeveloperFilesRouteImport } from './routes/api/developer/files'
 import { Route as ApiDeveloperFundingRouteImport } from './routes/api/developer/funding'
 import { Route as ApiDeveloperMcpRouteImport } from './routes/api/developer/mcp'
+import { Route as ApiDeveloperOpenapiRouteImport } from './routes/api/developer/openapi'
 import { Route as ApiFinancesExchangeRouteImport } from './routes/api/finances/exchange'
 import { Route as ApiFinancesLinkTokenRouteImport } from './routes/api/finances/link-token'
 import { Route as ApiFinancesManageRouteImport } from './routes/api/finances/manage'
@@ -984,6 +985,11 @@ const ApiDeveloperMcpRoute = ApiDeveloperMcpRouteImport.update({
   path: '/api/developer/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeveloperOpenapiRoute = ApiDeveloperOpenapiRouteImport.update({
+  id: '/api/developer/openapi',
+  path: '/api/developer/openapi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFinancesExchangeRoute = ApiFinancesExchangeRouteImport.update({
   id: '/api/finances/exchange',
   path: '/api/finances/exchange',
@@ -1692,6 +1698,7 @@ export interface FileRoutesByFullPath {
   '/api/developer/files': typeof ApiDeveloperFilesRoute
   '/api/developer/funding': typeof ApiDeveloperFundingRoute
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
+  '/api/developer/openapi': typeof ApiDeveloperOpenapiRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -1944,6 +1951,7 @@ export interface FileRoutesByTo {
   '/api/developer/files': typeof ApiDeveloperFilesRoute
   '/api/developer/funding': typeof ApiDeveloperFundingRoute
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
+  '/api/developer/openapi': typeof ApiDeveloperOpenapiRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -2197,6 +2205,7 @@ export interface FileRoutesById {
   '/api/developer/files': typeof ApiDeveloperFilesRoute
   '/api/developer/funding': typeof ApiDeveloperFundingRoute
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
+  '/api/developer/openapi': typeof ApiDeveloperOpenapiRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -2451,6 +2460,7 @@ export interface FileRouteTypes {
     | '/api/developer/files'
     | '/api/developer/funding'
     | '/api/developer/mcp'
+    | '/api/developer/openapi'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2703,6 +2713,7 @@ export interface FileRouteTypes {
     | '/api/developer/files'
     | '/api/developer/funding'
     | '/api/developer/mcp'
+    | '/api/developer/openapi'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2955,6 +2966,7 @@ export interface FileRouteTypes {
     | '/api/developer/files'
     | '/api/developer/funding'
     | '/api/developer/mcp'
+    | '/api/developer/openapi'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -3201,6 +3213,7 @@ export interface RootRouteChildren {
   ApiDeveloperFilesRoute: typeof ApiDeveloperFilesRoute
   ApiDeveloperFundingRoute: typeof ApiDeveloperFundingRoute
   ApiDeveloperMcpRoute: typeof ApiDeveloperMcpRoute
+  ApiDeveloperOpenapiRoute: typeof ApiDeveloperOpenapiRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
   ApiFinancesLinkTokenRoute: typeof ApiFinancesLinkTokenRoute
   ApiFinancesManageRoute: typeof ApiFinancesManageRoute
@@ -4308,6 +4321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeveloperMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/developer/openapi': {
+      id: '/api/developer/openapi'
+      path: '/api/developer/openapi'
+      fullPath: '/api/developer/openapi'
+      preLoaderRoute: typeof ApiDeveloperOpenapiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/finances/exchange': {
       id: '/api/finances/exchange'
       path: '/api/finances/exchange'
@@ -5319,6 +5339,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeveloperFilesRoute: ApiDeveloperFilesRoute,
   ApiDeveloperFundingRoute: ApiDeveloperFundingRoute,
   ApiDeveloperMcpRoute: ApiDeveloperMcpRoute,
+  ApiDeveloperOpenapiRoute: ApiDeveloperOpenapiRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,
   ApiFinancesLinkTokenRoute: ApiFinancesLinkTokenRoute,
   ApiFinancesManageRoute: ApiFinancesManageRoute,

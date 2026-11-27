@@ -71,6 +71,9 @@ function DeveloperDirectory({
         <Link to="/developers/$docSlug" params={{ docSlug: "api-pricing" }} className="underline">
           Pricing
         </Link>
+        <a href="/api/developer/openapi" className="underline">
+          OpenAPI JSON
+        </a>
         <Link to="/developers/console" className="underline">
           Console
         </Link>
