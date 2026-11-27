@@ -456,6 +456,8 @@ export class KovaGPT {
         });
       },
       upsert: (input, options) => vectorPost("upsert", input, { signal: options?.signal }),
+      upsertBatch: (input, options) =>
+        vectorPost("upsert_batch", input, { signal: options?.signal }),
       search: (input, options) => vectorPost("search", input, { signal: options?.signal }),
       list: async ({ signal } = {}) =>
         smallJson(await this.#request("vector-stores", { signal }), 1048576),

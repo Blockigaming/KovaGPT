@@ -48,6 +48,17 @@ const queueQuotes = {
     input: "",
     dimensions: 256,
   }),
+  quoteSearch: quoteOperation("Get web search quote", "search", {
+    model: "",
+    query: "",
+    max_output_tokens: 256,
+    max_tool_calls: 1,
+  }),
+  quoteAnalysis: quoteOperation("Get isolated analysis quote", "analysis", {
+    model: "",
+    input: "",
+    max_output_tokens: 256,
+  }),
   quoteDecision: quoteOperation("Get Decisions quote", "decisions", {
     model: "",
     input: "",
@@ -122,6 +133,11 @@ export const developerResourceSections = Object.freeze({
         model: "",
         vector: [1],
         text: "",
+      }),
+      upsertBatch: post("Index a batch of entries", "upsert_batch", {
+        store_id: "",
+        model: "",
+        entries: [{ entry_id: "", vector: [1], text: "", file_id: "" }],
       }),
       search: post("Search vectors", "search", { store_id: "", model: "", vector: [1], limit: 5 }),
       deleteEntry: { label: "Delete entry", method: "DELETE", fields: { id: "", entry_id: "" } },

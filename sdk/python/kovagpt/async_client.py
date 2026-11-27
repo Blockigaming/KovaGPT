@@ -189,7 +189,7 @@ _READS = (
 _MUTATIONS = (
     "file_delete", "file_upload", "file_upload_multipart", "conversation_create",
     "conversation_append", "conversation_remove", "conversation_delete", "vector_create",
-    "vector_upsert", "vector_delete", "agent_create", "agent_update", "agent_delete",
+    "vector_upsert", "vector_upsert_batch", "vector_delete", "agent_create", "agent_update", "agent_delete",
     "skill_create", "skill_update", "skill_delete", "webhook_create", "webhook_rotate",
     "webhook_test", "webhook_delete", "batch_cancel", "response_job_cancel",
     "automation_cancel", "automation_pause",

@@ -4885,7 +4885,7 @@
       "order": 234,
       "filename": "20261127205025_developer_vector_stores_v1.sql",
       "timestamp": "20261127205025",
-      "sha256": "6ff8e88d50907f02a48a599db4c64a2611f85db73732e1f912f44979ce7c419d",
+      "sha256": "788c8f56f45ecf1ea4d4386c3cabd886798825e009b8d8f049a9c30475b64eb2",
       "tables": ["developer_vector_stores_v1", "developer_vector_entries_v1"],
       "functions": [
         "developer_normalize_vector_v1",
@@ -4974,7 +4974,7 @@
       "order": 239,
       "filename": "20261127205035_developer_batches_v1.sql",
       "timestamp": "20261127205035",
-      "sha256": "1b0ed2c96cea4ac0228096437ae3663d7996e9b91dd655be789e226b53036e6f",
+      "sha256": "57c1de9943112abc3612cbfccc527f48b7af5aa32aa607a0bfcf9df2753ef9f3",
       "tables": ["developer_batches_v1", "developer_batch_items_v1"],
       "functions": [
         "developer_batch_key_active_v1",

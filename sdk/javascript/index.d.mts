@@ -136,6 +136,11 @@ export type BatchInvocation = {
   | { operation: "moderations"; input: ModerationsInput }
   | { operation: "embeddings"; input: EmbeddingsInput & { dimensions: number } }
   | { operation: "decisions"; input: DecisionInput }
+  | {
+      operation: "search";
+      input: { model: string; query: string; max_output_tokens: number; max_tool_calls: number };
+    }
+  | { operation: "analysis"; input: { model: string; input: string; max_output_tokens: number } }
 );
 export interface AgentDefinition {
   name: string;
@@ -359,6 +364,14 @@ export class KovaGPT {
         vector: number[];
         text: string;
         file_id?: string;
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    upsertBatch(
+      input: {
+        store_id: string;
+        model: string;
+        entries: { entry_id: string; vector: number[]; text: string; file_id?: string }[];
       },
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;

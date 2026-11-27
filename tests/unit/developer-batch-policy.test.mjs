@@ -265,3 +265,23 @@ test("replay lookup accepts an elapsed schedule but new submissions still reject
     /batch_invalid/,
   );
 });
+
+test("scheduled and batch jobs accept bounded search and isolated analysis, not arbitrary tools", () => {
+  const cases = [
+    ["search", { model: "kova-fast", query: "Example", max_output_tokens: 128, max_tool_calls: 2 }],
+    ["analysis", { model: "kova-fast", input: "Calculate 2+2", max_output_tokens: 128 }],
+  ];
+  for (const [operation, input] of cases) {
+    const body = { ...request, items: [{ ...request.items[0], operation, input }] };
+    assert.equal(parse("POST", "", body).input.items[0].operation, operation);
+    assert.throws(() =>
+      parse("POST", "", {
+        ...body,
+        items: [{ ...body.items[0], input: { ...input, max_output_tokens: 2049 } }],
+      }),
+    );
+    assert.throws(() =>
+      parse("POST", "", { ...body, items: [{ ...body.items[0], input: { ...input, tools: [] } }] }),
+    );
+  }
+});

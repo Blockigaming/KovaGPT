@@ -41,3 +41,23 @@ test("vector resource operations are explicit and bounded with no caller ownersh
   for (const query of [`id=${id}&id=${id}`, "entries=true", `id=${id}&entries=true&page=20`])
     assert.throws(() => parse("GET", query), /vector_invalid/);
 });
+
+test("vector batches validate every entry, reject duplicate IDs and prevent caller authority", () => {
+  const entry = { entry_id: "one", vector: [1, 0], text: "file text", file_id: id };
+  const body = {
+    operation: "upsert_batch",
+    store_id: id,
+    model: "kova-embedding",
+    entries: [entry, { ...entry, entry_id: "two" }],
+  };
+  assert.deepEqual(parse("POST", "", body).input.entries, body.entries);
+  for (const entries of [
+    [],
+    Array(9).fill(entry),
+    [entry, entry],
+    [{ ...entry, owner_id: id }],
+    [{ ...entry, vector: [0, 0] }],
+    [{ ...entry, text: "" }],
+  ])
+    assert.throws(() => parse("POST", "", { ...body, entries }), /vector_invalid/);
+});

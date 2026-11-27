@@ -97,6 +97,8 @@ test("each supported queue operation can prepare an exact quote-bound draft with
     quoteModeration: "moderations",
     quoteEmbedding: "embeddings",
     quoteDecision: "decisions",
+    quoteSearch: "search",
+    quoteAnalysis: "analysis",
   };
   for (const section of ["batches", "automations", "response-jobs"]) {
     for (const [action, operation] of Object.entries(operations)) {

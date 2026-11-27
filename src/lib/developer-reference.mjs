@@ -134,7 +134,7 @@ export const DEVELOPER_ENDPOINTS = [
     "Vector Stores",
     "vector-stores",
     "GET POST DELETE",
-    "POST operation create (name, model, dimensions), upsert (store_id, entry_id, model, vector, text, optional file_id), or search (store_id, model, vector, limit). GET id, entries=true with page, or entry_id; DELETE id and optional entry_id.",
+    "POST operation create (name, model, dimensions), upsert (store_id, entry_id, model, vector, text, optional file_id), upsert_batch (store_id, model, entries of up to eight valid entries, atomically), or search (store_id, model, vector, limit). GET id, entries=true with page, or entry_id; DELETE id and optional entry_id.",
     "Both files and embeddings scopes are required. Dimensions are 1–1,536. Supply compatible vectors yourself; search uses cosine similarity, not automatic embedding or provider indexing. Store creation requires a stable retry key.",
   ),
   endpoint(
@@ -183,7 +183,7 @@ export const DEVELOPER_ENDPOINTS = [
     "batches",
     "GET POST",
     "POST create with id, currency, maximum_charge and one to eight items. Each item has id, operation, input and quote_token. GET id or id and item_id; POST cancel with id.",
-    "Supported operations are responses, chat/completions, agent-turns, moderations, embeddings and decisions. Admission occurs at dispatch, not submission. Unknown outcomes are not automatically retried; cancel only prevents new claims.",
+    "Supported operations are responses, chat/completions, agent-turns, moderations, embeddings, decisions, search and isolated analysis. Admission occurs at dispatch, not submission. Unknown outcomes are not automatically retried; cancel only prevents new claims.",
   ),
   endpoint(
     "automations",

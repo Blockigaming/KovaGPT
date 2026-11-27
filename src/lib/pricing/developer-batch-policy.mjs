@@ -1,3 +1,4 @@
+import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { parseDeveloperAgentTurn } from "./developer-agent-policy.mjs";
 import { parseDeveloperInput } from "./developer-platform-policy.mjs";
 
@@ -48,6 +49,8 @@ const batchCapabilities = Object.freeze({
   moderations: "moderation",
   embeddings: "embeddings",
   decisions: "decisions",
+  search: "chat",
+  analysis: "file_analysis",
 });
 export function developerBatchCapability(operation) {
   if (typeof operation !== "string" || !Object.hasOwn(batchCapabilities, operation)) fail();
@@ -75,8 +78,19 @@ function directInput(operation, value) {
     exact(value, ["model", "input"]);
   } else if (operation === "decisions") {
     exact(value, ["model", "input", "questions"]);
+  } else if (operation === "search") {
+    exact(value, ["model", "query", "max_output_tokens", "max_tool_calls"]);
+    if (
+      !Number.isSafeInteger(value.max_output_tokens) ||
+      value.max_output_tokens < 1 ||
+      value.max_output_tokens > 2048
+    )
+      fail();
+  } else if (operation === "analysis") {
+    exact(value, ["model", "input", "max_output_tokens"]);
   } else fail();
-  const parsed = parseDeveloperInput(operation, value);
+  const normalized = normalizeDeveloperOperation(operation, value);
+  const parsed = parseDeveloperInput(normalized.operation, normalized.input);
   if (parsed.capability !== developerBatchCapability(operation)) fail();
   return value;
 }

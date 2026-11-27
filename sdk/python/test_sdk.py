@@ -158,6 +158,13 @@ class SDKTests(unittest.TestCase):
             self.assertEqual(self.calls[-1][1], "/api/v1/" + operation)
             self.assertEqual(json.loads(self.calls[-1][2]), body)
 
+    def test_vector_batch(self):
+        self.responses.append(FakeResponse({"object": "list", "data": []}))
+        data = {"store_id": ID, "model": "embedding", "entries": [{"entry_id": "a", "vector": [1], "text": "one"}]}
+        self.client.vector_upsert_batch(data)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(json.loads(self.calls[0][2]), {**data, "operation": "upsert_batch"})
+
     def test_vectors_scoped_crud_no_inference(self):
         self.responses.extend(FakeResponse({}) for _ in range(5))
         self.client.vector_create({"name": "index", "model": "embedding", "dimensions": 2}, idempotency_key="stable")

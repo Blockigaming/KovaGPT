@@ -71,6 +71,8 @@ declare
   owner_dimensions bigint;
   owner_bytes bigint;
   store_entries bigint;
+  batch_entry jsonb;
+  batch_result jsonb;
 begin
   perform pg_advisory_xact_lock(hashtextextended(p_owner::text,20260903204500));
   if p_owner is null or not kova_private.auth_user_exists(p_owner)
@@ -142,6 +144,25 @@ begin
         where store_id=s.id order by entry_id offset page*25 limit 26) t;
     return jsonb_build_object('object','list','data',case when jsonb_array_length(result)>25 then result-25 else result end,
       'page',page,'has_more',jsonb_array_length(result)>25);
+  elsif p_operation='upsert_batch' then
+    if p_input->>'model' is distinct from s.model or jsonb_typeof(p_input->'entries') is distinct from 'array'
+    then raise exception 'developer_vector_invalid'; end if;
+    if jsonb_array_length(p_input->'entries') not between 1 and 8
+      or octet_length((p_input->'entries')::text)>60000
+      or (select count(distinct v->>'entry_id') from jsonb_array_elements(p_input->'entries') v)<>jsonb_array_length(p_input->'entries')
+    then raise exception 'developer_vector_invalid'; end if;
+    result:='[]'::jsonb;
+    for batch_entry in select value from jsonb_array_elements(p_input->'entries') loop
+      if jsonb_typeof(batch_entry) is distinct from 'object' then raise exception 'developer_vector_invalid'; end if;
+      if exists(select 1 from jsonb_object_keys(batch_entry) k where k not in ('entry_id','vector','text','file_id'))
+      then raise exception 'developer_vector_invalid'; end if;
+      -- Reuse all single-entry authorization, content, dimension and quota checks.
+      -- Any exception aborts the enclosing statement, including earlier entries.
+      batch_result:=public.manage_developer_vector_stores_v1(p_owner,p_key,p_project,'upsert',
+        batch_entry||jsonb_build_object('store_id',s.id,'model',s.model));
+      result:=result||jsonb_build_array(batch_result);
+    end loop;
+    return jsonb_build_object('object','list','data',result);
   elsif p_operation in ('get_entry','delete_entry','upsert') then
     if coalesce(p_input->>'entry_id','') !~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$'
     then raise exception 'developer_vector_invalid'; end if;

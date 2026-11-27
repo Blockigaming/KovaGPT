@@ -1,5 +1,12 @@
 export type BatchOperation =
-  "chat/completions" | "agent-turns" | "responses" | "moderations" | "embeddings" | "decisions";
+  | "chat/completions"
+  | "agent-turns"
+  | "responses"
+  | "moderations"
+  | "embeddings"
+  | "decisions"
+  | "search"
+  | "analysis";
 export type BatchItem = {
   id: string;
   operation: BatchOperation;
@@ -25,7 +32,7 @@ export function parseDeveloperBatchRequest(
 ): BatchRequest;
 export function developerBatchCapability(
   operation: unknown,
-): "chat" | "moderation" | "embeddings" | "decisions";
+): "chat" | "moderation" | "embeddings" | "decisions" | "file_analysis";
 export function batchChargeTicks(value: unknown): number;
 export function batchBudgetTicks(value: unknown): number;
 export function assertBatchBudget(maximumTicks: number, itemTicks: number[]): void;

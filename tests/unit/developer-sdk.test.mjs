@@ -502,3 +502,15 @@ test("multipart SDK uploads match the server validator and preserve the stable r
   await assert.rejects(f.client.files.uploadMultipart(input), /idempotency_key_required/);
   assert.equal(f.calls.length, 1);
 });
+
+test("vector batch SDK sends one scoped atomic resource mutation", async () => {
+  const f = fixture(() => Response.json({ object: "list", data: [] }));
+  const data = {
+    store_id: "11111111-1111-4111-8111-111111111111",
+    model: "kova-embedding",
+    entries: [{ entry_id: "a", vector: [1], text: "one" }],
+  };
+  await f.client.vectorStores.upsertBatch(data);
+  assert.equal(f.calls.length, 1);
+  assert.deepEqual(JSON.parse(f.calls[0].body), { ...data, operation: "upsert_batch" });
+});

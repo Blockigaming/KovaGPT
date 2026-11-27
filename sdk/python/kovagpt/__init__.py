@@ -322,6 +322,9 @@ class Client:
     def vector_upsert(self, data):
         return self._vector_post("upsert", data)
 
+    def vector_upsert_batch(self, data):
+        return self._vector_post("upsert_batch", data)
+
     def vector_search(self, data):
         return self._vector_post("search", data)
 

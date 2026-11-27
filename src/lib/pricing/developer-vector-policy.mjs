@@ -76,6 +76,31 @@ export function parseDeveloperVectorRequest(method, params, body) {
         },
       };
     }
+    if (operation === "upsert_batch") {
+      exact(body, ["operation", "store_id", "model", "entries"]);
+      if (!Array.isArray(body.entries) || body.entries.length < 1 || body.entries.length > 8)
+        fail();
+      const store_id = id(body.store_id);
+      const alias = model(body.model);
+      const entries = body.entries.map((item) => {
+        exact(item, ["entry_id", "vector", "text", "file_id"]);
+        const { input } = parseDeveloperVectorRequest("POST", new URLSearchParams(), {
+          ...item,
+          operation: "upsert",
+          store_id,
+          model: alias,
+        });
+        return {
+          entry_id: input.entry_id,
+          vector: input.vector,
+          text: input.text,
+          ...(input.file_id ? { file_id: input.file_id } : {}),
+        };
+      });
+      if (new Set(entries.map((item) => item.entry_id)).size !== entries.length) fail();
+      if (new TextEncoder().encode(JSON.stringify(entries)).byteLength > 60000) fail();
+      return { operation, input: { store_id, model: alias, entries } };
+    }
     if (operation === "upsert") {
       exact(body, ["operation", "store_id", "entry_id", "model", "vector", "text", "file_id"]);
       if (

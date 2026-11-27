@@ -347,6 +347,31 @@ test("vector stores persist cosine retrieval, enforce scopes and erase linked fi
       vector: [0, 1, 0],
       text: "other text",
     });
+    const batch = [
+      { entry_id: "batch-a", vector: [1, 0, 0], text: "relevant", file_id: linked.id },
+      { entry_id: "batch-b", vector: [0, 1, 0], text: "document", file_id: linked.id },
+    ];
+    assert.equal((await run("upsert_batch", { ...base, entries: batch })).data.length, 2);
+    await assert.rejects(
+      run("upsert_batch", {
+        ...base,
+        entries: [
+          { ...batch[0], entry_id: "rollback" },
+          { ...batch[1], text: "not in the source" },
+        ],
+      }),
+      /vector_not_found/,
+    );
+    await assert.rejects(
+      run("get_entry", { store_id: store.id, entry_id: "rollback" }),
+      /vector_not_found/,
+    );
+    await assert.rejects(
+      run("upsert_batch", { ...base, entries: [batch[0], batch[0]] }),
+      /vector_invalid/,
+    );
+    await run("delete_entry", { store_id: store.id, entry_id: "batch-a" });
+    await run("delete_entry", { store_id: store.id, entry_id: "batch-b" });
     const search = await run("search", { ...base, vector: [1, 0, 0], limit: 2 });
     assert.equal(search.search_type, "cosine");
     assert.deepEqual(
