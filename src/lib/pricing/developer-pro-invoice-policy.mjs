@@ -80,3 +80,94 @@ export function normalizeDeveloperProInvoice(event, environment) {
     p_amount_paid: invoice.amount_paid,
   };
 }
+
+function processorId(value, prefix) {
+  const id = typeof value === "string" ? value : value?.id;
+  return typeof id === "string" &&
+    id.length <= 200 &&
+    new RegExp(`^${prefix}_[A-Za-z0-9_]+function processorId(value, prefix) {
+  const id = typeof value === "string" ? value : value?.id;
+).test(id)
+    ? id
+    : null;
+}
+
+export function developerProPaymentReference(proof, payments) {
+  if (payments?.has_more !== false || !Array.isArray(payments.data) || payments.data.length !== 1)
+    return null;
+  const entry = payments.data[0];
+  const payment = processorId(entry?.id, "inpay");
+  const intent = processorId(entry?.payment?.payment_intent, "pi");
+  if (
+    !payment ||
+    !intent ||
+    entry.object !== "invoice_payment" ||
+    entry.livemode !== true ||
+    entry.status !== "paid" ||
+    entry.currency !== "usd" ||
+    processorId(entry.invoice, "in") !== proof.p_invoice ||
+    entry.amount_paid !== proof.p_amount_paid ||
+    entry.payment?.type !== "payment_intent"
+  )
+    return null;
+  return { p_payment: payment, p_intent: intent };
+}
+
+export function qualifyDeveloperProCharge(proof, reference, intent) {
+  const charge = intent?.latest_charge;
+  const chargeId = processorId(charge, "ch");
+  if (
+    !chargeId ||
+    intent?.object !== "payment_intent" ||
+    processorId(intent.id, "pi") !== reference.p_intent ||
+    intent.livemode !== true ||
+    intent.status !== "succeeded" ||
+    intent.currency !== "usd" ||
+    processorId(intent.customer, "cus") !== proof.p_customer ||
+    intent.amount_received !== proof.p_amount_paid ||
+    charge?.object !== "charge" ||
+    charge.livemode !== true ||
+    charge.status !== "succeeded" ||
+    charge.paid !== true ||
+    charge.captured !== true ||
+    charge.currency !== "usd" ||
+    charge.amount_captured !== proof.p_amount_paid ||
+    charge.amount_refunded !== 0 ||
+    charge.refunded !== false ||
+    charge.disputed !== false ||
+    processorId(charge.customer, "cus") !== proof.p_customer ||
+    processorId(charge.payment_intent, "pi") !== reference.p_intent
+  )
+    return null;
+  return { ...reference, p_charge: chargeId };
+}
+
+export function normalizeDeveloperProReversal(event, environment) {
+  if (environment !== "live" || event?.livemode !== true) return null;
+  const object = event.data?.object;
+  const eventId = processorId(event.id, "evt");
+  if (!eventId || !object || object.livemode !== true) return null;
+  if (!Number.isSafeInteger(event.created) || event.created <= 0 || event.created > 253402300799)
+    return null;
+  let charge, reason;
+  if (
+    event.type === "charge.refunded" &&
+    object.object === "charge" &&
+    Number.isSafeInteger(object.amount_refunded) &&
+    object.amount_refunded > 0
+  ) {
+    charge = processorId(object.id, "ch");
+    reason = "refund";
+  } else if (event.type === "charge.dispute.created" && object.object === "dispute") {
+    charge = processorId(object.charge, "ch");
+    reason = "dispute";
+  } else return null;
+  return charge
+    ? {
+        p_event: eventId,
+        p_charge: charge,
+        p_reason: reason,
+        p_at: new Date(event.created * 1000).toISOString(),
+      }
+    : null;
+}

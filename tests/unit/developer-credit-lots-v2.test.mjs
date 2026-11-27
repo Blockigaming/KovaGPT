@@ -75,8 +75,8 @@ const recordInvoice = (
 ) =>
   value(
     db,
-    "select developer_record_paid_pro_invoice_v2($1,$2,$3,'sub_fixture',$4,$5,$6,$5,8000) result",
-    [event, invoice, customer, price, start, end],
+    "select developer_record_paid_pro_invoice_v2($1,$2,$3,'sub_fixture',$4,$5,$6,$5,8000,$7,$8,$9) result",
+    [event, invoice, customer, price, start, end, `inpay_${invoice}`, `pi_${invoice}`, `ch_${invoice}`],
   );
 const refresh = (db, at = now) =>
   value(db, "select developer_refresh_pro_v2($1,$2) result", [owner, at]);
@@ -289,6 +289,39 @@ test("active status without matching payment cannot mint included credits", asyn
     await privileged(db, "update developer_paid_pro_invoices_v2 set revoked_at=now()");
     assert.equal(await refresh(db), null);
     assert.equal(await balance(db, lot), 0);
+  } finally {
+    await db.close();
+  }
+});
+
+test("a verified refund or dispute blocks duplicate and out-of-order invoice eligibility", async () => {
+  const db = await fixture();
+  try {
+    const lot = await refresh(db);
+    assert.equal(await balance(db, lot), 8000);
+    const block = (event, charge, reason) =>
+      value(db, "select developer_record_pro_charge_block_v2($1,$2,$3,$4) result", [
+        event,
+        charge,
+        reason,
+        now,
+      ]);
+    assert.equal(await block("evt_refund", "ch_in_first", "refund"), true);
+    assert.equal(await block("evt_refund", "ch_in_first", "refund"), true);
+    assert.equal(await recordInvoice(db), false);
+    assert.equal(await refresh(db), null);
+    assert.equal(await balance(db, lot), 0);
+    assert.equal(await block("evt_dispute", "ch_in_second", "dispute"), true);
+    assert.equal(
+      await recordInvoice(
+        db,
+        "evt_second",
+        "in_second",
+        "2024-12-01T00:00:00Z",
+        "2025-01-01T00:00:00Z",
+      ),
+      false,
+    );
   } finally {
     await db.close();
   }
