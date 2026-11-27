@@ -84,6 +84,8 @@ import {
   type PendingAttachment,
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
+import { loadActiveChatTranscript, preloadConversationView } from "@/lib/preload-conversation-view";
+import { conversationLimitMessage, conversationLimitReached } from "@/lib/conversation-limits.mjs";
 import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
 import { type Settings, DEFAULT_SETTINGS, settingsTabForSection } from "@/lib/settings-types";
@@ -100,7 +102,7 @@ const CommandPalette = lazy(() =>
   import("@/components/CommandPalette").then((module) => ({ default: module.CommandPalette })),
 );
 const ActiveChatTranscript = lazy(() =>
-  import("@/components/ActiveChatTranscript").then((module) => ({
+  loadActiveChatTranscript().then((module) => ({
     default: module.ActiveChatTranscript,
   })),
 );
@@ -360,6 +362,10 @@ function KovaGPT() {
   const [tempChat, setTempChat] = useState(false);
   const [tempChatContext, setTempChatContext] = useState<TemporaryChatContext>("clean");
   const [tempChatStartOpen, setTempChatStartOpen] = useState(false);
+  // Warm the conversation view so the first message of a long chat is already loaded.
+  useEffect(() => {
+    preloadConversationView();
+  }, []);
   const temporaryTriggerRef = useRef<HTMLElement | null>(null);
   const temporaryReturnUrlRef = useRef<string | undefined>(undefined);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
@@ -1920,6 +1926,16 @@ function KovaGPT() {
       const requestHostedModel = existingConversation?.kova
         ? undefined
         : (queuedSend?.hostedModel ?? hostedModel);
+      if (
+        _retryAttempt === 0 &&
+        !retryConversationId &&
+        !editingMessage &&
+        existingConversation &&
+        conversationLimitReached(tier, existingConversation.messages.length)
+      ) {
+        toast.error(conversationLimitMessage(tier));
+        return;
+      }
       const isNewConversation = !retryConversationId && !existingConversation;
       const selectedWorkflowSkill = existingConversation?.skill ?? pendingWorkflowSkill;
 

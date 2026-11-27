@@ -18,13 +18,21 @@
   .kova-assistant .kova-empty-chat-content .kova-greeting {
     margin-block: auto;
     align-items: center;
-    /* The composer docks at the bottom, so centering in the leftover space sits
-       above the true middle of the screen. Nudge it down to the middle. */
-    translate: 0 clamp(24px, 8dvh, 80px);
+    /* Centered on the screen's own middle height, not in the space left above
+       the docked composer (which sits higher than the middle). */
+    position: fixed;
+    inset-inline: 0;
+    inset-block-start: 50dvh;
+    margin-block: 0;
+    translate: 0 -50%;
+    pointer-events: none;
   }
   /* With the keyboard open the greeting centers in the space above the composer. */
   .kova-assistant[data-keyboard-open="true"] .kova-empty-chat-content .kova-greeting {
+    position: static;
     translate: none;
+    margin-block: auto;
+    pointer-events: auto;
   }
   .kova-assistant .kova-empty-chat .kova-greeting h1 {
     display: flex;
@@ -176,7 +184,7 @@
         [data-slot="select-content"],
         [role="menu"],
         [role="listbox"]
-      ):not(.kova-profile-menu)
+      ):not(:where(.kova-profile-menu))
   ) {
     position: fixed !important;
     inset: 0 !important;
@@ -195,7 +203,7 @@
       [data-slot="select-content"],
       [role="menu"],
       [role="listbox"]
-    ):not(.kova-profile-menu) {
+    ):not(:where(.kova-profile-menu)) {
     box-shadow:
       0 0 0 100vmax rgb(0 0 0 / 0.4),
       var(--shadow-floating);
