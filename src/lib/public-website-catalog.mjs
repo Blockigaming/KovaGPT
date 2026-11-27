@@ -1215,7 +1215,7 @@ const developerPages = [
       ),
       section(
         "Check capabilities",
-        "Select a model appropriate to the documented operation and obtain a quote for the actual request. A consumer Thinking label and a public API model name are different interfaces.",
+        "Select a model appropriate to the documented operation and obtain a quote for the actual request. The catalog reports reasoning_efforts, web_search and inline_image_input; unsupported capabilities must not be assumed. Consumer Thinking labels are separate.",
       ),
     ],
     [link("Quickstart", "/developers/quickstart"), link("Responses", "/developers/responses")],
@@ -1223,16 +1223,16 @@ const developerPages = [
   ),
   page(
     "/developers/files",
-    "Developer file availability",
-    "Consumer attachments are outside the versioned public file-storage contract.",
+    "Developer Files API",
+    "Project-scoped private text files are supported in source, subject to explicit activation and key scope.",
     [
       section(
-        "No public file-store API",
-        "The documented versioned API does not provide public file storage or remote file input. Internal routes used by consumer chat or Library are not a supported substitute.",
+        "Private file lifecycle",
+        "POST /api/v1/files accepts filename, mimeType and text for a private project file, with a stable Idempotency-Key and files-scoped bearer key. GET /api/v1/files?page=0 lists files; GET and DELETE with ?id=<uuid> read and remove a file. File creation requires the developer file gate.",
       ),
       section(
-        "Use supported text input",
-        "If you are authorized to process a document, extract relevant text in your own application and use the documented text Responses input. Apply your own size, privacy, and access controls before sending it.",
+        "Supported formats and Responses",
+        "Plain text, Markdown, CSV and JSON are supported up to 32 KiB per file. Files expire after 30 days. Responses can reference up to four unique project file_ids; deletion or expiry invalidates the quote. Remote URLs, provider file IDs and consumer Library access are not supported.",
       ),
     ],
     [link("Responses", "/developers/responses"), link("Consumer file guide", "/features/files")],
@@ -1279,7 +1279,7 @@ const developerPages = [
     [
       section(
         "Current documented boundary",
-        "The source implements model discovery, signed quotes, text Responses, images, and embeddings behind developer authorization and budget checks. Operator enablement and current pricing remain release requirements.",
+        "The source implements model discovery, signed quotes, Responses, images, embeddings, key-scoped usage, private text files, and gated text moderation and hosted web search. Operator enablement, approved pricing, migration replay and provider verification remain release requirements.",
       ),
       section(
         "Before upgrading",
@@ -1296,11 +1296,11 @@ const developerPages = [
     [
       section(
         "Implemented contract",
-        "Versioned model discovery, quotes, Responses, images, and embeddings have repository implementations. Execution still depends on operator-enabled pricing, scoped credentials, and account budgets.",
+        "Versioned model discovery, quotes, Responses, images, embeddings, private text files, key-scoped usage and gated moderation have repository implementations. Execution depends on operator-enabled pricing, scoped credentials and account budgets. GET /api/v1/usage?limit=25&offset=0 lists only the authenticating key's request records.",
       ),
       section(
         "Excluded surfaces",
-        "Consumer files, connected accounts, and internal application endpoints are not a public API merely because the web application uses them. No official SDK is claimed.",
+        "Consumer files, connected accounts and internal application endpoints are not public developer APIs. A first-party JavaScript/TypeScript SDK exists in the repository; no public package release is claimed. Agents and outgoing developer webhooks remain incomplete.",
       ),
     ],
     [
@@ -1312,11 +1312,11 @@ const developerPages = [
   page(
     "/developers/responses",
     "Responses API",
-    "Use the implemented text Responses contract with a scoped key and quote.",
+    "Use the bounded Responses contract with a scoped key and quote.",
     [
       section(
         "Request boundary",
-        "POST /api/v1/responses accepts a public model name, text input, optional instructions, required max_output_tokens, and optional stream. Obtain a signed quote for the identical operation and input before dispatch.",
+        "POST /api/v1/responses accepts a public model name, text input, optional instructions, required max_output_tokens and optional stream. Approved contracts may additionally support reasoning effort, structured output, client function definitions, private file_ids or one low-detail inline PNG. Obtain a signed quote for the identical operation and input before dispatch.",
       ),
       section(
         "Retries and accounting",
@@ -1337,7 +1337,7 @@ const developerPages = [
       ),
       section(
         "Availability and limits",
-        "The public model catalog and enabled provider determine availability. This page does not promise image editing, consumer Library access, or a public file-upload API.",
+        "The public model catalog and enabled provider determine availability. This page does not promise image editing, consumer Library access or unrestricted file uploads.",
       ),
     ],
     [link("Models", "/developers/models"), link("Rate limits", "/developers/rate-limits")],
@@ -1350,11 +1350,11 @@ const developerPages = [
     [
       section(
         "Public endpoint status",
-        "A standalone public search endpoint is not part of the documented versioned API contract. Do not call an internal consumer search route as though it were a stable developer API.",
+        "A standalone public search endpoint is not implemented. The gated Responses contract supports one native web_search tool with low search_context_size, max_tool_calls from 1 to 3, and stream false. It requires an approved search pricing contract and enabled provider capability.",
       ),
       section(
         "Plan an integration",
-        "If your integration needs external retrieval, define its own authorized source access and provide relevant text through the supported Responses contract. Review the source rights and privacy implications.",
+        "Discover web_search support from GET /api/v1/models before requesting a quote for the exact search-enabled Responses input. The gate remains disabled until provider metering is qualified. Do not substitute internal consumer search routes.",
       ),
     ],
     [link("API boundary", "/developers/docs"), link("Responses", "/developers/responses")],
