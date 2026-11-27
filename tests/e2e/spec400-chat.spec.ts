@@ -303,7 +303,8 @@ test("landscape topbar keeps navigation and actions inside lateral safe areas", 
   await expect(topbar).toBeVisible();
   await expect(title).toHaveText("KovaGPT");
   await expect(topbar.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
-  await expect(topbar.getByRole("button", { name: "New chat", exact: true })).toBeVisible();
+  // Home has no chat to leave: the temporary-chat hat is the last action.
+  await expect(topbar.getByRole("button", { name: "New chat", exact: true })).toHaveCount(0);
   await expect(
     topbar.getByRole("button", { name: "Start temporary chat", exact: true }),
   ).toBeVisible();

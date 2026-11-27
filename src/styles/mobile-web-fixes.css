@@ -27,6 +27,11 @@
     translate: 0 -50%;
     pointer-events: none;
   }
+  /* The greeting no longer takes part in the layout, so the composer docks to
+     the bottom by itself. */
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content > .kova-empty-composer {
+    margin-block-start: auto;
+  }
   /* With the keyboard open the greeting centers in the space above the composer. */
   .kova-assistant[data-keyboard-open="true"] .kova-empty-chat-content .kova-greeting {
     position: static;
@@ -143,10 +148,8 @@
   .kova-assistant .spec400-composer .spec400-composer-toolbar {
     column-gap: 0;
   }
-  .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-thinking-toggle,
-  .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-consumer-model-trigger,
-  .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-home-model-placeholder {
-    margin-inline-start: -6px;
+  .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-thinking-toggle {
+    padding-inline-start: 2px;
   }
   .kova-assistant .spec400-composer .spec400-composer-speech-actions {
     order: 2;

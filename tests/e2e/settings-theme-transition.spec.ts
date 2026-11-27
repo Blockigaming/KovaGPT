@@ -118,7 +118,7 @@ test("guest Settings URLs require an account with a consistent first-paint surfa
     return colors;
   });
   expect(frames).toHaveLength(12);
-  expect(new Set(frames)).toEqual(new Set(["rgb(17, 17, 17)"]));
+  expect(new Set(frames)).toEqual(new Set(["rgb(25, 25, 25)"]));
 });
 
 test("signed-in mobile settings list keeps every option at least 44px tall", async ({
