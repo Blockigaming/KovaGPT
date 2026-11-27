@@ -29,7 +29,10 @@ export function batchChargeTicks(value: unknown): number;
 export function batchBudgetTicks(value: unknown): number;
 export function assertBatchBudget(maximumTicks: number, itemTicks: number[]): void;
 export function developerBatchRequestKey(batch: string, item: string): string;
-export function developerResponseJobView(value: unknown, expectedId: string): {
+export function developerResponseJobView(
+  value: unknown,
+  expectedId: string,
+): {
   object: "response.job";
   id: string;
   status: "queued" | "running" | "completed" | "uncertain" | "canceled";

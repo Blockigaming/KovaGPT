@@ -382,13 +382,9 @@ export class KovaGPT {
           }),
           262144,
         ),
-      list: async ({ signal } = {}) =>
-        smallJson(await this.#request("response-jobs", { signal })),
+      list: async ({ signal } = {}) => smallJson(await this.#request("response-jobs", { signal })),
       retrieve: async (id, { signal } = {}) =>
-        smallJson(
-          await this.#request("response-jobs?id=" + responseJobId(id), { signal }),
-          262144,
-        ),
+        smallJson(await this.#request("response-jobs?id=" + responseJobId(id), { signal }), 262144),
     });
     const automationPath = (id, item) => {
       const valid = (value) =>

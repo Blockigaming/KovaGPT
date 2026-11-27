@@ -427,7 +427,10 @@ test("response jobs use a stable ID, explicit quote and budget, and separate ret
   assert.deepEqual(JSON.parse(f.calls[0].body), { ...job, operation: "create" });
   assert.equal(f.calls[2].url, "https://kovagpt.com/api/v1/response-jobs?id=" + id);
   assert.deepEqual(JSON.parse(f.calls[3].body), { operation: "cancel", id });
-  await assert.rejects(f.client.responseJobs.create({ ...job, quote_token: "" }), /budget_required/);
+  await assert.rejects(
+    f.client.responseJobs.create({ ...job, quote_token: "" }),
+    /budget_required/,
+  );
   await assert.rejects(f.client.responseJobs.retrieve("../keys"), /response_job_id_invalid/);
   assert.equal(f.calls.length, 4);
 });

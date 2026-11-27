@@ -206,7 +206,10 @@ test("background Responses accept one explicitly authorized text invocation", ()
   assert.equal(job("POST", "", { operation: "cancel", id }).operation, "cancel");
   assert.throws(() => job("GET", "id=" + id + "&item_id=" + item), /batch_invalid/);
   assert.throws(() => job("POST", "", request), /batch_invalid/);
-  assert.throws(() => job("POST", "", { ...body, input: { ...input, stream: true } }), /batch_invalid/);
+  assert.throws(
+    () => job("POST", "", { ...body, input: { ...input, stream: true } }),
+    /batch_invalid/,
+  );
   assert.throws(() => job("POST", "", { operation: "resume", id }), /batch_invalid/);
 });
 
