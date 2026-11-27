@@ -1,6 +1,6 @@
 .public-website {
   color-scheme: dark;
-  --public-bg: #111111;
+  --public-bg: #191919; /* same as the signed-in app background */
   --public-card: #0b0b0b;
   --public-muted: #a5a5a5;
   min-height: 100dvh;

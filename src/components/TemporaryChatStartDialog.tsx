@@ -34,7 +34,7 @@ export function TemporaryChatStartDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-ui-reference="chatgpt.temporary-chat.dialogcontent"
-        className="sm:max-w-lg"
+        className="border-0 outline-none sm:max-w-lg"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           restoreDialogFocus(returnFocusTarget, returnFocusUrl, startedRef.current);

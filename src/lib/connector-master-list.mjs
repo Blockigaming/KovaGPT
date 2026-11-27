@@ -12,7 +12,6 @@ const requested = [
   ["google-calendar", "Google Calendar"],
   ["google-bigquery", "Google Cloud BigQuery"],
   ["google-drive", "Google Drive"],
-  ["hubspot", "HubSpot"],
   ["hyperframes-heygen", "HyperFrames by HeyGen"],
   ["interactive-brokers", "Interactive Brokers (IBKR)"],
   ["linear", "Linear"],

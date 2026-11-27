@@ -159,7 +159,8 @@ export function MobileTopBar({
               </Button>
             ) : null}
 
-            {newChatButton}
+            {/* Home has no chat to leave, so the hat is the last action on the right. */}
+            {chatStarted ? newChatButton : null}
           </div>
         )}
       </div>

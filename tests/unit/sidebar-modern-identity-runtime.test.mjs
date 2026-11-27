@@ -172,7 +172,12 @@ test("mobile navigation uses the KovaGPT brand for every destination", () => {
 test("mobile menu and new-chat actions preserve callbacks and expose the controlled drawer", () => {
   const calls = [];
   const tree = renderTopbar(
-    { onOpenSidebar: () => calls.push("menu"), onNewChat: () => calls.push("new") },
+    {
+      onOpenSidebar: () => calls.push("menu"),
+      onNewChat: () => calls.push("new"),
+      // Home shows the temporary-chat hat instead; New chat appears inside a chat.
+      chatStarted: true,
+    },
     { isLoaded: true, isSignedIn: true },
   );
   const menu = all(tree).find((node) => node.props["aria-label"] === "Open menu");
