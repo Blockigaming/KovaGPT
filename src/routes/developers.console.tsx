@@ -52,6 +52,7 @@ const CSV_FIELDS = [
   "cached_input_tokens",
   "image_input_tokens",
   "output_tokens",
+  "web_search_calls",
   "final_customer_charge",
   "maximum_reserved_charge",
   "currency",
@@ -1641,6 +1642,11 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                       {currentSummary.data.measuredRequests.toLocaleString()} requests with measured
                       tokens
                     </p>
+                    {(currentSummary.data.measuredSearchRequests ?? 0) > 0 && (
+                      <p className="text-sm tabular-nums">
+                        {currentSummary.data.webSearchCalls.toLocaleString()} recorded search calls
+                      </p>
+                    )}
                     {(["days", "models", "services", "statuses"] as const).map((group) => {
                       const rows = currentSummary.data[group];
                       const max = Math.max(1, ...rows.map((row) => row.requests));
@@ -1674,6 +1680,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                                         .reduce((sum, value) => sum + value, 0)
                                         .toLocaleString()} measured tokens`
                                     : "No measured tokens"}
+                                  {(row.measuredSearchRequests ?? 0) > 0 &&
+                                    ` · ${row.webSearchCalls.toLocaleString()} search calls`}
                                   {row.charges.length
                                     ? ` · ${row.charges.map((charge) => `${charge.amount} ${charge.currency} minor units`).join(" · ")}`
                                     : ""}

@@ -4,6 +4,8 @@ const tokenFields = ["input_tokens", "cached_input_tokens", "image_input_tokens"
 const newTotals = () => ({
   requests: 0,
   measuredRequests: 0,
+  measuredSearchRequests: 0,
+  webSearchCalls: 0,
   tokens: Object.fromEntries(tokenFields.map((key) => [key, 0])),
   charges: Object.create(null),
 });
@@ -38,6 +40,11 @@ function add(totals, row) {
     }
   }
   if (measured) totals.measuredRequests++;
+  const calls = usage?.web_search_calls;
+  if (typeof calls === "number" && Number.isSafeInteger(calls) && calls >= 0) {
+    totals.measuredSearchRequests++;
+    totals.webSearchCalls += calls;
+  }
   if (row.final_customer_charge == null || !/^[A-Z]{3}$/.test(row.currency)) return;
   const value = chargeTicks(row.final_customer_charge);
   if (value === null) return;

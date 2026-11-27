@@ -130,6 +130,11 @@ export async function meterProviderRequest(
   if (!current) return input.send();
   if (runtimeEnv("KOVA_DEVELOPER_BILLING_ENABLED") !== "true")
     throw new Error("developer_billing_disabled");
+  if (
+    input.body.max_tool_calls !== undefined &&
+    runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true"
+  )
+    throw new Error("developer_web_search_unavailable");
   const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
   const call = current.nextCall++;
   if (call >= 16) throw new Error("developer_call_limit");

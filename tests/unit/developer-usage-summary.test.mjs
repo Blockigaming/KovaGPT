@@ -50,3 +50,18 @@ test("empty summaries never imply metered usage or a charge", () => {
   assert.deepEqual(summary.charges, []);
   assert.deepEqual(summary.models, []);
 });
+
+test("search calls are reported separately from token quantities and absent measurements", () => {
+  const summary = summarizeDeveloperUsage([
+    { ...row, authoritative_usage: { input_tokens: 4, web_search_calls: 2 } },
+    { ...row, authoritative_usage: { web_search_calls: 0 } },
+    { ...row, authoritative_usage: { web_search_calls: -1 } },
+    { ...row },
+  ]);
+  assert.equal(summary.measuredRequests, 1);
+  assert.equal(summary.measuredSearchRequests, 2);
+  assert.equal(summary.webSearchCalls, 2);
+  assert.equal(summary.tokens.input_tokens, 4);
+  assert.equal(summary.models[0].webSearchCalls, 2);
+  assert.equal(summary.days[0].measuredSearchRequests, 2);
+});

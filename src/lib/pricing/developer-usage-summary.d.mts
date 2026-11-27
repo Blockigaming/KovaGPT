@@ -1,6 +1,8 @@
 export type DeveloperUsageTotals = {
   requests: number;
   measuredRequests: number;
+  measuredSearchRequests: number;
+  webSearchCalls: number;
   tokens: Record<
     "input_tokens" | "cached_input_tokens" | "image_input_tokens" | "output_tokens",
     number
