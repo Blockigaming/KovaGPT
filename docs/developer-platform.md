@@ -59,3 +59,7 @@ The server selects the required tool, rejects mixed hosted tools, and reserves t
 OpenAI's standard moderation endpoint is free to use; Kova's own reviewed infrastructure and collection-cost policy determines any customer charge. This implementation does not establish a commercial rate. The staged workspace migration adds the new key scope, and `KOVA_DEVELOPER_MODERATION_ENABLED` plus the configured provider capability must be enabled only after migration replay, provider verification and owner review. Image moderation, bulk classification and specialized restricted classifiers are not part of this implementation.
 
 Reference: https://developers.openai.com/api/reference/resources/moderations/methods/create
+
+## Filtered model discovery and SDK parity
+
+`GET /api/v1/models?id=<public-model>` returns the same catalog envelope as the list endpoint but contains only the matching alias's capability entries visible to the authenticating key. An unknown or out-of-scope alias returns the same 404. Invalid, duplicate and unknown query parameters are rejected. The JavaScript SDK now exposes this selector, the read-only usage list/detail operations, and quoted text moderation, with TypeScript declarations for reasoning and bounded hosted-search requests. These additions do not activate any provider or publish the private SDK package.

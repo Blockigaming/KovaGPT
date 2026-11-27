@@ -225,3 +225,36 @@ test("SDK forwards real AbortSignals through fetch and terminates an in-flight s
     clearTimeout(keepAlive);
   }
 });
+
+test("SDK exposes scoped usage reads and model filtering without quote or inference calls", async () => {
+  const id = "55555555-5555-4555-8555-555555555555";
+  const f = fixture(() => Response.json({ data: [] }));
+  await f.client.usage.list({ limit: 100, offset: 10000 });
+  await f.client.usage.retrieve(id);
+  await f.client.models({ id: "kova-argon-4.6" });
+  assert.deepEqual(
+    f.calls.map((call) => [call.url, call.method]),
+    [
+      ["https://kovagpt.com/api/v1/usage?limit=100&offset=10000", "GET"],
+      [`https://kovagpt.com/api/v1/usage?id=${id}`, "GET"],
+      ["https://kovagpt.com/api/v1/models?id=kova-argon-4.6", "GET"],
+    ],
+  );
+  for (const invalid of [{ limit: 101 }, { limit: 0 }, { offset: 10001 }, { offset: 1.5 }])
+    await assert.rejects(f.client.usage.list(invalid), /usage_pagination_invalid/);
+  await assert.rejects(f.client.usage.retrieve("x&offset=2"), /usage_id_invalid/);
+  await assert.rejects(f.client.models({ id: "../quotes" }), /model_id_invalid/);
+  assert.equal(f.calls.length, 3);
+});
+test("SDK moderation uses the same exact signed quote and budget boundary", async () => {
+  const f = fixture();
+  const body = { model: "kova-moderation", input: "Synthetic test" };
+  await assert.rejects(f.client.moderations.create(body, {}), /budget_required/);
+  await f.client.moderations.create(body, options);
+  assert.equal(f.calls.length, 2);
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "moderations", input: body });
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/moderations");
+  assert.deepEqual(JSON.parse(f.calls[1].body), body);
+  assert.equal(f.calls[1].headers["Idempotency-Key"], options.idempotencyKey);
+  assert.match(f.calls[1].headers["X-Kova-Quote"], /^e30\./);
+});

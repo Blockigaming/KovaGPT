@@ -677,3 +677,27 @@ test("key usage detail is isolated by account, project, key and request id", asy
   assert.equal(f.state.calls.length, 0);
   assert.equal(f.state.contexts.length, 0);
 });
+
+test("model catalog detail returns only approved key-scoped aliases and rejects ambiguous selectors", async () => {
+  const f = await fixture();
+  const contract = f.state.version.public_price_configuration.contracts[0];
+  f.state.version.public_price_configuration.contracts.push(
+    { ...contract, capability: "streaming" },
+    { ...contract, publicModel: "kova-hidden", capability: "embeddings" },
+  );
+  const read = (query = "") =>
+    f.module.developerModels(f.identity, new Request(`https://kovagpt.com/api/v1/models${query}`));
+  const listed = await (await read()).json();
+  assert.deepEqual(listed.data.map((model) => model.id), ["kova-fast"]);
+  const detail = await (await read("?id=kova-fast")).json();
+  assert.deepEqual(detail.data, listed.data);
+  for (const id of ["kova-hidden", "kova-missing"]) {
+    const missing = await read(`?id=${id}`);
+    assert.equal(missing.status, 404);
+    assert.equal((await missing.json()).error.code, "developer_model_not_found");
+  }
+  for (const query of ["?id=", "?id=../models", "?id=kova-fast&id=kova-hidden", "?page=1"])
+    await assert.rejects(() => read(query), /developer_(model|input)_invalid/);
+  assert.equal(f.state.calls.length, 0);
+  assert.equal(f.state.contexts.length, 0);
+});

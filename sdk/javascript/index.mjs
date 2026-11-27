@@ -1,4 +1,4 @@
-const operations = new Set(["responses", "images", "embeddings"]);
+const operations = new Set(["responses", "images", "embeddings", "moderations"]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
     super(code);
@@ -117,6 +117,34 @@ export class KovaGPT {
     this.embeddings = Object.freeze({
       create: (input, options) => this.run("embeddings", input, options),
     });
+    this.moderations = Object.freeze({
+      create: (input, options) => this.run("moderations", input, options),
+    });
+    this.usage = Object.freeze({
+      list: async ({ limit = 25, offset = 0, signal } = {}) => {
+        if (
+          !Number.isSafeInteger(limit) ||
+          limit < 1 ||
+          limit > 100 ||
+          !Number.isSafeInteger(offset) ||
+          offset < 0 ||
+          offset > 10000
+        )
+          fail("usage_pagination_invalid");
+        return smallJson(
+          await this.#request(`usage?limit=${limit}&offset=${offset}`, { signal }),
+          131072,
+        );
+      },
+      retrieve: async (id, { signal } = {}) => {
+        if (
+          typeof id !== "string" ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+        )
+          fail("usage_id_invalid");
+        return smallJson(await this.#request(`usage?id=${id}`, { signal }));
+      },
+    });
     const fileId = (id) => {
       if (
         typeof id !== "string" ||
@@ -183,8 +211,18 @@ export class KovaGPT {
     }
     return response;
   }
-  async models({ signal } = {}) {
-    return smallJson(await this.#request("models", { signal }));
+  async models({ id, signal } = {}) {
+    if (
+      id !== undefined &&
+      (typeof id !== "string" ||
+        id.length < 2 ||
+        id.length > 80 ||
+        !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(id))
+    )
+      fail("model_id_invalid");
+    return smallJson(
+      await this.#request(id === undefined ? "models" : `models?id=${id}`, { signal }),
+    );
   }
   async quote(kind, input, { signal } = {}) {
     operation(kind);

@@ -1,4 +1,4 @@
-export type Operation = "responses" | "images" | "embeddings";
+export type Operation = "responses" | "images" | "embeddings" | "moderations";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -26,7 +26,9 @@ export interface ResponsesInput {
   instructions?: string;
   max_output_tokens: number;
   stream?: boolean;
-  tools?: FunctionTool[];
+  tools?: FunctionTool[] | [{ type: "web_search"; search_context_size: "low" }];
+  max_tool_calls?: 1 | 2 | 3;
+  reasoning?: { effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" };
   tool_choice?: "auto" | "none" | "required" | { type: "function"; name: string };
   parallel_tool_calls?: boolean;
   text?: {
@@ -50,6 +52,34 @@ export interface EmbeddingsInput {
   model: string;
   input: string | string[];
   dimensions?: number;
+}
+export interface ModerationsInput {
+  model: string;
+  input: string;
+}
+export interface DeveloperModel {
+  id: string;
+  capability: string;
+  reasoning_efforts: string[];
+  web_search: boolean;
+  inline_image_input: boolean;
+}
+export interface DeveloperUsage {
+  id: string;
+  public_model: string;
+  capability: string;
+  currency: string;
+  settlement_state: string;
+  maximum_reserved_charge: number | string | null;
+  final_customer_charge: number | string | null;
+  created_at: string;
+  settled_at: string | null;
+  input_tokens: number | null;
+  cached_input_tokens: number | null;
+  image_input_tokens: number | null;
+  output_tokens: number | null;
+  web_search_calls: number | null;
+  moderation_requests: number | null;
 }
 export class KovaError extends Error {
   code: string;
@@ -88,24 +118,39 @@ export class KovaGPT {
   readonly responses: { create(input: ResponsesInput, options: Budget): Promise<Response> };
   readonly images: { generate(input: ImagesInput, options: Budget): Promise<Response> };
   readonly embeddings: { create(input: EmbeddingsInput, options: Budget): Promise<Response> };
-  models(options?: { signal?: AbortSignal }): Promise<{
+  readonly moderations: { create(input: ModerationsInput, options: Budget): Promise<Response> };
+  readonly usage: {
+    list(options?: { limit?: number; offset?: number; signal?: AbortSignal }): Promise<{
+      object: "list";
+      data: DeveloperUsage[];
+      has_more: boolean;
+      next_offset: number | null;
+      amount_unit: "currency_minor_unit";
+    }>;
+    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<{
+      object: "usage";
+      data: DeveloperUsage;
+      amount_unit: "currency_minor_unit";
+    }>;
+  };
+  models(options?: { id?: string; signal?: AbortSignal }): Promise<{
     object: "list";
-    data: { id: string; capability: string }[];
+    data: DeveloperModel[];
     pricingVersion: string;
   }>;
   quote(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | EmbeddingsInput,
+    input: ResponsesInput | ImagesInput | EmbeddingsInput | ModerationsInput,
     options?: { signal?: AbortSignal },
   ): Promise<Quote>;
   execute(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | EmbeddingsInput,
+    input: ResponsesInput | ImagesInput | EmbeddingsInput | ModerationsInput,
     options: Budget & { quote: Quote },
   ): Promise<Response>;
   run(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | EmbeddingsInput,
+    input: ResponsesInput | ImagesInput | EmbeddingsInput | ModerationsInput,
     options: Budget,
   ): Promise<Response>;
 }

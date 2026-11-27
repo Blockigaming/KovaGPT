@@ -408,47 +408,65 @@ export async function developerKeyUsage(identity: DeveloperIdentity, request: Re
     amount_unit: "currency_minor_unit",
   });
 }
+export async function developerModels(identity: DeveloperIdentity, request: Request) {
+  const params = new URL(request.url).searchParams;
+  for (const key of params.keys()) {
+    if (key !== "id" || params.getAll(key).length !== 1)
+      throw new Error("developer_input_invalid");
+  }
+  const id = params.get("id");
+  if (
+    id !== null &&
+    (id.length < 2 || id.length > 80 || !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(id))
+  )
+    throw new Error("developer_model_invalid");
+  const pricing = await currentPricing(identity);
+  const contracts = pricing.public_price_configuration?.contracts;
+  const models = Array.isArray(contracts)
+    ? contracts
+        .filter(
+          (entry: { publicModel: string; capability: string; provider: string }) =>
+            (id === null || entry.publicModel === id) &&
+            identity.capabilities.includes(entry.capability) &&
+            (entry.capability !== "moderation" || developerModerationEnabled()) &&
+            entry.provider ===
+              getAiProviderConfig(entry.capability as ProviderCapability).provider,
+        )
+        .map(
+          (entry: {
+            publicModel: string;
+            capability: string;
+            allowedReasoningEfforts?: string[];
+            maximumInlineImageTokens?: number;
+            meter?: string;
+            provider: string;
+          }) => ({
+            id: entry.publicModel,
+            capability: entry.capability,
+            reasoning_efforts: entry.allowedReasoningEfforts ?? [],
+            web_search:
+              entry.meter === "responses_search" &&
+              entry.provider === "openai" &&
+              runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") === "true" &&
+              getAiProviderConfig("chat").capabilities?.includes("web_search") === true,
+            inline_image_input:
+              Number.isSafeInteger(entry.maximumInlineImageTokens) &&
+              Number(entry.maximumInlineImageTokens) > 0,
+          }),
+        )
+    : [];
+  if (id !== null && models.length === 0)
+    return developerJson(
+      { error: { code: "developer_model_not_found", message: "developer model not found" } },
+      404,
+    );
+  return developerJson({ object: "list", data: models, pricingVersion: pricing.id });
+}
 export async function handleDeveloperApi(request: Request, operation: string) {
   try {
     const identity = await authenticateDeveloper(request);
     if (operation === "usage") return await developerKeyUsage(identity, request);
-    if (operation === "models") {
-      const pricing = await currentPricing(identity);
-      const contracts = pricing.public_price_configuration?.contracts;
-      const models = Array.isArray(contracts)
-        ? contracts
-            .filter(
-              (entry: { capability: string; provider: string }) =>
-                identity.capabilities.includes(entry.capability) &&
-                (entry.capability !== "moderation" || developerModerationEnabled()) &&
-                entry.provider ===
-                  getAiProviderConfig(entry.capability as ProviderCapability).provider,
-            )
-            .map(
-              (entry: {
-                publicModel: string;
-                capability: string;
-                allowedReasoningEfforts?: string[];
-                maximumInlineImageTokens?: number;
-                meter?: string;
-                provider: string;
-              }) => ({
-                id: entry.publicModel,
-                capability: entry.capability,
-                reasoning_efforts: entry.allowedReasoningEfforts ?? [],
-                web_search:
-                  entry.meter === "responses_search" &&
-                  entry.provider === "openai" &&
-                  runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") === "true" &&
-                  getAiProviderConfig("chat").capabilities?.includes("web_search") === true,
-                inline_image_input:
-                  Number.isSafeInteger(entry.maximumInlineImageTokens) &&
-                  Number(entry.maximumInlineImageTokens) > 0,
-              }),
-            )
-        : [];
-      return developerJson({ object: "list", data: models, pricingVersion: pricing.id });
-    }
+    if (operation === "models") return await developerModels(identity, request);
     if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
       throw new Error("developer_json_required");
     const body = await readBoundedJsonObject(request, 65536);
