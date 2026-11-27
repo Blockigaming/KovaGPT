@@ -316,9 +316,7 @@ const publicUsage = (row: Record<string, unknown>) => {
       : {};
   const dimension = (name: string) => {
     const value = usage[name];
-    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
-      ? value
-      : null;
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
   };
   return {
     ...rest,
