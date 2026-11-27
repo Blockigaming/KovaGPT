@@ -81,9 +81,7 @@ export function DeveloperFilesPanel({
         uploadFile.size > 32768
       )
         throw new Error("Choose a supported text file of 1–32768 bytes.");
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(
-        await uploadFile.arrayBuffer(),
-      );
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(await uploadFile.arrayBuffer());
       if (!active.current) return;
       uploadRequest.current ??= crypto.randomUUID();
       const params = new URLSearchParams({ project: projectId, key: uploadKey });

@@ -327,3 +327,34 @@ test("reasoning settings require an explicitly approved model contract and the s
     /billing_reasoning_contract_invalid/,
   );
 });
+
+test("inline vision requires a reviewed token upper bound and cannot bypass reservation", () => {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  const at = new Date("2026-09-05");
+  const image = {
+    type: "input_image",
+    detail: "low",
+    image_url:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+  };
+  f.request.body.input = [{ role: "user", content: [image] }];
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_dimensions_unsupported/,
+  );
+  contract.maximumInlineImageTokens = 100;
+  const quote = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(quote.quote.maximumReservedCharge, prepared().quote.maximumReservedCharge);
+  contract.maximumInlineImageTokens = contract.maximumUsage.input_tokens;
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_input_bound_exceeded/,
+  );
+  contract.maximumInlineImageTokens = 100;
+  f.request.body.input[0].content.push(image);
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_dimensions_unsupported/,
+  );
+});

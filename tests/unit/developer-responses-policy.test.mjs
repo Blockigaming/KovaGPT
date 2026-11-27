@@ -136,3 +136,46 @@ test("reasoning effort is explicit, bounded and cannot introduce other provider 
     );
   }
 });
+
+test("inline vision accepts one bounded PNG and rejects external URLs and unsupported media", () => {
+  const image = {
+    type: "input_image",
+    image_url:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+    detail: "low",
+  };
+  const body = {
+    ...input,
+    input: [
+      {
+        role: "user",
+        content: [{ type: "input_text", text: "Describe this." }, image],
+      },
+    ],
+  };
+  const parsed = parseDeveloperInput("responses", body);
+  assert.deepEqual(parsed.body.input[0].content[1], image);
+  for (const invalid of [
+    { ...image, detail: "high" },
+    { ...image, image_url: "https://example.invalid/image.png" },
+    { ...image, file_id: "file_external" },
+    { ...image, image_url: "data:image/png;base64,AAAA" },
+  ]) {
+    assert.throws(
+      () =>
+        parseDeveloperInput("responses", {
+          ...body,
+          input: [{ role: "user", content: [invalid] }],
+        }),
+      /responses_invalid/,
+    );
+  }
+  assert.throws(
+    () =>
+      parseDeveloperInput("responses", {
+        ...body,
+        input: [{ role: "user", content: [image, image] }],
+      }),
+    /responses_invalid/,
+  );
+});

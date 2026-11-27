@@ -1,4 +1,5 @@
 import { quoteRequest, reconcileCharge, PricingUnavailableError } from "./cost-plus.mjs";
+import { developerInlineImage } from "./developer-responses-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -75,6 +76,15 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
+  const inlineImageTokens = contract.maximumInlineImageTokens;
+  if (
+    inlineImageTokens !== undefined &&
+    (contract.meter !== "responses_tokens" ||
+      !integer(inlineImageTokens) ||
+      inlineImageTokens < 1 ||
+      inlineImageTokens > contract.maximumUsage.input_tokens)
+  )
+    fail("billing_vision_contract_invalid");
   const allowedEfforts = contract.allowedReasoningEfforts;
   if (
     allowedEfforts !== undefined &&
@@ -107,14 +117,35 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       request.body.max_output_tokens > contract.maximumUsage.output_tokens
     )
       fail("billing_output_unbounded");
-    // Hosted tools and media have additional charges; no token-only guess is accepted.
+    // Only an explicitly reviewed, token-metered inline image is supported.
+    // Hosted tools and other media remain fail-closed.
+    const images = Array.isArray(request.body.input)
+      ? request.body.input.flatMap((item) =>
+          Array.isArray(item?.content)
+            ? item.content.filter((part) => part?.type === "input_image")
+            : [],
+        )
+      : [];
+    const encodedInput = JSON.stringify(request.body.input);
+    const imageMarkers = encodedInput?.match(/"type"\s*:\s*"input_image"/g)?.length ?? 0;
     if (
       request.body.tools?.some((tool) => tool.type !== "function") ||
-      /"type"\s*:\s*"(?:input_image|input_file|input_audio)"/.test(
-        JSON.stringify(request.body.input),
-      )
+      /"type"\s*:\s*"(?:input_file|input_audio)"/.test(encodedInput) ||
+      imageMarkers !== images.length ||
+      images.length > 1
     )
       fail("billing_dimensions_unsupported");
+    if (images.length) {
+      if (!inlineImageTokens) fail("billing_dimensions_unsupported");
+      try {
+        developerInlineImage(images[0]);
+      } catch {
+        fail("billing_dimensions_unsupported");
+      }
+      const requestBytes = new TextEncoder().encode(JSON.stringify(request.body)).byteLength;
+      if (requestBytes + inlineImageTokens > contract.maximumUsage.input_tokens)
+        fail("billing_input_bound_exceeded");
+    }
   } else if (contract.meter === "embedding_tokens" && request.capability !== "embeddings")
     fail("billing_contract_invalid");
   else if (contract.meter === "image_tokens" && request.capability !== "image_generation")

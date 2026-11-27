@@ -25,3 +25,7 @@ Verification covers SQL ownership and privilege boundaries without service-role 
 ## Model-specific reasoning effort
 
 Responses accept an optional `reasoning: { "effort": "high" }` field. An approved pricing contract must explicitly list the supported values in `allowedReasoningEfforts`. The model catalog exposes these as `reasoning_efforts`, and the playground displays only the approved options for the selected model. Changing the effort invalidates the current quote. Reasoning remains within the approved output-token ceiling and is included in the signed request and metered settlement. No additional provider capability is enabled by default.
+
+## Bounded inline vision
+
+A Responses user message may contain one inline PNG image of up to 32 KiB and 512 × 512 pixels, with `detail: "low"`. Remote image URLs, provider file IDs, other media and multiple images are rejected. Enable only for a model/provider contract with a reviewed `maximumInlineImageTokens` upper bound and verified input-token pricing; the server reserves sufficient input tokens for both request bytes and the image bound. The Playground shows an image selector only when the approved model catalog advertises inline-image support. Larger images, other formats and full vision compatibility remain outside this initial implementation.

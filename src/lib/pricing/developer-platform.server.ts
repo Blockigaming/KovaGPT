@@ -387,10 +387,14 @@ export async function handleDeveloperApi(request: Request, operation: string) {
                 publicModel: string;
                 capability: string;
                 allowedReasoningEfforts?: string[];
+                maximumInlineImageTokens?: number;
               }) => ({
                 id: entry.publicModel,
                 capability: entry.capability,
                 reasoning_efforts: entry.allowedReasoningEfforts ?? [],
+                inline_image_input:
+                  Number.isSafeInteger(entry.maximumInlineImageTokens) &&
+                  Number(entry.maximumInlineImageTokens) > 0,
               }),
             )
         : [];

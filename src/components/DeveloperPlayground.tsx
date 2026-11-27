@@ -4,7 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 type Operation = "responses" | "images" | "embeddings";
-type Model = { id: string; capability: string; reasoningEfforts: string[] };
+type Model = {
+  id: string;
+  capability: string;
+  reasoningEfforts: string[];
+  inlineImageInput: boolean;
+};
 type Quote = {
   quoteToken: string;
   currency: string;
@@ -42,6 +47,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
   const [effort, setEffort] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const imageInput = useRef<HTMLInputElement>(null);
   const [size, setSize] = useState("1024x1024");
   const [quality, setQuality] = useState("medium");
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -124,6 +131,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       setModel("");
       setModels([]);
       setEffort("");
+      setImageFile(null);
+      if (imageInput.current) imageInput.current.value = "";
       const result = record(await request("models", controller));
       const catalog = Array.isArray(result.data)
         ? result.data.flatMap((entry): Model[] => {
@@ -133,6 +142,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   {
                     id: row.id,
                     capability: row.capability,
+                    inlineImageInput: row.inline_image_input === true,
                     reasoningEfforts: Array.isArray(row.reasoning_efforts)
                       ? row.reasoning_efforts.filter(
                           (effort): effort is string =>
@@ -152,15 +162,33 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     });
 
   const eligible = models.filter((item) => item.capability === capability[operation]);
-  const efforts = eligible.find((item) => item.id === model)?.reasoningEfforts ?? [];
+  const selectedModel = eligible.find((item) => item.id === model);
+  const efforts = selectedModel?.reasoningEfforts ?? [];
+  const acceptsImage = operation === "responses" && selectedModel?.inlineImageInput === true;
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
+      let responseInput: string | Record<string, unknown>[] = prompt;
+      if (acceptsImage && imageFile) {
+        if (imageFile.type !== "image/png" || imageFile.size < 1 || imageFile.size > 32768)
+          throw new Error("Select a PNG image of up to 32 KiB.");
+        const bytes = new Uint8Array(await imageFile.arrayBuffer());
+        const dataUrl = "data:image/png;base64," + btoa(String.fromCharCode(...bytes));
+        responseInput = [
+          {
+            role: "user",
+            content: [
+              { type: "input_text", text: prompt },
+              { type: "input_image", image_url: dataUrl, detail: "low" },
+            ],
+          },
+        ];
+      }
       const input =
         operation === "responses"
           ? {
               model,
-              input: prompt,
+              input: responseInput,
               max_output_tokens: Number(maxOutput),
               stream: false,
               ...(effort && efforts.includes(effort) ? { reasoning: { effort } } : {}),
@@ -265,6 +293,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setModels([]);
                 setModel("");
                 setEffort("");
+                setImageFile(null);
+                if (imageInput.current) imageInput.current.value = "";
                 setDispatched(false);
                 resetQuote();
               }}
@@ -293,6 +323,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setOperation(next);
                 setModel(models.find((item) => item.capability === capability[next])?.id ?? "");
                 setEffort("");
+                setImageFile(null);
+                if (imageInput.current) imageInput.current.value = "";
                 setDispatched(false);
                 resetQuote();
               }}
@@ -311,6 +343,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               onChange={(event) => {
                 setModel(event.target.value);
                 setEffort("");
+                setImageFile(null);
+                if (imageInput.current) imageInput.current.value = "";
                 setDispatched(false);
                 resetQuote();
               }}
@@ -348,6 +382,22 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 disabled={busy}
                 onChange={(event) => {
                   setMaxOutput(event.target.value);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              />
+            </label>
+          )}
+          {acceptsImage && (
+            <label className="block min-w-0 space-y-1 text-sm">
+              <span>Image (optional, PNG up to 32 KiB and 512 × 512)</span>
+              <Input
+                ref={imageInput}
+                type="file"
+                accept="image/png"
+                disabled={busy}
+                onChange={(event) => {
+                  setImageFile(event.target.files?.[0] ?? null);
                   setDispatched(false);
                   resetQuote();
                 }}
