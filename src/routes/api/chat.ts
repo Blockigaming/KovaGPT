@@ -192,21 +192,23 @@ const CHART_INSTRUCTION = "";
 // Files appear in chat as a card that opens a side preview, so a file needs its name.
 const FILE_OUTPUT_INSTRUCTION = `
 
-When the user asks you to make, create, build or write a file (a web page, game, script, stylesheet, config, component, data file or similar), put the complete file in one fenced code block whose opening line has the language and a quoted filename, for example: \`\`\`html filename="game.html". Use a short, descriptive lowercase filename with the right extension. A self-contained web page or game goes in a single .html file with its CSS and JavaScript inline and no external network requests. Keep the explanation around the file brief, and do not repeat the file's contents outside the block. Ordinary short code examples that are not files need no filename.`;
+When the user asks you to make, create, build or write a file (a web page, game, script, stylesheet, config, component, data file or similar), put the complete file in one fenced code block whose opening line has the language and a quoted filename, for example: \`\`\`html filename="game.html". Use a short, descriptive lowercase filename with the right extension. A self-contained web page or game goes in a single .html file with its CSS and JavaScript inline and no external network requests. Keep the explanation around the file brief, and do not repeat the file's contents outside the block. For PDF requests, use a named pdf fence containing only the document's Markdown text (an empty fence for a blank page); the application generates the actual PDF bytes. Never invent PDF binary syntax or base64. Ordinary short code examples that are not files need no filename.`;
 const COMPACT_CHART_INSTRUCTION = `
 
-When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
+When the user requests a chart, graph or plot, render it by emitting a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
 const FINAL_CHART_INSTRUCTION = `
 
 Use double-dollar TeX for inline equations and put double-dollar delimiters on separate lines for display equations. Leave ordinary currency as plain text.
 
-When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, horizontal-bar, stacked-bar, line, step, area, stacked-area, pie, donut, scatter, radar, heatmap, histogram, percent-stacked-bar, funnel, candlestick, bubble, treemap, sankey, waterfall and range. Waterfall rows are signed changes in order; range rows need numeric low and high. Sankey uses data rows with source and target labels and positive numeric value, with no directed cycles. Bubble charts need a numeric xKey, one y series in keys, and a nonnegative sizeKey (default size). For treemaps, the first numeric series represents the size of each category. Use individual numeric observations for a histogram, nonnegative series for percentages and funnels, and named open/high/low/close values for each candle. More types: grouped-bar, diverging-bar, dot, lollipop, slope (two keys), bump, streamgraph, sparkline, small-multiples, polar-area, connected-scatter, function and combo (first key bars, rest lines) use xKey and keys; strip, box, violin, density and ridgeline use keys as columns of raw observations; calendar-heatmap uses an xKey of YYYY-MM-DD dates; sunburst and icicle use an xKey of "A/B/C" paths with a positive value key; alluvial and chord use source/target/value rows; gantt rows need start and end (numbers or YYYY-MM-DD); timeline rows need a date; ohlc and volume use open/high/low/close (plus volume); error-bars need an error value; confidence-band and interval need low and high; contour, surface and mesh need a full x/y/z grid; scatter-3d needs x/y/z; vector-field needs x/y/dx/dy; choropleth uses an xKey of country or US state names with a value key; point-map, route-map (in order) and density-map need lat and lon. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
+When the user requests a chart, graph or plot, render it by emitting a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, horizontal-bar, stacked-bar, line, step, area, stacked-area, pie, donut, scatter, radar, heatmap, histogram, percent-stacked-bar, funnel, candlestick, bubble, treemap, sankey, waterfall and range. Waterfall rows are signed changes in order; range rows need numeric low and high. Sankey uses data rows with source and target labels and positive numeric value, with no directed cycles. Bubble charts need a numeric xKey, one y series in keys, and a nonnegative sizeKey (default size). For treemaps, the first numeric series represents the size of each category. Use individual numeric observations for a histogram, nonnegative series for percentages and funnels, and named open/high/low/close values for each candle. More types: grouped-bar, diverging-bar, dot, lollipop, slope (two keys), bump, streamgraph, sparkline, small-multiples, polar-area, connected-scatter, function and combo (first key bars, rest lines) use xKey and keys; strip, box, violin, density and ridgeline use keys as columns of raw observations; calendar-heatmap uses an xKey of YYYY-MM-DD dates; sunburst and icicle use an xKey of "A/B/C" paths with a positive value key; alluvial and chord use source/target/value rows; gantt rows need start and end (numbers or YYYY-MM-DD); timeline rows need a date and a descriptive label (use a timeline for historical events rather than invented quantities); ohlc and volume use open/high/low/close (plus volume); error-bars need an error value; confidence-band and interval need low and high; contour, surface and mesh need a full x/y/z grid; scatter-3d needs x/y/z; vector-field needs x/y/dx/dy; choropleth uses an xKey of country or US state names with a value key; point-map, route-map (in order) and density-map need lat and lon. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
 // The file-output protocol is only sent when the turn plausibly asks for a file, so
 // ordinary Free turns keep their token headroom.
 const FILE_OUTPUT_REQUEST =
-  /\b(?:files?|web ?pages?|websites?|web ?sites?|landing page|games?|apps?|scripts?|html|css|javascript|typescript|python|components?|config|program|code|svg|readme)\b/i;
+  /\b(?:files?|web ?pages?|websites?|web ?sites?|landing page|games?|apps?|scripts?|html|css|javascript|typescript|python|components?|config|program|code|svg|pdf|readme)\b/i;
 const RICH_RESPONSE_REQUEST =
   /\b(?:charts?|plots?|graphs?|heatmaps?|radar|candlesticks?|sankey|waterfalls?|treemaps?|histograms?|diagrams?|flowcharts?|maps?|quizz(?:es)?|quiz|flashcards?|simulations?|memory game|sticker packs?|patterns?|narration|read aloud|interactive|file bundle|zip archive|latex|equations?)\b/i;
+const RICH_INTERACTIVE_REQUEST =
+  /\b(?:quizzes|quiz|flashcards?|simulations?|memory game|sticker packs?|patterns?|narration|read aloud|interactive|file bundle|zip archive|diagrams?|flowcharts?|maps?)\b/i;
 const CREATOR_INSTRUCTION = "";
 const MAX_IMAGE_PROVIDER_RESPONSE_BYTES = 16 * 1024 * 1024;
 const MAX_TOOL_HOP_RESPONSE_BYTES = 2 * 1024 * 1024;
@@ -1677,6 +1679,8 @@ export const Route = createFileRoute("/api/chat")({
               clientTool === "data_analysis" ||
               clientTool === "file_analysis" ||
               RICH_RESPONSE_REQUEST.test(lastText);
+            const useRichInteractiveCatalog =
+              clientTool === "study" || RICH_INTERACTIVE_REQUEST.test(lastText);
             const body: Record<string, unknown> = {
               model,
               stream: true,
@@ -1714,7 +1718,7 @@ export const Route = createFileRoute("/api/chat")({
                     (useRichResponseCatalog ? FINAL_CHART_INSTRUCTION : COMPACT_CHART_INSTRUCTION) +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
-                    (useRichResponseCatalog
+                    (useRichInteractiveCatalog
                       ? INTERACTIVE_UI_INSTRUCTIONS
                       : COMPACT_INTERACTIVE_UI_INSTRUCTIONS) +
                     (request.headers.get("X-Kova-Response-Followups") === "1"
@@ -2473,6 +2477,11 @@ export const Route = createFileRoute("/api/chat")({
                             enc.encode(sseEvent(responseSourcesDelta(webSources))),
                           );
                         }
+                        if (browserActivity) {
+                          controller.enqueue(
+                            enc.encode(sseEvent(activityToSseDelta(browserActivity))),
+                          );
+                        }
                         for (const a of activityEvents) {
                           controller.enqueue(
                             enc.encode(
@@ -2879,10 +2888,13 @@ export const Route = createFileRoute("/api/chat")({
               // If we already committed to SSE (activities/confirms staged),
               // deliver the error inside the stream so the client renders it
               // instead of hanging.
-              if (hasStreamedActivity) {
+              if (hasStreamedActivity || browserActivity) {
                 const enc = new TextEncoder();
                 const stream = new ReadableStream({
                   start(controller) {
+                    if (browserActivity) {
+                      controller.enqueue(enc.encode(sseEvent(activityToSseDelta(browserActivity))));
+                    }
                     for (const a of activityEvents) {
                       controller.enqueue(
                         enc.encode(
@@ -3161,7 +3173,26 @@ export const Route = createFileRoute("/api/chat")({
                       if (frame !== sseDone()) controller.enqueue(value);
                     }
                   }
-                  await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
+                  // Keep the transport open while usage settles, but do not release
+                  // DONE until accounting has finished.
+                  let accountingKeepalive: ReturnType<typeof setTimeout>;
+                  const keepAccountingAlive = () => {
+                    if (request.signal.aborted) return;
+                    try {
+                      if ((controller.desiredSize ?? 0) > 0)
+                        controller.enqueue(enc.encode(": accounting\n\n"));
+                    } catch {
+                      // Stop scheduling if the reader has disconnected.
+                      return;
+                    }
+                    accountingKeepalive = setTimeout(keepAccountingAlive, 10_000);
+                  };
+                  accountingKeepalive = setTimeout(keepAccountingAlive, 10_000);
+                  try {
+                    await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
+                  } finally {
+                    clearTimeout(accountingKeepalive);
+                  }
                   if (!request.signal.aborted) controller.enqueue(enc.encode(sseDone()));
                 } catch (error) {
                   const providerTimedOut = isProviderTimeoutError(error);

@@ -102,6 +102,7 @@ const EXTENSION_LANGUAGE = {
   csv: "csv",
   tsv: "tsv",
   txt: "text",
+  pdf: "pdf",
 };
 
 const LANGUAGE_LABEL = {
@@ -133,6 +134,7 @@ const LANGUAGE_LABEL = {
   csv: "CSV",
   tsv: "TSV",
   text: "Text",
+  pdf: "PDF",
 };
 
 const MIME = {
@@ -144,6 +146,7 @@ const MIME = {
   json: "application/json",
   csv: "text/csv",
   xml: "application/xml",
+  pdf: "application/pdf",
 };
 
 /** Language, labels and preview support for a named file. */
@@ -155,8 +158,9 @@ export function describeFile(name, fenceLanguage, content, complete = true) {
     (fenceLanguage && /^[a-z0-9+#-]{1,20}$/u.test(fenceLanguage) ? fenceLanguage : "text");
   const languageLabel =
     LANGUAGE_LABEL[language] ?? (extension ? extension.toUpperCase() : language.toUpperCase());
-  const writing = language === "markdown" || language === "text";
-  const preview = language === "html" || language === "svg" || language === "markdown";
+  const writing = language === "markdown" || language === "text" || language === "pdf";
+  const preview =
+    language === "html" || language === "svg" || language === "markdown" || language === "pdf";
   const stem =
     name
       .replace(/\.[^.]+$/u, "")
@@ -169,7 +173,8 @@ export function describeFile(name, fenceLanguage, content, complete = true) {
     languageLabel,
     category: writing ? "Document" : "Code",
     preview,
-    mime: (MIME[language] ?? "text/plain") + ";charset=utf-8",
+    mime:
+      language === "pdf" ? "application/pdf" : (MIME[language] ?? "text/plain") + ";charset=utf-8",
     content,
     complete,
     lines: content ? content.split("\n").length : 0,

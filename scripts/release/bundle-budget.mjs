@@ -48,6 +48,12 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 648_944,
       gzip: 201_025,
     }),
+    Object.freeze({
+      head: "9f54a3f97c18ba2f3c9d52cbe2e39ed5ea360f85",
+      source: "PR #771 CI production build, run 45829792418",
+      raw: 651_002,
+      gzip: 201_727,
+    }),
   ]),
   deviceSettingsAdjustment:
     "On 2026-11-08 the clean main client build measured 200,896 gzip bytes, already above the previous 200,000 ceiling. The device-specific Settings candidate measured 200,991 locally and 201,025 in CI. A 201,500 ceiling leaves 475 bytes (0.24%) above the measured CI candidate; raw, home-route, omega and chart ceilings remain unchanged.",
@@ -104,7 +110,15 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 62_373,
       gzip: 21_670,
     }),
+    Object.freeze({
+      head: "9f54a3f97c18ba2f3c9d52cbe2e39ed5ea360f85",
+      source: "PR #771 CI production build, run 45829792418",
+      raw: 62_583,
+      gzip: 21_805,
+    }),
   ]),
+  responseFileBrowserAdjustment:
+    "PR #771 run 45829792418 measured the home route at 62,583 raw / 21,805 gzip bytes and the shared entry at 651,002 raw / 201,727 gzip bytes after lazy browser handoff and transport deferral. The 21,950 and 202,000 gzip ceilings retain 145 and 273 bytes of headroom (0.67% and 0.14%). Raw, omega and chart ceilings and fail-closed chunk identification remain unchanged.",
   composerAvailabilityAdjustment:
     "The immediate composer and consolidated UI correction in PR #762 measured 62,373 raw / 21,670 gzip bytes in CI after deferring the streaming transport. The initial gzip ceiling of 21,800 leaves 130 bytes (0.60%) of headroom over that measured build. The 62,750 raw limit, all other chunk ceilings, and chunk identification checks remain unchanged.",
   apiAudioAdjustment:
@@ -124,8 +138,8 @@ export const BUNDLE_BASELINE = Object.freeze({
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_750, gzip: 21_800 }),
-  main: Object.freeze({ raw: 670_000, gzip: 201_500 }),
+  initial: Object.freeze({ raw: 62_750, gzip: 21_950 }),
+  main: Object.freeze({ raw: 670_000, gzip: 202_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
 });

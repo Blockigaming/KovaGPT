@@ -144,7 +144,7 @@ export function InteractiveBlock({
 
   return (
     <section
-      className="kova-interactive my-3 min-w-0 max-w-full rounded-2xl border border-border bg-card p-4 text-card-foreground [overflow-wrap:anywhere] sm:p-5"
+      className="kova-interactive my-3 min-w-0 max-w-full rounded-2xl bg-card p-4 text-card-foreground [overflow-wrap:anywhere] sm:p-5"
       aria-labelledby={headingId}
       data-interactive-type={block.type}
       data-interactive-state={submitted ? "submitted" : locked ? "readonly" : "open"}
@@ -261,7 +261,7 @@ function FormBody({
   const [other, setOther] = useState(submittedOther ?? initialOther ?? "");
   const choiceOnly = !hasFields && block.actions.length > 0;
   const choiceClass =
-    "h-auto min-h-11 min-w-0 w-full justify-start gap-3 rounded-xl border border-border bg-transparent px-3 py-2.5 text-left font-normal whitespace-normal [overflow-wrap:anywhere] aria-pressed:bg-accent aria-pressed:opacity-100 sm:min-h-10";
+    "h-auto min-h-11 min-w-0 w-full justify-start gap-3 rounded-xl border-0 bg-muted/40 px-3 py-2.5 text-left font-normal whitespace-normal [overflow-wrap:anywhere] aria-pressed:bg-accent aria-pressed:opacity-100 sm:min-h-10";
   const letterClass =
     "flex size-7 shrink-0 items-center justify-center rounded-full border border-muted-foreground/60 text-xs font-semibold leading-none";
 
@@ -293,7 +293,7 @@ function FormBody({
           <Button
             key={action.id}
             type="button"
-            variant={choiceOnly ? "outline" : action.style === "primary" ? "default" : "outline"}
+            variant={choiceOnly ? "ghost" : action.style === "primary" ? "default" : "outline"}
             data-choice-letter={choiceOnly ? String.fromCharCode(65 + index) : undefined}
             aria-label={choiceOnly ? action.label : undefined}
             disabled={locked}
@@ -320,7 +320,7 @@ function FormBody({
           <>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               data-choice-letter={String.fromCharCode(65 + block.actions.length)}
               aria-label="Other"
               className={choiceClass}

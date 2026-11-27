@@ -88,7 +88,13 @@ test("crossing the phone and tablet boundaries preserves the draft and model men
     await trigger.click();
     const menu = page.getByRole("dialog", { name: "Select model", exact: true });
     await expect(menu).toBeVisible();
-    await expect.poll(async () => (await menu.boundingBox())?.width).toBeCloseTo(282, 0);
+    if (width < 768) {
+      // Phones anchor the popup directly above the chat bar at the bar's width.
+      const bar = (await page.locator(".spec400-composer:visible").first().boundingBox())!;
+      await expect.poll(async () => (await menu.boundingBox())?.width).toBeCloseTo(bar.width, 0);
+      const above = (await menu.boundingBox())!;
+      expect(above.y + above.height).toBeLessThanOrEqual(bar.y);
+    } else await expect.poll(async () => (await menu.boundingBox())?.width).toBeCloseTo(282, 0);
     const box = (await menu.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
@@ -298,3 +304,272 @@ for (const theme of ["light", "dark"] as const) {
     await page.screenshot({ path: info.outputPath("rotated-draft.png") });
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`${theme}: generated file and expanded activity stay contained on narrow screens`, async ({
+    page,
+  }) => {
+    const filename = `${"long-generated-filename-".repeat(5)}.pdf`;
+    const response = [
+      "A document with **important information**.",
+      `~~~pdf filename="${filename}"`,
+      "Document body",
+      "~~~",
+    ].join("\n\n");
+    await fixture(page, theme, true, true, "plus", {
+      savedMessages: [
+        {
+          id: "ratio-generated-file",
+          role: "assistant",
+          content: response,
+          workedMs: 2000,
+          activities: [
+            {
+              activityId: "ratio-parent",
+              tool: "github_search",
+              label: "Reviewed a very long repository and document path",
+              status: "done",
+              at: 0,
+            },
+            {
+              parentId: "ratio-parent",
+              tool: "file_search",
+              label: "Located document",
+              detail: "unbroken-document-path-".repeat(8),
+              count: 12345,
+              total: 99999,
+              status: "done",
+              durationMs: 123456,
+            },
+          ],
+        },
+        {
+          id: "ratio-interrupted-file",
+          role: "assistant",
+          content: '~~~pdf filename="unfinished-letter.pdf"\nPartial document',
+          generationStatus: "failed",
+        },
+      ],
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const ready = page.locator('.kova-assistant-message .kova-file-card[data-state="ready"]');
+    const failed = page.locator('.kova-file-card[data-state="interrupted"]');
+    await expect(ready).toBeVisible();
+    await expect(failed).toContainText("Generation interrupted. Retry the response.");
+    await expect(failed.getByRole("button")).toBeDisabled();
+    const group = page.locator(".kova-step-group").first();
+    await expect(group).toHaveAttribute("open", "");
+    await expect(group.getByText("Located document")).toBeVisible();
+    const emphasis = page.locator(".kova-response-emphasis").first();
+    await expect(emphasis).toBeVisible();
+    expect(
+      await emphasis.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const parent = getComputedStyle(element.parentElement!);
+        return style.color !== parent.color && style.fontWeight === parent.fontWeight;
+      }),
+    ).toBe(true);
+    for (const selector of [
+      ".kova-file-card",
+      ".kova-file-card-open",
+      ".kova-file-card-title",
+      ".kova-file-card-meta",
+      ".kova-step-group",
+      ".kova-activity-row",
+      ".kova-activity-progress",
+    ]) {
+      const boxes = await page.locator(selector).evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const element = node as HTMLElement;
+          const box = element.getBoundingClientRect();
+          return {
+            left: box.left,
+            right: box.right,
+            viewport: document.documentElement.clientWidth,
+            overflow: element.scrollWidth - element.clientWidth,
+            verticalOverflow: element.scrollHeight - element.clientHeight,
+          };
+        }),
+      );
+      expect(boxes.length, selector).toBeGreaterThan(0);
+      for (const box of boxes) {
+        expect(box.left, selector).toBeGreaterThanOrEqual(-1);
+        expect(box.right, selector).toBeLessThanOrEqual(box.viewport + 1);
+        expect(box.overflow, selector).toBeLessThanOrEqual(1);
+        expect(box.verticalOverflow, selector).toBeLessThanOrEqual(1);
+      }
+    }
+    const viewport = page.viewportSize()!;
+    if (viewport.width < 480) {
+      const download = ready.getByRole("button", { name: `Download ${filename}`, exact: true });
+      await expect(download).toHaveCSS("opacity", "1");
+      const box = (await download.boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    await group.locator("summary").click();
+    await expect(group).not.toHaveAttribute("open", "");
+    await group.locator("summary").click();
+    await expect(group).toHaveAttribute("open", "");
+    expect(
+      await page.locator("html").evaluate((element) => element.scrollWidth - element.clientWidth),
+    ).toBeLessThanOrEqual(1);
+  });
+}
+
+test("mobile browser handoff fits its response and opens a contained workspace", async ({
+  page,
+}) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 1024, "mobile and tablet browser handoff");
+  await fixture(page, "dark", true, false, "plus");
+  await page.route("**/api/chat", (route) => {
+    const observedAt = Date.now();
+    const sessionId = "99999999-9999-4999-8999-999999999999";
+    const frame = (delta: object) => `data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`;
+    const body =
+      frame({
+        kind: "activity",
+        activity_id: "ratio-browser-session",
+        tool: "browser_interact",
+        label: "Opened a browser session",
+        status: "running",
+        browser: {
+          sessionId,
+          tabCount: 1,
+          observedAt,
+          expiresAt: observedAt + 300000,
+          hostname: `${"long-hostname-".repeat(4)}example.test`,
+          previewPath: `/api/browser/preview/${sessionId}`,
+        },
+      }) +
+      frame({ content: "The website needs your input." }) +
+      "data: [DONE]\n\n";
+    return route.fulfill({ status: 200, contentType: "text/event-stream", body });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT", exact: true }).fill("Open browser");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  const card = page.locator(".kova-response-browser-card");
+  await expect(card).toBeVisible();
+  await expect(card.getByText("Open browser", { exact: true })).toBeVisible();
+  const geometry = await card.evaluate((element) => {
+    const root = element.getBoundingClientRect();
+    return {
+      left: root.left,
+      right: root.right,
+      viewport: document.documentElement.clientWidth,
+      overflow: element.scrollWidth - element.clientWidth,
+      children: Array.from(element.children).map((child) => {
+        const box = child.getBoundingClientRect();
+        return {
+          left: box.left - root.left,
+          right: root.right - box.right,
+          top: box.top - root.top,
+          bottom: root.bottom - box.bottom,
+        };
+      }),
+    };
+  });
+  expect(geometry.left).toBeGreaterThanOrEqual(0);
+  expect(geometry.right).toBeLessThanOrEqual(geometry.viewport + 1);
+  expect(geometry.overflow).toBeLessThanOrEqual(1);
+  for (const child of geometry.children) {
+    for (const distance of Object.values(child)) expect(distance).toBeGreaterThanOrEqual(-1);
+  }
+  await card.click();
+  const dialog = page.getByRole("dialog", { name: "Cloud browser", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Take over", exact: true })).toBeVisible();
+  const close = dialog.getByRole("button", { name: "Close browser workspace", exact: true });
+  await expectReachable(close, 0, viewport.height);
+  const box = (await dialog.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(-1);
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+  await close.click();
+  await expect(dialog).toBeHidden();
+  await expect(card).toBeFocused();
+});
+
+test("a browser request without a URL keeps its address form within the chat", async ({ page }) => {
+  await fixture(page, "dark", true, false, "plus");
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      status: 400,
+      json: {
+        error: "Include one public HTTPS link for Cloud Browser to open.",
+        code: "cloud_browser_url_required",
+        stage: "cloud_browser",
+        retryable: false,
+      },
+    }),
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page
+    .getByRole("textbox", { name: "Message KovaGPT", exact: true })
+    .fill("Open cloud browser");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  const form = page.locator(".kova-browser-destination-form");
+  await expect(form).toBeVisible();
+  const input = form.getByRole("textbox", { name: "Website address" });
+  const button = form.getByRole("button", { name: "Open browser", exact: true });
+  await expect(button).toBeDisabled();
+  await input.fill("https://example.com");
+  await expect(button).toBeEnabled();
+  const dimensions = await form.evaluate((element) => ({
+    overflow: element.scrollWidth - element.clientWidth,
+    pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  }));
+  expect(dimensions.overflow).toBeLessThanOrEqual(1);
+  expect(dimensions.pageOverflow).toBeLessThanOrEqual(1);
+  const box = (await button.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+});
+
+test("a generated blank PDF renders its real page without distorting the mobile preview", async ({
+  page,
+}) => {
+  await fixture(page, "dark", true, true, "plus", {
+    savedMessages: [
+      {
+        id: "ratio-blank-pdf",
+        role: "assistant",
+        content: 'Your file is ready.\n\n~~~pdf filename="blank-letter.pdf"\n~~~',
+      },
+    ],
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const card = page.locator('.kova-file-card[data-state="ready"]');
+  await expect(card).toBeVisible();
+  await card.locator(".kova-file-card-open").click();
+  const pane = page.locator(".kova-file-pane");
+  await expect(pane).toBeVisible();
+  await expect(pane.getByText("Page 1 of 1", { exact: true })).toBeVisible();
+  const canvas = pane.locator("canvas");
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
+  const dimensions = await canvas.evaluate((element) => {
+    const bitmap = element as HTMLCanvasElement;
+    const rect = bitmap.getBoundingClientRect();
+    return {
+      bitmapRatio: bitmap.width / bitmap.height,
+      displayedRatio: rect.width / rect.height,
+      left: rect.left,
+      right: rect.right,
+      viewport: document.documentElement.clientWidth,
+    };
+  });
+  expect(dimensions.bitmapRatio).toBeCloseTo(612 / 792, 2);
+  expect(dimensions.displayedRatio).toBeCloseTo(dimensions.bitmapRatio, 2);
+  expect(dimensions.left).toBeGreaterThanOrEqual(-1);
+  expect(dimensions.right).toBeLessThanOrEqual(dimensions.viewport + 1);
+  const close = pane.getByRole("button", { name: "Close preview", exact: true });
+  await expectReachable(close, 0, page.viewportSize()!.height);
+  await close.click();
+  await expect(pane).toBeHidden();
+});
