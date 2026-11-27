@@ -1221,24 +1221,36 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                 </div>
                 <fieldset>
                   <legend>New key capabilities</legend>
-                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation", "decisions"]
-                    .filter((scope) => (scope !== "moderation" || data?.moderationEnabled) && (scope !== "decisions" || data?.decisionsEnabled))
+                  {[
+                    "chat",
+                    "streaming",
+                    "image_generation",
+                    "embeddings",
+                    "files",
+                    "moderation",
+                    "decisions",
+                  ]
+                    .filter(
+                      (scope) =>
+                        (scope !== "moderation" || data?.moderationEnabled) &&
+                        (scope !== "decisions" || data?.decisionsEnabled),
+                    )
                     .map((scope) => (
-                    <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={scopes.includes(scope)}
-                        onChange={(event) =>
-                          setScopes(
-                            event.target.checked
-                              ? [...scopes, scope]
-                              : scopes.filter((item) => item !== scope),
-                          )
-                        }
-                      />
-                      {scope}
-                    </label>
-                  ))}
+                      <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={scopes.includes(scope)}
+                          onChange={(event) =>
+                            setScopes(
+                              event.target.checked
+                                ? [...scopes, scope]
+                                : scopes.filter((item) => item !== scope),
+                            )
+                          }
+                        />
+                        {scope}
+                      </label>
+                    ))}
                 </fieldset>
                 <label className="block">
                   Key name
@@ -1456,7 +1468,15 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                   className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                 >
                   <option value="">All services</option>
-                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation", "decisions"].map((item) => (
+                  {[
+                    "chat",
+                    "streaming",
+                    "image_generation",
+                    "embeddings",
+                    "files",
+                    "moderation",
+                    "decisions",
+                  ].map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -1654,7 +1674,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     )}
                     {(currentSummary.data.measuredModerationRequests ?? 0) > 0 && (
                       <p className="text-sm tabular-nums">
-                        {currentSummary.data.moderationRequests.toLocaleString()} moderation requests
+                        {currentSummary.data.moderationRequests.toLocaleString()} moderation
+                        requests
                       </p>
                     )}
                     {(["days", "models", "services", "statuses"] as const).map((group) => {

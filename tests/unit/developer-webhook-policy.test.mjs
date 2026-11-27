@@ -37,10 +37,24 @@ test("DNS answers must be canonical public IPv4 addresses", () => {
   for (const value of ["8.8.8.8", "1.1.1.1", "93.184.216.34"])
     assert.equal(publicWebhookIPv4(value), true);
   for (const value of [
-    "0.0.0.0", "127.0.0.1", "169.254.169.254", "10.0.0.1", "172.16.0.1",
-    "192.168.1.1", "100.64.0.1", "192.0.0.1", "192.0.2.1", "198.18.0.1",
-    "198.51.100.1", "203.0.113.1", "224.0.0.1", "255.255.255.255", "::1",
-    "::ffff:127.0.0.1", "010.0.0.1", "8.8.8.256",
+    "0.0.0.0",
+    "127.0.0.1",
+    "169.254.169.254",
+    "10.0.0.1",
+    "172.16.0.1",
+    "192.168.1.1",
+    "100.64.0.1",
+    "192.0.0.1",
+    "192.0.2.1",
+    "198.18.0.1",
+    "198.51.100.1",
+    "203.0.113.1",
+    "224.0.0.1",
+    "255.255.255.255",
+    "::1",
+    "::ffff:127.0.0.1",
+    "010.0.0.1",
+    "8.8.8.256",
   ])
     assert.equal(publicWebhookIPv4(value), false, value);
 });
@@ -65,7 +79,10 @@ test("HMAC binds event, body and timestamp; rotation and recreation change the k
   const secret = developerWebhookSecret(master, endpoint);
   assert.match(secret, /^whsec_[A-Za-z0-9_-]{43}$/);
   assert.notEqual(secret, developerWebhookSecret(master, { ...endpoint, generation: 2 }));
-  assert.notEqual(secret, developerWebhookSecret(master, { ...endpoint, secret_nonce: endpoint.api_key_id }));
+  assert.notEqual(
+    secret,
+    developerWebhookSecret(master, { ...endpoint, secret_nonce: endpoint.api_key_id }),
+  );
   const timestamp = 1795651200;
   const body = JSON.stringify({ id, type: "webhook.test" });
   const signature = developerWebhookSignature(secret, id, timestamp, body);

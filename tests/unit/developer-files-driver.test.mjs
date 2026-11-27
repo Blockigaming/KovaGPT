@@ -199,8 +199,14 @@ test("raw file reads refuse foreign-project or expired records before retrieval 
   };
   assert.equal((await f.module.readDeveloperFileRecords(identity, [file]))[0].content, content);
   f.state.rows.project_id = owner;
-  await assert.rejects(() => f.module.readDeveloperFileRecords(identity, [file]), /file_unavailable/);
+  await assert.rejects(
+    () => f.module.readDeveloperFileRecords(identity, [file]),
+    /file_unavailable/,
+  );
   f.state.rows.project_id = project;
   f.state.rows.expires_at = new Date(Date.now() - 1000).toISOString();
-  await assert.rejects(() => f.module.readDeveloperFileRecords(identity, [file]), /file_unavailable/);
+  await assert.rejects(
+    () => f.module.readDeveloperFileRecords(identity, [file]),
+    /file_unavailable/,
+  );
 });

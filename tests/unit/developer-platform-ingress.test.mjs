@@ -681,7 +681,10 @@ test("key usage detail is isolated by account, project, key and request id", asy
     await assert.rejects(() => read(query), /developer_(id|input)_invalid/);
   }
   const list = await (await read("limit=25&offset=0")).json();
-  assert.deepEqual(list.data.map((entry) => entry.id), [id(1)]);
+  assert.deepEqual(
+    list.data.map((entry) => entry.id),
+    [id(1)],
+  );
   assert.equal(f.state.calls.length, 0);
   assert.equal(f.state.contexts.length, 0);
 });
@@ -696,7 +699,10 @@ test("model catalog detail returns only approved key-scoped aliases and rejects 
   const read = (query = "") =>
     f.module.developerModels(f.identity, new Request(`https://kovagpt.com/api/v1/models${query}`));
   const listed = await (await read()).json();
-  assert.deepEqual(listed.data.map((model) => model.id), ["kova-fast"]);
+  assert.deepEqual(
+    listed.data.map((model) => model.id),
+    ["kova-fast"],
+  );
   const detail = await (await read("?id=kova-fast")).json();
   assert.deepEqual(detail.data, listed.data);
   for (const id of ["kova-hidden", "kova-missing"]) {

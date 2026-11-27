@@ -83,7 +83,11 @@ test("JSON compatibility preserves refusal, token usage and public aliases witho
     status: "incomplete",
     incomplete_details: { reason: "max_output_tokens" },
     output: [
-      { type: "message", role: "assistant", content: [{ type: "refusal", refusal: "Unavailable" }] },
+      {
+        type: "message",
+        role: "assistant",
+        content: [{ type: "refusal", refusal: "Unavailable" }],
+      },
     ],
   };
   const partial = await (await developerChatCompletion(Response.json(incomplete), options)).json();

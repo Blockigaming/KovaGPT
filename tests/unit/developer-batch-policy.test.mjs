@@ -15,11 +15,17 @@ const request = {
   id,
   currency: "USD",
   maximum_charge: 1,
-  items: [{
-    id: item,
-    input: { model: "kova-fast", messages: [{ role: "user", content: "Summarize text." }], max_completion_tokens: 100 },
-    quote_token: "payload." + "a".repeat(64),
-  }],
+  items: [
+    {
+      id: item,
+      input: {
+        model: "kova-fast",
+        messages: [{ role: "user", content: "Summarize text." }],
+        max_completion_tokens: 100,
+      },
+      quote_token: "payload." + "a".repeat(64),
+    },
+  ],
 };
 const parse = (method, query = "", body) =>
   parseDeveloperBatchRequest(method, new URLSearchParams(query), body);
@@ -34,7 +40,11 @@ test("batch submission requires stable IDs, a quote per item and bounded text-on
     { items: [{ ...request.items[0], quote_token: "" }] },
     { items: [{ ...request.items[0], input: { ...request.items[0].input, stream: true } }] },
     { items: [{ ...request.items[0], input: { ...request.items[0].input, tools: [] } }] },
-    { items: [{ ...request.items[0], input: { ...request.items[0].input, max_completion_tokens: 2049 } }] },
+    {
+      items: [
+        { ...request.items[0], input: { ...request.items[0].input, max_completion_tokens: 2049 } },
+      ],
+    },
     { owner_id: id },
   ])
     assert.throws(() => parse("POST", "", { ...request, ...patch }), /batch_invalid/);

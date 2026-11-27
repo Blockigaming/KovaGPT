@@ -564,7 +564,8 @@ test("image editing reserves reviewed image token bounds without treating base64
       n: 1,
       size: "1024x1024",
       quality: "medium",
-      image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+      image:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
     },
   };
   const quote = () => prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));

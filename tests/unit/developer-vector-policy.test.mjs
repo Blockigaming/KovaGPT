@@ -1,13 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { developerVector, parseDeveloperVectorRequest } from "../../src/lib/pricing/developer-vector-policy.mjs";
+import {
+  developerVector,
+  parseDeveloperVectorRequest,
+} from "../../src/lib/pricing/developer-vector-policy.mjs";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const parse = (method, query = "", body) =>
   parseDeveloperVectorRequest(method, new URLSearchParams(query), body);
 test("vector operations reject nonfinite, zero, oversized and malformed embeddings", () => {
   assert.deepEqual(developerVector([1, 0, -1]), [1, 0, -1]);
-  for (const value of [[], [0, 0], [Infinity], [NaN], ["1"], [1e7], [1, 1e-14], Array(1537).fill(1)])
+  for (const value of [
+    [],
+    [0, 0],
+    [Infinity],
+    [NaN],
+    ["1"],
+    [1e7],
+    [1, 1e-14],
+    Array(1537).fill(1),
+  ])
     assert.throws(() => developerVector(value), /vector_invalid/);
 });
 test("vector resource operations are explicit and bounded with no caller ownership claims", () => {

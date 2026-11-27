@@ -4,7 +4,12 @@ import { checkServerIdentity } from "node:tls";
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
-import { authenticateDeveloper, developerDatabase, developerFailure, developerJson } from "./developer-platform.server";
+import {
+  authenticateDeveloper,
+  developerDatabase,
+  developerFailure,
+  developerJson,
+} from "./developer-platform.server";
 import {
   developerWebhookSecret,
   developerWebhookSignature,
@@ -54,7 +59,9 @@ export async function handleDeveloperWebhooks(request: Request) {
     const parsed = parseDeveloperWebhookRequest(
       request.method,
       new URL(request.url).searchParams,
-      request.method === "POST" ? await readBoundedJsonObject(request, 8192, request.signal) : undefined,
+      request.method === "POST"
+        ? await readBoundedJsonObject(request, 8192, request.signal)
+        : undefined,
       config.allowlist,
     );
     const result = await identity.db
@@ -86,7 +93,14 @@ export async function handleDeveloperWebhooks(request: Request) {
 }
 
 type Claim = {
-  endpoint: { id: string; project_id: string; api_key_id: string; secret_nonce: string; generation: number; url: string };
+  endpoint: {
+    id: string;
+    project_id: string;
+    api_key_id: string;
+    secret_nonce: string;
+    generation: number;
+    url: string;
+  };
   event: { id: string; type: string; created_at: string; data: Record<string, unknown> };
   lease_token: string;
 };
@@ -146,7 +160,9 @@ export async function deliverDeveloperWebhooks() {
   const config = configuration();
   if (!config) return 0;
   const db = developerDatabase();
-  const claimed = await db.rpc("claim_developer_webhooks_v1", { p_limit: 3 }).abortSignal(AbortSignal.timeout(5000));
+  const claimed = await db
+    .rpc("claim_developer_webhooks_v1", { p_limit: 3 })
+    .abortSignal(AbortSignal.timeout(5000));
   if (claimed.error || !Array.isArray(claimed.data) || claimed.data.length > 3)
     throw new Error("developer_webhook_unavailable");
   await Promise.all(
@@ -157,13 +173,15 @@ export async function deliverDeveloperWebhooks() {
       } catch {
         // A refused destination or transient failure consumes a bounded attempt.
       }
-      const result = await db.rpc("finish_developer_webhook_v1", {
-        p_project: claim.endpoint.project_id,
-        p_endpoint: claim.endpoint.id,
-        p_event: claim.event.id,
-        p_lease: claim.lease_token,
-        p_http_status: status,
-      }).abortSignal(AbortSignal.timeout(5000));
+      const result = await db
+        .rpc("finish_developer_webhook_v1", {
+          p_project: claim.endpoint.project_id,
+          p_endpoint: claim.endpoint.id,
+          p_event: claim.event.id,
+          p_lease: claim.lease_token,
+          p_http_status: status,
+        })
+        .abortSignal(AbortSignal.timeout(5000));
       if (result.error) throw new Error("developer_webhook_delivery_unavailable");
     }),
   );

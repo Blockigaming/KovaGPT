@@ -120,7 +120,8 @@ test("versioned Kova model identifiers are accepted but URLs and malformed versi
 });
 
 test("bounded image edits reject remote or malformed input and preserve exact inline source bytes", () => {
-  const image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=";
+  const image =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=";
   const input = {
     model: "kova-image",
     prompt: "Change background",

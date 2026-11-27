@@ -323,7 +323,12 @@ test("vector stores persist cosine retrieval, enforce scopes and erase linked fi
           input,
         ])
       ).rows[0].result;
-    const input = { name: "Docs", model: "kova-embedding", dimensions: 3, request_digest: "c".repeat(64) };
+    const input = {
+      name: "Docs",
+      model: "kova-embedding",
+      dimensions: 3,
+      request_digest: "c".repeat(64),
+    };
     const store = await run("create", input);
     assert.equal((await run("create", input)).id, store.id);
     await assert.rejects(run("create", { ...input, name: "Other" }), /vector_conflict/);
@@ -344,7 +349,10 @@ test("vector stores persist cosine retrieval, enforce scopes and erase linked fi
     });
     const search = await run("search", { ...base, vector: [1, 0, 0], limit: 2 });
     assert.equal(search.search_type, "cosine");
-    assert.deepEqual(search.data.map((row) => row.entry_id), ["relevant", "different"]);
+    assert.deepEqual(
+      search.data.map((row) => row.entry_id),
+      ["relevant", "different"],
+    );
     assert.equal(search.data[0].score, 1);
     assert.equal(search.data[1].score, 0);
     const entry = await run("get_entry", { store_id: store.id, entry_id: "relevant" });
@@ -360,18 +368,30 @@ test("vector stores persist cosine retrieval, enforce scopes and erase linked fi
     );
     await f.file("delete", { id: linked.id });
     assert.deepEqual(
-      (await run("search", { ...base, vector: [1, 0, 0], limit: 2 })).data.map((row) => row.entry_id),
+      (await run("search", { ...base, vector: [1, 0, 0], limit: 2 })).data.map(
+        (row) => row.entry_id,
+      ),
       ["different"],
     );
     for (const role of ["anon", "authenticated"])
       assert.equal(
-        (await f.db.query("select has_table_privilege($1,'developer_vector_entries_v1','select') allowed", [role])).rows[0].allowed,
+        (
+          await f.db.query(
+            "select has_table_privilege($1,'developer_vector_entries_v1','select') allowed",
+            [role],
+          )
+        ).rows[0].allowed,
         false,
       );
-    await f.db.query("update developer_billing_keys set capabilities=array['files'] where id=$1", [key]);
+    await f.db.query("update developer_billing_keys set capabilities=array['files'] where id=$1", [
+      key,
+    ]);
     await assert.rejects(run("get", { store_id: store.id }), /scope_required/);
     await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
-    assert.equal((await f.db.query("select count(*)::int n from developer_vector_stores_v1")).rows[0].n, 0);
+    assert.equal(
+      (await f.db.query("select count(*)::int n from developer_vector_stores_v1")).rows[0].n,
+      0,
+    );
   } finally {
     await f.db.close();
   }
@@ -386,10 +406,16 @@ test("developer conversations serialize revisions, retain retry fences and erase
     const run = async (operation, input, user = owner) =>
       (
         await f.db.query("select manage_developer_conversations_v1($1,$2,$3,$4,$5) result", [
-          user, key, f.account.projectId, operation, input,
+          user,
+          key,
+          f.account.projectId,
+          operation,
+          input,
         ])
       ).rows[0].result;
-    const conversation = id(50), itemId = id(51), otherItem = id(52);
+    const conversation = id(50),
+      itemId = id(51),
+      otherItem = id(52);
     const item = { id: itemId, role: "user", content: "private example" };
     const create = { id: conversation, title: "Example" };
     assert.equal((await run("create", create)).revision, 0);
@@ -406,7 +432,10 @@ test("developer conversations serialize revisions, retain retry fences and erase
       /conversation_conflict/,
     );
     assert.deepEqual((await run("get", { id: conversation })).items, [item]);
-    assert.equal((await run("get_item", { id: conversation, item_id: itemId })).item.content, item.content);
+    assert.equal(
+      (await run("get_item", { id: conversation, item_id: itemId })).item.content,
+      item.content,
+    );
     assert.equal((await run("list", {})).data[0].items, undefined);
     await assert.rejects(run("get", { id: conversation }, other), /scope_required/);
     const remove = { id: conversation, item_id: itemId, expected_revision: 1 };
@@ -415,11 +444,18 @@ test("developer conversations serialize revisions, retain retry fences and erase
     assert.deepEqual((await run("get", { id: conversation })).items, []);
     await assert.rejects(run("get_item", { id: conversation, item_id: itemId }), /not_found/);
     await assert.rejects(run("append", append), /conversation_conflict/);
-    const exported = (await f.db.query("select items from developer_conversation_export_records_v1")).rows[0];
+    const exported = (
+      await f.db.query("select items from developer_conversation_export_records_v1")
+    ).rows[0];
     assert.deepEqual(exported.items, [{ id: itemId, deleted: true }]);
     for (const role of ["anon", "authenticated"])
       assert.equal(
-        (await f.db.query("select has_table_privilege($1,'developer_conversations_v1','select') allowed", [role])).rows[0].allowed,
+        (
+          await f.db.query(
+            "select has_table_privilege($1,'developer_conversations_v1','select') allowed",
+            [role],
+          )
+        ).rows[0].allowed,
         false,
       );
     await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
@@ -441,7 +477,11 @@ test("agent definitions preserve immutable revisions and owner boundaries", asyn
     const run = async (operation, input, user = owner) =>
       (
         await f.db.query("select manage_developer_agents_v1($1,$2,$3,$4,$5) result", [
-          user, key, f.account.projectId, operation, input,
+          user,
+          key,
+          f.account.projectId,
+          operation,
+          input,
         ])
       ).rows[0].result;
     const agent = id(61);
@@ -474,7 +514,12 @@ test("agent definitions preserve immutable revisions and owner boundaries", asyn
     await assert.rejects(run("get", { id: agent }, other), /scope_required/);
     for (const role of ["anon", "authenticated"])
       assert.equal(
-        (await f.db.query("select has_table_privilege($1,'developer_agent_versions_v1','select') allowed", [role])).rows[0].allowed,
+        (
+          await f.db.query(
+            "select has_table_privilege($1,'developer_agent_versions_v1','select') allowed",
+            [role],
+          )
+        ).rows[0].allowed,
         false,
       );
     await run("delete", { id: agent });
@@ -499,7 +544,11 @@ test("skill versions are private, immutable and project scoped", async () => {
     const run = async (operation, input, user = owner) =>
       (
         await f.db.query("select manage_developer_skills_v1($1,$2,$3,$4,$5) result", [
-          user, key, f.account.projectId, operation, input,
+          user,
+          key,
+          f.account.projectId,
+          operation,
+          input,
         ])
       ).rows[0].result;
     const skill = id(71);
@@ -511,22 +560,46 @@ test("skill versions are private, immutable and project scoped", async () => {
     const create = { id: skill, definition };
     assert.equal((await run("create", create)).version, 1);
     assert.equal((await run("create", create)).version, 1);
-    await assert.rejects(run("create", { ...create, definition: { ...definition, code: "run" } }), /skill_invalid/);
-    const update = { id: skill, expected_version: 1, definition: { ...definition, instructions: "List evidence." } };
+    await assert.rejects(
+      run("create", { ...create, definition: { ...definition, code: "run" } }),
+      /skill_invalid/,
+    );
+    const update = {
+      id: skill,
+      expected_version: 1,
+      definition: { ...definition, instructions: "List evidence." },
+    };
     assert.equal((await run("update", update)).version, 2);
     assert.equal((await run("update", update)).version, 2);
-    await assert.rejects(run("update", { ...update, definition: { ...definition, instructions: "Changed" } }), /skill_conflict/);
-    assert.equal((await run("get", { id: skill, version: 1 })).definition.instructions, definition.instructions);
+    await assert.rejects(
+      run("update", { ...update, definition: { ...definition, instructions: "Changed" } }),
+      /skill_conflict/,
+    );
+    assert.equal(
+      (await run("get", { id: skill, version: 1 })).definition.instructions,
+      definition.instructions,
+    );
     assert.equal((await run("get", { id: skill })).version, 2);
     assert.equal((await run("list", {})).data[0].definition, undefined);
     await assert.rejects(run("get", { id: skill }, other), /scope_required/);
     for (const role of ["anon", "authenticated"])
-      assert.equal((await f.db.query("select has_table_privilege($1,'developer_skill_versions_v1','select') allowed", [role])).rows[0].allowed, false);
+      assert.equal(
+        (
+          await f.db.query(
+            "select has_table_privilege($1,'developer_skill_versions_v1','select') allowed",
+            [role],
+          )
+        ).rows[0].allowed,
+        false,
+      );
     await run("delete", { id: skill });
     await assert.rejects(run("get", { id: skill, version: 1 }), /skill_not_found/);
     await run("create", create);
     await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
-    assert.equal((await f.db.query("select count(*)::int n from developer_skill_versions_v1")).rows[0].n, 0);
+    assert.equal(
+      (await f.db.query("select count(*)::int n from developer_skill_versions_v1")).rows[0].n,
+      0,
+    );
   } finally {
     await f.db.close();
   }
@@ -541,22 +614,35 @@ test("outgoing webhook registration, stable test events, lease retry and rotatio
     const run = async (operation, input, user = owner) =>
       (
         await f.db.query("select manage_developer_webhooks_v1($1,$2,$3,$4,$5) result", [
-          user, key, f.account.projectId, operation, input,
+          user,
+          key,
+          f.account.projectId,
+          operation,
+          input,
         ])
       ).rows[0].result;
-    const endpoint = id(81), event = id(82);
-    const create = { id: endpoint, url: "https://hooks.example.com/kova", events: ["request.settled"] };
+    const endpoint = id(81),
+      event = id(82);
+    const create = {
+      id: endpoint,
+      url: "https://hooks.example.com/kova",
+      events: ["request.settled"],
+    };
     const first = await run("create", create);
     assert.equal(first.generation, 1);
     assert.equal((await run("create", create)).secret_nonce, first.secret_nonce);
     assert.equal((await run("get", { id: endpoint })).secret_nonce, undefined);
     await assert.rejects(run("get", { id: endpoint }, other), /scope_required/);
-    await assert.rejects(run("create", { ...create, url: "https://hooks.example.com/other" }), /webhook_conflict/);
+    await assert.rejects(
+      run("create", { ...create, url: "https://hooks.example.com/other" }),
+      /webhook_conflict/,
+    );
     assert.equal((await run("rotate", { id: endpoint, expected_generation: 1 })).generation, 2);
     assert.equal((await run("rotate", { id: endpoint, expected_generation: 1 })).generation, 2);
     await run("test", { id: endpoint, event_id: event });
     await run("test", { id: endpoint, event_id: event });
-    const claim = async () => (await f.db.query("select claim_developer_webhooks_v1(3) result")).rows[0].result;
+    const claim = async () =>
+      (await f.db.query("select claim_developer_webhooks_v1(3) result")).rows[0].result;
     const claimed = await claim();
     assert.equal(claimed.length, 1);
     assert.equal(claimed[0].event.id, event);
@@ -564,24 +650,44 @@ test("outgoing webhook registration, stable test events, lease retry and rotatio
     assert.equal(claimed[0].endpoint.generation, 2);
     assert.deepEqual(await claim(), []);
     const finish = async (lease, status) =>
-      (await f.db.query("select finish_developer_webhook_v1($1,$2,$3,$4,$5) result", [
-        f.account.projectId, endpoint, event, lease, status,
-      ])).rows[0].result;
+      (
+        await f.db.query("select finish_developer_webhook_v1($1,$2,$3,$4,$5) result", [
+          f.account.projectId,
+          endpoint,
+          event,
+          lease,
+          status,
+        ])
+      ).rows[0].result;
     assert.equal(await finish(id(99), 200), false);
     assert.equal(await finish(claimed[0].lease_token, 503), true);
     assert.equal((await run("deliveries", { id: endpoint })).data[0].status, "pending");
     assert.deepEqual(await claim(), []);
-    await f.db.query("update developer_webhook_deliveries_v1 set next_attempt_at=now()-interval '1 second' where id=$1", [event]);
+    await f.db.query(
+      "update developer_webhook_deliveries_v1 set next_attempt_at=now()-interval '1 second' where id=$1",
+      [event],
+    );
     const retry = await claim();
     assert.equal(retry[0].event.id, event);
     assert.notEqual(retry[0].lease_token, claimed[0].lease_token);
     assert.equal(await finish(retry[0].lease_token, 204), true);
     assert.equal((await run("deliveries", { id: endpoint })).data[0].status, "delivered");
     assert.deepEqual(await claim(), []);
-    for (const role of ["anon","authenticated"])
-      assert.equal((await f.db.query("select has_table_privilege($1,'developer_webhook_endpoints_v1','select') allowed", [role])).rows[0].allowed, false);
+    for (const role of ["anon", "authenticated"])
+      assert.equal(
+        (
+          await f.db.query(
+            "select has_table_privilege($1,'developer_webhook_endpoints_v1','select') allowed",
+            [role],
+          )
+        ).rows[0].allowed,
+        false,
+      );
     await run("delete", { id: endpoint });
-    assert.equal((await f.db.query("select count(*)::int n from developer_webhook_deliveries_v1")).rows[0].n, 0);
+    assert.equal(
+      (await f.db.query("select count(*)::int n from developer_webhook_deliveries_v1")).rows[0].n,
+      0,
+    );
   } finally {
     await f.db.close();
   }
@@ -594,41 +700,85 @@ test("batch leases, aggregate maximums, cancellation and isolation", async () =>
     await f.db.exec(await readFile("supabase/pending/developer_batches_v1.sql", "utf8"));
     await f.db.exec("set role service_role");
     const run = async (operation, input, user = owner) =>
-      (await f.db.query("select manage_developer_batches_v1($1,$2,$3,$4,$5) result", [
-        user, key, f.account.projectId, operation, input,
-      ])).rows[0].result;
-    const batch = id(91), first = id(92), second = id(93);
+      (
+        await f.db.query("select manage_developer_batches_v1($1,$2,$3,$4,$5) result", [
+          user,
+          key,
+          f.account.projectId,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
+    const batch = id(91),
+      first = id(92),
+      second = id(93);
     const item = (id, n) => ({
-      id, input: { model: "kova-fast", messages: [{ role: "user", content: "hello" }], max_completion_tokens: 100 },
-      authorization: "test-authorization", maximum_ticks: 100, request_group: n.repeat(64),
+      id,
+      input: {
+        model: "kova-fast",
+        messages: [{ role: "user", content: "hello" }],
+        max_completion_tokens: 100,
+      },
+      authorization: "test-authorization",
+      maximum_ticks: 100,
+      request_group: n.repeat(64),
     });
     const input = {
-      id: batch, currency: "USD", maximum_ticks: 200, request_digest: "a".repeat(64),
-      expires_at: new Date(Date.now() + 3600000).toISOString(), items: [item(first, "b"), item(second, "c")],
+      id: batch,
+      currency: "USD",
+      maximum_ticks: 200,
+      request_digest: "a".repeat(64),
+      expires_at: new Date(Date.now() + 3600000).toISOString(),
+      items: [item(first, "b"), item(second, "c")],
     };
     await assert.rejects(run("create", { ...input, maximum_ticks: 199 }), /batch_budget_invalid/);
     assert.equal((await run("create", input)).id, batch);
     assert.equal((await run("create", input)).id, batch);
-    await assert.rejects(run("create", { ...input, request_digest: "d".repeat(64) }), /batch_conflict/);
+    await assert.rejects(
+      run("create", { ...input, request_digest: "d".repeat(64) }),
+      /batch_conflict/,
+    );
     await assert.rejects(run("get", { id: batch }, other), /scope_required/);
-    const claim = async () => (await f.db.query("select claim_developer_batch_v1() result")).rows[0].result;
+    const claim = async () =>
+      (await f.db.query("select claim_developer_batch_v1() result")).rows[0].result;
     const claimed = await claim();
     assert.equal(claimed.item.id, first);
     assert.equal(await claim(), null);
     await run("cancel", { id: batch });
     const state = await run("get", { id: batch });
-    assert.deepEqual(state.items.map((item) => item.state), ["running", "canceled"]);
+    assert.deepEqual(
+      state.items.map((item) => item.state),
+      ["running", "canceled"],
+    );
     assert.equal((await run("get_item", { id: batch, item_id: first })).authorization, undefined);
-    const finish = async (lease) => (await f.db.query("select finish_developer_batch_v1($1,$2,$3,$4,$5) result", [
-      f.account.projectId, batch, first, lease, null,
-    ])).rows[0].result;
+    const finish = async (lease) =>
+      (
+        await f.db.query("select finish_developer_batch_v1($1,$2,$3,$4,$5) result", [
+          f.account.projectId,
+          batch,
+          first,
+          lease,
+          null,
+        ])
+      ).rows[0].result;
     assert.equal(await finish(id(99)), false);
     assert.equal(await finish(claimed.item.lease_token), true);
     assert.equal((await run("get_item", { id: batch, item_id: first })).state, "uncertain");
     assert.equal(await claim(), null);
-    for (const role of ["anon","authenticated"])
-      assert.equal((await f.db.query("select has_table_privilege($1,'developer_batch_items_v1','select') allowed", [role])).rows[0].allowed, false);
-    assert.equal((await f.db.query("select count(*)::int n from developer_batch_export_records_v1")).rows[0].n, 2);
+    for (const role of ["anon", "authenticated"])
+      assert.equal(
+        (
+          await f.db.query(
+            "select has_table_privilege($1,'developer_batch_items_v1','select') allowed",
+            [role],
+          )
+        ).rows[0].allowed,
+        false,
+      );
+    assert.equal(
+      (await f.db.query("select count(*)::int n from developer_batch_export_records_v1")).rows[0].n,
+      2,
+    );
   } finally {
     await f.db.close();
   }

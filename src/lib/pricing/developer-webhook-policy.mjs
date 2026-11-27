@@ -44,7 +44,10 @@ export function webhookDestination(value, allowlist) {
   return url;
 }
 export function publicWebhookIPv4(value) {
-  if (typeof value !== "string" || !/^(?:0|[1-9][0-9]{0,2})(?:\.(?:0|[1-9][0-9]{0,2})){3}$/.test(value))
+  if (
+    typeof value !== "string" ||
+    !/^(?:0|[1-9][0-9]{0,2})(?:\.(?:0|[1-9][0-9]{0,2})){3}$/.test(value)
+  )
     return false;
   const [a, b, c, d] = value.split(".").map(Number);
   return !(
@@ -76,12 +79,20 @@ export function parseDeveloperWebhookRequest(method, params, body, allowlist) {
         fail();
       return {
         operation: "create",
-        input: { id: id(body.id), url: webhookDestination(body.url, allowlist).href, events: [...body.events].sort() },
+        input: {
+          id: id(body.id),
+          url: webhookDestination(body.url, allowlist).href,
+          events: [...body.events].sort(),
+        },
       };
     }
     if (body?.operation === "rotate") {
       exact(body, ["operation", "id", "expected_generation"]);
-      if (!Number.isSafeInteger(body.expected_generation) || body.expected_generation < 1 || body.expected_generation > 999)
+      if (
+        !Number.isSafeInteger(body.expected_generation) ||
+        body.expected_generation < 1 ||
+        body.expected_generation > 999
+      )
         fail();
       return {
         operation: "rotate",
@@ -117,10 +128,18 @@ export function developerWebhookSecret(master, endpoint) {
     endpoint.generation > 1000
   )
     fail();
-  const binding = [endpoint.project_id, endpoint.id, endpoint.api_key_id, endpoint.secret_nonce].map(id);
-  return "whsec_" + createHmac("sha256", Buffer.from(master, "hex"))
-    .update(JSON.stringify(["kova-webhook-v1", ...binding, endpoint.generation]))
-    .digest("base64url");
+  const binding = [
+    endpoint.project_id,
+    endpoint.id,
+    endpoint.api_key_id,
+    endpoint.secret_nonce,
+  ].map(id);
+  return (
+    "whsec_" +
+    createHmac("sha256", Buffer.from(master, "hex"))
+      .update(JSON.stringify(["kova-webhook-v1", ...binding, endpoint.generation]))
+      .digest("base64url")
+  );
 }
 export function developerWebhookSignature(secret, eventId, timestamp, body) {
   if (
@@ -132,9 +151,21 @@ export function developerWebhookSignature(secret, eventId, timestamp, body) {
     Buffer.byteLength(body) > 65536
   )
     fail();
-  return "v1=" + createHmac("sha256", secret).update(id(eventId) + "." + timestamp + "." + body).digest("hex");
+  return (
+    "v1=" +
+    createHmac("sha256", secret)
+      .update(id(eventId) + "." + timestamp + "." + body)
+      .digest("hex")
+  );
 }
-export function verifyDeveloperWebhook({ secret, eventId, timestamp, body, signature, now = Math.floor(Date.now() / 1000) }) {
+export function verifyDeveloperWebhook({
+  secret,
+  eventId,
+  timestamp,
+  body,
+  signature,
+  now = Math.floor(Date.now() / 1000),
+}) {
   try {
     if (
       !Number.isSafeInteger(now) ||
