@@ -79,6 +79,7 @@ type ConsoleData = {
   enabled: boolean;
   workspaceV2?: boolean;
   moderationEnabled?: boolean;
+  transcriptionEnabled?: boolean;
   decisionsEnabled?: boolean;
   analysisEnabled?: boolean;
   computerEnabled?: boolean;
@@ -1235,6 +1236,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "file_analysis",
                     "computer_use",
                     "cloud_browser",
+                    "audio_transcription",
                   ]
                     .filter(
                       (scope) =>
@@ -1242,7 +1244,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         (scope !== "decisions" || data?.decisionsEnabled) &&
                         (scope !== "file_analysis" || data?.analysisEnabled) &&
                         (scope !== "computer_use" || data?.computerEnabled) &&
-                        (scope !== "cloud_browser" || data?.browserEnabled),
+                        (scope !== "cloud_browser" || data?.browserEnabled) &&
+                        (scope !== "audio_transcription" || data?.transcriptionEnabled),
                     )
                     .map((scope) => (
                       <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
@@ -1488,6 +1491,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "file_analysis",
                     "computer_use",
                     "cloud_browser",
+                    "audio_transcription",
                   ].map((item) => (
                     <option key={item} value={item}>
                       {item}

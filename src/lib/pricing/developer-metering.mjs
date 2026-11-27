@@ -13,6 +13,13 @@ import {
 } from "./developer-analysis-policy.mjs";
 import { validDeveloperComputerRequest } from "./developer-computer-policy.mjs";
 import {
+  developerTranscriptionAudio,
+  developerTranscriptionReceipt,
+  TRANSCRIPTION_MAX_SECONDS,
+  TRANSCRIPTION_MODEL,
+  validDeveloperTranscriptionRequest,
+} from "./developer-transcription-policy.mjs";
+import {
   BROWSER_MODEL,
   developerBrowserReceipt,
   validDeveloperBrowserRequest,
@@ -38,6 +45,7 @@ const dimensionsByMeter = {
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
+  transcription_duration: ["transcription_seconds"],
   browser_sessions: ["browser_sessions_60s"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
@@ -87,6 +95,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   }
   const dimensions = dimensionsByMeter[contract.meter];
   const moderationMeter = contract.meter === "moderation_requests";
+  const transcriptionMeter = contract.meter === "transcription_duration";
   const browserMeter = contract.meter === "browser_sessions";
   const decisionsMeter = contract.meter === "decisions_tokens";
   const searchMeter = contract.meter === "responses_search";
@@ -118,6 +127,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   if (imageEdit) delete textBody.image;
   if (
     !moderationMeter &&
+    !transcriptionMeter &&
     !browserMeter &&
     new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
       (decisionsMeter
@@ -156,6 +166,19 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
         !validModerationRequest(request.body)))
   )
     fail("billing_moderation_contract_invalid");
+  if (
+    transcriptionMeter !== (request.capability === "audio_transcription") ||
+    (transcriptionMeter &&
+      (request.provider !== "openai" ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== TRANSCRIPTION_MODEL ||
+        contract.maximumUsage.transcription_seconds < 1 ||
+        contract.maximumUsage.transcription_seconds > TRANSCRIPTION_MAX_SECONDS ||
+        !validDeveloperTranscriptionRequest(request.body) ||
+        Math.ceil(developerTranscriptionAudio(request.body.audio).seconds) >
+          contract.maximumUsage.transcription_seconds))
+  )
+    fail("billing_transcription_contract_invalid");
   if (
     decisionsMeter !== (request.capability === "decisions") ||
     (decisionsMeter &&
@@ -455,6 +478,9 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   } else if (meter === "browser_sessions") {
     if (!developerBrowserReceipt(response)) return null;
     dimensions = { browser_sessions_60s: 1 };
+  } else if (meter === "transcription_duration") {
+    dimensions = developerTranscriptionReceipt(response);
+    if (!dimensions) return null;
   } else if (meter === "moderation_requests") {
     if (!validModerationResult(response)) return null;
     dimensions = { moderation_requests: 1 };

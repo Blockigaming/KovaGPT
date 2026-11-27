@@ -12,6 +12,7 @@ const operations = new Set([
   "analysis",
   "computer-use",
   "browser",
+  "audio/transcriptions",
 ]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
@@ -38,6 +39,9 @@ function budget(value) {
     value.maximumCharge > 1e9
   )
     fail("budget_required");
+}
+function operationBodyLimit(kind) {
+  return kind === "audio/transcriptions" ? 1048576 : 65536;
 }
 function boundedInput(value, maximumBytes = 65536) {
   let encoded;
@@ -153,6 +157,11 @@ export class KovaGPT {
     });
     this.embeddings = Object.freeze({
       create: (input, options) => this.run("embeddings", input, options),
+    });
+    this.audio = Object.freeze({
+      transcriptions: Object.freeze({
+        create: (input, options) => this.run("audio/transcriptions", input, options),
+      }),
     });
     this.moderations = Object.freeze({
       create: (input, options) => this.run("moderations", input, options),
@@ -489,7 +498,10 @@ export class KovaGPT {
     operation(kind);
     return smallJson(
       await this.#request("quotes", {
-        input: { operation: kind, input: boundedInput(input) },
+        input: boundedInput(
+          { operation: kind, input: boundedInput(input, operationBodyLimit(kind)) },
+          operationBodyLimit(kind),
+        ),
         signal,
       }),
     );
@@ -515,7 +527,7 @@ export class KovaGPT {
     )
       fail("quote_outside_budget");
     return this.#request(kind, {
-      input: boundedInput(input),
+      input: boundedInput(input, operationBodyLimit(kind)),
       signal,
       generation: true,
       headers: { "Idempotency-Key": idempotencyKey, "X-Kova-Quote": quote.quoteToken },
@@ -524,7 +536,7 @@ export class KovaGPT {
   async run(kind, input, options) {
     budget(options);
     // Snapshot before the first await; client mutation cannot change the accepted operation.
-    const snapshot = boundedInput(input);
+    const snapshot = boundedInput(input, operationBodyLimit(kind));
     const accepted = { ...options };
     if (
       typeof accepted.idempotencyKey !== "string" ||

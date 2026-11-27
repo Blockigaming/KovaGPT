@@ -57,3 +57,9 @@ Batch items can explicitly select `chat/completions`, `agent-turns`, `responses`
 ### Use stored conversation history in Responses
 
 Supply `conversation: { id, revision }` and a new string `input` to Responses. Both quote preparation and execution read the authenticated project's current conversation snapshot; a changed revision or recreated conversation invalidates the quote. The quote expires no later than the stored conversation. This uses at most 99 stored text items and does not implicitly append the request or generated response. Use the explicit conversation append endpoint with stable item IDs and expected revisions to persist new messages. The conversation schema and runtime flags must be enabled.
+
+### Recorded audio transcription
+
+The gated `audio/transcriptions` operation targets a reviewed alias of the current OpenAI `gpt-transcribe` model. Submit an `audio` string containing a canonical base64 PCM WAV data URI (16 kHz, mono, 16-bit, 0.1–20 seconds), plus `model`. Use the usual identical signed quote, explicit budget and stable idempotency key. The server checks the audio duration and settles using the provider's duration receipt. The endpoint requires the `audio_transcription` scope, an approved duration rate, and runtime activation. Record and submit audio only with appropriate permission. This is recorded-audio transcription, not live microphone streaming or speech generation.
+
+Reference: https://developers.openai.com/api/docs/guides/transcription

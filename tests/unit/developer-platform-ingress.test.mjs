@@ -162,7 +162,9 @@ async function fixture(options = {}) {
       path === "./developer-batch-policy.mjs" ||
       path === "./developer-analysis-policy.mjs" ||
       path === "./developer-computer-policy.mjs" ||
-      path === "./developer-browser-policy.mjs"
+      path === "./developer-browser-policy.mjs" ||
+      path === "./developer-conversation-policy.mjs" ||
+      path === "./developer-transcription-policy.mjs"
     )
       return full.replace(
         JSON.stringify(path),
@@ -181,7 +183,7 @@ async function fixture(options = {}) {
     if (path === "@/lib/ai/provider.server" && options.providerUrl)
       return full.replace(JSON.stringify(path), JSON.stringify(options.providerUrl));
     if (path === "@/lib/ai/provider.server")
-      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),developerDecisions=developerResponses,developerAnalysis=developerResponses,developerComputerUse=developerResponses,deleteDeveloperAnalysisContainer=async()=>{},developerModerations=developerResponses,embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>({provider:"azure_openai"}),providerModelId=(model)=>model;';
+      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),developerDecisions=developerResponses,developerAnalysis=developerResponses,developerComputerUse=developerResponses,deleteDeveloperAnalysisContainer=async()=>{},developerModerations=developerResponses,developerTranscriptions=developerResponses,embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>({provider:"azure_openai"}),providerModelId=(model)=>model;';
     if (path === "./developer-browser.server")
       return 'const developerBrowserEnabled=()=>false,assertDeveloperBrowserAuthority=async()=>{throw Error("developer_browser_unavailable")},runDeveloperBrowser=async()=>{throw Error("developer_browser_unavailable")};';
     if (path === "./developer-billing.server")

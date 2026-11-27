@@ -1,6 +1,11 @@
 import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { meterProviderRequest } from "@/lib/pricing/developer-billing.server";
+import {
+  developerTranscriptionAudio,
+  developerTranscriptionResult,
+  validDeveloperTranscriptionRequest,
+} from "@/lib/pricing/developer-transcription-policy.mjs";
 
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
@@ -40,7 +45,8 @@ export type ProviderCapability =
   | "image_generation"
   | "vision"
   | "file_analysis"
-  | "computer_use";
+  | "computer_use"
+  | "audio_transcription";
 
 export type ProviderErrorCode =
   "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
@@ -171,7 +177,12 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 }
 
 function providerTarget(capability?: ProviderCapability): ProviderTarget {
-  if (capability === "moderation" || capability === "decisions" || capability === "computer_use") {
+  if (
+    capability === "moderation" ||
+    capability === "decisions" ||
+    capability === "computer_use" ||
+    capability === "audio_transcription"
+  ) {
     return {
       provider: "openai",
       baseUrl: OPENAI_API_BASE_URL,
@@ -299,7 +310,13 @@ function parseTimeout(value: string | undefined): number {
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
   const allowed = new Set<ProviderCapability>(
-    DEFAULT_CAPABILITIES.concat("web_search", "moderation", "decisions", "computer_use"),
+    DEFAULT_CAPABILITIES.concat(
+      "web_search",
+      "moderation",
+      "decisions",
+      "computer_use",
+      "audio_transcription",
+    ),
   );
   const configured = value
     .split(",")
@@ -1114,4 +1131,58 @@ export async function developerModerations(
 
 export async function developerDecisions(body: JsonObject, init?: RequestInit): Promise<Response> {
   return providerFetch("/decisions", "decisions", body, init);
+}
+
+/** Recorded-audio execution is developer-only and settles from provider duration receipts. */
+export async function developerTranscriptions(
+  body: JsonObject,
+  init?: RequestInit,
+): Promise<Response> {
+  const capture = env("KOVA_REQUEST_CAPTURE_ENABLED");
+  const acceptance = env("KOVA_GENERATION_ACCEPTANCE_ENABLED");
+  if (
+    (capture && capture !== "false") ||
+    (acceptance && acceptance !== "false") ||
+    env("KOVA_DEVELOPER_TRANSCRIPTION_ENABLED") !== "true" ||
+    !validDeveloperTranscriptionRequest(body)
+  )
+    throw new Error("developer_transcription_unavailable");
+  const unavailable = providerUnavailableEnvelope("audio_transcription");
+  if (unavailable) throw new AiProviderError(unavailable);
+  const audio = developerTranscriptionAudio(body.audio);
+  const target = providerTarget("audio_transcription");
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(getAiProviderConfig("audio_transcription").timeoutMs),
+    ...(init?.signal ? [init.signal] : []),
+  ]);
+  return meterProviderRequest({
+    provider: "openai",
+    capability: "audio_transcription",
+    body,
+    signal,
+    send: async () => {
+      const headers = new Headers(await providerHeaders(target, signal));
+      headers.delete("content-type");
+      const form = new FormData();
+      form.set("model", String(body.model));
+      form.set("response_format", "json");
+      form.set("file", new Blob([audio.bytes as BlobPart], { type: "audio/wav" }), "audio.wav");
+      const response = await fetch(target.baseUrl + "/audio/transcriptions", {
+        method: "POST",
+        redirect: "error",
+        headers,
+        body: form,
+        signal,
+      });
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
+        throw new Error("developer_transcription_unavailable");
+      }
+      const bytes = await readResponseBytesBounded(response, 131072, { signal });
+      const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      return Response.json(
+        developerTranscriptionResult(value, response.headers.get("x-request-id")),
+      );
+    },
+  });
 }

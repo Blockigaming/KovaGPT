@@ -2,6 +2,7 @@ import { prepareDeveloperQuote } from "./developer-metering.mjs";
 import { developerAnalysisFields } from "./developer-analysis-policy.mjs";
 import { developerComputerFields } from "./developer-computer-policy.mjs";
 import { BROWSER_MODEL, developerBrowserFields } from "./developer-browser-policy.mjs";
+import { TRANSCRIPTION_MODEL } from "./developer-transcription-policy.mjs";
 
 const fail = (code) => {
   throw new Error(`pricing_admin_${code}`);
@@ -29,6 +30,7 @@ const meters = {
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
+  transcription_duration: ["transcription_seconds"],
   browser_sessions: ["browser_sessions_60s"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
@@ -223,6 +225,25 @@ export function validatePricingProposal(raw, now = Date.now()) {
       fail("image_bounds_invalid");
     const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "transcription_duration") {
+      if (c.upstreamModel !== TRANSCRIPTION_MODEL) fail("contract_invalid");
+      const wave = Buffer.alloc(3244);
+      wave.write("RIFF");
+      wave.writeUInt32LE(wave.length - 8, 4);
+      wave.write("WAVEfmt ", 8);
+      wave.writeUInt32LE(16, 16);
+      wave.writeUInt16LE(1, 20);
+      wave.writeUInt16LE(1, 22);
+      wave.writeUInt32LE(16000, 24);
+      wave.writeUInt32LE(32000, 28);
+      wave.writeUInt16LE(2, 32);
+      wave.writeUInt16LE(16, 34);
+      wave.write("data", 36);
+      wave.writeUInt32LE(3200, 40);
+      delete body.input;
+      body.audio = "data:audio/wav;base64," + wave.toString("base64");
+      body.response_format = "json";
+    }
     if (c.meter === "browser_sessions") {
       if (c.upstreamModel !== BROWSER_MODEL) fail("contract_invalid");
       delete body.input;

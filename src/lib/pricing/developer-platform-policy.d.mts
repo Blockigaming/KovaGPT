@@ -22,6 +22,7 @@ export function parseDeveloperInput(
     | "decisions"
     | "file_analysis"
     | "computer_use"
-    | "cloud_browser";
+    | "cloud_browser"
+    | "audio_transcription";
   publicModel: string;
 };

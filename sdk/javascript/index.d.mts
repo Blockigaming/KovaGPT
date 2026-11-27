@@ -9,7 +9,8 @@ export type Operation =
   | "agent-turns"
   | "analysis"
   | "computer-use"
-  | "browser";
+  | "browser"
+  | "audio/transcriptions";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -92,7 +93,12 @@ export type OperationInput =
   | AgentTurnInput
   | AnalysisInput
   | ComputerUseInput
-  | BrowserSnapshotInput;
+  | BrowserSnapshotInput
+  | TranscriptionInput;
+export interface TranscriptionInput {
+  model: string;
+  audio: string;
+}
 export interface BrowserSnapshotInput {
   model: string;
   url: string;
@@ -189,6 +195,7 @@ export interface DeveloperUsage {
   output_tokens: number | null;
   web_search_calls: number | null;
   moderation_requests: number | null;
+  transcription_seconds: number | null;
 }
 export class KovaError extends Error {
   code: string;
@@ -410,6 +417,9 @@ export class KovaGPT {
     edit(input: ImagesInput & { image: string }, options: Budget): Promise<Response>;
   };
   readonly embeddings: { create(input: EmbeddingsInput, options: Budget): Promise<Response> };
+  readonly audio: {
+    transcriptions: { create(input: TranscriptionInput, options: Budget): Promise<Response> };
+  };
   readonly moderations: { create(input: ModerationsInput, options: Budget): Promise<Response> };
   readonly usage: {
     list(options?: { limit?: number; offset?: number; signal?: AbortSignal }): Promise<{

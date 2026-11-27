@@ -15,6 +15,7 @@ import {
   developerComputerUse,
   deleteDeveloperAnalysisContainer,
   developerModerations,
+  developerTranscriptions,
   developerDecisions,
   embeddings,
   imageGenerations,
@@ -30,6 +31,7 @@ import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
 import { summarizeDeveloperUsage } from "./developer-usage-summary.mjs";
 import { developerFileReferences } from "./developer-file-policy.mjs";
 import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
+import { TRANSCRIPTION_BODY_LIMIT } from "./developer-transcription-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
 import { readDeveloperDecisionResponse } from "./developer-decisions-policy.mjs";
@@ -147,6 +149,15 @@ function developerModerationEnabled() {
   if (runtimeEnv("KOVA_DEVELOPER_MODERATION_ENABLED") !== "true") return false;
   const config = getAiProviderConfig("moderation");
   return config.configured && config.capabilities?.includes("moderation") === true;
+}
+function developerTranscriptionEnabled() {
+  if (
+    runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_TRANSCRIPTION_ENABLED") !== "true"
+  )
+    return false;
+  const config = getAiProviderConfig("audio_transcription");
+  return config.configured && config.capabilities?.includes("audio_transcription") === true;
 }
 function developerDecisionsEnabled() {
   if (
@@ -492,6 +503,8 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     throw new Error("developer_moderation_unavailable");
   if (parsed.capability === "decisions" && (!developerDecisionsEnabled() || provider !== "openai"))
     throw new Error("developer_decision_unavailable");
+  if (parsed.capability === "audio_transcription" && !developerTranscriptionEnabled())
+    throw new Error("developer_transcription_unavailable");
   if (parsed.capability === "computer_use" && !developerComputerEnabled())
     throw new Error("developer_computer_unavailable");
   if (parsed.capability === "file_analysis" && !developerAnalysisEnabled())
@@ -682,6 +695,7 @@ export async function executeDeveloper(
         });
       if (kind === "computer-use") return developerComputerUse(parsed.body, { signal });
       if (kind === "analysis") return developerAnalysis(parsed.body, { signal });
+      if (kind === "audio/transcriptions") return developerTranscriptions(parsed.body, { signal });
       const call =
         parsed.operation === "responses"
           ? developerResponses
@@ -698,6 +712,10 @@ export async function executeDeveloper(
   if (!response.ok) {
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
+  }
+  if (kind === "audio/transcriptions") {
+    const receipt = await response.json();
+    return developerJson({ ...receipt, model: parsed.publicModel });
   }
   if (kind === "browser") {
     const receipt = await response.json();
@@ -901,6 +919,12 @@ const publicUsage = (row: Record<string, unknown>) => {
     output_tokens: dimension("output_tokens"),
     web_search_calls: dimension("web_search_calls"),
     moderation_requests: dimension("moderation_requests"),
+    transcription_seconds:
+      typeof usage.transcription_seconds === "number" &&
+      Number.isFinite(usage.transcription_seconds) &&
+      usage.transcription_seconds > 0
+        ? usage.transcription_seconds
+        : null,
     container_1g_sessions: dimension("container_1g_sessions"),
     browser_sessions_60s: dimension("browser_sessions_60s"),
   };
@@ -984,6 +1008,7 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             (id === null || entry.publicModel === id) &&
             identity.capabilities.includes(entry.capability) &&
             (entry.capability !== "moderation" || developerModerationEnabled()) &&
+            (entry.capability !== "audio_transcription" || developerTranscriptionEnabled()) &&
             (entry.capability !== "decisions" || developerDecisionsEnabled()) &&
             (entry.capability !== "file_analysis" || developerAnalysisEnabled()) &&
             (entry.capability !== "computer_use" || developerComputerEnabled()) &&
@@ -1037,7 +1062,17 @@ export async function handleDeveloperApi(request: Request, operation: string) {
     if (operation === "models") return await developerModels(identity, request);
     if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
       throw new Error("developer_json_required");
-    const body = await readBoundedJsonObject(request, 65536, request.signal);
+    const limit =
+      operation === "quotes" || operation === "audio/transcriptions"
+        ? TRANSCRIPTION_BODY_LIMIT
+        : 65536;
+    const body = await readBoundedJsonObject(request, limit, request.signal);
+    if (
+      operation === "quotes" &&
+      body.operation !== "audio/transcriptions" &&
+      Buffer.byteLength(JSON.stringify(body)) > 65536
+    )
+      throw new Error("developer_input_too_large");
     if (operation === "file_search") {
       if (!identity.capabilities.includes("files")) throw new Error("developer_scope_required");
       if (runtimeEnv("KOVA_DEVELOPER_FILE_SEARCH_ENABLED") !== "true")
@@ -1156,6 +1191,7 @@ export async function handleDeveloperConsole(request: Request) {
           enabled: developerEnabled(),
           workspaceV2,
           moderationEnabled: developerModerationEnabled(),
+          transcriptionEnabled: developerTranscriptionEnabled(),
           decisionsEnabled: developerDecisionsEnabled(),
           analysisEnabled: developerAnalysisEnabled(),
           computerEnabled: developerComputerEnabled(),
@@ -1305,6 +1341,7 @@ export async function handleDeveloperConsole(request: Request) {
         enabled: developerEnabled(),
         workspaceV2,
         moderationEnabled: developerModerationEnabled(),
+        transcriptionEnabled: developerTranscriptionEnabled(),
         decisionsEnabled: developerDecisionsEnabled(),
         analysisEnabled: developerAnalysisEnabled(),
         computerEnabled: developerComputerEnabled(),
@@ -1405,6 +1442,7 @@ export async function handleDeveloperConsole(request: Request) {
           body.scopes.length > DEVELOPER_SCOPES.length ||
           body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value))) ||
           (body.scopes.includes("moderation") && !developerModerationEnabled()) ||
+          (body.scopes.includes("audio_transcription") && !developerTranscriptionEnabled()) ||
           (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
           (body.scopes.includes("file_analysis") && !developerAnalysisEnabled()) ||
           (body.scopes.includes("computer_use") && !developerComputerEnabled()) ||
