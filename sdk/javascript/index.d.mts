@@ -121,6 +121,7 @@ export interface AnalysisInput {
   model: string;
   input: string;
   max_output_tokens: number;
+  file_ids?: string[];
 }
 export type BackgroundResponsesInput = Omit<
   ResponsesInput,

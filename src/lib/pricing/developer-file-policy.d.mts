@@ -17,4 +17,5 @@ export function expandDeveloperFileContent(
   body: Record<string, unknown>,
   files: Record<string, unknown>[],
   now?: number,
+  kind?: string,
 ): { body: Record<string, unknown>; bindings: FileBinding[]; expiresAt: number | null };

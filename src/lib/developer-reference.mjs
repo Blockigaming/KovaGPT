@@ -102,8 +102,8 @@ export const DEVELOPER_ENDPOINTS = [
     "Isolated analysis",
     "analysis",
     "POST",
-    "Supply model, text input up to 16,000 bytes, and max_output_tokens from 1 to 2,048. Quote analysis with file_analysis scope.",
-    "The gated adapter uses one automatic network-disabled 1 GB container and one tool call, returns bounded text, and cleans up the observed container. Persistent containers and hosted shell are not exposed.",
+    "Supply model, text input up to 16,000 bytes, and max_output_tokens from 1 to 2,048. Optionally supply one to four project-owned text file_ids, requiring files scope; the expanded input must also fit 16,000 bytes. Quote analysis with file_analysis scope.",
+    "The gated adapter uses one automatic network-disabled 1 GB container and one tool call, returns bounded text, and cleans up the observed container. File contents are included as bounded untrusted text input, not mounted files. Persistent containers and hosted shell are not exposed.",
   ),
   endpoint(
     "browser",

@@ -497,7 +497,12 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   const parsed = parseDeveloperInput(normalized.operation, references.body);
   if (!identity.capabilities.includes(parsed.capability))
     throw new Error("developer_scope_required");
-  const files = await loadDeveloperFileContent(identity, parsed.body, references.ids);
+  const files = await loadDeveloperFileContent(
+    identity,
+    parsed.body,
+    references.ids,
+    normalized.operation,
+  );
   parsed.body = files.body;
   const version = await currentPricing(identity);
   const providerConfig = ["cloud_browser", "audio_speech"].includes(parsed.capability)

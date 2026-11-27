@@ -65,3 +65,36 @@ test("file uploads enforce UTF-8 byte bounds, document type and parsed JSON with
   ])
     assert.throws(() => developerFileUpload({ ...good, ...patch }), /file_invalid/);
 });
+
+test("isolated analysis binds project text as bounded data, never as an executable file", () => {
+  const source = file("Name,Count\nA,1");
+  assert.deepEqual(developerFileReferences("analysis", { ...body, file_ids: [id] }), {
+    body,
+    ids: [id],
+  });
+  const result = expandDeveloperFileContent(body, [source], Date.now(), "analysis");
+  const input = JSON.parse(result.body.input);
+  assert.equal(input.task, body.input);
+  assert.deepEqual(input.attachments, [{ id, filename: source.filename, content: source.content }]);
+  assert.deepEqual(result.bindings, [{ id, digest: source.content_digest }]);
+  assert.equal(result.expiresAt, Date.parse(source.expires_at));
+  assert.equal(body.input, "Summarize the attachment.");
+  assert.throws(
+    () => expandDeveloperFileContent(body, [file("é".repeat(8000))], Date.now(), "analysis"),
+    /too_large/,
+  );
+  assert.throws(
+    () =>
+      expandDeveloperFileContent(
+        body,
+        [{ ...source, expires_at: new Date(Date.now() - 1).toISOString() }],
+        Date.now(),
+        "analysis",
+      ),
+    /file_invalid/,
+  );
+  assert.throws(
+    () => expandDeveloperFileContent(body, [source], Date.now(), "images"),
+    /file_invalid/,
+  );
+});

@@ -13,7 +13,8 @@ type Operation =
   | "moderations"
   | "search"
   | "audio/transcriptions"
-  | "audio/speech";
+  | "audio/speech"
+  | "analysis";
 type Model = {
   id: string;
   capability: string;
@@ -41,6 +42,7 @@ const capability: Record<Operation, string> = {
   "audio/transcriptions": "audio_transcription",
   "audio/speech": "audio_speech",
   search: "chat",
+  analysis: "file_analysis",
 };
 
 function eligibleModel(item: Model, operation: Operation) {
@@ -68,6 +70,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
   const [maxSearchCalls, setMaxSearchCalls] = useState("1");
+  const [analysisFileIds, setAnalysisFileIds] = useState("");
   const [effort, setEffort] = useState("");
   const [advanced, setAdvanced] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -262,7 +265,16 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               ? { model, audio: sourceAudio }
               : operation === "audio/speech"
                 ? { model, input: prompt, voice: "default", response_format: "mp3" }
-                : { model, input: prompt };
+                : operation === "analysis"
+                  ? {
+                      model,
+                      input: prompt,
+                      max_output_tokens: Number(maxOutput),
+                      ...(analysisFileIds.trim()
+                        ? { file_ids: analysisFileIds.trim().split(/[\s,]+/) }
+                        : {}),
+                    }
+                  : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
@@ -447,6 +459,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="embeddings">Embeddings</option>
               <option value="moderations">Moderation</option>
               <option value="search">Web search</option>
+              <option value="analysis">Isolated code analysis</option>
               <option value="audio/speech">Speech generation</option>
               <option value="audio/transcriptions">Audio transcription</option>
             </select>
@@ -516,13 +529,13 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               </p>
             </label>
           )}
-          {(textOperation || operation === "search") && (
+          {(textOperation || operation === "search" || operation === "analysis") && (
             <label className="block space-y-1 text-sm">
               <span>Maximum output tokens</span>
               <Input
                 type="number"
                 min={1}
-                max={32768}
+                max={operation === "analysis" ? 2048 : 32768}
                 value={maxOutput}
                 disabled={busy}
                 onChange={(event) => {
@@ -531,6 +544,25 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   resetQuote();
                 }}
               />
+            </label>
+          )}
+          {operation === "analysis" && (
+            <label className="block space-y-1 text-sm">
+              <span>Project text file IDs (optional, up to four)</span>
+              <Input
+                value={analysisFileIds}
+                disabled={busy}
+                placeholder="Comma-separated file IDs"
+                onChange={(event) => {
+                  setAnalysisFileIds(event.target.value);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Requires files scope. Expanded text must fit 16,000 bytes. This is a temporary,
+                network-disabled analysis session.
+              </p>
             </label>
           )}
           {operation === "search" && (

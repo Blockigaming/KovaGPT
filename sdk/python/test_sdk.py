@@ -83,6 +83,14 @@ class SDKTests(unittest.TestCase):
         self.addCleanup(self.mock.stop)
         self.client = Client(KEY)
 
+    def test_analysis_preserves_project_file_references(self):
+        data = {**DATA, "file_ids": [ID]}
+        self.responses.extend([FakeResponse(quote()), FakeResponse({"text": "result"})])
+        self.assertEqual(self.client.analysis(data, **BUDGET).json()["text"], "result")
+        self.assertEqual(json.loads(self.calls[0][2]), {"operation": "analysis", "input": data})
+        self.assertEqual(self.calls[1][1], "/api/v1/analysis")
+        self.assertEqual(json.loads(self.calls[1][2]), data)
+
     def test_speech_uses_exact_quoted_input(self):
         data = {"model": "speech", "input": "hello", "voice": "default"}
         self.responses.extend([FakeResponse(quote()), FakeResponse({"audio": "//uAAA=="})])

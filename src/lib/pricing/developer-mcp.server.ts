@@ -167,11 +167,21 @@ const paidTools = [
     name: "kova_analyze",
     operation: "analysis",
     scope: "file_analysis",
-    schema: objectSchema({ model, input: text(16000), max_output_tokens: integer(2048) }, [
-      "model",
-      "input",
-      "max_output_tokens",
-    ]),
+    schema: objectSchema(
+      {
+        model,
+        input: text(16000),
+        max_output_tokens: integer(2048),
+        file_ids: {
+          type: "array",
+          minItems: 1,
+          maxItems: 4,
+          uniqueItems: true,
+          items: { type: "string", format: "uuid" },
+        },
+      },
+      ["model", "input", "max_output_tokens"],
+    ),
   },
   {
     name: "kova_agent_turn",

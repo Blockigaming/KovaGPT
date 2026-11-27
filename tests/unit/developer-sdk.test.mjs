@@ -541,3 +541,12 @@ test("speech SDK authorizes exactly the same input and never sends unquoted gene
   assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "audio/speech", input: speech });
   assert.deepEqual(JSON.parse(f.calls[1].body), speech);
 });
+
+test("analysis keeps the exact project file IDs in the signed request", async () => {
+  const f = fixture();
+  const data = { ...input, file_ids: ["55555555-5555-4555-8555-555555555555"] };
+  await f.client.analysis.create(data, options);
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "analysis", input: data });
+  assert.deepEqual(JSON.parse(f.calls[1].body), data);
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/analysis");
+});

@@ -48,9 +48,12 @@ export async function loadDeveloperFileContent(
   identity: FileIdentity,
   body: Record<string, unknown>,
   ids: string[],
+  kind = "responses",
 ) {
   return expandDeveloperFileContent(
     body,
     ids.length ? await readDeveloperFileRecords(identity, ids) : [],
+    Date.now(),
+    kind,
   );
 }

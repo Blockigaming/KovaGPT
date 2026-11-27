@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
 import { createHash } from "node:crypto";
+import { expandDeveloperFileContent } from "../../src/lib/pricing/developer-file-policy.mjs";
 const slot = Symbol.for("kova.developer-ingress-test");
 async function fixture(options = {}) {
   const version = {
@@ -137,6 +138,7 @@ async function fixture(options = {}) {
   globalThis[slot] = {
     ...state,
     env: options.env ?? {},
+    providerConfig: options.providerConfig ?? { provider: "azure_openai" },
     loadFiles: async (body, ids) => ({ body, bindings: [], expiresAt: null }),
     db,
     async provider(body) {
@@ -181,7 +183,7 @@ async function fixture(options = {}) {
         JSON.stringify(new URL(`../../src/lib/pricing/${path.slice(2)}`, import.meta.url).href),
       );
     if (path === "./developer-file-content.server")
-      return 'const loadDeveloperFileContent=async(identity,body,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].loadFiles(body,ids),readDeveloperFileRecords=async(identity,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].readFiles(identity,ids);';
+      return 'const loadDeveloperFileContent=async(identity,body,ids,kind)=>globalThis[Symbol.for("kova.developer-ingress-test")].loadFiles(body,ids,kind),readDeveloperFileRecords=async(identity,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].readFiles(identity,ids);';
     if (path === "@supabase/supabase-js")
       return 'const createClient=()=>globalThis[Symbol.for("kova.developer-ingress-test")].db;';
     if (path === "@/lib/api-auth.server")
@@ -194,7 +196,7 @@ async function fixture(options = {}) {
     if (path === "@/lib/ai/provider.server" && options.providerUrl)
       return full.replace(JSON.stringify(path), JSON.stringify(options.providerUrl));
     if (path === "@/lib/ai/provider.server")
-      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),developerDecisions=developerResponses,developerAnalysis=developerResponses,developerComputerUse=developerResponses,deleteDeveloperAnalysisContainer=async()=>{},developerModerations=developerResponses,developerTranscriptions=developerResponses,embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>({provider:"azure_openai"}),providerModelId=(model)=>model;';
+      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),developerDecisions=developerResponses,developerAnalysis=developerResponses,developerComputerUse=developerResponses,deleteDeveloperAnalysisContainer=async()=>{},developerModerations=developerResponses,developerTranscriptions=developerResponses,embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>globalThis[Symbol.for("kova.developer-ingress-test")].providerConfig,providerModelId=(model)=>model;';
     if (path === "./developer-browser.server")
       return 'const developerBrowserEnabled=()=>false,assertDeveloperBrowserAuthority=async()=>{throw Error("developer_browser_unavailable")},runDeveloperBrowser=async()=>{throw Error("developer_browser_unavailable")};';
     if (path === "./developer-billing.server")
@@ -931,4 +933,113 @@ test("structured background response authorizations bind every function argument
   await execute(input);
   assert.deepEqual(f.state.calls[0].text, input.text);
   assert.deepEqual(f.state.calls[0].tools, input.tools);
+});
+
+test("analysis file quotes bind expanded data and require the same ownership and settlement path", async () => {
+  const f = await fixture({
+    env: { KOVA_DEVELOPER_WORKSPACE_V2: "true", KOVA_DEVELOPER_ANALYSIS_ENABLED: "true" },
+    providerConfig: { provider: "openai", configured: true, capabilities: ["file_analysis"] },
+  });
+  f.identity.capabilities = ["file_analysis", "files"];
+  const c = f.state.version.public_price_configuration.contracts[0];
+  Object.assign(c, {
+    provider: "openai",
+    capability: "file_analysis",
+    meter: "responses_analysis",
+    maximumAnalysisInputTokens: 1000,
+    maximumUsage: {
+      input_tokens: 4000,
+      cached_input_tokens: 4000,
+      output_tokens: 100,
+      container_1g_sessions: 1,
+    },
+  });
+  for (const row of f.state.registry) row.provider = "openai";
+  const registryId = "33333333-3333-4333-8333-333333333334";
+  f.state.version.public_price_configuration.registryIds.push(registryId);
+  f.state.registry.push({
+    ...f.state.registry[0],
+    id: registryId,
+    billing_dimension: "container_1g_sessions",
+    unit_quantity: 1,
+    unit_price: 3,
+  });
+  const id = "55555555-5555-4555-8555-555555555555";
+  const expiresAt = Date.now() + 30000;
+  let content = "A,1";
+  globalThis[slot].loadFiles = async (body, ids, kind) => {
+    assert.deepEqual(ids, [id]);
+    assert.equal(kind, "analysis");
+    if (!f.identity.capabilities.includes("files")) throw Error("developer_scope_required");
+    return expandDeveloperFileContent(
+      body,
+      [
+        {
+          id,
+          filename: "report.csv",
+          content,
+          byte_size: Buffer.byteLength(content),
+          content_digest: createHash("sha256").update(content).digest("hex"),
+          expires_at: new Date(expiresAt).toISOString(),
+        },
+      ],
+      Date.now(),
+      kind,
+    );
+  };
+  globalThis[slot].provider = async (body) => {
+    f.state.calls.push(body);
+    return Response.json({
+      id: "resp_test",
+      model: body.model,
+      status: "completed",
+      usage: {
+        input_tokens: 100,
+        output_tokens: 2,
+        total_tokens: 102,
+        input_tokens_details: { cached_tokens: 0 },
+      },
+      output: [
+        {
+          type: "code_interpreter_call",
+          id: "ci_test",
+          container_id: "cntr_test",
+          status: "completed",
+        },
+        { type: "message", role: "assistant", content: [{ type: "output_text", text: "Result." }] },
+      ],
+    });
+  };
+  const request = { ...f.input, file_ids: [id] };
+  const quote = await f.module.developerQuote(f.identity, "analysis", request);
+  assert.equal(quote.expiresAt, expiresAt);
+  content = "A,2";
+  await assert.rejects(
+    f.module.executeDeveloper(f.identity, "analysis", request, "analysis-retry", quote.quoteToken),
+    /quote_changed/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  content = "A,1";
+  f.identity.capabilities = ["file_analysis"];
+  await assert.rejects(
+    f.module.executeDeveloper(f.identity, "analysis", request, "analysis-retry", quote.quoteToken),
+    /scope_required/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  f.identity.capabilities = ["file_analysis", "files"];
+  const result = await (
+    await f.module.executeDeveloper(
+      f.identity,
+      "analysis",
+      request,
+      "analysis-retry",
+      quote.quoteToken,
+    )
+  ).json();
+  assert.equal(result.text, "Result.");
+  assert.equal(result.usage.container_1g_sessions, 1);
+  assert.equal(JSON.parse(f.state.calls[0].input).attachments[0].content, "A,1");
+  assert.deepEqual(f.state.contexts[0].fileBindings, [
+    { id, digest: createHash("sha256").update(content).digest("hex") },
+  ]);
 });
