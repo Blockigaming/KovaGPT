@@ -81,21 +81,67 @@ export function MarketingShowcase({ compact = false }: { compact?: boolean }) {
 function PublicationCover({ item }: { item: Publication }) {
   return <div className="kova-marketing-cover" data-category={item.section} aria-hidden="true"><span>KovaGPT / {item.section.replaceAll("-", " ")}</span><div className="kova-marketing-cover-shape"><i /><i /><i /></div></div>;
 }
-export function MarketingNews({ items = PUBLICATIONS, heading = "Latest from KovaGPT" }: { items?: readonly Publication[]; heading?: string }) {
+export function MarketingNews({
+  items = PUBLICATIONS,
+  heading = "Latest from KovaGPT",
+}: {
+  items?: readonly Publication[];
+  heading?: string;
+}) {
+  const [category, setCategory] = useState("all");
   const sorted = [...items].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  const categories = [...new Set(sorted.map((item) => item.section))];
+  const visible = sorted.filter((item) => category === "all" || item.section === category);
   if (!sorted.length) return null;
   return (
-    <section className="kova-marketing-news" aria-label={heading}>
+    <section className="kova-marketing-news col-span-full" aria-label={heading}>
       <h2>{heading}</h2>
+      {categories.length > 1 && (
+        <div className="kova-marketing-tabs" aria-label="Filter publications">
+          {["all", ...categories].map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={category === item}
+              onClick={() => setCategory(item)}
+              className="capitalize"
+            >
+              {item.replaceAll("-", " ")}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="kova-marketing-news-grid">
-        {sorted.map((item, i) => <Link key={item.section + "/" + item.slug} to={("/" + item.section + "/" + item.slug) as never} className="kova-marketing-news-card" data-featured={i === 0 ? "true" : "false"}>
-          <PublicationCover item={item} />
-          <div><p className="kova-marketing-meta">{item.section.replaceAll("-", " ")} · <time dateTime={item.publishedAt}>{item.publishedAt}</time></p><h3>{item.title}</h3><p>{item.description}</p><span className="kova-marketing-link">Read article <ArrowRight size={15} aria-hidden="true" /></span></div>
-        </Link>)}
+        {visible.map((item, i) => (
+          <Link
+            key={item.section + "/" + item.slug}
+            to={("/" + item.section + "/" + item.slug) as never}
+            className="kova-marketing-news-card"
+            data-featured={i === 0 ? "true" : "false"}
+          >
+            <PublicationCover item={item} />
+            <div>
+              <p className="kova-marketing-meta">
+                {item.section.replaceAll("-", " ")} ·{" "}
+                <time dateTime={item.publishedAt}>{item.publishedAt}</time>
+              </p>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+              <span className="kova-marketing-link">
+                Read article <ArrowRight size={15} aria-hidden="true" />
+              </span>
+            </div>
+          </Link>
+        ))}
       </div>
     </section>
   );
 }
+
 export function PublicationVisual({ item }: { item: Publication }) {
-  return <div className="col-span-full"><PublicationCover item={item} /></div>;
+  return (
+    <div className="col-span-full">
+      <PublicationCover item={item} />
+    </div>
+  );
 }
