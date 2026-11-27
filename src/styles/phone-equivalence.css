@@ -103,6 +103,8 @@
   }
 
   :where(:root[data-kova-surface="app"]) {
+    --phone-app-composer-corner: 24px;
+
     /* Paint the same phone frame before hydration and during the route chunk
        load. The default account placeholder remains in place at larger widths. */
     dialog[data-kova-entry-pending]:not([open]),
@@ -133,7 +135,6 @@
   .kova-assistant[data-ui="modern"] {
     --phone-composer-gutter: var(--kova-phone-space-12);
     --phone-composer-bottom: max(14px, calc(var(--safe-bottom) + 6px));
-    --phone-composer-radius: 24px;
   }
 
   .kova-assistant .kova-empty-chat {
@@ -156,6 +157,7 @@
     /* Keep the phone header compact and reserve the top safe area separately. */
     .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
       min-height: calc(56px + var(--safe-top, 0px));
+      padding-block-start: var(--safe-top, 0px);
     }
 
     .kova-assistant .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
@@ -224,7 +226,7 @@
   }
   :where(:root[data-kova-surface="app"]) {
     .kova-assistant .kova-empty-composer .spec400-composer {
-      --chat-composer-corner: 21px;
+      --chat-composer-corner: var(--phone-app-composer-corner);
       --composer-text-inset: 6px;
       min-height: 0 !important;
       padding-block-start: 4px;
@@ -241,7 +243,7 @@
     }
 
     .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
-      --chat-composer-corner: 26px;
+      --chat-composer-corner: var(--phone-app-composer-corner);
       --composer-text-inset: 6px;
       padding-block: 8px;
     }

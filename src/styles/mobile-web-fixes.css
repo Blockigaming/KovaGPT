@@ -59,14 +59,14 @@
   .kova-assistant .spec400-composer {
     --composer-text-inset: 10px;
     --composer-action-inset: 8px;
-    --chat-composer-corner: 21px;
+    --chat-composer-corner: var(--phone-app-composer-corner, 21px);
     min-height: 0 !important;
     padding: 10px 8px 6px;
     gap: 2px;
     border-radius: var(--chat-composer-corner);
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
-    --chat-composer-corner: 26px;
+    --chat-composer-corner: var(--phone-app-composer-corner, 26px);
     padding-block: 5px;
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {

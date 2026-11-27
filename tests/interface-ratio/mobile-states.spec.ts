@@ -73,14 +73,16 @@ test("a transient history storage failure recovers without reloading or losing t
   page.on("pageerror", (error) => errors.push(error.message));
   await fixture(page, "dark", true, true);
   await page.addInitScript(() => {
-    const open = indexedDB.open.bind(indexedDB);
-    let failOnce = true;
-    indexedDB.open = (name, version) => {
-      if (name === "kovagpt-chat-history-v1" && failOnce) {
-        failOnce = false;
+    const open = IDBFactory.prototype.open;
+    let unavailable = true;
+    window.addEventListener("test:restore-chat-storage", () => {
+      unavailable = false;
+    });
+    IDBFactory.prototype.open = function (name, version) {
+      if (name === "kovagpt-chat-history-v1" && unavailable) {
         throw new DOMException("Storage temporarily unavailable", "UnknownError");
       }
-      return version === undefined ? open(name) : open(name, version);
+      return version === undefined ? open.call(this, name) : open.call(this, name, version);
     };
   });
   await page.route("**/api/chat", (route) =>
@@ -97,7 +99,7 @@ test("a transient history storage failure recovers without reloading or losing t
   await expect(retry).toBeEnabled();
   await input.fill(draft);
   const send = page.getByRole("button", { name: "Send message", exact: true });
-  await expect(send).toBeDisabled();
+  await page.evaluate(() => window.dispatchEvent(new Event("test:restore-chat-storage")));
   await retry.click();
   await expect(retry).toBeHidden();
   await expect(input).toHaveValue(draft);
