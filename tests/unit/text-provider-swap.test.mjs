@@ -4,6 +4,7 @@ import fs from "node:fs";
 import ts from "typescript";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/endpoint-reliability.mjs";
+import * as transcription from "../../src/lib/pricing/developer-transcription-policy.mjs";
 import * as hosted from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 function loadProvider(env, fetcher, generationEnabled = true) {
   const output = ts.transpileModule(fs.readFileSync("src/lib/ai/provider.server.ts", "utf8"), {
@@ -14,6 +15,7 @@ function loadProvider(env, fetcher, generationEnabled = true) {
     exports = {};
   const modules = {
     "@/lib/endpoint-reliability.mjs": bounded,
+    "@/lib/pricing/developer-transcription-policy.mjs": transcription,
     "@/lib/runtime-env.server": { runtimeEnv: (key) => env[key] },
     "@/lib/pricing/developer-billing.server": {
       meterProviderRequest: async (input) => {
