@@ -15,7 +15,18 @@ for (const theme of ["dark", "light"] as const) {
     await expect(page.locator(".kova-topbar:visible")).toHaveCount(1);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
-    const composerBackground = theme === "dark" ? "rgb(48, 48, 48)" : "rgb(255, 255, 255)";
+    const phonePalette = await page.evaluate(
+      () =>
+        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches,
+    );
+    const composerBackground = phonePalette
+      ? theme === "dark"
+        ? "rgb(42, 42, 42)"
+        : "rgb(239, 239, 239)"
+      : theme === "dark"
+        ? "rgb(48, 48, 48)"
+        : "rgb(255, 255, 255)";
     await expect(surface).toHaveCSS("background-color", composerBackground);
     await expect(page.locator('[data-slot="dialog-overlay"]')).toBeVisible();
     await expect(
