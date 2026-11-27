@@ -65,6 +65,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -775,15 +776,13 @@ function KovaGPT() {
   const resizeAttachmentPane = (next: number) =>
     setAttachmentPaneRatio(Math.max(0.3, Math.min(0.7, next)));
   const wideResult = workspaceWidth >= 1000;
-  const wideResultRef = useRef(wideResult);
-  wideResultRef.current = wideResult;
   const setLayoutRatio = (next: number) => {
     const usableWidth = Math.max(workspaceWidth - 12, 840);
     const minimum = 420 / usableWidth;
     setPaneRatio(Math.max(minimum, Math.min(1 - minimum, next)));
   };
-  const needsWorkspaceWidth = Boolean(activeId || result);
-  useEffect(() => {
+  const needsWorkspaceWidth = Boolean(result);
+  useLayoutEffect(() => {
     const element = workspaceRef.current;
     if (!element || !needsWorkspaceWidth) return;
     setWorkspaceWidth(element.clientWidth);
@@ -1288,7 +1287,10 @@ function KovaGPT() {
     // preview but never another kind of result. Narrow layouts keep the tap-to-open card.
     const fileResult = latestFileResult(latest);
     if (fileResult) {
-      if (wideResultRef.current && (!resultRef.current || resultRef.current.file))
+      if (
+        (workspaceRef.current?.clientWidth ?? 0) >= 1000 &&
+        (!resultRef.current || resultRef.current.file)
+      )
         openResultRef.current(fileResult);
       return;
     }
