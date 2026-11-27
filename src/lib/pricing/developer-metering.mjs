@@ -75,6 +75,28 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
+  const allowedEfforts = contract.allowedReasoningEfforts;
+  if (
+    allowedEfforts !== undefined &&
+    (contract.meter !== "responses_tokens" ||
+      !Array.isArray(allowedEfforts) ||
+      !allowedEfforts.length ||
+      new Set(allowedEfforts).size !== allowedEfforts.length ||
+      allowedEfforts.some(
+        (effort) => !["none", "minimal", "low", "medium", "high", "xhigh"].includes(effort),
+      ))
+  )
+    fail("billing_reasoning_contract_invalid");
+  if (request.body.reasoning !== undefined) {
+    const reasoning = request.body.reasoning;
+    if (
+      !object(reasoning) ||
+      Object.keys(reasoning).length !== 1 ||
+      !Array.isArray(allowedEfforts) ||
+      !allowedEfforts.includes(reasoning.effort)
+    )
+      fail("billing_reasoning_effort_unapproved");
+  }
   if (contract.meter === "responses_tokens") {
     if (
       !["chat", "streaming", "reasoning", "tool_calls", "vision", "file_analysis"].includes(

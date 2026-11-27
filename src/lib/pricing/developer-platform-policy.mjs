@@ -56,6 +56,7 @@ export function parseDeveloperInput(kind, input) {
           "tools",
           "tool_choice",
           "parallel_tool_calls",
+          "reasoning",
           "text",
         ]
       : kind === "images"

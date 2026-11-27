@@ -21,3 +21,7 @@ Verification covers SQL ownership and privilege boundaries without service-role 
 ## Key-scoped usage retrieval
 
 `GET /api/v1/usage?limit=25&offset=0` returns recent request records for the authenticated API key only, with sanitized token dimensions and customer charges in currency minor units. It uses the normal key authentication and rate limits and does not call a provider or create a charge. Limit is 1–100, offset is 0–10000; other parameters are rejected. The response contains `data`, `has_more`, and `next_offset`; the live list may change between reads. Organization-wide usage remains available only through the verified owner console.
+
+## Model-specific reasoning effort
+
+Responses accept an optional `reasoning: { "effort": "high" }` field. An approved pricing contract must explicitly list the supported values in `allowedReasoningEfforts`. The model catalog exposes these as `reasoning_efforts`, and the playground displays only the approved options for the selected model. Changing the effort invalidates the current quote. Reasoning remains within the approved output-token ceiling and is included in the signed request and metered settlement. No additional provider capability is enabled by default.

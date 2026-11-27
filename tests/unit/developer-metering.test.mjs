@@ -302,3 +302,28 @@ test("unexpected response model, mixed image-output prices and impossible reques
     null,
   );
 });
+
+test("reasoning settings require an explicitly approved model contract and the same token bound", () => {
+  const f = fixture();
+  const at = new Date("2026-09-05");
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  f.request.body.reasoning = { effort: "high" };
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_reasoning_effort_unapproved/,
+  );
+  contract.allowedReasoningEfforts = ["low", "high"];
+  const quote = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(quote.quote.maximumReservedCharge, prepared().quote.maximumReservedCharge);
+  f.request.body.reasoning = { effort: "xhigh" };
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_reasoning_effort_unapproved/,
+  );
+  delete f.request.body.reasoning;
+  contract.allowedReasoningEfforts = ["high", "high"];
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_reasoning_contract_invalid/,
+  );
+});

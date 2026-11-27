@@ -382,10 +382,17 @@ export async function handleDeveloperApi(request: Request, operation: string) {
                 entry.provider ===
                   getAiProviderConfig(entry.capability as ProviderCapability).provider,
             )
-            .map((entry: { publicModel: string; capability: string }) => ({
-              id: entry.publicModel,
-              capability: entry.capability,
-            }))
+            .map(
+              (entry: {
+                publicModel: string;
+                capability: string;
+                allowedReasoningEfforts?: string[];
+              }) => ({
+                id: entry.publicModel,
+                capability: entry.capability,
+                reasoning_efforts: entry.allowedReasoningEfforts ?? [],
+              }),
+            )
         : [];
       return developerJson({ object: "list", data: models, pricingVersion: pricing.id });
     }

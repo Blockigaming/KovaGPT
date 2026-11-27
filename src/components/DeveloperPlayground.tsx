@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 type Operation = "responses" | "images" | "embeddings";
-type Model = { id: string; capability: string };
+type Model = { id: string; capability: string; reasoningEfforts: string[] };
 type Quote = {
   quoteToken: string;
   currency: string;
@@ -41,6 +41,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
+  const [effort, setEffort] = useState("");
   const [size, setSize] = useState("1024x1024");
   const [quality, setQuality] = useState("medium");
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -122,12 +123,25 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       resetQuote();
       setModel("");
       setModels([]);
+      setEffort("");
       const result = record(await request("models", controller));
       const catalog = Array.isArray(result.data)
         ? result.data.flatMap((entry): Model[] => {
             const row = record(entry);
             return typeof row.id === "string" && typeof row.capability === "string"
-              ? [{ id: row.id, capability: row.capability }]
+              ? [
+                  {
+                    id: row.id,
+                    capability: row.capability,
+                    reasoningEfforts: Array.isArray(row.reasoning_efforts)
+                      ? row.reasoning_efforts.filter(
+                          (effort): effort is string =>
+                            typeof effort === "string" &&
+                            ["none", "minimal", "low", "medium", "high", "xhigh"].includes(effort),
+                        )
+                      : [],
+                  },
+                ]
               : [];
           })
         : [];
@@ -138,12 +152,19 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     });
 
   const eligible = models.filter((item) => item.capability === capability[operation]);
+  const efforts = eligible.find((item) => item.id === model)?.reasoningEfforts ?? [];
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
       const input =
         operation === "responses"
-          ? { model, input: prompt, max_output_tokens: Number(maxOutput), stream: false }
+          ? {
+              model,
+              input: prompt,
+              max_output_tokens: Number(maxOutput),
+              stream: false,
+              ...(effort && efforts.includes(effort) ? { reasoning: { effort } } : {}),
+            }
           : operation === "images"
             ? { model, prompt, size, quality, n: 1 }
             : { model, input: prompt };
@@ -243,6 +264,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setKey(event.target.value);
                 setModels([]);
                 setModel("");
+                setEffort("");
                 setDispatched(false);
                 resetQuote();
               }}
@@ -270,6 +292,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 const next = event.target.value as Operation;
                 setOperation(next);
                 setModel(models.find((item) => item.capability === capability[next])?.id ?? "");
+                setEffort("");
                 setDispatched(false);
                 resetQuote();
               }}
@@ -287,6 +310,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               disabled={busy}
               onChange={(event) => {
                 setModel(event.target.value);
+                setEffort("");
                 setDispatched(false);
                 resetQuote();
               }}
@@ -328,6 +352,28 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   resetQuote();
                 }}
               />
+            </label>
+          )}
+          {operation === "responses" && efforts.length > 0 && (
+            <label className="block space-y-1 text-sm">
+              <span>Reasoning effort</span>
+              <select
+                className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
+                value={effort}
+                disabled={busy}
+                onChange={(event) => {
+                  setEffort(event.target.value);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              >
+                <option value="">Model default</option>
+                {efforts.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
             </label>
           )}
           {operation === "images" && (

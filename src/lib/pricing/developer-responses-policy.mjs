@@ -204,6 +204,12 @@ export function developerResponseInput(value) {
 
 export function developerResponseFeatures(input) {
   const result = {};
+  if (input.reasoning !== undefined) {
+    exact(input.reasoning, ["effort"]);
+    if (!["none", "minimal", "low", "medium", "high", "xhigh"].includes(input.reasoning.effort))
+      fail();
+    result.reasoning = { effort: input.reasoning.effort };
+  }
   if (input.tools !== undefined) {
     if (!Array.isArray(input.tools) || input.tools.length > 32) fail();
     const names = new Set();

@@ -116,3 +116,23 @@ test("schema and tool-result bytes consume the total request bound", () => {
     /too_large/,
   );
 });
+
+test("reasoning effort is explicit, bounded and cannot introduce other provider fields", () => {
+  for (const effort of ["none", "minimal", "low", "medium", "high", "xhigh"]) {
+    const value = parseDeveloperInput("responses", { ...input, reasoning: { effort } });
+    assert.deepEqual(value.body.reasoning, { effort });
+    assert.equal(value.body.store, false);
+  }
+  for (const reasoning of [
+    null,
+    {},
+    "high",
+    { effort: "unlimited" },
+    { effort: "high", budget: 1000000 },
+  ]) {
+    assert.throws(
+      () => parseDeveloperInput("responses", { ...input, reasoning }),
+      /responses_invalid/,
+    );
+  }
+});

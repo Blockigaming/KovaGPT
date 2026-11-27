@@ -176,6 +176,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "maximumImages",
         "allowedSizes",
         "allowedQualities",
+        "allowedReasoningEfforts",
       ]) ||
       !["azure_openai", "openai"].includes(c.provider) ||
       !text(c.upstreamModel) ||
