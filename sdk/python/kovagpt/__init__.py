@@ -246,6 +246,40 @@ class Client:
             path += "&entry_id=" + _identifier(entry, re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}"), "vector_entry_invalid")
         return path
 
+    @staticmethod
+    def _conversation_path(conversation_id, item_id=None):
+        path = "conversations?id=" + _identifier(conversation_id, _UUID, "conversation_id_invalid")
+        if item_id is not None:
+            path += "&item_id=" + _identifier(item_id, _UUID, "conversation_id_invalid")
+        return path
+
+    def _conversation_post(self, operation, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("conversations", method="POST",
+                             body=_json_body({**data, "operation": operation}, 16384)).json(131072)
+
+    def conversation_create(self, data):
+        return self._conversation_post("create", data)
+
+    def conversation_append(self, data):
+        return self._conversation_post("append", data)
+
+    def conversation_remove(self, data):
+        return self._conversation_post("remove", data)
+
+    def conversation_list(self):
+        return self._get("conversations")
+
+    def conversation_retrieve(self, conversation_id):
+        return self._get(self._conversation_path(conversation_id))
+
+    def conversation_item(self, conversation_id, item_id):
+        _require(item_id is not None, "conversation_id_invalid")
+        return self._get(self._conversation_path(conversation_id, item_id))
+
+    def conversation_delete(self, conversation_id):
+        return self._request(self._conversation_path(conversation_id), method="DELETE").json(65536)
+
     def _vector_post(self, operation, data, headers=None):
         _require(isinstance(data, dict), "input_invalid")
         return self._request("vector-stores", method="POST",

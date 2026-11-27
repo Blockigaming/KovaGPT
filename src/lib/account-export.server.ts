@@ -33,6 +33,7 @@ import {
 } from "@/lib/account-export-pagination.mjs";
 import { readAccountExportSiteFiles } from "@/lib/account-export-sites.mjs";
 import { readAccountExportIdentity } from "@/lib/account-export-identity.mjs";
+import { runtimeEnv } from "@/lib/runtime-env.server";
 
 const EXPORT_BUCKET = "account-exports";
 const MAX_ROWS = 100_000;
@@ -344,6 +345,15 @@ async function collectDirectRecords(
       })),
     );
     for (const result of results) records[result.table] = result.rows;
+  }
+  // These source-staged schemas are not present until their canonical migrations replay.
+  // Export persisted resources even if creation is subsequently disabled.
+  for (const [gate, table] of [
+    ["KOVA_DEVELOPER_VECTOR_SCHEMA_READY", "developer_vector_export_records_v1"],
+    ["KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY", "developer_conversation_export_records_v1"],
+  ] as const) {
+    if (runtimeEnv(gate) === "true")
+      records[table] = await readAllWhere(budget, table, "owner_id", userId);
   }
   // Include both sides of the user's invitation/audit history without exporting
   // unrelated tenant members, provider configuration, or domain proof tokens.

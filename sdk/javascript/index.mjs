@@ -182,6 +182,36 @@ export class KovaGPT {
       smallJson(await this.#request("vector-stores", {
         input: boundedInput({ ...boundedInput(input), operation }), signal, headers,
       }), 1048576);
+    const conversationPath = (id, item) => {
+      const valid = (value) =>
+        typeof value === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+      if (!valid(id) || (item !== undefined && !valid(item))) fail("conversation_id_invalid");
+      return "conversations?id=" + id + (item === undefined ? "" : "&item_id=" + item);
+    };
+    const conversationPost = async (operation, input, { signal } = {}) =>
+      smallJson(
+        await this.#request("conversations", {
+          input: boundedInput({ ...boundedInput(input), operation }, 16384),
+          signal,
+        }),
+        131072,
+      );
+    this.conversations = Object.freeze({
+      create: (input, options) => conversationPost("create", input, options),
+      append: (input, options) => conversationPost("append", input, options),
+      remove: (input, options) => conversationPost("remove", input, options),
+      list: async ({ signal } = {}) =>
+        smallJson(await this.#request("conversations", { signal }), 131072),
+      retrieve: async (id, { signal } = {}) =>
+        smallJson(await this.#request(conversationPath(id), { signal }), 131072),
+      retrieveItem: async (id, item, { signal } = {}) => {
+        if (item === undefined) fail("conversation_id_invalid");
+        return smallJson(await this.#request(conversationPath(id, item), { signal }), 131072);
+      },
+      delete: async (id, { signal } = {}) =>
+        smallJson(await this.#request(conversationPath(id), { signal, method: "DELETE" })),
+    });
     this.vectorStores = Object.freeze({
       create: async (input, { idempotencyKey, signal } = {}) => {
         if (typeof idempotencyKey !== "string" || !/^[\x21-\x7e]{1,128}$/.test(idempotencyKey))

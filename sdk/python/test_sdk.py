@@ -157,6 +157,21 @@ class SDKTests(unittest.TestCase):
                     list(chat_completion_events(response))
             self.assertTrue(response.closed)
 
+    def test_conversation_resource_operations(self):
+        self.responses.extend(FakeResponse({}) for _ in range(4))
+        self.client.conversation_create({"id": ID, "title": "Example"})
+        self.client.conversation_append({"id": ID, "expected_revision": 0, "item": {"id": ID, "role": "user", "content": "hello"}})
+        self.client.conversation_item(ID, ID)
+        self.client.conversation_delete(ID)
+        self.assertEqual(json.loads(self.calls[0][2])["operation"], "create")
+        self.assertEqual(json.loads(self.calls[1][2])["operation"], "append")
+        self.assertEqual(self.calls[2][1], "/api/v1/conversations?id=" + ID + "&item_id=" + ID)
+        self.assertEqual(self.calls[3][:2], ("DELETE", "/api/v1/conversations?id=" + ID))
+        self.assertTrue(all("X-Kova-Quote" not in call[3] for call in self.calls))
+        with self.assertRaisesRegex(KovaError, "conversation_id_invalid"):
+            self.client.conversation_item(ID, "../files")
+        self.assertEqual(len(self.calls), 4)
+
     def test_invalid_origin_and_unsafe_key(self):
         for url in ("http://kovagpt.com", "https://x:y@kovagpt.com", "https://kovagpt.com/path"):
             with self.assertRaisesRegex(KovaError, "origin_invalid"):

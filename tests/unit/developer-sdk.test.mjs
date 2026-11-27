@@ -308,3 +308,23 @@ test("chat completion stream requires both finish reason and DONE", async () => 
     assert.equal(response.body.locked, false);
   }
 });
+
+test("conversation SDK keeps explicit revisions and validates item paths before transport", async () => {
+  const id = "55555555-5555-4555-8555-555555555555";
+  const f = fixture(() => Response.json({}));
+  await f.client.conversations.create({ id, title: "Example" });
+  await f.client.conversations.append({
+    id,
+    expected_revision: 0,
+    item: { id, role: "user", content: "hello" },
+  });
+  await f.client.conversations.retrieveItem(id, id);
+  await f.client.conversations.delete(id);
+  assert.equal(JSON.parse(f.calls[0].body).operation, "create");
+  assert.equal(JSON.parse(f.calls[1].body).expected_revision, 0);
+  assert.equal(f.calls[2].url, "https://kovagpt.com/api/v1/conversations?id=" + id + "&item_id=" + id);
+  assert.equal(f.calls[3].method, "DELETE");
+  assert.ok(f.calls.every((call) => !call.headers["X-Kova-Quote"]));
+  await assert.rejects(f.client.conversations.retrieveItem(id), /conversation_id_invalid/);
+  assert.equal(f.calls.length, 4);
+});

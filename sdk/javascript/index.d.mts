@@ -117,6 +117,25 @@ export class KovaError extends Error {
   requestMayHaveStarted: boolean;
 }
 export class KovaGPT {
+  readonly conversations: {
+    create(input: { id: string; title: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    append(
+      input: {
+        id: string;
+        expected_revision: number;
+        item: { id: string; role: "user" | "assistant" | "developer" | "system"; content: string };
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    remove(
+      input: { id: string; item_id: string; expected_revision: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieveItem(id: string, item: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+  };
   readonly vectorStores: {
     create(input: { name: string; model: string; dimensions: number }, options: { idempotencyKey: string; signal?: AbortSignal }): Promise<Record<string, unknown>>;
     upsert(input: { store_id: string; entry_id: string; model: string; vector: number[]; text: string; file_id?: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;

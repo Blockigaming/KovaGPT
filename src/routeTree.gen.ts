@@ -197,6 +197,7 @@ import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/hel
 import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
+import { Route as ApiV1ConversationsRouteImport } from './routes/api/v1/conversations'
 import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
 import { Route as ApiV1FileSearchRouteImport } from './routes/api/v1/file-search'
 import { Route as ApiV1FilesRouteImport } from './routes/api/v1/files'
@@ -1207,6 +1208,11 @@ const ApiTasksEventSourcesRoute = ApiTasksEventSourcesRouteImport.update({
   path: '/api/tasks/event-sources',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1ConversationsRoute = ApiV1ConversationsRouteImport.update({
+  id: '/api/v1/conversations',
+  path: '/api/v1/conversations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1EmbeddingsRoute = ApiV1EmbeddingsRouteImport.update({
   id: '/api/v1/embeddings',
   path: '/api/v1/embeddings',
@@ -1647,6 +1653,7 @@ export interface FileRoutesByFullPath {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
   '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
@@ -1884,6 +1891,7 @@ export interface FileRoutesByTo {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
   '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
@@ -2122,6 +2130,7 @@ export interface FileRoutesById {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
   '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
@@ -2361,6 +2370,7 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/conversations'
     | '/api/v1/embeddings'
     | '/api/v1/file-search'
     | '/api/v1/files'
@@ -2598,6 +2608,7 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/conversations'
     | '/api/v1/embeddings'
     | '/api/v1/file-search'
     | '/api/v1/files'
@@ -2835,6 +2846,7 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/conversations'
     | '/api/v1/embeddings'
     | '/api/v1/file-search'
     | '/api/v1/files'
@@ -3063,6 +3075,7 @@ export interface RootRouteChildren {
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
+  ApiV1ConversationsRoute: typeof ApiV1ConversationsRoute
   ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
   ApiV1FileSearchRoute: typeof ApiV1FileSearchRoute
   ApiV1FilesRoute: typeof ApiV1FilesRoute
@@ -4428,6 +4441,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTasksEventSourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/conversations': {
+      id: '/api/v1/conversations'
+      path: '/api/v1/conversations'
+      fullPath: '/api/v1/conversations'
+      preLoaderRoute: typeof ApiV1ConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/embeddings': {
       id: '/api/v1/embeddings'
       path: '/api/v1/embeddings'
@@ -5062,6 +5082,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
+  ApiV1ConversationsRoute: ApiV1ConversationsRoute,
   ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,
   ApiV1FileSearchRoute: ApiV1FileSearchRoute,
   ApiV1FilesRoute: ApiV1FilesRoute,

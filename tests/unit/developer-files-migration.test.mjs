@@ -376,3 +376,58 @@ test("vector stores persist cosine retrieval, enforce scopes and erase linked fi
     await f.db.close();
   }
 });
+
+test("developer conversations serialize revisions, retain retry fences and erase content", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_conversations_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input, user = owner) =>
+      (
+        await f.db.query("select manage_developer_conversations_v1($1,$2,$3,$4,$5) result", [
+          user, key, f.account.projectId, operation, input,
+        ])
+      ).rows[0].result;
+    const conversation = id(50), itemId = id(51), otherItem = id(52);
+    const item = { id: itemId, role: "user", content: "private example" };
+    const create = { id: conversation, title: "Example" };
+    assert.equal((await run("create", create)).revision, 0);
+    assert.equal((await run("create", create)).id, conversation);
+    const append = { id: conversation, expected_revision: 0, item };
+    assert.equal((await run("append", append)).revision, 1);
+    assert.equal((await run("append", append)).revision, 1);
+    await assert.rejects(
+      run("append", { ...append, item: { ...item, content: "changed" } }),
+      /conversation_conflict/,
+    );
+    await assert.rejects(
+      run("append", { ...append, item: { ...item, id: otherItem } }),
+      /conversation_conflict/,
+    );
+    assert.deepEqual((await run("get", { id: conversation })).items, [item]);
+    assert.equal((await run("get_item", { id: conversation, item_id: itemId })).item.content, item.content);
+    assert.equal((await run("list", {})).data[0].items, undefined);
+    await assert.rejects(run("get", { id: conversation }, other), /scope_required/);
+    const remove = { id: conversation, item_id: itemId, expected_revision: 1 };
+    assert.equal((await run("remove", remove)).revision, 2);
+    assert.equal((await run("remove", remove)).revision, 2);
+    assert.deepEqual((await run("get", { id: conversation })).items, []);
+    await assert.rejects(run("get_item", { id: conversation, item_id: itemId }), /not_found/);
+    await assert.rejects(run("append", append), /conversation_conflict/);
+    const exported = (await f.db.query("select items from developer_conversation_export_records_v1")).rows[0];
+    assert.deepEqual(exported.items, [{ id: itemId, deleted: true }]);
+    for (const role of ["anon", "authenticated"])
+      assert.equal(
+        (await f.db.query("select has_table_privilege($1,'developer_conversations_v1','select') allowed", [role])).rows[0].allowed,
+        false,
+      );
+    await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
+    assert.equal(
+      (await f.db.query("select count(*)::int n from developer_conversations_v1")).rows[0].n,
+      0,
+    );
+  } finally {
+    await f.db.close();
+  }
+});
