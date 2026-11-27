@@ -178,7 +178,15 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   const files = await loadDeveloperFileContent(identity, parsed.body, references.ids);
   parsed.body = files.body;
   const version = await currentPricing(identity);
-  const provider = getAiProviderConfig(parsed.capability).provider;
+  const providerConfig = getAiProviderConfig(parsed.capability);
+  const provider = providerConfig.provider;
+  if (
+    parsed.body.max_tool_calls !== undefined &&
+    (runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true" ||
+      provider !== "openai" ||
+      !providerConfig.capabilities?.includes("web_search"))
+  )
+    throw new Error("developer_web_search_unavailable");
   const contracts = version.public_price_configuration?.contracts;
   const contract = Array.isArray(contracts)
     ? contracts.find(
@@ -324,6 +332,7 @@ const publicUsage = (row: Record<string, unknown>) => {
     cached_input_tokens: dimension("cached_input_tokens"),
     image_input_tokens: dimension("image_input_tokens"),
     output_tokens: dimension("output_tokens"),
+    web_search_calls: dimension("web_search_calls"),
   };
 };
 async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {
@@ -388,10 +397,17 @@ export async function handleDeveloperApi(request: Request, operation: string) {
                 capability: string;
                 allowedReasoningEfforts?: string[];
                 maximumInlineImageTokens?: number;
+                meter?: string;
+                provider: string;
               }) => ({
                 id: entry.publicModel,
                 capability: entry.capability,
                 reasoning_efforts: entry.allowedReasoningEfforts ?? [],
+                web_search:
+                  entry.meter === "responses_search" &&
+                  entry.provider === "openai" &&
+                  runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") === "true" &&
+                  getAiProviderConfig("chat").capabilities?.includes("web_search") === true,
                 inline_image_input:
                   Number.isSafeInteger(entry.maximumInlineImageTokens) &&
                   Number(entry.maximumInlineImageTokens) > 0,

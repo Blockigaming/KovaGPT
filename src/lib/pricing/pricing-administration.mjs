@@ -15,6 +15,7 @@ const number = (v, max = 1e9) =>
 const keys = (v, allowed) => object(v) && Object.keys(v).every((key) => allowed.includes(key));
 const meters = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   embedding_tokens: ["input_tokens"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
@@ -178,6 +179,8 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "allowedQualities",
         "allowedReasoningEfforts",
         "maximumInlineImageTokens",
+        "maximumWebSearchInputTokens",
+        "searchContentAccounting",
       ]) ||
       !["azure_openai", "openai"].includes(c.provider) ||
       !text(c.upstreamModel) ||
@@ -203,7 +206,14 @@ export function validatePricingProposal(raw, now = Date.now()) {
     )
       fail("image_bounds_invalid");
     const body = { model: c.upstreamModel, input: "" };
-    if (c.meter === "responses_tokens") body.max_output_tokens = 1;
+    if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "responses_search")
+      Object.assign(body, {
+        tools: [{ type: "web_search", search_context_size: "low" }],
+        tool_choice: "required",
+        max_tool_calls: c.maximumUsage?.web_search_calls,
+        stream: false,
+      });
     if (c.meter === "image_tokens")
       Object.assign(body, { n: 1, size: c.allowedSizes[0], quality: c.allowedQualities[0] });
     try {

@@ -1,5 +1,6 @@
 import { quoteRequest, reconcileCharge, PricingUnavailableError } from "./cost-plus.mjs";
 import { developerInlineImage } from "./developer-responses-policy.mjs";
+import { developerSearchOptions } from "./developer-search-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -10,6 +11,7 @@ const finite = (value, maximum = 1e9) =>
 const integer = (value) => finite(value, 1e7) && Number.isSafeInteger(value);
 const dimensionsByMeter = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   embedding_tokens: ["input_tokens"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
@@ -38,6 +40,8 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   if (!contract || !dimensionsByMeter[contract.meter] || !object(contract.maximumUsage))
     fail("billing_contract_missing");
   const dimensions = dimensionsByMeter[contract.meter];
+  const searchMeter = contract.meter === "responses_search";
+  const responsesMeter = searchMeter || contract.meter === "responses_tokens";
   if (
     Object.keys(contract.maximumUsage).sort().join() !== [...dimensions].sort().join() ||
     dimensions.some((key) => !integer(contract.maximumUsage[key])) ||
@@ -76,6 +80,41 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
+  let search;
+  try {
+    search = developerSearchOptions(request.body);
+  } catch {
+    fail("billing_dimensions_unsupported");
+  }
+  if (search && !searchMeter) fail("billing_dimensions_unsupported");
+  if (
+    searchMeter &&
+    (request.provider !== "openai" ||
+      request.capability !== "chat" ||
+      request.body.stream === true ||
+      contract.searchContentAccounting !== "included_in_input_tokens" ||
+      !integer(contract.maximumWebSearchInputTokens) ||
+      contract.maximumWebSearchInputTokens < 1 ||
+      contract.maximumWebSearchInputTokens > contract.maximumUsage.input_tokens ||
+      contract.maximumUsage.web_search_calls < 1 ||
+      contract.maximumUsage.web_search_calls > 3 ||
+      /^gpt-(?:4o-mini|4\.1-mini)(?:-|$)/.test(request.body.model))
+  )
+    fail("billing_search_contract_invalid");
+  if (
+    !searchMeter &&
+    (contract.maximumWebSearchInputTokens !== undefined ||
+      contract.searchContentAccounting !== undefined)
+  )
+    fail("billing_search_contract_invalid");
+  if (search) {
+    const bytes = new TextEncoder().encode(JSON.stringify(request.body)).byteLength;
+    if (
+      search.max_tool_calls > contract.maximumUsage.web_search_calls ||
+      bytes + contract.maximumWebSearchInputTokens > contract.maximumUsage.input_tokens
+    )
+      fail("billing_search_bound_exceeded");
+  }
   const inlineImageTokens = contract.maximumInlineImageTokens;
   if (
     inlineImageTokens !== undefined &&
@@ -88,7 +127,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   const allowedEfforts = contract.allowedReasoningEfforts;
   if (
     allowedEfforts !== undefined &&
-    (contract.meter !== "responses_tokens" ||
+    (!responsesMeter ||
       !Array.isArray(allowedEfforts) ||
       !allowedEfforts.length ||
       new Set(allowedEfforts).size !== allowedEfforts.length ||
@@ -107,7 +146,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     )
       fail("billing_reasoning_effort_unapproved");
   }
-  if (contract.meter === "responses_tokens") {
+  if (responsesMeter) {
     if (
       !["chat", "streaming", "reasoning", "tool_calls", "vision", "file_analysis"].includes(
         request.capability,
@@ -129,7 +168,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     const encodedInput = JSON.stringify(request.body.input);
     const imageMarkers = encodedInput?.match(/"type"\s*:\s*"input_image"/g)?.length ?? 0;
     if (
-      request.body.tools?.some((tool) => tool.type !== "function") ||
+      (!search && request.body.tools?.some((tool) => tool.type !== "function")) ||
       /"type"\s*:\s*"(?:input_file|input_audio)"/.test(encodedInput) ||
       imageMarkers !== images.length ||
       images.length > 1
@@ -220,7 +259,12 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     provider: request.provider,
     upstreamModel: request.body.model,
     currency: version.currency,
-    usage: { capability: request.capability, dimensions: contract.maximumUsage },
+    usage: {
+      capability: request.capability,
+      dimensions: searchMeter
+        ? { ...contract.maximumUsage, web_search_calls: search?.max_tool_calls ?? 0 }
+        : contract.maximumUsage,
+    },
     allowances: version.allowance_configuration,
     pricingVersion: { id: version.id, status: version.status, marginFloor: version.margin_floor },
     publicPrice: { model: contract.publicModel, meter: contract.meter },
@@ -245,7 +289,7 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
     return null;
   const usage = response.usage;
   let dimensions;
-  if (meter === "responses_tokens") {
+  if (meter === "responses_tokens" || meter === "responses_search") {
     if (!["completed", "incomplete"].includes(response.status)) return null;
     const cached = usage.input_tokens_details?.cached_tokens;
     if (
@@ -258,6 +302,24 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
       cached_input_tokens: cached,
       output_tokens: usage.output_tokens,
     };
+    if (meter === "responses_search") {
+      if (!Array.isArray(response.output) || response.output.length > 256) return null;
+      const ids = new Set();
+      for (const item of response.output) {
+        if (!object(item)) return null;
+        if (item.type === "web_search_call") {
+          if (
+            typeof item.id !== "string" ||
+            !/^ws_[A-Za-z0-9_-]{1,180}$/.test(item.id) ||
+            ids.has(item.id) ||
+            item.status !== "completed"
+          )
+            return null;
+          ids.add(item.id);
+        } else if (!["message", "reasoning", "function_call"].includes(item.type)) return null;
+      }
+      dimensions.web_search_calls = ids.size;
+    }
   } else if (meter === "embedding_tokens") {
     if (!integer(usage.prompt_tokens)) return null;
     dimensions = { input_tokens: usage.prompt_tokens };
@@ -320,8 +382,9 @@ export function settleDeveloperQuote(prepared, actual) {
 }
 
 /** Retain only top-level accounting fields; image bytes and model output are never buffered. */
-export function createUsageCollector() {
+export function createUsageCollector(includeOutput = false) {
   const selected = new Set(["usage", "id", "status", "model"]);
+  if (includeOutput) selected.add("output");
   let depth = 0,
     inString = false,
     escaped = false,
@@ -417,7 +480,7 @@ export function createUsageCollector() {
         }
         if (selected.has(key)) {
           token += character;
-          if (token.length > 16384) {
+          if (token.length > (key === "output" ? 1048576 : 16384)) {
             bad = true;
             return;
           }
@@ -466,7 +529,7 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
       response.headers.get("x-request-id") || response.headers.get("apim-request-id");
     const reader = response.body.getReader(),
       decoder = new TextDecoder(),
-      collector = createUsageCollector();
+      collector = createUsageCollector(prepared.contract.meter === "responses_search");
     const streaming = response.headers.get("content-type")?.includes("text/event-stream");
     let pending = "",
       overflow = false;

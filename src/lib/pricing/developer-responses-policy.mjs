@@ -1,3 +1,5 @@
+import { developerSearchOptions } from "./developer-search-policy.mjs";
+
 const fail = () => {
   throw new Error("developer_responses_invalid");
 };
@@ -253,6 +255,8 @@ export function developerResponseFeatures(input) {
       fail();
     result.reasoning = { effort: input.reasoning.effort };
   }
+  const search = developerSearchOptions(input);
+  if (search) return { ...result, ...search };
   if (input.tools !== undefined) {
     if (!Array.isArray(input.tools) || input.tools.length > 32) fail();
     const names = new Set();
