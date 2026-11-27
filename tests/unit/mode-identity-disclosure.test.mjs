@@ -17,10 +17,7 @@ test("Kova-first identity preserves explicit provider disclosure", () => {
   assert.match(base, /ordinary identity questions/);
   assert.match(base, /assistant is developed and refined by Kova/);
   assert.match(base, /do not volunteer upstream provider names or internal model IDs/);
-  assert.match(
-    base,
-    /Do not claim Kova trained or fine-tuned third-party foundation weights without verified evidence/,
-  );
+  assert.match(base, /Never claim unverified Kova training or fine-tuning/);
   assert.match(base, /When directly asked about the active provider, underlying model/);
   assert.match(
     base,
