@@ -145,3 +145,34 @@ test("file expansion verifies digest and key/project-scoped reads before returni
     /scope_required/,
   );
 });
+
+test("owner console uploads require the pinned principal, explicit project and files key", async () => {
+  const f = await fixture();
+  f.state.enabled = true;
+  const upload = { filename: "safe.txt", mimeType: "text/plain", text: "hello" };
+  const send = (query, principal = owner) =>
+    f.module.handleDeveloperFiles(
+      new Request(`https://kovagpt.com/api/developer/files?${query}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": "stable",
+          "x-kova-expected-user": principal,
+        },
+        body: JSON.stringify(upload),
+      }),
+      true,
+    );
+  assert.equal((await send(`project=${project}&key=${key}`, project)).status, 400);
+  assert.equal((await send(`key=${key}`)).status, 400);
+  assert.equal((await send(`project=${project}`)).status, 400);
+  assert.equal(f.state.calls.length, 0);
+  assert.equal((await send(`project=${project}&key=${key}`)).status, 201);
+  assert.equal(f.state.calls[0].args.p_owner, owner);
+  assert.equal(f.state.calls[0].args.p_project, project);
+  assert.equal(f.state.calls[0].args.p_key, key);
+  assert.equal(
+    f.state.calls[0].args.p_input.requestDigest,
+    createHash("sha256").update("owner-console:stable").digest("hex"),
+  );
+});

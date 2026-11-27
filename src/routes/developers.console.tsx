@@ -1267,6 +1267,18 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                 key={`${userId}:${project}`}
                 userId={userId}
                 projectId={project}
+                uploadKeys={(data?.keys ?? [])
+                  .filter(
+                    (key) =>
+                      key.project_id === project &&
+                      key.account_id === account &&
+                      key.enabled === true &&
+                      !key.revoked_at &&
+                      Date.parse(String(key.expires_at)) > Date.now() &&
+                      Array.isArray(key.capabilities) &&
+                      key.capabilities.includes("files"),
+                  )
+                  .map((key) => ({ id: String(key.id), name: String(key.name) }))}
               />
             ) : (
               <div className="rounded-xl border p-5">

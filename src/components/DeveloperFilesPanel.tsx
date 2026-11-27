@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 type FileRow = {
   id: string;
@@ -8,13 +9,33 @@ type FileRow = {
   expires_at: string;
   content?: string;
 };
-export function DeveloperFilesPanel({ userId, projectId }: { userId: string; projectId: string }) {
+type UploadKey = { id: string; name: string };
+const uploadTypes: Record<string, string> = {
+  txt: "text/plain",
+  md: "text/markdown",
+  csv: "text/csv",
+  json: "application/json",
+};
+export function DeveloperFilesPanel({
+  userId,
+  projectId,
+  uploadKeys,
+}: {
+  userId: string;
+  projectId: string;
+  uploadKeys: UploadKey[];
+}) {
   const [data, setData] = useState<{ data: FileRow[]; hasMore: boolean } | null>(null),
     [page, setPage] = useState(0),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [preview, setPreview] = useState<FileRow | null>(null),
-    [deleting, setDeleting] = useState<string | null>(null);
+    [deleting, setDeleting] = useState<string | null>(null),
+    [uploadKey, setUploadKey] = useState(""),
+    [uploadFile, setUploadFile] = useState<File | null>(null);
+  const uploadInput = useRef<HTMLInputElement>(null);
+  const uploadRequest = useRef<string | null>(null);
+  const uploadPending = useRef(false);
   const active = useRef(true),
     version = useRef(0);
   const load = useCallback(
@@ -44,6 +65,52 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
       controller.abort();
     };
   }, [load]);
+  const upload = async () => {
+    if (uploadPending.current || busy || !uploadFile || !uploadKeys.some((k) => k.id === uploadKey))
+      return;
+    uploadPending.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      const extension = uploadFile.name.split(".").at(-1) ?? "";
+      const mimeType = uploadTypes[extension];
+      if (
+        !mimeType ||
+        !/^[A-Za-z0-9][A-Za-z0-9._ -]{0,119}\.(txt|md|csv|json)$/.test(uploadFile.name) ||
+        uploadFile.size < 1 ||
+        uploadFile.size > 32768
+      )
+        throw new Error("Choose a supported text file of 1–32768 bytes.");
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(
+        await uploadFile.arrayBuffer(),
+      );
+      if (!active.current) return;
+      uploadRequest.current ??= crypto.randomUUID();
+      const params = new URLSearchParams({ project: projectId, key: uploadKey });
+      const response = await fetchWithTimeoutAuthenticated(`/api/developer/files?${params}`, {
+        method: "POST",
+        headers: {
+          "X-Kova-Expected-User": userId,
+          "Content-Type": "application/json",
+          "Idempotency-Key": uploadRequest.current,
+        },
+        body: JSON.stringify({ filename: uploadFile.name, mimeType, text }),
+      });
+      if (!response.ok) throw new Error("Upload rejected. Check file format, key and storage limits.");
+      if (!active.current) return;
+      setUploadFile(null);
+      uploadRequest.current = null;
+      if (uploadInput.current) uploadInput.current.value = "";
+      if (page === 0) await load();
+      else setPage(0);
+    } catch (cause) {
+      if (active.current)
+        setError(cause instanceof Error ? cause.message : "Upload could not be completed.");
+    } finally {
+      uploadPending.current = false;
+      if (active.current) setBusy(false);
+    }
+  };
   const action = async (file: FileRow, remove: boolean) => {
     setBusy(true);
     setError("");
@@ -73,10 +140,65 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
     >
       <h2 className="text-lg font-semibold">Developer files</h2>
       <p className="text-sm text-muted-foreground">
-        Private text, Markdown, CSV and JSON files for this developer project. Upload through the
-        API with a files-scoped key. Files expire after 30 days; your account can store up to 100
-        files and 2 MiB across all projects.
+        Private text, Markdown, CSV and JSON files for this developer project. Files expire after
+        30 days; your account can store up to 100 files and 2 MiB across all projects.
       </p>
+      <form
+        className="grid min-w-0 gap-3 border-b border-border pb-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void upload();
+        }}
+      >
+        <h3 className="font-medium">Upload file</h3>
+        {uploadKeys.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Create an active files-scoped API key in this project to upload files.
+          </p>
+        ) : (
+          <>
+            <label className="block min-w-0 space-y-1 text-sm">
+              <span>Files-scoped key</span>
+              <select
+                className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
+                value={uploadKey}
+                disabled={busy}
+                onChange={(event) => {
+                  setUploadKey(event.target.value);
+                  uploadRequest.current = null;
+                }}
+              >
+                <option value="">Select key</option>
+                {uploadKeys.map((key) => (
+                  <option key={key.id} value={key.id}>
+                    {key.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block min-w-0 space-y-1 text-sm">
+              <span>File (up to 32 KiB)</span>
+              <Input
+                ref={uploadInput}
+                type="file"
+                accept=".txt,.md,.csv,.json"
+                disabled={busy}
+                onChange={(event) => {
+                  setUploadFile(event.target.files?.[0] ?? null);
+                  uploadRequest.current = null;
+                }}
+              />
+            </label>
+            <Button
+              type="submit"
+              className="justify-self-start"
+              disabled={busy || !uploadFile || !uploadKeys.some((key) => key.id === uploadKey)}
+            >
+              Upload
+            </Button>
+          </>
+        )}
+      </form>
       {error && <p role="alert">{error}</p>}
       <ul className="space-y-3">
         {data?.data.map((file) => (

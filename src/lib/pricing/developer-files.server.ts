@@ -45,16 +45,21 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
     const db = developerDatabase();
     let operation: string, input: Record<string, unknown>;
     if (request.method === "POST") {
-      if (ownerConsole) throw new Error("developer_operation_invalid");
       if (runtimeEnv("KOVA_DEVELOPER_FILES_ENABLED") !== "true")
         throw new Error("developer_files_disabled");
       if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
         throw new Error("developer_json_required");
       operation = "create";
+      if (ownerConsole) {
+        if (!projectId) throw new Error("developer_scope_required");
+        keyId = developerUuid(url.searchParams.get("key"));
+      }
       const requestKey = developerRequestKey(request.headers.get("idempotency-key"));
       input = {
         ...developerFileUpload(await readBoundedJsonObject(request, 131072)),
-        requestDigest: createHash("sha256").update(requestKey).digest("hex"),
+        requestDigest: createHash("sha256")
+          .update(ownerConsole ? `owner-console:${requestKey}` : requestKey)
+          .digest("hex"),
       };
     } else if (["GET", "DELETE"].includes(request.method)) {
       const id = url.searchParams.get("id");
