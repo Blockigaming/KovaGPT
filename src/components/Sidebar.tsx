@@ -19,6 +19,7 @@ import {
   Archive,
   Brain,
   Bell,
+  Inbox,
   PanelLeft,
   ArrowLeft,
   MessageSquare,
@@ -49,6 +50,7 @@ import { createPortal } from "react-dom";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { useInboxAccounts } from "@/hooks/use-inbox-accounts";
 import { useAccountProfile } from "@/lib/use-account-profile";
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
@@ -103,6 +105,7 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   memory: Brain,
   settings: SettingsGlyph,
   notifications: Bell,
+  inbox: Inbox,
 };
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({
@@ -355,8 +358,12 @@ export function Sidebar({
     railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
   const railShortcuts = layout.shortcuts;
   const railDialogOpen = Boolean(railOwner && railDialogOwner === railOwner);
+  const inboxPath = useRouterState({ select: (state) => state.location.pathname });
+  const inboxAccounts = useInboxAccounts(railOwner, inboxPath);
   const availableShortcuts = SIDEBAR_ITEMS.filter(
-    (shortcut) => shortcut.id !== "maps" || mapsReleaseApproved,
+    (shortcut) =>
+      (shortcut.id !== "maps" || mapsReleaseApproved) &&
+      (shortcut.id !== "inbox" || inboxAccounts.accounts.length > 0),
   );
   const sidebarStyle = {
     ...sidebarColors(layout.color),

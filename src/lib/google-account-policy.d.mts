@@ -2,6 +2,7 @@ export type GoogleConnector = "gmail" | "google-calendar" | "google-drive";
 export const GOOGLE_CONNECTOR_SCOPES: Readonly<Record<GoogleConnector, string[]>>;
 export function googleConnectorScopes(connector?: string, access?: string): string;
 export type GoogleCapability =
+  | "gmail.modify"
   | "gmail.read"
   | "gmail.write"
   | "gmail.draft"

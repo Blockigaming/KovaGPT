@@ -2364,6 +2364,28 @@ export function SettingsDialog({
               {/* APPEARANCE */}
               <TabsContent aria-labelledby={currentSectionHeadingId} value="appearance">
                 <AppearanceSettings settings={settings} onChange={onChange} />
+                <section className="space-y-3">
+                  <h3>Inbox appearance</h3>
+                  <label className="flex flex-wrap items-center justify-between gap-3">
+                    Message density
+                    <select
+                      className="rounded-lg border bg-background p-2"
+                      value={settings.inboxDensity === "compact" ? "compact" : "comfortable"}
+                      onChange={(event) => onChange({ ...settings, inboxDensity: event.target.value === "compact" ? "compact" : "comfortable" })}
+                    >
+                      <option value="comfortable">Comfortable</option>
+                      <option value="compact">Compact</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center justify-between gap-3">
+                    Show message previews
+                    <input type="checkbox" checked={settings.inboxShowPreview !== false} onChange={(event) => onChange({ ...settings, inboxShowPreview: event.target.checked })} />
+                  </label>
+                  <label className="flex items-center justify-between gap-3">
+                    Show unread messages first
+                    <input type="checkbox" checked={settings.inboxUnreadFirst === true} onChange={(event) => onChange({ ...settings, inboxUnreadFirst: event.target.checked })} />
+                  </label>
+                </section>
                 <LocalizationSettings />
               </TabsContent>
 

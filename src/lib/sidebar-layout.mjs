@@ -3,6 +3,7 @@ import { principalScopedStorageKey } from "./principal-browser-storage.mjs";
 import { readSidebarShortcuts } from "./sidebar-shortcuts.mjs";
 
 export const SIDEBAR_ITEMS = Object.freeze([
+  { id: "inbox", label: "Inbox", to: "/inbox" },
   { id: "library", label: "Library", to: "/library" },
   { id: "projects", label: "Projects", to: "/projects" },
   { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
@@ -13,7 +14,7 @@ export const SIDEBAR_ITEMS = Object.freeze([
   { id: "notifications", label: "Notifications", to: "/notifications" },
 ]);
 export const DEFAULT_SIDEBAR_LAYOUT = Object.freeze({
-  shortcuts: ["library", "projects", "scheduled-tasks", "apps"],
+  shortcuts: ["library", "projects", "scheduled-tasks", "apps", "inbox"],
   width: 280,
   color: "default",
   searchPosition: "header",
@@ -42,11 +43,17 @@ export function readSidebarLayout(storage, owner) {
   if (!key) return normalizeSidebarLayout(null);
   try {
     const raw = storage?.getItem(key);
-    if (raw && raw.length < 4096) return normalizeSidebarLayout(JSON.parse(raw));
+    if (raw && raw.length < 4096) {
+      const parsed = JSON.parse(raw);
+      const layout = normalizeSidebarLayout(parsed);
+      if (parsed?.inboxVersion !== 1 && !layout.shortcuts.includes("inbox"))
+        layout.shortcuts.push("inbox");
+      return layout;
+    }
     // Preserve the account's old rail choices when upgrading its settings format.
     const legacy = storage?.getItem(principalScopedStorageKey("kova-sidebar-shortcuts-v1", owner));
     return normalizeSidebarLayout(
-      legacy ? { shortcuts: readSidebarShortcuts(storage, owner) } : null,
+      legacy ? { shortcuts: [...readSidebarShortcuts(storage, owner), "inbox"] } : null,
     );
   } catch {
     return normalizeSidebarLayout(null);
@@ -56,7 +63,7 @@ export function saveSidebarLayout(storage, owner, layout) {
   const key = sidebarLayoutKey(owner);
   if (!key || !storage) return false;
   try {
-    storage.setItem(key, JSON.stringify(normalizeSidebarLayout(layout)));
+    storage.setItem(key, JSON.stringify({ ...normalizeSidebarLayout(layout), inboxVersion: 1 }));
     return true;
   } catch {
     return false;
