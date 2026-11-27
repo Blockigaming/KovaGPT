@@ -35,8 +35,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
-          VITE_KOVA_AUTH_MODE: ${{ vars.STAGING_AUTH_MODE || 'supabase' }}
-          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          VITE_KOVA_AUTH_MODE: "supabase"
         run: |
           set -euo pipefail
           staging_url="$VITE_SUPABASE_URL"
@@ -49,18 +48,10 @@ jobs:
             echo "::error::A staging publishable key and a nonproduction project are required."
             exit 1
           fi
-          auth_origin=""
-          case "$VITE_KOVA_AUTH_MODE" in
-            supabase) ;;
-            dual|kova)
-              auth_origin="${STAGING_BASE_URL%/}"
-              if [[ ! "$auth_origin" =~ ^https://(staging\.kovagpt\.com|ca-kovagpt-staging\.[a-z0-9-]+\.[a-z0-9-]+\.azurecontainerapps\.io)$ ]]; then
-                echo "::error::Kova auth requires the verified staging app origin."
-                exit 1
-              fi
-              ;;
-            *) echo "::error::Invalid staging auth mode."; exit 1 ;;
-          esac
+          if [[ "$VITE_KOVA_AUTH_MODE" != "supabase" ]]; then
+            echo "::error::Only Supabase Auth is supported in staging."
+            exit 1
+          fi
 
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           source_tree="$(git rev-parse 'HEAD^{tree}')"
@@ -78,7 +69,7 @@ jobs:
             --build-arg VITE_SUPABASE_URL="https://$staging_project_ref.supabase.co" \
             --build-arg VITE_SUPABASE_PUBLISHABLE_KEY \
             --build-arg VITE_KOVA_AUTH_MODE \
-            --build-arg VITE_KOVA_AUTH_ORIGIN="$auth_origin" "$context"
+            --build-arg VITE_KOVA_AUTH_ORIGIN="" "$context"
           test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")" = "$SOURCE_SHA"
           test "$(docker inspect --format '{{index .Config.Labels "com.kovagpt.source.tree"}}' "$image")" = "$source_tree"
           test "$(docker inspect --format '{{index .Config.Labels "com.kovagpt.browser.config-verified"}}' "$image")" = true
