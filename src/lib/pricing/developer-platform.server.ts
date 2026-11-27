@@ -66,6 +66,21 @@ export const developerJson = (value: unknown, status = 200) =>
     headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
   });
 export function developerFailure(error: unknown) {
+  const bodyCode = error instanceof Error && "code" in error ? error.code : null;
+  if (bodyCode === "request_too_large")
+    return developerJson(
+      { error: { code: "developer_input_too_large", message: "request too large" } },
+      413,
+    );
+  if (
+    ["invalid_content_length", "invalid_utf8", "invalid_json", "invalid_request_body"].includes(
+      String(bodyCode),
+    )
+  )
+    return developerJson(
+      { error: { code: "developer_input_invalid", message: "invalid request body" } },
+      400,
+    );
   const code =
     error instanceof Error && /^developer_[a-z_]+$/.test(error.message)
       ? error.message
@@ -506,9 +521,16 @@ export async function handleDeveloperApi(request: Request, operation: string) {
     if (operation === "models") return await developerModels(identity, request);
     if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
       throw new Error("developer_json_required");
-    const body = await readBoundedJsonObject(request, 65536);
-    if (operation === "quotes")
-      return developerJson(await developerQuote(identity, String(body.operation), body.input));
+    const body = await readBoundedJsonObject(request, 65536, request.signal);
+    if (operation === "quotes") {
+      if (
+        typeof body.operation !== "string" ||
+        Object.keys(body).length !== 2 ||
+        !Object.hasOwn(body, "input")
+      )
+        throw new Error("developer_input_invalid");
+      return developerJson(await developerQuote(identity, body.operation, body.input));
+    }
     return await executeDeveloper(
       identity,
       operation,

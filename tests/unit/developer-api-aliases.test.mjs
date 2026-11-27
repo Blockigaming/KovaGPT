@@ -120,3 +120,34 @@ test("SSE compatibility requires the real terminal receipt and matching observed
     await assert.rejects(() => rejected.text(), /provider_unavailable/);
   }
 });
+
+test(
+  "compatibility stream never stalls on byte fragmentation or reasoning-only frames",
+  { timeout: 2000 },
+  async () => {
+    const text = "Héllo";
+    const receipt = structuredClone(native);
+    receipt.output[1].content[0].text = text;
+    const source =
+      sse({ type: "response.created", response: receipt }) +
+      sse({ type: "response.reasoning_summary_text.delta", delta: "private" }) +
+      sse({ type: "response.output_text.delta", delta: text }) +
+      sse({ type: "response.completed", response: receipt });
+    const bytes = new TextEncoder().encode(source.replaceAll("\n", "\r\n"));
+    let offset = 0;
+    const response = new Response(
+      new ReadableStream({
+        pull(controller) {
+          if (offset < bytes.length) controller.enqueue(bytes.slice(offset, ++offset));
+          else controller.close();
+        },
+      }),
+      { headers: { "Content-Type": "text/event-stream" } },
+    );
+    const result = await developerChatCompletion(response, { ...options, stream: true });
+    const output = await result.text();
+    assert.match(output, /Héllo/);
+    assert.match(output, /data: \[DONE\]/);
+    assert.doesNotMatch(output, /private/);
+  },
+);

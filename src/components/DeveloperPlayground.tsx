@@ -5,13 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { createDeveloperPlaygroundStream } from "@/lib/pricing/developer-playground-stream.mjs";
 import { parseDeveloperPlaygroundOptions } from "@/lib/pricing/developer-playground-options.mjs";
 
-type Operation = "responses" | "streaming" | "images" | "embeddings" | "moderations";
+type Operation = "responses" | "streaming" | "images" | "embeddings" | "moderations" | "search";
 type Model = {
   id: string;
   capability: string;
   reasoningEfforts: string[];
   inlineImageInput: boolean;
   imageEdits: boolean;
+  webSearch: boolean;
 };
 type Quote = {
   quoteToken: string;
@@ -29,7 +30,12 @@ const capability: Record<Operation, string> = {
   images: "image_generation",
   embeddings: "embeddings",
   moderations: "moderation",
+  search: "chat",
 };
+
+function eligibleModel(item: Model, operation: Operation) {
+  return item.capability === capability[operation] && (operation !== "search" || item.webSearch);
+}
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -51,6 +57,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
+  const [maxSearchCalls, setMaxSearchCalls] = useState("1");
   const [effort, setEffort] = useState("");
   const [advanced, setAdvanced] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -161,6 +168,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                     capability: row.capability,
                     inlineImageInput: row.inline_image_input === true,
                     imageEdits: row.image_edits === true,
+                    webSearch: row.web_search === true,
                     reasoningEfforts: Array.isArray(row.reasoning_efforts)
                       ? row.reasoning_efforts.filter(
                           (effort): effort is string =>
@@ -175,11 +183,11 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         : [];
       if (!mounted.current || controller.signal.aborted) return;
       setModels(catalog);
-      setModel(catalog.find((item) => item.capability === capability[operation])?.id ?? "");
+      setModel(catalog.find((item) => eligibleModel(item, operation))?.id ?? "");
       if (!catalog.length) setError("No approved models are available for this key.");
     });
 
-  const eligible = models.filter((item) => item.capability === capability[operation]);
+  const eligible = models.filter((item) => eligibleModel(item, operation));
   const selectedModel = eligible.find((item) => item.id === model);
   const efforts = selectedModel?.reasoningEfforts ?? [];
   const textOperation = operation === "responses" || operation === "streaming";
@@ -197,15 +205,16 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         const bytes = new Uint8Array(await imageFile.arrayBuffer());
         const dataUrl = "data:image/png;base64," + btoa(String.fromCharCode(...bytes));
         if (acceptsEdit) sourceImage = dataUrl;
-        else responseInput = [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: prompt },
-              { type: "input_image", image_url: dataUrl, detail: "low" },
-            ],
-          },
-        ];
+        else
+          responseInput = [
+            {
+              role: "user",
+              content: [
+                { type: "input_text", text: prompt },
+                { type: "input_image", image_url: dataUrl, detail: "low" },
+              ],
+            },
+          ];
       }
       const input = textOperation
         ? {
@@ -218,7 +227,14 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           }
         : operation === "images"
           ? { model, prompt, size, quality, n: 1, ...(sourceImage ? { image: sourceImage } : {}) }
-          : { model, input: prompt };
+          : operation === "search"
+            ? {
+                model,
+                query: prompt,
+                max_output_tokens: Number(maxOutput),
+                max_tool_calls: Number(maxSearchCalls),
+              }
+            : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
@@ -378,7 +394,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               onChange={(event) => {
                 const next = event.target.value as Operation;
                 setOperation(next);
-                setModel(models.find((item) => item.capability === capability[next])?.id ?? "");
+                setModel(models.find((item) => eligibleModel(item, next))?.id ?? "");
                 setEffort("");
                 setAdvanced("");
                 setImageFile(null);
@@ -392,6 +408,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="images">Images</option>
               <option value="embeddings">Embeddings</option>
               <option value="moderations">Moderation</option>
+              <option value="search">Web search</option>
             </select>
           </label>
           <label className="block space-y-1 text-sm">
@@ -419,7 +436,13 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             </select>
           </label>
           <label className="block space-y-1 text-sm">
-            <span>{operation === "images" ? "Image prompt" : "Input"}</span>
+            <span>
+              {operation === "images"
+                ? "Image prompt"
+                : operation === "search"
+                  ? "Search query"
+                  : "Input"}
+            </span>
             <Textarea
               rows={6}
               className="w-full min-w-0 resize-y"
@@ -432,7 +455,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               }}
             />
           </label>
-          {textOperation && (
+          {(textOperation || operation === "search") && (
             <label className="block space-y-1 text-sm">
               <span>Maximum output tokens</span>
               <Input
@@ -447,6 +470,28 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   resetQuote();
                 }}
               />
+            </label>
+          )}
+          {operation === "search" && (
+            <label className="block space-y-1 text-sm">
+              <span>Maximum search calls</span>
+              <select
+                className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
+                value={maxSearchCalls}
+                disabled={busy}
+                onChange={(event) => {
+                  setMaxSearchCalls(event.target.value);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              >
+                {["1", "2", "3"].map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Only models with an approved, enabled search contract appear here.
+              </p>
             </label>
           )}
           {textOperation && (

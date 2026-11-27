@@ -6,6 +6,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { consumeOpenAiAdmission } from "../../src/lib/ai/openai-admission.server.mjs";
 import { parseDeveloperCredential } from "../../src/lib/pricing/developer-platform-policy.mjs";
+import { readBoundedJsonObject } from "../../src/lib/bounded-json.server.mjs";
 
 const keyId = "11111111-1111-4111-8111-111111111111";
 const credential = `kova_${keyId}_${"a".repeat(43)}`;
@@ -118,6 +119,7 @@ function fixture(overrides = {}) {
       runtimeEnv: (name) => (state.enabled ? env[name] : undefined),
     },
     "@supabase/supabase-js": { createClient: () => db },
+    "@/lib/bounded-json.server.mjs": { readBoundedJsonObject },
     "@/lib/ai/openai-admission-runtime.server": { consumeOpenAiApplicationAdmission: consume },
     "@/lib/distributed-rate-limit.server": {
       consumeApplicationRateLimit: async () =>
@@ -301,5 +303,25 @@ test("bearer usage rejects cross-account filters, duplicate and unbounded pagina
     );
     assert.equal(response.status, 400, query);
     assert.ok(!f.state.queries.includes("developer_api_requests"), query);
+  }
+});
+
+test("invalid or oversized JSON and ambiguous quote envelopes fail before provider work", async () => {
+  for (const [body, status] of [
+    ["{", 400],
+    ["[]", 400],
+    [" ".repeat(65537), 413],
+    [JSON.stringify({ operation: "responses", input: {}, ignored: true }), 400],
+    [JSON.stringify({ operation: {}, input: {} }), 400],
+  ]) {
+    const f = fixture();
+    const request = new Request("https://kova.test/api/v1/quotes", {
+      method: "POST",
+      headers: { authorization: `Bearer ${credential}`, "content-type": "application/json" },
+      body,
+    });
+    const response = await f.exports.handleDeveloperApi(request, "quotes");
+    assert.equal(response.status, status);
+    assert.equal(f.state.providerCalls, 0);
   }
 });

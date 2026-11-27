@@ -131,18 +131,19 @@ export async function developerChatCompletion(response, { publicModel, expectedM
       .filter((line) => line.startsWith("data:"))
       .map((line) => line.slice(5).replace(/^ /, ""))
       .join("\n");
-    if (!data) return;
+    if (!data) return false;
     if (data === "[DONE]") {
       if (!terminal) invalid();
-      return;
+      return false;
     }
     if (terminal) invalid();
     const event = JSON.parse(data);
-    if (!object(event)) invalid();
+    if (!object(event) || typeof event.type !== "string") invalid();
     if (event.type === "response.created") {
       if (meta) invalid();
       meta = metadata(event.response, publicModel, expectedModels);
       controller.enqueue(format(chunk({ role: "assistant" })));
+      return true;
     } else if (
       event.type === "response.output_text.delta" ||
       event.type === "response.refusal.delta"
@@ -155,8 +156,9 @@ export async function developerChatCompletion(response, { publicModel, expectedM
         observedText += event.delta;
         controller.enqueue(format(chunk({ content: event.delta })));
       }
+      return true;
     } else if (["response.completed", "response.incomplete"].includes(event.type)) {
-      if (!meta) invalid();
+      if (!meta || event.type !== "response." + event.response?.status) invalid();
       terminal = completion(event.response, publicModel, expectedModels);
       if (
         terminal.id !== meta.id ||
@@ -168,32 +170,40 @@ export async function developerChatCompletion(response, { publicModel, expectedM
     } else if (
       event.type === "response.failed" ||
       event.type === "error" ||
-      event.type?.startsWith?.("response.function_call") ||
+      event.type.startsWith("response.function_call") ||
       (event.type === "response.output_item.added" &&
         !["message", "reasoning"].includes(event.item?.type))
     ) {
       invalid();
     }
     // Other native metadata and reasoning events never enter the public stream.
+    return false;
   }
   return new Response(
     new ReadableStream({
       async pull(controller) {
         try {
-          const next = await read();
-          if (canceled) return;
-          pending += next.text;
-          let frame;
-          while ((frame = /\r?\n\r?\n/.exec(pending))) {
-            consume(pending.slice(0, frame.index), controller);
-            pending = pending.slice(frame.index + frame[0].length);
-          }
-          if (next.done) {
-            if (!terminal || pending.trim()) invalid();
-            controller.enqueue(format(chunk({}, terminal.choices[0].finish_reason, terminal.usage)));
-            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-            reader.releaseLock();
-            controller.close();
+          // A pull that emits nothing may not be called again by the stream.
+          // Continue across fragmented frames and ignored metadata until output or EOF.
+          for (;;) {
+            const next = await read();
+            if (canceled) return;
+            pending += next.text;
+            let emitted = false,
+              frame;
+            while ((frame = /\r?\n\r?\n/.exec(pending))) {
+              emitted = consume(pending.slice(0, frame.index), controller) || emitted;
+              pending = pending.slice(frame.index + frame[0].length);
+            }
+            if (next.done) {
+              if (!terminal || pending.trim()) invalid();
+              controller.enqueue(format(chunk({}, terminal.choices[0].finish_reason, terminal.usage)));
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              reader.releaseLock();
+              controller.close();
+              return;
+            }
+            if (emitted) return;
           }
         } catch {
           if (canceled) return;
