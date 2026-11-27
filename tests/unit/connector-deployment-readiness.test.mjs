@@ -141,6 +141,9 @@ test("configured Google callbacks must return to the same application origin", (
   assert.deepEqual(google(deployment(env)).requiredSettings, ["GOOGLE_REDIRECT_URI"]);
   env.GOOGLE_REDIRECT_URI = "https://kovagpt.com/api/google/callback";
   assert.equal(google(deployment(env)).state, "ready_for_account_verification");
+  env.SUPABASE_SERVICE_ROLE_KEY = "   ";
+  assert.deepEqual(google(deployment(env)).requiredSettings, ["SUPABASE_SERVICE_ROLE_KEY"]);
+  env.SUPABASE_SERVICE_ROLE_KEY = "server-role-fixture";
   env.GOOGLE_OAUTH_CLIENT_ID = "   ";
   assert.deepEqual(google(deployment(env)).requiredSettings, ["GOOGLE_OAUTH_CLIENT_ID"]);
 });

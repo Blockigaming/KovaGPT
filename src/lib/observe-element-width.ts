@@ -3,8 +3,8 @@ export function observeElementWidth(element: HTMLElement, onWidth: (width: numbe
   let width = element.clientWidth;
   let frame: number | null = null;
   const observer = new ResizeObserver(() => {
-    if (frame !== null || element.clientWidth === width) return;
-    frame = window.requestAnimationFrame(() => {
+    if (frame !== null) return;
+    frame = requestAnimationFrame(() => {
       frame = null;
       const nextWidth = element.clientWidth;
       if (nextWidth === width) return;
@@ -15,6 +15,6 @@ export function observeElementWidth(element: HTMLElement, onWidth: (width: numbe
   observer.observe(element);
   return () => {
     observer.disconnect();
-    if (frame !== null) window.cancelAnimationFrame(frame);
+    if (frame !== null) cancelAnimationFrame(frame);
   };
 }

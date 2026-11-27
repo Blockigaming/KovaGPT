@@ -1,5 +1,5 @@
 import { MASTER_CONNECTORS } from "@/lib/connector-master-list.mjs";
-import { googleOAuthConfigured, googleRedirectUri } from "@/lib/google-oauth.server";
+import { googleRedirectUri } from "@/lib/google-oauth.server";
 import { financeConfigured } from "@/finances/plaid.server";
 import { CONNECTION_FLOWS } from "./connection-flows.mjs";
 import { approvedMcpServers } from "./approved-mcp-servers.server.mjs";
@@ -46,24 +46,21 @@ function callbackMatches(value: string, origin: string, path: string) {
 
 function googleSettings(request: Request, origin: string) {
   const settings = [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
     "GOOGLE_OAUTH_CLIENT_ID",
     "GOOGLE_OAUTH_CLIENT_SECRET",
     "GOOGLE_REDIRECT_URI",
     "CONNECTOR_ENCRYPTION_KEY",
   ];
   const missing = settings.filter((name) => !hasSetting(name));
-  if (googleOAuthConfigured() && missing.length === 0) {
-    try {
-      if (callbackMatches(googleRedirectUri(request), origin, "/api/google/callback")) return [];
-      return ["GOOGLE_REDIRECT_URI"];
-    } catch {
-      return ["GOOGLE_REDIRECT_URI"];
-    }
+  if (missing.length) return missing;
+  try {
+    if (callbackMatches(googleRedirectUri(request), origin, "/api/google/callback")) return [];
+  } catch {
+    // Report an invalid callback using the same setting as a mismatched origin.
   }
-  return [
-    ...missing,
-    ...["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter((name) => !hasSetting(name)),
-  ];
+  return ["GOOGLE_REDIRECT_URI"];
 }
 
 function githubSettings(origin: string) {
