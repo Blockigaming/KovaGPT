@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { createDeveloperPlaygroundStream } from "@/lib/pricing/developer-playground-stream.mjs";
 
-type Operation = "responses" | "images" | "embeddings";
+type Operation = "responses" | "streaming" | "images" | "embeddings";
 type Model = {
   id: string;
   capability: string;
@@ -22,6 +23,7 @@ type Quote = {
 
 const capability: Record<Operation, string> = {
   responses: "chat",
+  streaming: "streaming",
   images: "image_generation",
   embeddings: "embeddings",
 };
@@ -75,13 +77,14 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     setError("");
   };
 
-  const request = async (
+  const fetchRequest = async (
     path: "models" | "quotes" | Operation,
     controller: AbortController,
     body?: string,
     headers?: Record<string, string>,
   ) => {
-    const response = await fetch(`/api/v1/${path}`, {
+    const endpoint = path === "streaming" ? "responses" : path;
+    const response = await fetch(`/api/v1/${endpoint}`, {
       method: body === undefined ? "GET" : "POST",
       credentials: "omit",
       redirect: "error",
@@ -94,10 +97,19 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       },
       body,
     });
-    const value: unknown = await response.json();
-    if (!response.ok) throw new Error(safeError(value, response.status));
-    return value;
+    if (!response.ok) {
+      const value: unknown = await response.json().catch(() => null);
+      throw new Error(safeError(value, response.status));
+    }
+    return response;
   };
+
+  const request = async (
+    path: "models" | "quotes" | Operation,
+    controller: AbortController,
+    body?: string,
+    headers?: Record<string, string>,
+  ): Promise<unknown> => (await fetchRequest(path, controller, body, headers)).json();
 
   const perform = async (action: (controller: AbortController) => Promise<void>) => {
     if (active.current || !enabled) return;
@@ -164,7 +176,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const eligible = models.filter((item) => item.capability === capability[operation]);
   const selectedModel = eligible.find((item) => item.id === model);
   const efforts = selectedModel?.reasoningEfforts ?? [];
-  const acceptsImage = operation === "responses" && selectedModel?.inlineImageInput === true;
+  const textOperation = operation === "responses" || operation === "streaming";
+  const acceptsImage = textOperation && selectedModel?.inlineImageInput === true;
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
@@ -185,20 +198,21 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         ];
       }
       const input =
-        operation === "responses"
+        textOperation
           ? {
               model,
               input: responseInput,
               max_output_tokens: Number(maxOutput),
-              stream: false,
+              stream: operation === "streaming",
               ...(effort && efforts.includes(effort) ? { reasoning: { effort } } : {}),
             }
           : operation === "images"
             ? { model, prompt, size, quality, n: 1 }
             : { model, input: prompt };
       const requestBody = JSON.stringify(input);
+      const apiOperation = operation === "streaming" ? "responses" : operation;
       const result = record(
-        await request("quotes", controller, JSON.stringify({ operation, input })),
+        await request("quotes", controller, JSON.stringify({ operation: apiOperation, input })),
       );
       if (
         typeof result.quoteToken !== "string" ||
@@ -234,10 +248,45 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     setDispatched(true);
     setQuote(null);
     void perform(async (controller) => {
-      const result = await request(accepted.operation, controller, accepted.requestBody, {
+      const headers = {
         "X-Kova-Quote": accepted.quoteToken,
         "Idempotency-Key": accepted.requestKey,
-      });
+      };
+      if (accepted.operation === "streaming") {
+        const response = await fetchRequest(
+          accepted.operation,
+          controller,
+          accepted.requestBody,
+          headers,
+        );
+        if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream"))
+          throw new Error("Expected a response stream. Check Logs before retrying.");
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8", { fatal: true });
+        const parser = createDeveloperPlaygroundStream();
+        try {
+          for (;;) {
+            controller.signal.throwIfAborted();
+            const next = await reader.read();
+            if (next.done) break;
+            const text = parser.push(decoder.decode(next.value, { stream: true }));
+            if (mounted.current && !controller.signal.aborted) setOutput(text);
+          }
+          controller.signal.throwIfAborted();
+          parser.push(decoder.decode());
+          const result = parser.finish();
+          if (mounted.current) {
+            setOutput(result.output || "No text output.");
+            if (result.status === "incomplete")
+              setError("Response incomplete. Check Logs for usage and settlement.");
+          }
+        } finally {
+          await reader.cancel().catch(() => {});
+          reader.releaseLock();
+        }
+        return;
+      }
+      const result = await request(accepted.operation, controller, accepted.requestBody, headers);
       if (!mounted.current || controller.signal.aborted) return;
       if (accepted.operation === "images") {
         const data = record(result).data;
@@ -330,6 +379,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               }}
             >
               <option value="responses">Text responses</option>
+              <option value="streaming">Streaming responses</option>
               <option value="images">Image generation</option>
               <option value="embeddings">Embeddings</option>
             </select>
@@ -371,7 +421,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               }}
             />
           </label>
-          {operation === "responses" && (
+          {textOperation && (
             <label className="block space-y-1 text-sm">
               <span>Maximum output tokens</span>
               <Input
@@ -404,7 +454,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               />
             </label>
           )}
-          {operation === "responses" && efforts.length > 0 && (
+          {textOperation && efforts.length > 0 && (
             <label className="block space-y-1 text-sm">
               <span>Reasoning effort</span>
               <select

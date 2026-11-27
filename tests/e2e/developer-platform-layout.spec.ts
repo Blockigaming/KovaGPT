@@ -213,3 +213,76 @@ test("320px billing renders real wallet projection without overflow", async ({ p
   );
   // The fixture supplies illustrative balances. No production allowance or payment is triggered.
 });
+
+test("playground streaming preserves the quote and renders the terminal response", async ({ page }) => {
+  await coreFixture(page, "dark", "pro");
+  let quotedInput: unknown;
+  let executions = 0;
+  await page.route("**/api/developer/console?**", (route) =>
+    route.fulfill({
+      json: {
+        enabled: true,
+        accounts: [],
+        projects: [],
+        keys: [],
+        limits: [],
+        balances: [],
+        usage: [],
+        limitsPage: 0,
+        limitsHasMore: false,
+        usagePage: 0,
+        usageHasMore: false,
+      },
+    }),
+  );
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/v1/models")
+      return route.fulfill({ json: { data: [{ id: "stream-model", capability: "streaming" }] } });
+    if (path === "/api/v1/quotes") {
+      const body = request.postDataJSON();
+      expect(body.operation).toBe("responses");
+      expect(body.input.stream).toBe(true);
+      quotedInput = body.input;
+      return route.fulfill({
+        json: {
+          quoteToken: "stream-quote",
+          maximumCharge: 3,
+          currency: "USD",
+          expiresAt: Date.now() + 120_000,
+        },
+      });
+    }
+    if (path === "/api/v1/responses") {
+      executions++;
+      expect(request.postDataJSON()).toEqual(quotedInput);
+      expect(request.headers()["x-kova-quote"]).toBe("stream-quote");
+      expect(request.headers()["idempotency-key"]).toBeTruthy();
+      return route.fulfill({
+        contentType: "text/event-stream",
+        body: [
+          { type: "response.output_text.delta", delta: "Streamed " },
+          { type: "response.output_text.delta", delta: "response" },
+          { type: "response.completed", response: { status: "completed" } },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join(""),
+      });
+    }
+    return route.abort();
+  });
+  await page.goto("/developers/console?section=playground");
+  await waitForKovaHydration(page);
+  await page.getByLabel("API key", { exact: true }).fill("fixture-only-not-a-real-key");
+  await page.getByRole("button", { name: "Load available models" }).click();
+  await page.getByLabel("Service", { exact: true }).selectOption("streaming");
+  await expect(page.getByLabel("Model", { exact: true })).toHaveValue("stream-model");
+  await page.getByLabel("Input", { exact: true }).fill("Hello");
+  await page.getByRole("button", { name: "Get price quote" }).click();
+  await expect(page.getByText("Maximum charge: 3 USD minor units")).toBeVisible();
+  expect(executions).toBe(0);
+  await page.getByRole("button", { name: "Confirm and run paid request" }).click();
+  await expect(page.getByText("Streamed response", { exact: true })).toBeVisible();
+  expect(executions).toBe(1);
+});

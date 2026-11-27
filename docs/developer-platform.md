@@ -29,3 +29,7 @@ Responses accept an optional `reasoning: { "effort": "high" }` field. An approve
 ## Bounded inline vision
 
 A Responses user message may contain one inline PNG image of up to 32 KiB and 512 × 512 pixels, with `detail: "low"`. Remote image URLs, provider file IDs, other media and multiple images are rejected. Enable only for a model/provider contract with a reviewed `maximumInlineImageTokens` upper bound and verified input-token pricing; the server reserves sufficient input tokens for both request bytes and the image bound. The Playground shows an image selector only when the approved model catalog advertises inline-image support. Larger images, other formats and full vision compatibility remain outside this initial implementation.
+
+## Streaming in the Playground
+
+Select Streaming responses to use the approved streaming-capability model list. The Playground requests a Responses quote with `stream: true`, sends the identical signed request after explicit confirmation, and renders only public output-text and refusal deltas. Failed, incomplete or truncated streams are distinguished from successful completion; cancellation never implies a refund or confirmed settlement. Consult Logs before retrying. The UI does not expose encrypted reasoning or internal event payloads.
