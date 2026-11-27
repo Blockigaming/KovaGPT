@@ -35,6 +35,11 @@ import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
 import { DeveloperCreditWallet } from "@/components/DeveloperCreditWallet";
 import { DeveloperFilesPanel } from "@/components/DeveloperFilesPanel";
 import { DeveloperPlayground } from "@/components/DeveloperPlayground";
+import { DeveloperResourcePanel } from "@/components/DeveloperResourcePanel";
+import {
+  developerResourceSections,
+  type DeveloperResourceSection,
+} from "@/lib/pricing/developer-resource-console.mjs";
 import { KOVA_MODEL_LABELS } from "@/lib/kova-foundation-models.mjs";
 import type { DeveloperUsageSummary } from "@/lib/pricing/developer-usage-summary.mjs";
 type Row = Record<string, string | number | boolean | null | string[]>;
@@ -104,6 +109,13 @@ const WORKSPACE_SECTIONS = [
   "keys",
   "models",
   "files",
+  "agents",
+  "skills",
+  "conversations",
+  "vector-stores",
+  "batches",
+  "automations",
+  "webhooks",
   "usage",
   "costs",
   "logs",
@@ -153,6 +165,13 @@ function DeveloperWorkspace({
         { label: "Playground", anchor: "playground", icon: FlaskConical },
         { label: "Models", anchor: "models", icon: Layers3 },
         { label: "Files", anchor: "files", icon: Folder },
+        { label: "Agents", anchor: "agents", icon: Layers3 },
+        { label: "Skills", anchor: "skills", icon: BookOpen },
+        { label: "Conversations", anchor: "conversations", icon: List },
+        { label: "Vector stores", anchor: "vector-stores", icon: Layers3 },
+        { label: "Batches", anchor: "batches", icon: List },
+        { label: "Automations", anchor: "automations", icon: Settings },
+        { label: "Webhooks", anchor: "webhooks", icon: SlidersHorizontal },
       ],
     },
     {
@@ -792,6 +811,23 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
           )}
           {section === "playground" && (
             <DeveloperPlayground key={userId} enabled={data?.enabled === true} />
+          )}
+          {Object.hasOwn(developerResourceSections, section) && (
+            <DeveloperResourcePanel
+              key={userId + ":" + account + ":" + project + ":" + section}
+              section={section as DeveloperResourceSection}
+              enabled={data?.enabled === true && Boolean(project)}
+              keys={(data?.keys ?? [])
+                .filter(
+                  (key) =>
+                    key.account_id === account &&
+                    key.project_id === project &&
+                    key.enabled === true &&
+                    !key.revoked_at &&
+                    Date.parse(String(key.expires_at)) > Date.now(),
+                )
+                .map((key) => ({ id: String(key.id), name: String(key.name) }))}
+            />
           )}
           {section === "models" && (
             <section className="min-w-0 space-y-6">

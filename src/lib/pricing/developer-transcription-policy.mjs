@@ -13,8 +13,7 @@ export function developerTranscriptionAudio(value) {
   const encoded = value.slice(prefix.length);
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length % 4 !== 0) fail();
   const bytes = Buffer.from(encoded, "base64");
-  if (bytes.toString("base64") !== encoded || bytes.length < 3244 || bytes.length > 640044)
-    fail();
+  if (bytes.toString("base64") !== encoded || bytes.length < 3244 || bytes.length > 640044) fail();
   const size = bytes.length - 44;
   if (
     bytes.toString("ascii", 0, 4) !== "RIFF" ||

@@ -72,7 +72,10 @@ test("settlement requires an actual request ID and valid provider duration", () 
   for (const seconds of [0, -1, NaN, Infinity, 601])
     assert.throws(
       () =>
-        developerTranscriptionResult({ text: "a", usage: { type: "duration", seconds } }, "req_123"),
+        developerTranscriptionResult(
+          { text: "a", usage: { type: "duration", seconds } },
+          "req_123",
+        ),
       /transcription_unavailable/,
     );
   assert.throws(
@@ -81,7 +84,8 @@ test("settlement requires an actual request ID and valid provider duration", () 
     /transcription_unavailable/,
   );
   assert.throws(
-    () => developerTranscriptionResult({ text: "a", usage: { type: "duration", seconds: 1 } }, null),
+    () =>
+      developerTranscriptionResult({ text: "a", usage: { type: "duration", seconds: 1 } }, null),
     /transcription_unavailable/,
   );
 });

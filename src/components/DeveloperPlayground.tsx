@@ -363,8 +363,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Playground</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Test approved text, image, audio and embedding models with your scoped API key. Every paid run
-          requires a fresh signed quote and explicit confirmation.
+          Test approved text, image, audio and embedding models with your scoped API key. Every paid
+          run requires a fresh signed quote and explicit confirmation.
         </p>
       </header>
       {!enabled && (
@@ -643,7 +643,11 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={
-                !enabled || busy || !model || (acceptsAudio ? !mediaFile : !prompt.trim()) || dispatched
+                !enabled ||
+                busy ||
+                !model ||
+                (acceptsAudio ? !mediaFile : !prompt.trim()) ||
+                dispatched
               }
               onClick={() => void getQuote()}
             >
