@@ -186,28 +186,54 @@ export class KovaGPT {
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   };
   readonly webhooks: {
-    create(input: { id: string; url: string; events: ("request.settled" | "request.rejected")[] }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    rotate(input: { id: string; expected_generation: number }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    test(input: { id: string; event_id: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    create(
+      input: { id: string; url: string; events: ("request.settled" | "request.rejected")[] },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    rotate(
+      input: { id: string; expected_generation: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    test(
+      input: { id: string; event_id: string },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
     list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     deliveries(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   };
   readonly batches: {
-    create(input: {
-      id: string;
-      currency: string;
-      maximum_charge: number;
-      items: { id: string; input: Omit<ChatCompletionInput, "max_tokens" | "max_completion_tokens" | "stream"> & { max_completion_tokens: number; stream?: false }; quote_token: string }[];
-    }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    create(
+      input: {
+        id: string;
+        currency: string;
+        maximum_charge: number;
+        items: {
+          id: string;
+          input: Omit<ChatCompletionInput, "max_tokens" | "max_completion_tokens" | "stream"> & {
+            max_completion_tokens: number;
+            stream?: false;
+          };
+          quote_token: string;
+        }[];
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
     cancel(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    retrieveItem(id: string, item: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieveItem(
+      id: string,
+      item: string,
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
   };
   readonly conversations: {
-    create(input: { id: string; title: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    create(
+      input: { id: string; title: string },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
     append(
       input: {
         id: string;
@@ -222,19 +248,50 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
     list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    retrieveItem(id: string, item: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieveItem(
+      id: string,
+      item: string,
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   };
   readonly vectorStores: {
-    create(input: { name: string; model: string; dimensions: number }, options: { idempotencyKey: string; signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    upsert(input: { store_id: string; entry_id: string; model: string; vector: number[]; text: string; file_id?: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    search(input: { store_id: string; model: string; vector: number[]; limit?: number }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    create(
+      input: { name: string; model: string; dimensions: number },
+      options: { idempotencyKey: string; signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    upsert(
+      input: {
+        store_id: string;
+        entry_id: string;
+        model: string;
+        vector: number[];
+        text: string;
+        file_id?: string;
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    search(
+      input: { store_id: string; model: string; vector: number[]; limit?: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
     list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    listEntries(id: string, options?: { page?: number; signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    retrieveEntry(id: string, entry: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    listEntries(
+      id: string,
+      options?: { page?: number; signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    retrieveEntry(
+      id: string,
+      entry: string,
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
-    deleteEntry(id: string, entry: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    deleteEntry(
+      id: string,
+      entry: string,
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
   };
   readonly files: {
     search(
@@ -300,7 +357,10 @@ export class KovaGPT {
       next_offset: number | null;
       amount_unit: "currency_minor_unit";
     }>;
-    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<{
+    retrieve(
+      id: string,
+      options?: { signal?: AbortSignal },
+    ): Promise<{
       object: "usage";
       data: DeveloperUsage;
       amount_unit: "currency_minor_unit";
@@ -311,21 +371,13 @@ export class KovaGPT {
     data: DeveloperModel[];
     pricingVersion: string;
   }>;
-  quote(
-    kind: Operation,
-    input: OperationInput,
-    options?: { signal?: AbortSignal },
-  ): Promise<Quote>;
+  quote(kind: Operation, input: OperationInput, options?: { signal?: AbortSignal }): Promise<Quote>;
   execute(
     kind: Operation,
     input: OperationInput,
     options: Budget & { quote: Quote },
   ): Promise<Response>;
-  run(
-    kind: Operation,
-    input: OperationInput,
-    options: Budget,
-  ): Promise<Response>;
+  run(kind: Operation, input: OperationInput, options: Budget): Promise<Response>;
 }
 export interface DeveloperFile {
   id: string;

@@ -22,7 +22,12 @@ function entry(value) {
   return value;
 }
 function model(value) {
-  if (typeof value !== "string" || value.length < 2 || value.length > 80 || !modelPattern.test(value))
+  if (
+    typeof value !== "string" ||
+    value.length < 2 ||
+    value.length > 80 ||
+    !modelPattern.test(value)
+  )
     fail();
   return value;
 }
@@ -49,8 +54,7 @@ export function developerVector(value) {
 }
 
 export function parseDeveloperVectorRequest(method, params, body) {
-  for (const key of params.keys())
-    if (params.getAll(key).length !== 1) fail();
+  for (const key of params.keys()) if (params.getAll(key).length !== 1) fail();
   if (method === "POST") {
     if ([...params.keys()].length) fail();
     const operation = body?.operation;
@@ -108,8 +112,7 @@ export function parseDeveloperVectorRequest(method, params, body) {
     fail();
   }
   if (method !== "GET" && method !== "DELETE") fail();
-  for (const key of params.keys())
-    if (!["id", "entry_id", "entries", "page"].includes(key)) fail();
+  for (const key of params.keys()) if (!["id", "entry_id", "entries", "page"].includes(key)) fail();
   const store = params.get("id");
   const entryId = params.get("entry_id");
   if (method === "DELETE") {

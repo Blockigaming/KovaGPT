@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
-import { authenticateDeveloper, developerFailure, developerJson } from "./developer-platform.server";
+import {
+  authenticateDeveloper,
+  developerFailure,
+  developerJson,
+} from "./developer-platform.server";
 import { developerRequestKey } from "./developer-platform-policy.mjs";
 import { parseDeveloperVectorRequest } from "./developer-vector-policy.mjs";
 

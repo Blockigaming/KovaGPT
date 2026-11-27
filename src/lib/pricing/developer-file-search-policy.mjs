@@ -2,7 +2,11 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const fail = () => {
   throw new Error("developer_file_search_invalid");
 };
-const terms = (value) => value.normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+const terms = (value) =>
+  value
+    .normalize("NFKC")
+    .toLowerCase()
+    .match(/[\p{L}\p{N}]+/gu) ?? [];
 
 export function parseDeveloperFileSearch(input) {
   if (
@@ -80,9 +84,7 @@ export function searchDeveloperFileRecords(request, files, now = Date.now()) {
       if (end === characters.length) break;
     }
   }
-  hits.sort(
-    (a, b) => b.score - a.score || a.file_id.localeCompare(b.file_id) || a.start - b.start,
-  );
+  hits.sort((a, b) => b.score - a.score || a.file_id.localeCompare(b.file_id) || a.start - b.start);
   // Suppress overlapping duplicate snippets from the same file.
   const results = [];
   for (const hit of hits) {
@@ -97,5 +99,10 @@ export function searchDeveloperFileRecords(request, files, now = Date.now()) {
     results.push(hit);
     if (results.length === request.limit) break;
   }
-  return { object: "list", search_type: "lexical", offset_unit: "unicode_code_point", data: results };
+  return {
+    object: "list",
+    search_type: "lexical",
+    offset_unit: "unicode_code_point",
+    data: results,
+  };
 }

@@ -83,7 +83,12 @@ export function parseDeveloperAgentRequest(method, params, body) {
   fail();
 }
 export function parseDeveloperAgentTurn(value) {
-  exact(value, ["agent_id", "version", "input", ...(value?.skills === undefined ? [] : ["skills"])]);
+  exact(value, [
+    "agent_id",
+    "version",
+    "input",
+    ...(value?.skills === undefined ? [] : ["skills"]),
+  ]);
   return {
     agent_id: id(value.agent_id),
     version: integer(value.version, 1, 20),

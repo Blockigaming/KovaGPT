@@ -1,7 +1,11 @@
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
-import { authenticateDeveloper, developerFailure, developerJson } from "./developer-platform.server";
+import {
+  authenticateDeveloper,
+  developerFailure,
+  developerJson,
+} from "./developer-platform.server";
 import { parseDeveloperConversationRequest } from "./developer-conversation-policy.mjs";
 
 export async function handleDeveloperConversations(request: Request) {

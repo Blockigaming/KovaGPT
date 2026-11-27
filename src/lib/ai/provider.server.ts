@@ -1079,7 +1079,10 @@ export async function embeddings(body: JsonObject, init?: RequestInit): Promise<
   );
 }
 
-export async function developerModerations(body: JsonObject, init?: RequestInit): Promise<Response> {
+export async function developerModerations(
+  body: JsonObject,
+  init?: RequestInit,
+): Promise<Response> {
   return providerFetch("/moderations", "moderation", body, init);
 }
 

@@ -520,8 +520,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           {(acceptsImage || acceptsEdit) && (
             <label className="block min-w-0 space-y-1 text-sm">
               <span>
-                {acceptsEdit ? "Source image for editing" : "Image input"} (optional, PNG up to 32 KiB
-                and 512 × 512)
+                {acceptsEdit ? "Source image for editing" : "Image input"} (optional, PNG up to 32
+                KiB and 512 × 512)
               </span>
               <Input
                 ref={imageInput}

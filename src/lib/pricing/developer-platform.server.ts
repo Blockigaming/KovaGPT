@@ -37,7 +37,10 @@ import {
 } from "./developer-agent-policy.mjs";
 import { expandDeveloperSkills, parseDeveloperSkillRequest } from "./developer-skill-policy.mjs";
 import { batchChargeTicks, developerBatchRequestKey } from "./developer-batch-policy.mjs";
-import { loadDeveloperFileContent, readDeveloperFileRecords } from "./developer-file-content.server";
+import {
+  loadDeveloperFileContent,
+  readDeveloperFileRecords,
+} from "./developer-file-content.server";
 import {
   parseDeveloperFileSearch,
   searchDeveloperFileRecords,
@@ -108,11 +111,11 @@ export function developerFailure(error: unknown) {
           ? 404
           : /conflict|quote_expired|quote_changed|quota_exceeded/.test(code)
             ? 409
-          : /invalid|required|too_large/.test(code)
-            ? 400
-            : /rate_limit/.test(code)
-              ? 429
-              : 503,
+            : /invalid|required|too_large/.test(code)
+              ? 400
+              : /rate_limit/.test(code)
+                ? 429
+                : 503,
   );
 }
 function developerModerationEnabled() {
@@ -124,7 +127,8 @@ function developerDecisionsEnabled() {
   if (
     runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") !== "true" ||
     runtimeEnv("KOVA_DEVELOPER_DECISIONS_ENABLED") !== "true"
-  ) return false;
+  )
+    return false;
   const config = getAiProviderConfig("decisions");
   return config.configured && config.capabilities?.includes("decisions") === true;
 }
@@ -195,7 +199,10 @@ export async function authenticateDeveloper(request: Request) {
   await assertLockdownAllows(db, user.id, "agent");
   return { ...result.data, ownerId: user.id, db };
 }
-export type DeveloperIdentity = Omit<Awaited<ReturnType<typeof authenticateDeveloper>>, "secret_digest">;
+export type DeveloperIdentity = Omit<
+  Awaited<ReturnType<typeof authenticateDeveloper>>,
+  "secret_digest"
+>;
 async function currentPricing(identity: DeveloperIdentity) {
   const account = await identity.db
     .from("developer_credit_accounts")
@@ -350,7 +357,10 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   if (kind === "agent-turns") {
     requireDeveloperAgents(identity);
     const turn = parseDeveloperAgentTurn(raw);
-    const saved = await agentResource(identity, "get", { id: turn.agent_id, version: turn.version });
+    const saved = await agentResource(identity, "get", {
+      id: turn.agent_id,
+      version: turn.version,
+    });
     if (typeof saved.created_at !== "string" || !Number.isFinite(Date.parse(saved.created_at)))
       throw new Error("developer_agent_unavailable");
     agentBinding = { id: turn.agent_id, version: turn.version, createdAt: saved.created_at };
@@ -358,7 +368,9 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     if (turn.skills?.length) {
       requireDeveloperSkills(identity);
       const rows = await Promise.all(
-        turn.skills.map((ref) => skillResource(identity, "get", { id: ref.id, version: ref.version })),
+        turn.skills.map((ref) =>
+          skillResource(identity, "get", { id: ref.id, version: ref.version }),
+        ),
       );
       const result = expandDeveloperSkills(String(expanded.instructions), turn.skills, rows);
       expanded.instructions = result.instructions;
@@ -568,12 +580,14 @@ export async function executeDeveloper(
     throw new Error("developer_provider_unavailable");
   }
   if (kind === "decisions")
-    return developerJson(await readDeveloperDecisionResponse(
-      response,
-      parsed.body.questions as Record<string, unknown>[],
-      parsed.prepared.contract.expectedResponseModels,
-      parsed.publicModel,
-    ));
+    return developerJson(
+      await readDeveloperDecisionResponse(
+        response,
+        parsed.body.questions as Record<string, unknown>[],
+        parsed.prepared.contract.expectedResponseModels,
+        parsed.publicModel,
+      ),
+    );
   if (kind === "chat/completions")
     return developerChatCompletion(response, {
       publicModel: parsed.publicModel,
@@ -637,7 +651,9 @@ export async function authorizeDeveloperBatchItem(
     input: item.input,
     authorization: payload + "." + digest("batch-authorization-v1", payload),
     maximum_ticks: batchChargeTicks(quote.maximumCharge),
-    request_group: createHash("sha256").update(developerBatchRequestKey(batch, item.id)).digest("hex"),
+    request_group: createHash("sha256")
+      .update(developerBatchRequestKey(batch, item.id))
+      .digest("hex"),
   };
 }
 export async function executeAuthorizedBatchItem(
@@ -650,12 +666,18 @@ export async function executeAuthorizedBatchItem(
   maximumTicks: number,
   signal?: AbortSignal,
 ) {
-  if (typeof token !== "string" || token.length > 2048)
-    throw new Error("developer_batch_invalid");
+  if (typeof token !== "string" || token.length > 2048) throw new Error("developer_batch_invalid");
   const [payload, signature, extra] = token.split(".");
-  if (extra !== undefined || !payload || !signature || !equal(signature, digest("batch-authorization-v1", payload)))
+  if (
+    extra !== undefined ||
+    !payload ||
+    !signature ||
+    !equal(signature, digest("batch-authorization-v1", payload))
+  )
     throw new Error("developer_batch_invalid");
-  const authorization = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as BatchAuthorization;
+  const authorization = JSON.parse(
+    Buffer.from(payload, "base64url").toString("utf8"),
+  ) as BatchAuthorization;
   if (
     authorization.batch !== batch ||
     authorization.item !== item ||
@@ -771,8 +793,7 @@ export async function developerKeyUsage(identity: DeveloperIdentity, request: Re
 export async function developerModels(identity: DeveloperIdentity, request: Request) {
   const params = new URL(request.url).searchParams;
   for (const key of params.keys()) {
-    if (key !== "id" || params.getAll(key).length !== 1)
-      throw new Error("developer_input_invalid");
+    if (key !== "id" || params.getAll(key).length !== 1) throw new Error("developer_input_invalid");
   }
   const id = params.get("id");
   if (
@@ -790,8 +811,7 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             identity.capabilities.includes(entry.capability) &&
             (entry.capability !== "moderation" || developerModerationEnabled()) &&
             (entry.capability !== "decisions" || developerDecisionsEnabled()) &&
-            entry.provider ===
-              getAiProviderConfig(entry.capability as ProviderCapability).provider,
+            entry.provider === getAiProviderConfig(entry.capability as ProviderCapability).provider,
         )
         .map(
           (entry: {
@@ -1101,7 +1121,7 @@ export async function handleDeveloperConsole(request: Request) {
         enabled: developerEnabled(),
         workspaceV2,
         moderationEnabled: developerModerationEnabled(),
-          decisionsEnabled: developerDecisionsEnabled(),
+        decisionsEnabled: developerDecisionsEnabled(),
         consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,

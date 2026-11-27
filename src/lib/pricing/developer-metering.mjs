@@ -3,7 +3,10 @@ import { developerInlineImage } from "./developer-responses-policy.mjs";
 import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
 import { developerSearchOptions } from "./developer-search-policy.mjs";
 import { validModerationRequest, validModerationResult } from "./developer-moderation-policy.mjs";
-import { validDeveloperDecisionRequest, developerDecisionUsage } from "./developer-decisions-policy.mjs";
+import {
+  validDeveloperDecisionRequest,
+  developerDecisionUsage,
+} from "./developer-decisions-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -94,7 +97,9 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   if (
     !moderationMeter &&
     new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
-      (decisionsMeter ? contract.maximumUsage.decision_input_tokens : contract.maximumUsage.input_tokens)
+      (decisionsMeter
+        ? contract.maximumUsage.decision_input_tokens
+        : contract.maximumUsage.input_tokens)
   )
     fail("billing_input_bound_exceeded");
   if (

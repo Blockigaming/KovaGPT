@@ -126,7 +126,9 @@ export class KovaGPT {
       }),
     });
     this.search = (input, options) => this.run("search", input, options);
-    this.decisions = Object.freeze({ create: (input, options) => this.run("decisions", input, options) });
+    this.decisions = Object.freeze({
+      create: (input, options) => this.run("decisions", input, options),
+    });
     this.images = Object.freeze({
       generate: (input, options) => this.run("images", input, options),
       edit: (input, options) => {
@@ -175,16 +177,27 @@ export class KovaGPT {
       return id;
     };
     const vectorPath = (id, entry) => {
-      if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
+      if (
+        typeof id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+      )
         fail("vector_id_invalid");
-      if (entry !== undefined && (typeof entry !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(entry)))
+      if (
+        entry !== undefined &&
+        (typeof entry !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(entry))
+      )
         fail("vector_entry_invalid");
       return "vector-stores?id=" + id + (entry === undefined ? "" : "&entry_id=" + entry);
     };
     const vectorPost = async (operation, input, { signal, headers } = {}) =>
-      smallJson(await this.#request("vector-stores", {
-        input: boundedInput({ ...boundedInput(input), operation }), signal, headers,
-      }), 1048576);
+      smallJson(
+        await this.#request("vector-stores", {
+          input: boundedInput({ ...boundedInput(input), operation }),
+          signal,
+          headers,
+        }),
+        1048576,
+      );
     const conversationPath = (id, item) => {
       const valid = (value) =>
         typeof value === "string" &&
@@ -290,10 +303,12 @@ export class KovaGPT {
       return "batches?id=" + id + (item === undefined ? "" : "&item_id=" + item);
     };
     const batchPost = async (operation, input, { signal } = {}) =>
-      smallJson(await this.#request("batches", {
-        input: boundedInput({ ...boundedInput(input), operation }),
-        signal,
-      }));
+      smallJson(
+        await this.#request("batches", {
+          input: boundedInput({ ...boundedInput(input), operation }),
+          signal,
+        }),
+      );
     this.batches = Object.freeze({
       create: (input, options) => batchPost("create", input, options),
       cancel: (id, options) => batchPost("cancel", { id }, options),
@@ -324,15 +339,23 @@ export class KovaGPT {
       create: async (input, { idempotencyKey, signal } = {}) => {
         if (typeof idempotencyKey !== "string" || !/^[\x21-\x7e]{1,128}$/.test(idempotencyKey))
           fail("idempotency_key_required");
-        return vectorPost("create", input, { signal, headers: { "Idempotency-Key": idempotencyKey } });
+        return vectorPost("create", input, {
+          signal,
+          headers: { "Idempotency-Key": idempotencyKey },
+        });
       },
       upsert: (input, options) => vectorPost("upsert", input, { signal: options?.signal }),
       search: (input, options) => vectorPost("search", input, { signal: options?.signal }),
-      list: async ({ signal } = {}) => smallJson(await this.#request("vector-stores", { signal }), 1048576),
-      retrieve: async (id, { signal } = {}) => smallJson(await this.#request(vectorPath(id), { signal }), 1048576),
+      list: async ({ signal } = {}) =>
+        smallJson(await this.#request("vector-stores", { signal }), 1048576),
+      retrieve: async (id, { signal } = {}) =>
+        smallJson(await this.#request(vectorPath(id), { signal }), 1048576),
       listEntries: async (id, { page = 0, signal } = {}) => {
         if (!Number.isSafeInteger(page) || page < 0 || page > 19) fail("vector_page_invalid");
-        return smallJson(await this.#request(vectorPath(id) + "&entries=true&page=" + page, { signal }), 1048576);
+        return smallJson(
+          await this.#request(vectorPath(id) + "&entries=true&page=" + page, { signal }),
+          1048576,
+        );
       },
       retrieveEntry: async (id, entry, { signal } = {}) => {
         if (entry === undefined) fail("vector_entry_invalid");
@@ -516,12 +539,20 @@ async function* streamEvents(response, { maximumEventBytes = 1048576 } = {}, cha
         if (terminal || !event || typeof event !== "object" || Array.isArray(event))
           fail("stream_event_invalid");
         if (chat) {
-          if (event.object !== "chat.completion.chunk" || !Array.isArray(event.choices) ||
-              event.choices.length !== 1 || event.choices[0]?.index !== 0 ||
-              ![null, "stop", "length", "content_filter"].includes(event.choices[0].finish_reason))
+          if (
+            event.object !== "chat.completion.chunk" ||
+            !Array.isArray(event.choices) ||
+            event.choices.length !== 1 ||
+            event.choices[0]?.index !== 0 ||
+            ![null, "stop", "length", "content_filter"].includes(event.choices[0].finish_reason)
+          )
             fail("stream_event_invalid");
           terminal = event.choices[0].finish_reason !== null;
-        } else if (["response.completed", "response.incomplete", "response.failed", "error"].includes(event.type))
+        } else if (
+          ["response.completed", "response.incomplete", "response.failed", "error"].includes(
+            event.type,
+          )
+        )
           terminal = true;
         yield event;
       }

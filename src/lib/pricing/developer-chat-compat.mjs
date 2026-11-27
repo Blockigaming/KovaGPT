@@ -47,7 +47,8 @@ function completion(value, publicModel, expectedModels) {
       invalid();
     for (const part of item.content) {
       if (part?.type === "output_text" && typeof part.text === "string") text += part.text;
-      else if (part?.type === "refusal" && typeof part.refusal === "string") refusal += part.refusal;
+      else if (part?.type === "refusal" && typeof part.refusal === "string")
+        refusal += part.refusal;
       else invalid();
     }
   }
@@ -197,7 +198,9 @@ export async function developerChatCompletion(response, { publicModel, expectedM
             }
             if (next.done) {
               if (!terminal || pending.trim()) invalid();
-              controller.enqueue(format(chunk({}, terminal.choices[0].finish_reason, terminal.usage)));
+              controller.enqueue(
+                format(chunk({}, terminal.choices[0].finish_reason, terminal.usage)),
+              );
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               reader.releaseLock();
               controller.close();

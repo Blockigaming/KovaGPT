@@ -3,8 +3,7 @@ import { developerInlineImage } from "./developer-responses-policy.mjs";
 const prefix = "data:image/png;base64,";
 export function developerImageEditValue(value) {
   try {
-    return developerInlineImage({ type: "input_image", image_url: value, detail: "low" })
-      .image_url;
+    return developerInlineImage({ type: "input_image", image_url: value, detail: "low" }).image_url;
   } catch {
     throw new Error("developer_image_invalid");
   }
@@ -28,6 +27,8 @@ export function bindDeveloperImageInput(body, images) {
     Object.hasOwn(body, "mask")
   )
     throw new Error("developer_image_invalid");
-  const image = developerImageEditValue(prefix + Buffer.from(images.image.bytes).toString("base64"));
+  const image = developerImageEditValue(
+    prefix + Buffer.from(images.image.bytes).toString("base64"),
+  );
   return { ...body, image };
 }

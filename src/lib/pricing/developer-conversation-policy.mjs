@@ -38,7 +38,10 @@ export function parseDeveloperConversationRequest(method, params, body) {
     if ([...params.keys()].length) fail();
     if (body?.operation === "create") {
       exact(body, ["operation", "id", "title"]);
-      return { operation: "create", input: { id: id(body.id), title: text(body.title, 160).trim() } };
+      return {
+        operation: "create",
+        input: { id: id(body.id), title: text(body.title, 160).trim() },
+      };
     }
     if (body?.operation === "append") {
       exact(body, ["operation", "id", "expected_revision", "item"]);

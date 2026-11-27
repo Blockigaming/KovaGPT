@@ -34,7 +34,7 @@ const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inh
 if (process.env.CI && result.status === 1) {
   const different = run("npx", ["prettier", "--list-different", ...files]);
   const mismatches = different.stdout?.split(/\r?\n/).filter((file) => files.includes(file)) ?? [];
-  for (const file of mismatches.slice(0, 20)) {
+  for (const file of mismatches.slice(0, 100)) {
     const formatted = run("npx", ["prettier", file]);
     if (formatted.status !== 0 || !formatted.stdout || formatted.stdout.length > 262144) continue;
     console.log(`KOVA_FORMATTED_FILE_BEGIN ${JSON.stringify(file)}`);

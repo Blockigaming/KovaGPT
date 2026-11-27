@@ -62,7 +62,9 @@ export function developerDecisionFields(input) {
         values.add(value);
         return {
           [valueKey]: value,
-          ...(option.description === undefined ? {} : { description: text(option.description, 500) }),
+          ...(option.description === undefined
+            ? {}
+            : { description: text(option.description, 500) }),
         };
       });
     }
@@ -180,17 +182,25 @@ export function validateDeveloperDecisionResult(value, questions, expectedModels
       input_tokens: value.usage.input_tokens,
       input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
       output_tokens: value.usage.output_tokens,
-      output_tokens_details: { reasoning_tokens: value.usage.output_tokens_details.reasoning_tokens },
+      output_tokens_details: {
+        reasoning_tokens: value.usage.output_tokens_details.reasoning_tokens,
+      },
       total_tokens: value.usage.total_tokens,
     },
   };
 }
 
-export async function readDeveloperDecisionResponse(response, questions, expectedModels, publicModel) {
+export async function readDeveloperDecisionResponse(
+  response,
+  questions,
+  expectedModels,
+  publicModel,
+) {
   if (
     !response.ok ||
     !response.body ||
-    (response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase() !== "application/json"
+    (response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase() !==
+      "application/json"
   ) {
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
@@ -208,7 +218,10 @@ export async function readDeveloperDecisionResponse(response, questions, expecte
       body += decoder.decode(part.value, { stream: true });
     }
     return validateDeveloperDecisionResult(
-      JSON.parse(body + decoder.decode()), questions, expectedModels, publicModel,
+      JSON.parse(body + decoder.decode()),
+      questions,
+      expectedModels,
+      publicModel,
     );
   } catch {
     throw new Error("developer_provider_unavailable");

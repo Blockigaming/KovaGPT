@@ -35,7 +35,10 @@ function add(totals, row) {
   const usage = row.authoritative_usage;
   let measured = false;
   for (const field of tokenFields) {
-    const value = field === "input_tokens" ? (usage?.input_tokens ?? usage?.decision_input_tokens) : usage?.[field];
+    const value =
+      field === "input_tokens"
+        ? (usage?.input_tokens ?? usage?.decision_input_tokens)
+        : usage?.[field];
     if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
       totals.tokens[field] += value;
       measured = true;

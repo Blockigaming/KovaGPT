@@ -27,16 +27,14 @@ function text(value, max) {
   return value;
 }
 export function batchChargeTicks(value) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > 1000000)
-    fail();
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > 1000000) fail();
   // Round the accepted per-item maximum upwards, not downwards.
   return Math.ceil(value * 100000000);
 }
 export function batchBudgetTicks(value) {
   const ticks = batchChargeTicks(value);
   const rounded = Math.round(value * 100000000);
-  if (Math.abs(value * 100000000 - rounded) > 0.00001 || !Number.isSafeInteger(rounded))
-    fail();
+  if (Math.abs(value * 100000000 - rounded) > 0.00001 || !Number.isSafeInteger(rounded)) fail();
   if (ticks < rounded || rounded < 1) fail();
   return rounded;
 }
@@ -106,7 +104,12 @@ export function parseDeveloperBatchRequest(method, params, body) {
     if (new TextEncoder().encode(JSON.stringify(items)).byteLength > 60000) fail();
     return {
       operation: "create",
-      input: { id: id(body.id), currency: body.currency, maximum_ticks: batchBudgetTicks(body.maximum_charge), items },
+      input: {
+        id: id(body.id),
+        currency: body.currency,
+        maximum_ticks: batchBudgetTicks(body.maximum_charge),
+        items,
+      },
     };
   }
   if (method !== "GET") fail();
