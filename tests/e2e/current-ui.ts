@@ -54,14 +54,20 @@ export async function revealSidebar(page: Page) {
     .getByRole("navigation", { name: "Primary navigation", exact: true })
     .or(page.getByRole("dialog", { name: "Primary navigation", exact: true }));
   if (!(await navigation.isVisible())) {
+    // Match the application breakpoint before choosing a trigger. At 1024px
+    // WebKit can briefly report the mobile header as visible while its desktop
+    // styles settle, leaving Playwright waiting on a now-hidden mobile button.
+    const drawer = await usesSidebarDrawer(page);
+    const trigger = page
+      .getByRole("button", {
+        name: drawer
+          ? /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/
+          : /^(Open sidebar|Expand sidebar|Toggle sidebar)$/,
+      })
+      .filter({ visible: true })
+      .first();
     try {
-      await page
-        .getByRole("button", {
-          name: /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/,
-        })
-        .filter({ visible: true })
-        .first()
-        .click({ timeout: 5_000 });
+      await trigger.click({ timeout: 5_000 });
     } catch (error) {
       // A returning profile can open its saved sidebar while the click waits.
       // That transition already satisfies this helper; other failures still fail.
