@@ -6,6 +6,7 @@ import {
   batchChargeTicks,
   developerBatchCapability,
   developerBatchRequestKey,
+  developerResponseJobView,
   parseDeveloperBatchRequest,
 } from "../../src/lib/pricing/developer-batch-policy.mjs";
 
@@ -183,4 +184,50 @@ test("batch direct operations reject streaming, hosted tools and unbounded vecto
     () => submit("moderations", { model: "kova-moderation", input: "A", project_id: id }),
     /batch_invalid/,
   );
+});
+
+test("background Responses accept one explicitly authorized text invocation", () => {
+  const input = { model: "kova-fast", input: "Hello", max_output_tokens: 20 };
+  const body = {
+    operation: "create",
+    id,
+    currency: "USD",
+    maximum_charge: 1,
+    input,
+    quote_token: request.items[0].quote_token,
+  };
+  const job = (method, query, value) =>
+    parseDeveloperBatchRequest(method, new URLSearchParams(query), value, "response");
+  const parsed = job("POST", "", body);
+  assert.deepEqual(parsed.input.items, [
+    { id, operation: "responses", input, quote_token: body.quote_token },
+  ]);
+  assert.equal(job("GET", "id=" + id).operation, "get");
+  assert.equal(job("POST", "", { operation: "cancel", id }).operation, "cancel");
+  assert.throws(() => job("GET", "id=" + id + "&item_id=" + item), /batch_invalid/);
+  assert.throws(() => job("POST", "", request), /batch_invalid/);
+  assert.throws(() => job("POST", "", { ...body, input: { ...input, stream: true } }), /batch_invalid/);
+  assert.throws(() => job("POST", "", { operation: "resume", id }), /batch_invalid/);
+});
+
+test("response job results never return unverified output, inputs or execution credentials", () => {
+  const value = {
+    id,
+    batch_id: id,
+    operation_kind: "responses",
+    state: "completed",
+    settlement_state: "settled",
+    output: { text: "hello" },
+    input: { secret: "private" },
+    authorization: "hidden",
+    lease_token: "hidden",
+  };
+  const result = developerResponseJobView(value, id);
+  assert.equal(result.status, "completed");
+  assert.deepEqual(result.output, value.output);
+  assert.equal(Object.hasOwn(result, "input"), false);
+  assert.equal(Object.hasOwn(result, "authorization"), false);
+  assert.equal(developerResponseJobView({ ...value, state: "uncertain" }, id).output, null);
+  assert.throws(() => developerResponseJobView({ ...value, settlement_state: "uncertain" }, id));
+  assert.throws(() => developerResponseJobView({ ...value, batch_id: item }, id));
 });

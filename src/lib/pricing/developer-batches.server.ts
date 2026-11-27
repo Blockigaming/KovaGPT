@@ -14,7 +14,11 @@ import {
   executeAuthorizedBatchItem,
   type DeveloperIdentity,
 } from "./developer-platform.server";
-import { assertBatchBudget, parseDeveloperBatchRequest } from "./developer-batch-policy.mjs";
+import {
+  assertBatchBudget,
+  developerResponseJobView,
+  parseDeveloperBatchRequest,
+} from "./developer-batch-policy.mjs";
 
 function batchEnabled() {
   return (
@@ -49,14 +53,21 @@ async function resource(
 function automationsEnabled() {
   return batchEnabled() && runtimeEnv("KOVA_DEVELOPER_AUTOMATIONS_ENABLED") === "true";
 }
+function responseJobsEnabled() {
+  return batchEnabled() && runtimeEnv("KOVA_DEVELOPER_BACKGROUND_RESPONSES_ENABLED") === "true";
+}
 export async function handleDeveloperBatches(
   request: Request,
-  resourceKind: "batch" | "automation" = "batch",
+  resourceKind: "batch" | "automation" | "response" = "batch",
 ) {
   try {
     const identity = await authenticateDeveloper(request);
     if (!identity.capabilities.includes("chat")) throw new Error("developer_scope_required");
-    if (!batchEnabled() || (resourceKind === "automation" && !automationsEnabled()))
+    if (
+      !batchEnabled() ||
+      (resourceKind === "automation" && !automationsEnabled()) ||
+      (resourceKind === "response" && !responseJobsEnabled())
+    )
       throw new Error("developer_batch_unavailable");
     const rate = await consumeApplicationRateLimit({
       identity: `developer:${identity.id}`,
@@ -78,6 +89,27 @@ export async function handleDeveloperBatches(
         : undefined,
       resourceKind,
     );
+    const responseJob = async (id: string) =>
+      developerResponseJobView(
+        await resource(
+          identity,
+          "get_item",
+          { id, item_id: id, resource_kind: "response" },
+          request.signal,
+        ),
+        id,
+      );
+    if (resourceKind === "response" && parsed.operation === "get")
+      return developerJson(await responseJob(parsed.input.id));
+    if (resourceKind === "response" && parsed.operation === "cancel") {
+      await resource(
+        identity,
+        "cancel",
+        { ...parsed.input, resource_kind: resourceKind },
+        request.signal,
+      );
+      return developerJson(await responseJob(parsed.input.id));
+    }
     if (parsed.operation !== "create")
       return developerJson(
         await resource(
@@ -100,23 +132,21 @@ export async function handleDeveloperBatches(
       maximum_ticks,
       authorized.map((item) => item.maximum_ticks),
     );
-    return developerJson(
-      await resource(
-        identity,
-        "create",
-        {
-          id,
-          resource_kind: resourceKind,
-          currency,
-          maximum_ticks,
-          request_digest,
-          expires_at: new Date(expiresAt).toISOString(),
-          items: authorized,
-        },
-        request.signal,
-      ),
-      202,
+    const created = await resource(
+      identity,
+      "create",
+      {
+        id,
+        resource_kind: resourceKind,
+        currency,
+        maximum_ticks,
+        request_digest,
+        expires_at: new Date(expiresAt).toISOString(),
+        items: authorized,
+      },
+      request.signal,
     );
+    return developerJson(resourceKind === "response" ? await responseJob(id) : created, 202);
   } catch (error) {
     return developerFailure(error);
   }
@@ -168,7 +198,10 @@ export async function processDeveloperBatch() {
   if (!batchEnabled()) return 0;
   const db = developerDatabase();
   const claimed = await db
-    .rpc("claim_developer_batch_v1", { p_allow_automations: automationsEnabled() })
+    .rpc("claim_developer_batch_v1", {
+      p_allow_automations: automationsEnabled(),
+      p_allow_responses: responseJobsEnabled(),
+    })
     .abortSignal(AbortSignal.timeout(5000));
   if (claimed.error) throw new Error("developer_batch_unavailable");
   if (!claimed.data) return 0;

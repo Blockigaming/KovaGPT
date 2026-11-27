@@ -343,6 +343,53 @@ export class KovaGPT {
         return smallJson(await this.#request(batchPath(id, item), { signal }), 262144);
       },
     });
+    const responseJobId = (id) => {
+      if (
+        typeof id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+      )
+        fail("response_job_id_invalid");
+      return id;
+    };
+    this.responseJobs = Object.freeze({
+      create: async (input, { signal } = {}) => {
+        const snapshot = boundedInput(input, 16384);
+        responseJobId(snapshot.id);
+        if (
+          !/^[A-Z]{3}$/.test(snapshot.currency ?? "") ||
+          !Number.isFinite(snapshot.maximum_charge) ||
+          snapshot.maximum_charge <= 0 ||
+          snapshot.maximum_charge > 1000000 ||
+          typeof snapshot.quote_token !== "string" ||
+          snapshot.quote_token.length > 2048 ||
+          !/^[A-Za-z0-9_-]+\.[a-f0-9]{64}$/.test(snapshot.quote_token)
+        )
+          fail("budget_required");
+        return smallJson(
+          await this.#request("response-jobs", {
+            input: { ...snapshot, operation: "create" },
+            generation: true,
+            signal,
+          }),
+          262144,
+        );
+      },
+      cancel: async (id, { signal } = {}) =>
+        smallJson(
+          await this.#request("response-jobs", {
+            input: { operation: "cancel", id: responseJobId(id) },
+            signal,
+          }),
+          262144,
+        ),
+      list: async ({ signal } = {}) =>
+        smallJson(await this.#request("response-jobs", { signal })),
+      retrieve: async (id, { signal } = {}) =>
+        smallJson(
+          await this.#request("response-jobs?id=" + responseJobId(id), { signal }),
+          262144,
+        ),
+    });
     const automationPath = (id, item) => {
       const valid = (value) =>
         typeof value === "string" &&

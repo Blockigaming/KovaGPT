@@ -26,9 +26,7 @@ test("resource console exposes only fixed authenticated resource routes", () => 
   assert.throws(() => resourceConsoleRequest("agents", "constructor", "{}"));
   assert.throws(() => resourceConsoleRequest("agents", "detail", '{"id":"../keys"}'));
   assert.throws(() => resourceConsoleRequest("agents", "list", '{"id":"x"}'));
-  assert.throws(() =>
-    resourceConsoleRequest("agents", "version", '{"id,version":"unexpected"}'),
-  );
+  assert.throws(() => resourceConsoleRequest("agents", "version", '{"id,version":"unexpected"}'));
 });
 
 test("resource credentials must match the selected project's allowed keys", () => {

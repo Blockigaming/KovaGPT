@@ -213,6 +213,22 @@ class SDKTests(unittest.TestCase):
             self.client.responses({"model": "fast", "input": data["audio"]}, **BUDGET)
         self.assertEqual(len(self.calls), 2)
 
+    def test_response_jobs_use_stable_ids_and_explicit_quotes(self):
+        self.responses.extend(FakeResponse({"id": ID, "status": "queued"}) for _ in range(4))
+        job = {"id": ID, "currency": "USD", "maximum_charge": 10, "quote_token": quote()["quoteToken"], "input": DATA}
+        self.client.response_job_create(job)
+        self.client.response_job_list()
+        self.client.response_job_retrieve(ID)
+        self.client.response_job_cancel(ID)
+        self.assertEqual(json.loads(self.calls[0][2]), {**job, "operation": "create"})
+        self.assertEqual(self.calls[2][1], "/api/v1/response-jobs?id=" + ID)
+        self.assertEqual(json.loads(self.calls[3][2]), {"operation": "cancel", "id": ID})
+        with self.assertRaisesRegex(KovaError, "budget_required"):
+            self.client.response_job_create({**job, "quote_token": ""})
+        with self.assertRaisesRegex(KovaError, "response_job_id_invalid"):
+            self.client.response_job_retrieve("../keys")
+        self.assertEqual(len(self.calls), 4)
+
     def test_invalid_origin_and_unsafe_key(self):
         for url in ("http://kovagpt.com", "https://x:y@kovagpt.com", "https://kovagpt.com/path"):
             with self.assertRaisesRegex(KovaError, "origin_invalid"):

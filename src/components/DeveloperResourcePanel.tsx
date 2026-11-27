@@ -59,7 +59,10 @@ export function DeveloperResourcePanel({
   const active = useRef<AbortController | null>(null);
   const mounted = useRef(false);
   const retry = useRef<{ request: string; key: string } | null>(null);
-  const token = resourceConsoleKey(secret, keys.map((key) => key.id));
+  const token = resourceConsoleKey(
+    secret,
+    keys.map((key) => key.id),
+  );
   const requiresConfirmation = resourceConsoleRequiresConfirmation(section, action);
 
   useEffect(() => {
@@ -149,7 +152,9 @@ export function DeveloperResourcePanel({
   const signingSecret = record(result).signing_secret;
   const publicResult =
     typeof signingSecret === "string"
-      ? Object.fromEntries(Object.entries(record(result)).filter(([key]) => key !== "signing_secret"))
+      ? Object.fromEntries(
+          Object.entries(record(result)).filter(([key]) => key !== "signing_secret"),
+        )
       : result;
 
   return (
@@ -245,11 +250,7 @@ export function DeveloperResourcePanel({
             >
               {config.actions[action].label}
             </Button>
-            <Button
-              variant="outline"
-              disabled={busy}
-              onClick={() => selectAction(action)}
-            >
+            <Button variant="outline" disabled={busy} onClick={() => selectAction(action)}>
               Reset request
             </Button>
             {busy && (
@@ -298,7 +299,9 @@ export function DeveloperResourcePanel({
                     <p className="break-words text-sm font-medium">
                       {String(row.name ?? row.title ?? row.id ?? "Resource")}
                     </p>
-                    <p className="break-all text-xs text-muted-foreground">{String(row.id ?? "")}</p>
+                    <p className="break-all text-xs text-muted-foreground">
+                      {String(row.id ?? "")}
+                    </p>
                   </div>
                   {typeof row.id === "string" && (
                     <Button

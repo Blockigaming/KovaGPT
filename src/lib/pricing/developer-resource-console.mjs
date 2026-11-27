@@ -64,7 +64,8 @@ export const developerResourceSections = Object.freeze({
   },
   "vector-stores": {
     label: "Vector stores",
-    description: "Manage project-owned vectors. Supply your own embeddings for indexing and search.",
+    description:
+      "Manage project-owned vectors. Supply your own embeddings for indexing and search.",
     actions: {
       list,
       detail,

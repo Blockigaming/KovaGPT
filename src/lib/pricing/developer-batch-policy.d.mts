@@ -19,7 +19,7 @@ export function parseDeveloperBatchRequest(
   method: string,
   params: URLSearchParams,
   body?: unknown,
-  resourceKind?: "batch" | "automation",
+  resourceKind?: "batch" | "automation" | "response",
   now?: number,
 ): BatchRequest;
 export function developerBatchCapability(
@@ -29,3 +29,13 @@ export function batchChargeTicks(value: unknown): number;
 export function batchBudgetTicks(value: unknown): number;
 export function assertBatchBudget(maximumTicks: number, itemTicks: number[]): void;
 export function developerBatchRequestKey(batch: string, item: string): string;
+export function developerResponseJobView(value: unknown, expectedId: string): {
+  object: "response.job";
+  id: string;
+  status: "queued" | "running" | "completed" | "uncertain" | "canceled";
+  output: Record<string, unknown> | null;
+  finished_at: unknown;
+  request_id: unknown;
+  settlement_state: unknown;
+  final_customer_charge: unknown;
+};

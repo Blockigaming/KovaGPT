@@ -430,6 +430,27 @@ class Client:
         _require(item_id is not None, "batch_id_invalid")
         return self._request(self._batch_path(batch_id, item_id), method="GET").json(262144)
 
+    def response_job_create(self, data):
+        snapshot = json.loads(_json_body(data, 16384))
+        _identifier(snapshot.get("id"), _UUID, "response_job_id_invalid")
+        currency, maximum, token = snapshot.get("currency"), snapshot.get("maximum_charge"), snapshot.get("quote_token")
+        _require(isinstance(currency, str) and re.fullmatch(r"[A-Z]{3}", currency)
+                 and _number(maximum) and maximum <= 1000000
+                 and isinstance(token, str) and len(token) <= 2048 and _QUOTE.fullmatch(token), "budget_required")
+        return self._request("response-jobs", method="POST", paid=True,
+                             body=_json_body({**snapshot, "operation": "create"})).json(262144)
+
+    def response_job_cancel(self, job_id):
+        job_id = _identifier(job_id, _UUID, "response_job_id_invalid")
+        return self._request("response-jobs", method="POST",
+                             body=_json_body({"operation": "cancel", "id": job_id})).json(262144)
+
+    def response_job_list(self):
+        return self._get("response-jobs")
+
+    def response_job_retrieve(self, job_id):
+        return self._request("response-jobs?id=" + _identifier(job_id, _UUID, "response_job_id_invalid")).json(262144)
+
     @staticmethod
     def _automation_path(automation_id, item_id=None):
         path = "automations?id=" + _identifier(automation_id, _UUID, "automation_id_invalid")

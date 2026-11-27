@@ -121,7 +121,20 @@ export function parseDeveloperBatchRequest(
   resourceKind = "batch",
   now = Date.now(),
 ) {
-  if (!["batch", "automation"].includes(resourceKind) || !Number.isSafeInteger(now)) fail();
+  if (!["batch", "automation", "response"].includes(resourceKind) || !Number.isSafeInteger(now))
+    fail();
+  if (resourceKind === "response") {
+    // A response job is one non-streaming, explicitly authorized text invocation.
+    if (params.has("item_id")) fail();
+    if (method === "POST" && body?.operation === "create") {
+      exact(body, ["operation", "id", "currency", "maximum_charge", "input", "quote_token"]);
+      const { input, quote_token, ...metadata } = body;
+      body = {
+        ...metadata,
+        items: [{ id: body.id, operation: "responses", input, quote_token }],
+      };
+    }
+  }
   const scheduled = resourceKind === "automation";
   for (const key of params.keys())
     if (!["id", "item_id"].includes(key) || params.getAll(key).length !== 1) fail();
@@ -135,6 +148,7 @@ export function parseDeveloperBatchRequest(
       return { operation: body.operation, input: { id: id(body.id) } };
     }
     exact(body, ["operation", "id", "currency", "maximum_charge", "items"]);
+    if (resourceKind === "response" && body.items?.length !== 1) fail();
     if (
       body.operation !== "create" ||
       typeof body.currency !== "string" ||
@@ -148,6 +162,7 @@ export function parseDeveloperBatchRequest(
       exact(item, ["id", "input", "quote_token", ...(scheduled ? ["run_at"] : [])], ["operation"]);
       const operation = item.operation ?? "chat/completions";
       developerBatchCapability(operation);
+      if (resourceKind === "response" && operation !== "responses") fail();
       if (
         typeof item.quote_token !== "string" ||
         item.quote_token.length > 2048 ||
@@ -222,4 +237,35 @@ export function assertBatchBudget(maximumTicks, itemTicks) {
     itemTicks.reduce((sum, ticks) => sum + ticks, 0) > maximumTicks
   )
     throw new Error("developer_batch_budget_invalid");
+}
+
+// Return only the job state and settled result; never expose stored input, authorization or leases.
+export function developerResponseJobView(value, expectedId) {
+  if (
+    !value ||
+    value.id !== expectedId ||
+    value.batch_id !== expectedId ||
+    value.operation_kind !== "responses" ||
+    !["queued", "running", "completed", "uncertain", "canceled"].includes(value.state)
+  )
+    throw new Error("developer_batch_unavailable");
+  const completed = value.state === "completed";
+  if (
+    completed &&
+    (value.settlement_state !== "settled" ||
+      !value.output ||
+      typeof value.output !== "object" ||
+      Array.isArray(value.output))
+  )
+    throw new Error("developer_batch_unavailable");
+  return {
+    object: "response.job",
+    id: expectedId,
+    status: value.state,
+    output: completed ? value.output : null,
+    finished_at: value.finished_at ?? null,
+    request_id: value.request_id ?? null,
+    settlement_state: value.settlement_state ?? null,
+    final_customer_charge: value.final_customer_charge ?? null,
+  };
 }

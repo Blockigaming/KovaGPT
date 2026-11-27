@@ -204,6 +204,7 @@ import { Route as ApiV1ComputerUseRouteImport } from './routes/api/v1/computer-u
 import { Route as ApiV1AnalysisRouteImport } from './routes/api/v1/analysis'
 import { Route as ApiV1AutomationsRouteImport } from './routes/api/v1/automations'
 import { Route as ApiV1BatchesRouteImport } from './routes/api/v1/batches'
+import { Route as ApiV1ResponseJobsRouteImport } from './routes/api/v1/response-jobs'
 import { Route as ApiV1ConversationsRouteImport } from './routes/api/v1/conversations'
 import { Route as ApiV1DecisionsRouteImport } from './routes/api/v1/decisions'
 import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
@@ -1254,6 +1255,11 @@ const ApiV1BatchesRoute = ApiV1BatchesRouteImport.update({
   path: '/api/v1/batches',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1ResponseJobsRoute = ApiV1ResponseJobsRouteImport.update({
+  id: '/api/v1/response-jobs',
+  path: '/api/v1/response-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1ConversationsRoute = ApiV1ConversationsRouteImport.update({
   id: '/api/v1/conversations',
   path: '/api/v1/conversations',
@@ -1726,6 +1732,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
+  '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -1975,6 +1982,7 @@ export interface FileRoutesByTo {
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
+  '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -2225,6 +2233,7 @@ export interface FileRoutesById {
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
+  '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -2476,6 +2485,7 @@ export interface FileRouteTypes {
     | '/api/v1/analysis'
     | '/api/v1/automations'
     | '/api/v1/batches'
+    | '/api/v1/response-jobs'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -2725,6 +2735,7 @@ export interface FileRouteTypes {
     | '/api/v1/analysis'
     | '/api/v1/automations'
     | '/api/v1/batches'
+    | '/api/v1/response-jobs'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -2974,6 +2985,7 @@ export interface FileRouteTypes {
     | '/api/v1/analysis'
     | '/api/v1/automations'
     | '/api/v1/batches'
+    | '/api/v1/response-jobs'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -3214,6 +3226,7 @@ export interface RootRouteChildren {
   ApiV1AnalysisRoute: typeof ApiV1AnalysisRoute
   ApiV1AutomationsRoute: typeof ApiV1AutomationsRoute
   ApiV1BatchesRoute: typeof ApiV1BatchesRoute
+  ApiV1ResponseJobsRoute: typeof ApiV1ResponseJobsRoute
   ApiV1ConversationsRoute: typeof ApiV1ConversationsRoute
   ApiV1DecisionsRoute: typeof ApiV1DecisionsRoute
   ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
@@ -4633,6 +4646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1BatchesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/response-jobs': {
+      id: '/api/v1/response-jobs'
+      path: '/api/v1/response-jobs'
+      fullPath: '/api/v1/response-jobs'
+      preLoaderRoute: typeof ApiV1ResponseJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/conversations': {
       id: '/api/v1/conversations'
       path: '/api/v1/conversations'
@@ -5309,6 +5329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1AnalysisRoute: ApiV1AnalysisRoute,
   ApiV1AutomationsRoute: ApiV1AutomationsRoute,
   ApiV1BatchesRoute: ApiV1BatchesRoute,
+  ApiV1ResponseJobsRoute: ApiV1ResponseJobsRoute,
   ApiV1ConversationsRoute: ApiV1ConversationsRoute,
   ApiV1DecisionsRoute: ApiV1DecisionsRoute,
   ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,

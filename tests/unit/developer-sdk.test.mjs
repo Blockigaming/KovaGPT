@@ -408,3 +408,26 @@ test("transcription uses a dedicated quote and bounded larger audio request", as
   await assert.rejects(f.client.responses.create({ ...input, input: input.audio }, options));
   assert.equal(f.calls.length, 2);
 });
+
+test("response jobs use a stable ID, explicit quote and budget, and separate retrieval routes", async () => {
+  const id = "55555555-5555-4555-8555-555555555555";
+  const f = fixture(() => Response.json({ id, status: "queued" }));
+  const job = {
+    id,
+    currency: "USD",
+    maximum_charge: 10,
+    quote_token: quote().quoteToken,
+    input,
+  };
+  await f.client.responseJobs.create(job);
+  await f.client.responseJobs.list();
+  await f.client.responseJobs.retrieve(id);
+  await f.client.responseJobs.cancel(id);
+  assert.equal(f.calls[0].url, "https://kovagpt.com/api/v1/response-jobs");
+  assert.deepEqual(JSON.parse(f.calls[0].body), { ...job, operation: "create" });
+  assert.equal(f.calls[2].url, "https://kovagpt.com/api/v1/response-jobs?id=" + id);
+  assert.deepEqual(JSON.parse(f.calls[3].body), { operation: "cancel", id });
+  await assert.rejects(f.client.responseJobs.create({ ...job, quote_token: "" }), /budget_required/);
+  await assert.rejects(f.client.responseJobs.retrieve("../keys"), /response_job_id_invalid/);
+  assert.equal(f.calls.length, 4);
+});

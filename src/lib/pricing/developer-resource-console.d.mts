@@ -10,13 +10,7 @@ export type ResourceSection = {
   actions: Record<string, ResourceAction>;
 };
 export type DeveloperResourceSection =
-  | "agents"
-  | "skills"
-  | "conversations"
-  | "vector-stores"
-  | "batches"
-  | "automations"
-  | "webhooks";
+  "agents" | "skills" | "conversations" | "vector-stores" | "batches" | "automations" | "webhooks";
 export const developerResourceSections: Readonly<Record<DeveloperResourceSection, ResourceSection>>;
 export function resourceConsoleTemplate(
   section: string,
