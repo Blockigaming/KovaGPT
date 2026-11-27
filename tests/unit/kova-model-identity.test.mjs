@@ -29,19 +29,13 @@ test("server-routed basic, advanced and premium responses use the approved exact
     );
     assert.ok(prompt.includes(`configured provider model is ${route.modelId}.`));
     assert.match(prompt, /ordinary identity questions/);
-    assert.match(prompt, /assistant as developed and refined by Kova/);
+    assert.match(prompt, /assistant developed and refined by Kova/);
     assert.match(prompt, /Do not volunteer upstream provider names or internal model IDs/);
     assert.match(prompt, /When explicitly asked about the underlying provider/);
-    assert.match(
-      prompt,
-      /Do not claim Kova trained or fine-tuned foundation weights without verified evidence/,
-    );
+    assert.match(prompt, /Never claim unverified Kova training or fine-tuning/);
     assert.match(prompt, /first assistant reply/);
     assert.match(prompt, /Respond to greetings and direct tasks without an identity statement/);
-    assert.match(
-      prompt,
-      /Mention your own identity, model name, or developer only when explicitly asked/,
-    );
+    assert.match(prompt, /Mention identity only when asked/);
   }
 });
 
@@ -68,10 +62,7 @@ test("later replies suppress repeated introductions and distinguish branding fro
     hasAssistantHistory: true,
   });
   assert.match(prompt, /Do not repeat an introduction unless the user asks/);
-  assert.match(
-    prompt,
-    /Mention your own identity, model name, or developer only when explicitly asked/,
-  );
+  assert.match(prompt, /Mention identity only when asked/);
   assert.doesNotMatch(prompt, /On the first assistant reply/);
   assert.match(prompt, /configured provider is Azure OpenAI/);
   assert.match(prompt, /not a foundation-model ID or proof of separately trained weights/);
