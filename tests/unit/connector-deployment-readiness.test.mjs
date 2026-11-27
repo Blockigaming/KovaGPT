@@ -72,14 +72,14 @@ function deployment(env, origin = "https://kovagpt.com") {
   return diagnostics.connectorDeploymentReadiness(new Request(origin + "/api/admin/diagnostics"));
 }
 
-test("connector diagnostics cover the 38 approved entries and identify native and local verification", () => {
+test("connector diagnostics cover the 37 approved entries and identify native and local verification", () => {
   const checks = deployment({});
   assert.deepEqual(
     checks.map(({ id }) => id),
     MASTER_CONNECTORS.map(({ id }) => id),
   );
-  assert.equal(checks.length, 38);
-  assert.ok(checks.every(({ id }) => id !== "whoop"));
+  assert.equal(checks.length, 37);
+  assert.ok(checks.every(({ id }) => id !== "whoop" && id !== "hubspot"));
   assert.deepEqual(
     checks
       .filter(({ state }) => state === "native_device_verification_required")
@@ -87,7 +87,7 @@ test("connector diagnostics cover the 38 approved entries and identify native an
     ["apple-health", "android-health-connect"],
   );
   assert.equal(checks.find(({ id }) => id === "excalidraw").state, "ready_for_file_verification");
-  assert.equal(checks.filter(({ state }) => state === "deployment_setup_required").length, 35);
+  assert.equal(checks.filter(({ state }) => state === "deployment_setup_required").length, 34);
 });
 
 test("provider setup distinguishes a shared Microsoft grant, hosted Tana, API keys and review gates", () => {

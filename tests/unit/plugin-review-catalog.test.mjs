@@ -64,13 +64,14 @@ test("launch review includes exactly 12 providers, preserving original catalog i
   assert.equal(original.getConnector("sharepoint").status, "setup_required");
 });
 
-test("master directory contains the 31 requested services and seven retained services exactly once", () => {
-  assert.equal(master.USER_REQUESTED_MASTER_CONNECTORS.length, 31);
-  assert.equal(master.MASTER_CONNECTORS.length, 38);
+test("master directory contains the 30 requested services and seven retained services exactly once", () => {
+  assert.equal(master.USER_REQUESTED_MASTER_CONNECTORS.length, 30);
+  assert.equal(master.MASTER_CONNECTORS.length, 37);
   const ids = review.MASTER_PLUGIN_REVIEW_CATALOG.map((item) => item.connector.id);
   assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS, "google-docs"].sort());
-  assert.equal(new Set(ids).size, 39);
+  assert.equal(new Set(ids).size, 38);
   assert.equal(review.getPluginReview("whoop"), undefined);
+  assert.equal(review.getPluginReview("hubspot"), undefined);
   assert.equal(original.getConnector("whoop"), undefined);
   for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     assert.equal(item.connector, original.getConnector(item.connector.id));
@@ -145,7 +146,6 @@ test("source-backed capabilities name existing local code and never imply grante
     "figma",
     "google-bigquery",
     "google-drive",
-    "hubspot",
     "meltwater",
     "ms-teams",
     "notion",
@@ -166,7 +166,7 @@ test("source-backed capabilities name existing local code and never imply grante
   assert.equal(review.getPluginPreviewProvider("unknown"), undefined);
 });
 
-test("all 38 connector marks use verified local assets with recorded provenance", () => {
+test("all 37 connector marks use verified local assets with recorded provenance", () => {
   assert.deepEqual(
     Object.keys(review.PLUGIN_BRAND_ASSET_URLS).sort(),
     [...master.MASTER_CONNECTOR_IDS].sort(),

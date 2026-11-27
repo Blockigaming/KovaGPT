@@ -218,7 +218,7 @@ test("approved directory keeps all providers and offers Health examples and sear
   for (const item of MASTER_CONNECTORS) {
     await expect(page.locator(`[data-plugin-id="${item.id}"]`)).toHaveCount(1);
   }
-  await expect(page.locator('[data-plugin-id="hubspot"]')).toContainText("Coming soon");
+  await expect(page.locator('[data-plugin-id="hubspot"]')).toHaveCount(0);
   const plaid = page.locator('[data-plugin-id="plaid"]');
   await expect(plaid.getByRole("button", { name: "Details Plaid" })).toBeVisible();
   await expect(plaid.getByText("Coming soon")).toHaveCount(0);
