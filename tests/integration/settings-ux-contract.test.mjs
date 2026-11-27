@@ -228,6 +228,7 @@ test("settings navigation is centralized and routes every rendered category", ()
       "Memory",
       "Subscriptions",
       "Usage",
+      "Gift cards",
       "Email",
       "Appearance",
       "Notifications",
@@ -295,6 +296,7 @@ test("settings navigation is centralized and routes every rendered category", ()
       ["family", "Family Center"],
       ["location", "Location"],
       ["billing", "Subscriptions"],
+      ["gift-cards", "Gift cards"],
       ["report", "Report an issue"],
       ["help", "Help center"],
       ["about", "About"],
@@ -328,7 +330,10 @@ test("full-page Settings keeps reference-style navigation theme-aware and functi
     /className="kova-settings-reference-group kova-settings-general-options"/,
   );
   assert.match(settingsPageStylesSource, /background: var\(--composer-background\)/);
-  assert.match(settingsStylesSource, /box-shadow: inset 0 0 0 1px var\(--border-strong\)/);
+  assert.match(
+    settingsStylesSource,
+    /\.kova-settings-nav-item\[aria-selected="true"\]\s*\{[^}]*background: var\(--settings-surface\);[^}]*box-shadow: none;/,
+  );
   assert.doesNotMatch(settingsPageStylesSource, /background:\s*#(?:000|fff|000000|ffffff)\b/i);
 });
 

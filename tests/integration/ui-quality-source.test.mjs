@@ -329,8 +329,12 @@ test("canonical reference styles own shell and composer contracts without retire
       '[role="dialog"]formlabel>:is(input.border-input,textarea.border-input)',
       ':root[data-kova-input-modality="pointer"]:is(button,a,[role="button"],[role="menu"],[role="menuitem"],[role="tab"],[data-slot="select-trigger"],[data-slot="select-item"],[data-slot="menu-item"],[role="option"],[role="combobox"]):focus',
       ':root:not([data-kova-input-modality="pointer"]):is(button,a,input,textarea,select,[tabindex],[role="option"],[role="menuitem"],[role="combobox"]):focus-visible',
+      ':is(html,body,main[tabindex="-1"],#main-content[tabindex="-1"]):focus-visible',
+      ".kova-auth-surface.kova-password-recovery",
+      ".kova-auth-surface.kova-password-recoveryinput#fp-email",
+      ".kova-settings-referencebutton.kova-gift-option",
     ],
-    "only scoped dialog-field and accessible focus repairs may follow shared utilities",
+    "only scoped dialog, focus, and Settings repairs may follow shared utilities",
   );
 });
 
