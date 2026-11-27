@@ -269,7 +269,7 @@ begin
   update public.developer_credit_lot_accounts_v2 t set last_refreshed_at=at_time
     where exists(select 1 from public.developer_account_owners own where own.account_id=t.account_id and own.owner_id=p_owner);
   return public.developer_credit_wallet_status_v2(p_owner,p_account,0);
-end $;
+end $$;
 revoke all on function public.developer_refresh_wallet_v2(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.developer_refresh_wallet_v2(uuid,uuid) to service_role;
 

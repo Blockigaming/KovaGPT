@@ -4859,7 +4859,7 @@
       "order": 233,
       "filename": "20261127205023_developer_credit_lot_integration_v2.sql",
       "timestamp": "20261127205023",
-      "sha256": "62d8b826dd9f6d56cde2c85a57748b84ab94bf286791348b63f4502754d7ef2c",
+      "sha256": "a86d1a7483d8118a320927a6aa22a8ef64b974325f44b9650474a4d53835a1fc",
       "tables": ["developer_credit_api_hold_links_v2"],
       "functions": [
         "developer_enable_credit_lots_v2",
