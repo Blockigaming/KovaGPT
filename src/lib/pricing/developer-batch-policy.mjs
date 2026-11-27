@@ -124,7 +124,8 @@ export function parseDeveloperBatchRequest(
         )
           fail();
       }
-      const input = operation === "agent-turns" ? parseDeveloperAgentTurn(item.input) : chatInput(item.input);
+      const input =
+        operation === "agent-turns" ? parseDeveloperAgentTurn(item.input) : chatInput(item.input);
       if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 12288) fail();
       return {
         id: id(item.id),

@@ -110,7 +110,12 @@ test("mixed agent batches preserve explicit operation, definition and skill vers
   const invocation = {
     id: second,
     operation: "agent-turns",
-    input: { agent_id: id, version: 2, input: "Review evidence.", skills: [{ id: item, version: 1 }] },
+    input: {
+      agent_id: id,
+      version: 2,
+      input: "Review evidence.",
+      skills: [{ id: item, version: 1 }],
+    },
     quote_token: request.items[0].quote_token,
   };
   const result = parse("POST", "", { ...request, items: [request.items[0], invocation] });
@@ -121,10 +126,11 @@ test("mixed agent batches preserve explicit operation, definition and skill vers
     /batch_invalid/,
   );
   assert.throws(
-    () => parse("POST", "", {
-      ...request,
-      items: [{ ...invocation, input: { ...invocation.input, version: 0 } }],
-    }),
+    () =>
+      parse("POST", "", {
+        ...request,
+        items: [{ ...invocation, input: { ...invocation.input, version: 0 } }],
+      }),
     /agent_invalid/,
   );
 });

@@ -238,9 +238,15 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   }
   if (responsesMeter) {
     if (
-      !["chat", "streaming", "reasoning", "tool_calls", "vision", "file_analysis", "computer_use"].includes(
-        request.capability,
-      ) ||
+      ![
+        "chat",
+        "streaming",
+        "reasoning",
+        "tool_calls",
+        "vision",
+        "file_analysis",
+        "computer_use",
+      ].includes(request.capability) ||
       !integer(request.body.max_output_tokens) ||
       request.body.max_output_tokens < 1 ||
       request.body.max_output_tokens > contract.maximumUsage.output_tokens
@@ -258,7 +264,10 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     const encodedInput = JSON.stringify(request.body.input);
     const imageMarkers = encodedInput?.match(/"type"\s*:\s*"input_image"/g)?.length ?? 0;
     if (
-      (!search && !analysisMeter && !computerMeter && request.body.tools?.some((tool) => tool.type !== "function")) ||
+      (!search &&
+        !analysisMeter &&
+        !computerMeter &&
+        request.body.tools?.some((tool) => tool.type !== "function")) ||
       /"type"\s*:\s*"(?:input_file|input_audio)"/.test(encodedInput) ||
       imageMarkers !== images.length ||
       images.length > 1
@@ -273,7 +282,9 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       }
       const requestBytes = new TextEncoder().encode(JSON.stringify(request.body)).byteLength;
       if (
-        requestBytes + inlineImageTokens + (computerMeter ? contract.maximumComputerInputTokens : 0) >
+        requestBytes +
+          inlineImageTokens +
+          (computerMeter ? contract.maximumComputerInputTokens : 0) >
         contract.maximumUsage.input_tokens
       )
         fail("billing_input_bound_exceeded");
@@ -384,7 +395,11 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   if (meter !== "moderation_requests" && !object(response.usage)) return null;
   const usage = response.usage;
   let dimensions;
-  if (["responses_tokens", "responses_search", "responses_analysis", "responses_computer"].includes(meter)) {
+  if (
+    ["responses_tokens", "responses_search", "responses_analysis", "responses_computer"].includes(
+      meter,
+    )
+  ) {
     if (!["completed", "incomplete"].includes(response.status)) return null;
     const cached = usage.input_tokens_details?.cached_tokens;
     if (

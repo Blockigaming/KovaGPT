@@ -161,18 +161,22 @@ export function validateDeveloperComputerResult(value, body, expectedModels, pub
     Math.abs(action.scroll_x) <= width * 4 &&
     Math.abs(action.scroll_y) <= height * 4 &&
     (action.keys == null || (Array.isArray(action.keys) && action.keys.length === 0)) &&
-    Object.keys(action).every((key) => ["type", "x", "y", "scroll_x", "scroll_y", "keys"].includes(key))
+    Object.keys(action).every((key) =>
+      ["type", "x", "y", "scroll_x", "scroll_y", "keys"].includes(key),
+    )
   )
     return {
       ...result,
       status: "proposed",
-      actions: [{
-        type: "scroll",
-        x: action.x,
-        y: action.y,
-        scroll_x: action.scroll_x,
-        scroll_y: action.scroll_y,
-      }],
+      actions: [
+        {
+          type: "scroll",
+          x: action.x,
+          y: action.y,
+          scroll_x: action.scroll_x,
+          scroll_y: action.scroll_y,
+        },
+      ],
     };
   return blocked;
 }

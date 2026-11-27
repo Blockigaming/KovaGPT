@@ -73,7 +73,12 @@ test("review is mandatory and unsupported or ambiguous actions are blocked", () 
   }
 });
 test("result reading preserves usage and rejects the wrong provider model", async () => {
-  const result = await readDeveloperComputerResponse(Response.json(value), body, ["test"], "public");
+  const result = await readDeveloperComputerResponse(
+    Response.json(value),
+    body,
+    ["test"],
+    "public",
+  );
   assert.equal(result.model, "public");
   assert.equal(result.usage.cached_input_tokens, 20);
   await assert.rejects(

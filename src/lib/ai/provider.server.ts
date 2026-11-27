@@ -740,7 +740,10 @@ export async function developerResponses(body: JsonObject, init?: RequestInit): 
   return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
 }
 
-export async function developerComputerUse(body: JsonObject, init?: RequestInit): Promise<Response> {
+export async function developerComputerUse(
+  body: JsonObject,
+  init?: RequestInit,
+): Promise<Response> {
   return providerFetch("/responses", "computer_use", body, init);
 }
 

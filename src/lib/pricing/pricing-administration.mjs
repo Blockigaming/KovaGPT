@@ -222,11 +222,15 @@ export function validatePricingProposal(raw, now = Date.now()) {
     const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
     if (c.meter === "responses_computer")
-      Object.assign(body, developerComputerFields({
-        input: "test",
-        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
-        max_output_tokens: 1,
-      }));
+      Object.assign(
+        body,
+        developerComputerFields({
+          input: "test",
+          screenshot:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+          max_output_tokens: 1,
+        }),
+      );
     if (c.meter === "responses_analysis")
       Object.assign(body, developerAnalysisFields({ input: "test", max_output_tokens: 1 }));
     if (c.meter === "responses_search")
