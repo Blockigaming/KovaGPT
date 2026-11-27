@@ -66,8 +66,8 @@ export function DeveloperFilesPanel({
     };
   }, [load]);
   const upload = async () => {
-    if (uploadPending.current || busy || !uploadFile || !uploadKeys.some((k) => k.id === uploadKey))
-      return;
+    const allowedKey = uploadKeys.some((key) => key.id === uploadKey);
+    if (uploadPending.current || busy || !uploadFile || !allowedKey) return;
     uploadPending.current = true;
     setBusy(true);
     setError("");
@@ -81,7 +81,8 @@ export function DeveloperFilesPanel({
         uploadFile.size > 32768
       )
         throw new Error("Choose a supported text file of 1–32768 bytes.");
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(await uploadFile.arrayBuffer());
+      const bytes = await uploadFile.arrayBuffer();
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
       if (!active.current) return;
       uploadRequest.current ??= crypto.randomUUID();
       const params = new URLSearchParams({ project: projectId, key: uploadKey });
@@ -94,7 +95,7 @@ export function DeveloperFilesPanel({
         },
         body: JSON.stringify({ filename: uploadFile.name, mimeType, text }),
       });
-      if (!response.ok) throw new Error("Upload rejected. Check file format, key and storage limits.");
+      if (!response.ok) throw new Error("Upload rejected. Check format, key and storage limits.");
       if (!active.current) return;
       setUploadFile(null);
       uploadRequest.current = null;
@@ -138,8 +139,8 @@ export function DeveloperFilesPanel({
     >
       <h2 className="text-lg font-semibold">Developer files</h2>
       <p className="text-sm text-muted-foreground">
-        Private text, Markdown, CSV and JSON files for this developer project. Files expire after
-        30 days; your account can store up to 100 files and 2 MiB across all projects.
+        Private text, Markdown, CSV and JSON files. Expire after 30 days. Account limit: 100 files
+        and 2 MiB.
       </p>
       <form
         className="grid min-w-0 gap-3 border-b border-border pb-4"
