@@ -18,6 +18,13 @@
   .kova-assistant .kova-empty-chat-content .kova-greeting {
     margin-block: auto;
     align-items: center;
+    /* The composer docks at the bottom, so centering in the leftover space sits
+       above the true middle of the screen. Nudge it down to the middle. */
+    translate: 0 clamp(24px, 8dvh, 80px);
+  }
+  /* With the keyboard open the greeting centers in the space above the composer. */
+  .kova-assistant[data-keyboard-open="true"] .kova-empty-chat-content .kova-greeting {
+    translate: none;
   }
   .kova-assistant .kova-empty-chat .kova-greeting h1 {
     display: flex;
@@ -123,6 +130,16 @@
     overflow-wrap: normal;
     max-inline-size: 100%;
   }
+  /* The mode control sits a fixed distance from the + button. Fixed px (not a
+     percentage or auto spacing) keeps the gap identical on every phone width. */
+  .kova-assistant .spec400-composer .spec400-composer-toolbar {
+    column-gap: 0;
+  }
+  .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-thinking-toggle,
+  .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-consumer-model-trigger,
+  .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-home-model-placeholder {
+    margin-inline-start: -6px;
+  }
   .kova-assistant .spec400-composer .spec400-composer-speech-actions {
     order: 2;
     flex: none;
@@ -154,12 +171,12 @@
   /* ---- Popups open centered ---- */
   [data-radix-popper-content-wrapper]:has(
     > :is(
-      [data-slot="popover-content"],
-      [data-slot="dropdown-menu-content"],
-      [data-slot="select-content"],
-      [role="menu"],
-      [role="listbox"]
-    )
+        [data-slot="popover-content"],
+        [data-slot="dropdown-menu-content"],
+        [data-slot="select-content"],
+        [role="menu"],
+        [role="listbox"]
+      ):not(.kova-profile-menu)
   ) {
     position: fixed !important;
     inset: 0 !important;
@@ -178,7 +195,7 @@
       [data-slot="select-content"],
       [role="menu"],
       [role="listbox"]
-    ) {
+    ):not(.kova-profile-menu) {
     box-shadow:
       0 0 0 100vmax rgb(0 0 0 / 0.4),
       var(--shadow-floating);
