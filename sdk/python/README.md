@@ -67,3 +67,9 @@ Reference: https://developers.openai.com/api/docs/guides/transcription
 ### Background Responses
 
 Use `POST /api/v1/response-jobs` with `operation: "create"`, a stable UUID `id`, `currency`, `maximum_charge`, `input` (a non-streaming text Responses request of at most 2,048 output tokens) and the `quote_token` returned by quoting that exact input as `responses`. Creating a job authorizes paid execution by the existing durable worker and stores the input and result for bounded retrieval. No automatic provider retries occur. A job expires after 24 hours and is eligible for cleanup seven days after expiration. List or retrieve through GET, or cancel a queued job by POSTing `{ operation: "cancel", id }`. Cancel does not interrupt a job already claimed by a worker. Retrieval reports the actual job and settlement status and exposes output only for settled completed jobs. This feature requires the staged batch migration and background Responses runtime flag.
+
+### Async Python
+
+`AsyncClient` offers awaitable equivalents of every public `Client` method using the same bounded HTTPS transport. It uses worker threads for blocking I/O; it does not introduce automatic retries. Use `async with await client.responses(data, **budget) as response:` and either `await response.json()` or `async for event in async_response_events(response):`. For Chat Completions use `async_chat_completion_events`. Always use the async context manager when consuming a stream partially.
+
+`AsyncRequestCancelled` subclasses `asyncio.CancelledError`. Its `request_may_have_started` and `mutation_may_have_started` flags distinguish potentially dispatched paid work and resource mutations. Canceling during a quote cannot start subsequent inference. Canceling after dispatch does not cancel work on the server: the bounded transport finishes in its worker and closes abandoned responses. Reconcile usage or retrieve the original resource before retrying.

@@ -277,7 +277,7 @@ export const DEVELOPER_GUIDES = [
     "sdks",
     "JavaScript and Python SDKs",
     "The repository-local JavaScript ESM client (Node 22+) and Python client use server-side credentials, scoped model discovery, explicit quotes and stable idempotency keys. Neither package is announced as published.",
-    "Use JavaScript responseEvents for Responses streams and the Python client’s streaming interface. Both SDKs expose bounded file, job and resource operations. Inspect uncertainty errors rather than automatically retrying.",
+    "Use JavaScript responseEvents or Python response_events and async_response_events for Responses streams. Both SDKs expose bounded file, job and resource operations. Inspect uncertainty errors rather than automatically retrying.",
   ),
   guide(
     "javascript",
@@ -289,7 +289,7 @@ export const DEVELOPER_GUIDES = [
     "python",
     "Python SDK",
     "Import Client, KovaError and response_events from the repository-local kovagpt package under sdk/python. Configure Client with an API key from a server-side secret manager. Call models() before selecting a public alias, then responses with an explicit currency, maximum_charge and idempotency_key.",
-    "Consume response_events for native streaming or chat_completion_events for compatible chat. The client is synchronous; do not block an async event loop with an unbounded request. KovaError.request_may_have_started warns of uncertain paid work. This package is not publicly published.",
+    "Consume response_events for native streaming or chat_completion_events for compatible chat. AsyncClient exposes awaitable equivalents and async_response_events or async_chat_completion_events for streaming. KovaError.request_may_have_started and AsyncRequestCancelled indicate potentially dispatched work; cancellation is not a refund. This package is not publicly published.",
   ),
   guide(
     "privacy",

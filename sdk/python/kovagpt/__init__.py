@@ -614,3 +614,12 @@ def verify_webhook_signature(*, secret, event_id, timestamp, body, signature, no
         return hmac.compare_digest("v1=" + digest, signature)
     except (TypeError, UnicodeError, ValueError):
         return False
+
+
+from .async_client import (  # noqa: E402
+    AsyncClient, AsyncAPIResponse, AsyncRequestCancelled,
+    async_response_events, async_chat_completion_events,
+)
+
+__all__ += ["AsyncClient", "AsyncAPIResponse", "AsyncRequestCancelled",
+            "async_response_events", "async_chat_completion_events"]
