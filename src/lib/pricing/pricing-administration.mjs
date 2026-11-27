@@ -1,6 +1,7 @@
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
 import { developerAnalysisFields } from "./developer-analysis-policy.mjs";
 import { developerComputerFields } from "./developer-computer-policy.mjs";
+import { BROWSER_MODEL, developerBrowserFields } from "./developer-browser-policy.mjs";
 
 const fail = (code) => {
   throw new Error(`pricing_admin_${code}`);
@@ -28,6 +29,7 @@ const meters = {
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
+  browser_sessions: ["browser_sessions_60s"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
 export function canonicalPricingJson(value) {
@@ -131,7 +133,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "expires_at",
         "evidence",
       ]) ||
-      !["azure_openai", "openai"].includes(row.provider) ||
+      !["azure_openai", "openai", "browserbase"].includes(row.provider) ||
       !text(row.upstream_model) ||
       !text(row.billing_dimension, 80) ||
       !text(row.unit, 80) ||
@@ -196,7 +198,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "maximumComputerInputTokens",
         "searchContentAccounting",
       ]) ||
-      !["azure_openai", "openai"].includes(c.provider) ||
+      !["azure_openai", "openai", "browserbase"].includes(c.provider) ||
       !text(c.upstreamModel) ||
       !text(c.publicModel) ||
       !text(c.capability, 80) ||
@@ -221,6 +223,11 @@ export function validatePricingProposal(raw, now = Date.now()) {
       fail("image_bounds_invalid");
     const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "browser_sessions") {
+      if (c.upstreamModel !== BROWSER_MODEL) fail("contract_invalid");
+      delete body.input;
+      Object.assign(body, developerBrowserFields({ url: "https://www.example.com/" }));
+    }
     if (c.meter === "responses_computer")
       Object.assign(
         body,

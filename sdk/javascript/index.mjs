@@ -9,6 +9,7 @@ const operations = new Set([
   "agent-turns",
   "analysis",
   "computer-use",
+  "browser",
 ]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
@@ -128,6 +129,9 @@ export class KovaGPT {
       }),
     });
     this.search = (input, options) => this.run("search", input, options);
+    this.browser = Object.freeze({
+      snapshot: (input, options) => this.run("browser", input, options),
+    });
     this.computerUse = Object.freeze({
       propose: (input, options) => this.run("computer-use", input, options),
     });

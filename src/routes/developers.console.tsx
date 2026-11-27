@@ -82,6 +82,7 @@ type ConsoleData = {
   decisionsEnabled?: boolean;
   analysisEnabled?: boolean;
   computerEnabled?: boolean;
+  browserEnabled?: boolean;
   consumerCreditSharing?: boolean;
   accounts: Row[];
   projects: Row[];
@@ -1233,13 +1234,15 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "decisions",
                     "file_analysis",
                     "computer_use",
+                    "cloud_browser",
                   ]
                     .filter(
                       (scope) =>
                         (scope !== "moderation" || data?.moderationEnabled) &&
                         (scope !== "decisions" || data?.decisionsEnabled) &&
                         (scope !== "file_analysis" || data?.analysisEnabled) &&
-                        (scope !== "computer_use" || data?.computerEnabled),
+                        (scope !== "computer_use" || data?.computerEnabled) &&
+                        (scope !== "cloud_browser" || data?.browserEnabled),
                     )
                     .map((scope) => (
                       <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
@@ -1484,6 +1487,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "decisions",
                     "file_analysis",
                     "computer_use",
+                    "cloud_browser",
                   ].map((item) => (
                     <option key={item} value={item}>
                       {item}

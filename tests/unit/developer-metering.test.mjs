@@ -628,3 +628,43 @@ test("analysis container sessions need separate approved pricing and completed t
     prepareDeveloperQuote({ ...config, registry: config.registry.slice(0, -1) }, request, at),
   );
 });
+
+test("browser snapshots require an approved fixed session price and a valid receipt", async () => {
+  const { BROWSER_MODEL, developerBrowserFields } =
+    await import("../../src/lib/pricing/developer-browser-policy.mjs");
+  const { config, request } = fixture();
+  const contract = config.version.public_price_configuration.contracts[0];
+  contract.provider = request.provider = "browserbase";
+  contract.upstreamModel = BROWSER_MODEL;
+  contract.expectedResponseModels = [BROWSER_MODEL];
+  contract.capability = request.capability = "cloud_browser";
+  contract.meter = "browser_sessions";
+  contract.maximumUsage = { browser_sessions_60s: 1 };
+  config.registry = [
+    {
+      ...config.registry[0],
+      provider: "browserbase",
+      upstream_model: BROWSER_MODEL,
+      billing_dimension: "browser_sessions_60s",
+      unit_quantity: 1,
+    },
+  ];
+  request.body = {
+    model: BROWSER_MODEL,
+    ...developerBrowserFields({ url: "https://www.example.com/" }),
+  };
+  const quote = prepareDeveloperQuote(config, request, new Date("2026-09-05"));
+  const receipt = {
+    id: "11111111-1111-4111-8111-111111111111",
+    model: BROWSER_MODEL,
+    status: "completed",
+    usage: { browser_sessions_60s: 1 },
+  };
+  assert.equal(quote.options.usage.dimensions.browser_sessions_60s, 1);
+  assert.equal(authoritativeUsage(receipt, "browser_sessions").dimensions.browser_sessions_60s, 1);
+  const h = harness({ prepared: quote, send: async () => Response.json(receipt) });
+  await (await runMeteredProvider(h.options)).json();
+  assert.equal(h.calls[0].outcome, "settled");
+  request.body.session_seconds = 61;
+  assert.throws(() => prepareDeveloperQuote(config, request, new Date("2026-09-05")));
+});

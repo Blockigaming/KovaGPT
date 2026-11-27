@@ -161,7 +161,8 @@ async function fixture(options = {}) {
       path === "./developer-skill-policy.mjs" ||
       path === "./developer-batch-policy.mjs" ||
       path === "./developer-analysis-policy.mjs" ||
-      path === "./developer-computer-policy.mjs"
+      path === "./developer-computer-policy.mjs" ||
+      path === "./developer-browser-policy.mjs"
     )
       return full.replace(
         JSON.stringify(path),
@@ -181,8 +182,10 @@ async function fixture(options = {}) {
       return full.replace(JSON.stringify(path), JSON.stringify(options.providerUrl));
     if (path === "@/lib/ai/provider.server")
       return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),developerDecisions=developerResponses,developerAnalysis=developerResponses,developerComputerUse=developerResponses,deleteDeveloperAnalysisContainer=async()=>{},developerModerations=developerResponses,embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>({provider:"azure_openai"}),providerModelId=(model)=>model;';
+    if (path === "./developer-browser.server")
+      return 'const developerBrowserEnabled=()=>false,assertDeveloperBrowserAuthority=async()=>{throw Error("developer_browser_unavailable")},runDeveloperBrowser=async()=>{throw Error("developer_browser_unavailable")};';
     if (path === "./developer-billing.server")
-      return 'const withDeveloperBilling=(identity,callback)=>globalThis[Symbol.for("kova.developer-ingress-test")].billing(identity,callback);';
+      return 'const withDeveloperBilling=(identity,callback)=>globalThis[Symbol.for("kova.developer-ingress-test")].billing(identity,callback),meterProviderRequest=async()=>{throw Error("developer_browser_unavailable")};';
     return "";
   });
   const compiled = ts.transpileModule(source, {

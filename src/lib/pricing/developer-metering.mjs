@@ -12,6 +12,11 @@ import {
   validDeveloperAnalysisRequest,
 } from "./developer-analysis-policy.mjs";
 import { validDeveloperComputerRequest } from "./developer-computer-policy.mjs";
+import {
+  BROWSER_MODEL,
+  developerBrowserReceipt,
+  validDeveloperBrowserRequest,
+} from "./developer-browser-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -33,6 +38,7 @@ const dimensionsByMeter = {
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
+  browser_sessions: ["browser_sessions_60s"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
 
@@ -81,6 +87,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   }
   const dimensions = dimensionsByMeter[contract.meter];
   const moderationMeter = contract.meter === "moderation_requests";
+  const browserMeter = contract.meter === "browser_sessions";
   const decisionsMeter = contract.meter === "decisions_tokens";
   const searchMeter = contract.meter === "responses_search";
   const analysisMeter = contract.meter === "responses_analysis";
@@ -111,6 +118,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   if (imageEdit) delete textBody.image;
   if (
     !moderationMeter &&
+    !browserMeter &&
     new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
       (decisionsMeter
         ? contract.maximumUsage.decision_input_tokens
@@ -130,6 +138,16 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
+  if (
+    browserMeter !== (request.capability === "cloud_browser") ||
+    browserMeter !== (request.provider === "browserbase") ||
+    (browserMeter &&
+      (contract.maximumUsage.browser_sessions_60s !== 1 ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== BROWSER_MODEL ||
+        !validDeveloperBrowserRequest(request.body)))
+  )
+    fail("billing_browser_contract_invalid");
   if (
     moderationMeter !== (request.capability === "moderation") ||
     (moderationMeter &&
@@ -434,6 +452,9 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
       }
       dimensions.web_search_calls = ids.size;
     }
+  } else if (meter === "browser_sessions") {
+    if (!developerBrowserReceipt(response)) return null;
+    dimensions = { browser_sessions_60s: 1 };
   } else if (meter === "moderation_requests") {
     if (!validModerationResult(response)) return null;
     dimensions = { moderation_requests: 1 };

@@ -23,7 +23,7 @@ import {
   providerModelId,
   type ProviderCapability,
 } from "@/lib/ai/provider.server";
-import { withDeveloperBilling } from "./developer-billing.server";
+import { meterProviderRequest, withDeveloperBilling } from "./developer-billing.server";
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
 import { pricingRegistryIds } from "./pricing-administration.mjs";
 import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
@@ -35,6 +35,16 @@ import { developerChatCompletion } from "./developer-chat-compat.mjs";
 import { readDeveloperDecisionResponse } from "./developer-decisions-policy.mjs";
 import { readDeveloperAnalysisResponse } from "./developer-analysis-policy.mjs";
 import { readDeveloperComputerResponse } from "./developer-computer-policy.mjs";
+import {
+  BROWSER_MODEL,
+  developerBrowserReceipt,
+  developerBrowserUrl,
+} from "./developer-browser-policy.mjs";
+import {
+  assertDeveloperBrowserAuthority,
+  developerBrowserEnabled,
+  runDeveloperBrowser,
+} from "./developer-browser.server";
 import {
   expandDeveloperAgentTurn,
   parseDeveloperAgentRequest,
@@ -417,8 +427,11 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   const files = await loadDeveloperFileContent(identity, parsed.body, references.ids);
   parsed.body = files.body;
   const version = await currentPricing(identity);
-  const providerConfig = getAiProviderConfig(parsed.capability);
-  const provider = providerConfig.provider;
+  const providerConfig =
+    parsed.capability === "cloud_browser" ? null : getAiProviderConfig(parsed.capability);
+  const provider = providerConfig?.provider ?? "browserbase";
+  if (parsed.capability === "cloud_browser")
+    await assertDeveloperBrowserAuthority(identity, developerBrowserUrl(parsed.body.url));
   if (
     parsed.body.image !== undefined &&
     (runtimeEnv("KOVA_DEVELOPER_IMAGE_EDITS_ENABLED") !== "true" ||
@@ -442,7 +455,7 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     parsed.body.max_tool_calls !== undefined &&
     (runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true" ||
       provider !== "openai" ||
-      !providerConfig.capabilities?.includes("web_search"))
+      !providerConfig?.capabilities?.includes("web_search"))
   )
     throw new Error("developer_web_search_unavailable");
   const contracts = version.public_price_configuration?.contracts;
@@ -457,7 +470,12 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   if (!contract || typeof contract.upstreamModel !== "string")
     throw new Error("developer_model_unavailable");
   // A reviewed model contract selects the deployment, never a client URL or upstream identifier.
-  parsed.body.model = providerModelId(contract.upstreamModel, parsed.capability);
+  parsed.body.model =
+    parsed.capability === "cloud_browser"
+      ? BROWSER_MODEL
+      : providerModelId(contract.upstreamModel, parsed.capability);
+  if (parsed.capability === "cloud_browser" && contract.upstreamModel !== BROWSER_MODEL)
+    throw new Error("developer_browser_unavailable");
   const at = new Date();
   const registry = await identity.db
     .from("upstream_price_registry")
@@ -598,6 +616,14 @@ export async function executeDeveloper(
           { signal },
         );
       }
+      if (kind === "browser")
+        return meterProviderRequest({
+          provider: "browserbase",
+          capability: "cloud_browser",
+          body: parsed.body,
+          signal,
+          send: () => runDeveloperBrowser(identity, parsed.body, signal),
+        });
       if (kind === "computer-use") return developerComputerUse(parsed.body, { signal });
       if (kind === "analysis") return developerAnalysis(parsed.body, { signal });
       const call =
@@ -616,6 +642,12 @@ export async function executeDeveloper(
   if (!response.ok) {
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
+  }
+  if (kind === "browser") {
+    const receipt = await response.json();
+    if (!developerBrowserReceipt(receipt) || !receipt.result)
+      throw new Error("developer_browser_unavailable");
+    return developerJson({ ...receipt.result, model: parsed.publicModel, usage: receipt.usage });
   }
   if (kind === "computer-use")
     return developerJson(
@@ -812,6 +844,7 @@ const publicUsage = (row: Record<string, unknown>) => {
     web_search_calls: dimension("web_search_calls"),
     moderation_requests: dimension("moderation_requests"),
     container_1g_sessions: dimension("container_1g_sessions"),
+    browser_sessions_60s: dimension("browser_sessions_60s"),
   };
 };
 export async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {
@@ -896,7 +929,9 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             (entry.capability !== "decisions" || developerDecisionsEnabled()) &&
             (entry.capability !== "file_analysis" || developerAnalysisEnabled()) &&
             (entry.capability !== "computer_use" || developerComputerEnabled()) &&
-            entry.provider === getAiProviderConfig(entry.capability as ProviderCapability).provider,
+            (entry.capability === "cloud_browser"
+              ? developerBrowserEnabled() && entry.provider === "browserbase"
+              : entry.provider === getAiProviderConfig(entry.capability as ProviderCapability).provider),
         )
         .map(
           (entry: {
@@ -968,11 +1003,13 @@ export async function handleDeveloperApi(request: Request, operation: string) {
         throw new Error("developer_input_invalid");
       return developerJson(await developerQuote(identity, body.operation, body.input));
     }
+    const requestKey = developerRequestKey(request.headers.get("idempotency-key"));
+    if (requestKey.startsWith("batch:")) throw new Error("developer_idempotency_key_invalid");
     return await executeDeveloper(
       identity,
       operation,
       body,
-      developerRequestKey(request.headers.get("idempotency-key")),
+      requestKey,
       request.headers.get("x-kova-quote"),
       request.signal,
     );
@@ -1063,6 +1100,7 @@ export async function handleDeveloperConsole(request: Request) {
           decisionsEnabled: developerDecisionsEnabled(),
           analysisEnabled: developerAnalysisEnabled(),
           computerEnabled: developerComputerEnabled(),
+          browserEnabled: developerBrowserEnabled(),
           consumerCreditSharing,
           accounts: [],
           projects: [],
@@ -1211,6 +1249,7 @@ export async function handleDeveloperConsole(request: Request) {
         decisionsEnabled: developerDecisionsEnabled(),
         analysisEnabled: developerAnalysisEnabled(),
         computerEnabled: developerComputerEnabled(),
+        browserEnabled: developerBrowserEnabled(),
         consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,
@@ -1309,7 +1348,8 @@ export async function handleDeveloperConsole(request: Request) {
           (body.scopes.includes("moderation") && !developerModerationEnabled()) ||
           (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
           (body.scopes.includes("file_analysis") && !developerAnalysisEnabled()) ||
-          (body.scopes.includes("computer_use") && !developerComputerEnabled())
+          (body.scopes.includes("computer_use") && !developerComputerEnabled()) ||
+          (body.scopes.includes("cloud_browser") && !developerBrowserEnabled())
         )
           throw new Error("developer_key_invalid");
         const keyId = crypto.randomUUID();

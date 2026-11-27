@@ -8,7 +8,8 @@ export type Operation =
   | "decisions"
   | "agent-turns"
   | "analysis"
-  | "computer-use";
+  | "computer-use"
+  | "browser";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -89,7 +90,12 @@ export type OperationInput =
   | DecisionInput
   | AgentTurnInput
   | AnalysisInput
-  | ComputerUseInput;
+  | ComputerUseInput
+  | BrowserSnapshotInput;
+export interface BrowserSnapshotInput {
+  model: string;
+  url: string;
+}
 export interface ComputerUseInput {
   model: string;
   input: string;
@@ -182,6 +188,7 @@ export class KovaGPT {
   readonly decisions: { create(input: DecisionInput, options: Budget): Promise<Response> };
   readonly analysis: { create(input: AnalysisInput, options: Budget): Promise<Response> };
   readonly computerUse: { propose(input: ComputerUseInput, options: Budget): Promise<Response> };
+  readonly browser: { snapshot(input: BrowserSnapshotInput, options: Budget): Promise<Response> };
   readonly agents: {
     create(
       input: { id: string; definition: AgentDefinition },

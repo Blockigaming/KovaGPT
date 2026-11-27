@@ -53,6 +53,7 @@ export class BrowserSessionManager {
     const idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_MS;
     const storagePath = await this.artifacts.initializeSession(id);
     let browser;
+    let providerSessionId: string | undefined;
     let releaseRemote: (() => Promise<void>) | undefined;
     let remoteHeartbeat: ReturnType<typeof setInterval> | undefined;
     try {
@@ -62,6 +63,8 @@ export class BrowserSessionManager {
       const projectId = process.env.BROWSERBASE_PROJECT_ID?.trim();
       const remainingMs = (hardExpiresAt ?? Infinity) - Date.now();
       if (remainingMs <= 0) throw runtimeError("session_expired", "Browser time has expired");
+      if (options.requireRemote && (!apiKey || !projectId || !options.readOnly))
+        throw new Error("A bounded remote browser is required");
       if (apiKey || projectId) {
         if (!apiKey || !projectId || engine !== "chromium") {
           throw new Error("Browserbase requires a configured Chromium project");
@@ -93,6 +96,7 @@ export class BrowserSessionManager {
         if (typeof session.id !== "string" || !/^[a-f0-9-]{36}$/i.test(session.id)) {
           throw new Error("Invalid Browserbase session ID");
         }
+        providerSessionId = session.id;
         releaseRemote = async () => {
           await fetch(`${sessionsUrl}/${session.id}`, {
             method: "POST",
@@ -165,6 +169,7 @@ export class BrowserSessionManager {
         context,
         tabs: new Map(),
         storagePath,
+        providerSessionId,
         releaseRemote,
         remoteHeartbeat,
         hardExpiresAt,

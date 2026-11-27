@@ -199,6 +199,7 @@ import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/l
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
 import { Route as ApiV1AgentTurnsRouteImport } from './routes/api/v1/agent-turns'
 import { Route as ApiV1AgentsRouteImport } from './routes/api/v1/agents'
+import { Route as ApiV1BrowserRouteImport } from './routes/api/v1/browser'
 import { Route as ApiV1ComputerUseRouteImport } from './routes/api/v1/computer-use'
 import { Route as ApiV1AnalysisRouteImport } from './routes/api/v1/analysis'
 import { Route as ApiV1AutomationsRouteImport } from './routes/api/v1/automations'
@@ -1227,6 +1228,11 @@ const ApiV1AgentsRoute = ApiV1AgentsRouteImport.update({
   path: '/api/v1/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1BrowserRoute = ApiV1BrowserRouteImport.update({
+  id: '/api/v1/browser',
+  path: '/api/v1/browser',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1ComputerUseRoute = ApiV1ComputerUseRouteImport.update({
   id: '/api/v1/computer-use',
   path: '/api/v1/computer-use',
@@ -1709,6 +1715,7 @@ export interface FileRoutesByFullPath {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/browser': typeof ApiV1BrowserRoute
   '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
@@ -1956,6 +1963,7 @@ export interface FileRoutesByTo {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/browser': typeof ApiV1BrowserRoute
   '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
@@ -2204,6 +2212,7 @@ export interface FileRoutesById {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/browser': typeof ApiV1BrowserRoute
   '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
@@ -2453,6 +2462,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/browser'
     | '/api/v1/computer-use'
     | '/api/v1/analysis'
     | '/api/v1/automations'
@@ -2700,6 +2710,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/browser'
     | '/api/v1/computer-use'
     | '/api/v1/analysis'
     | '/api/v1/automations'
@@ -2947,6 +2958,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/browser'
     | '/api/v1/computer-use'
     | '/api/v1/analysis'
     | '/api/v1/automations'
@@ -3185,6 +3197,7 @@ export interface RootRouteChildren {
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
   ApiV1AgentTurnsRoute: typeof ApiV1AgentTurnsRoute
   ApiV1AgentsRoute: typeof ApiV1AgentsRoute
+  ApiV1BrowserRoute: typeof ApiV1BrowserRoute
   ApiV1ComputerUseRoute: typeof ApiV1ComputerUseRoute
   ApiV1AnalysisRoute: typeof ApiV1AnalysisRoute
   ApiV1AutomationsRoute: typeof ApiV1AutomationsRoute
@@ -4572,6 +4585,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/browser': {
+      id: '/api/v1/browser'
+      path: '/api/v1/browser'
+      fullPath: '/api/v1/browser'
+      preLoaderRoute: typeof ApiV1BrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/computer-use': {
       id: '/api/v1/computer-use'
       path: '/api/v1/computer-use'
@@ -5264,6 +5284,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
   ApiV1AgentTurnsRoute: ApiV1AgentTurnsRoute,
   ApiV1AgentsRoute: ApiV1AgentsRoute,
+  ApiV1BrowserRoute: ApiV1BrowserRoute,
   ApiV1ComputerUseRoute: ApiV1ComputerUseRoute,
   ApiV1AnalysisRoute: ApiV1AnalysisRoute,
   ApiV1AutomationsRoute: ApiV1AutomationsRoute,

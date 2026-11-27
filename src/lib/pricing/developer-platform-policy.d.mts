@@ -21,6 +21,7 @@ export function parseDeveloperInput(
     | "moderation"
     | "decisions"
     | "file_analysis"
-    | "computer_use";
+    | "computer_use"
+    | "cloud_browser";
   publicModel: string;
 };
