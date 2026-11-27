@@ -19,6 +19,23 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
       keyId: string | null = null,
       projectId: string | null = null;
     const url = new URL(request.url);
+    const params = url.searchParams;
+    const allowed = new Set(
+      request.method === "POST"
+        ? ownerConsole
+          ? ["project", "key"]
+          : []
+        : [
+            ...(ownerConsole ? ["project"] : []),
+            "id",
+            ...(request.method === "GET" ? ["page"] : []),
+          ],
+    );
+    for (const name of params.keys()) {
+      if (!allowed.has(name) || params.getAll(name).length !== 1)
+        throw new Error("developer_input_invalid");
+    }
+    if (params.has("id") && params.has("page")) throw new Error("developer_input_invalid");
     if (ownerConsole) {
       if (isCrossSiteMutation(request)) throw new Error("developer_origin_invalid");
       const caller = await requireVerifiedUser(request);
@@ -65,15 +82,12 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
           .digest("hex"),
       };
     } else if (["GET", "DELETE"].includes(request.method)) {
-      const id = url.searchParams.get("id");
-      if (request.method === "DELETE" && !id) throw new Error("developer_id_invalid");
-      operation = id ? (request.method === "DELETE" ? "delete" : "get") : "list";
-      input = id ? { id: developerUuid(id) } : { page: Number(url.searchParams.get("page") ?? 0) };
-      if (
-        operation === "list" &&
-        (!Number.isSafeInteger(input.page) || Number(input.page) < 0 || Number(input.page) > 4)
-      )
-        throw new Error("developer_page_invalid");
+      const id = params.has("id") ? developerUuid(params.get("id")) : null;
+      if (request.method === "DELETE" && id === null) throw new Error("developer_id_invalid");
+      const page = params.get("page") ?? "0";
+      if (!/^[0-4]$/.test(page)) throw new Error("developer_page_invalid");
+      operation = id === null ? "list" : request.method === "DELETE" ? "delete" : "get";
+      input = id === null ? { page: Number(page) } : { id };
     } else throw new Error("developer_operation_invalid");
     const result = await db
       .rpc("manage_developer_files", {

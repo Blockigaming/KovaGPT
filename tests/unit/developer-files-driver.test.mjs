@@ -253,3 +253,34 @@ test("multipart upload uses the same scoped file record and rejects extra parts 
   assert.equal((await send(binary)).status, 400);
   assert.equal(f.state.calls.length, 1);
 });
+
+test("file resource queries reject ambiguity and client authority before database access", async () => {
+  const f = await fixture();
+  const send = (method, query, ownerConsole = false) =>
+    f.module.handleDeveloperFiles(
+      new Request(`https://kovagpt.com/api/v1/files?${query}`, {
+        method,
+        headers: { "x-kova-expected-user": owner, "idempotency-key": "stable" },
+      }),
+      ownerConsole,
+    );
+  for (const [method, query, ownerConsole] of [
+    ["GET", "id="],
+    ["GET", "page="],
+    ["GET", "page=01"],
+    ["GET", "page=1&page=2"],
+    ["GET", `id=${file}&page=1`],
+    ["GET", `project=${project}`],
+    ["GET", `project=${project}&project=${owner}`, true],
+    ["GET", `project=${project}&key=${key}`, true],
+    ["DELETE", `id=${file}&page=1`],
+    ["POST", `id=${file}`],
+  ])
+    assert.equal((await send(method, query, ownerConsole)).status, 400, query);
+  assert.equal(f.state.calls.length, 0);
+  assert.equal((await send("GET", "page=4")).status, 200);
+  assert.deepEqual(f.state.calls[0].args.p_input, { page: 4 });
+  assert.equal((await send("GET", `project=${project}&id=${file}`, true)).status, 200);
+  assert.equal(f.state.calls[1].args.p_project, project);
+  assert.deepEqual(f.state.calls[1].args.p_input, { id: file });
+});

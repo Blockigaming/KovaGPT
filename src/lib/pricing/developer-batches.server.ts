@@ -137,8 +137,7 @@ export async function handleDeveloperBatches(
       request.signal,
     );
     if (replay?.found === true) {
-      if (!replay.batch || replay.batch.id !== id)
-        throw new Error("developer_batch_unavailable");
+      if (!replay.batch || replay.batch.id !== id) throw new Error("developer_batch_unavailable");
       return developerJson(resourceKind === "response" ? await responseJob(id) : replay.batch);
     }
     if (replay?.found !== false) throw new Error("developer_batch_unavailable");

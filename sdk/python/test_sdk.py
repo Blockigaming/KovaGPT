@@ -1,5 +1,7 @@
 import io
 import json
+from email import policy
+from email.parser import BytesParser
 import time
 import unittest
 from unittest.mock import patch
@@ -249,6 +251,28 @@ class SDKTests(unittest.TestCase):
         with self.assertRaises(KovaError) as raised:
             self.client.batch_cancel(ID)
         self.assertFalse(raised.exception.request_may_have_started)
+
+    def test_multipart_upload_uses_one_utf8_file_and_stable_key(self):
+        data = {"filename": "data.csv", "mimeType": "text/csv", "text": "A,é\nB,2"}
+        self.responses.append(FakeResponse({"id": ID}))
+        self.client.file_upload_multipart(data, idempotency_key="upload-1")
+        method, path, raw, headers = self.calls[0]
+        self.assertEqual((method, path), ("POST", "/api/v1/files"))
+        self.assertEqual(headers["Idempotency-Key"], "upload-1")
+        message = BytesParser(policy=policy.default).parsebytes(
+            ("Content-Type: " + headers["Content-Type"] + "\r\n\r\n").encode("ascii") + raw)
+        parts = list(message.iter_parts())
+        self.assertEqual(len(parts), 1)
+        self.assertEqual(parts[0].get_param("name", header="content-disposition"), "file")
+        self.assertEqual(parts[0].get_filename(), "data.csv")
+        self.assertEqual(parts[0].get_content_type(), "text/csv")
+        self.assertEqual(parts[0].get_payload(decode=True), data["text"].encode("utf-8"))
+        for invalid in ({**data, "filename": "../data.csv"}, {**data, "mimeType": "text/plain"},
+                        {**data, "text": "é" * 16385},
+                        {"filename": "bad.json", "mimeType": "application/json", "text": "NaN"}):
+            with self.assertRaisesRegex(KovaError, "file_invalid"):
+                self.client.file_upload_multipart(invalid, idempotency_key="upload-1")
+        self.assertEqual(len(self.calls), 1)
 
     def test_invalid_origin_and_unsafe_key(self):
         for url in ("http://kovagpt.com", "https://x:y@kovagpt.com", "https://kovagpt.com/path"):

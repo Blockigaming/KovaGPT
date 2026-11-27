@@ -6,6 +6,7 @@ import http.client
 import json
 import math
 import re
+import secrets
 import time
 from urllib.parse import urlsplit
 
@@ -43,6 +44,10 @@ def _json_body(value, maximum=65536):
         raise KovaError("input_invalid") from None
     _require(len(raw) <= maximum, "input_too_large")
     return raw
+
+
+def _reject_json_constant(value):
+    raise ValueError(value)
 
 
 def _identifier(value, pattern, code):
@@ -241,6 +246,28 @@ class Client:
         key = _identifier(idempotency_key, _RETRY, "idempotency_key_required")
         return self._request("files", method="POST", body=_json_body(data, 131072),
                              headers={"Idempotency-Key": key}).json(131072)
+
+    def file_upload_multipart(self, data, *, idempotency_key):
+        key = _identifier(idempotency_key, _RETRY, "idempotency_key_required")
+        _require(isinstance(data, dict) and set(data) == {"filename", "mimeType", "text"}, "file_invalid")
+        filename, mime, content = data["filename"], data["mimeType"], data["text"]
+        _require(isinstance(filename, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._ -]{0,119}\.(txt|md|csv|json)", filename)
+                 and isinstance(content, str) and "\0" not in content, "file_invalid")
+        expected = {"txt": "text/plain", "md": "text/markdown", "csv": "text/csv", "json": "application/json"}[filename.rsplit(".", 1)[1]]
+        try:
+            raw = content.encode("utf-8")
+            if expected == "application/json":
+                json.loads(content, parse_constant=_reject_json_constant)
+        except (UnicodeError, ValueError, RecursionError):
+            raise KovaError("file_invalid") from None
+        _require(mime == expected and 1 <= len(raw) <= 32768, "file_invalid")
+        boundary = "kova-" + secrets.token_hex(16)
+        _require(boundary.encode("ascii") not in raw, "file_invalid")
+        prefix = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+                  f'Content-Type: {mime}\r\n\r\n').encode("ascii")
+        body = prefix + raw + f"\r\n--{boundary}--\r\n".encode("ascii")
+        return self._request("files", method="POST", body=body,
+                             headers={"Idempotency-Key": key, "Content-Type": f"multipart/form-data; boundary={boundary}"}).json(131072)
 
     @staticmethod
     def _vector_path(store_id, entry=None):

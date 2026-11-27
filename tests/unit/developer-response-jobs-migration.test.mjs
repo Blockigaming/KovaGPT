@@ -109,10 +109,9 @@ test("response job replay is read-only, exact-match and isolated from other owne
       /batch_not_found/,
     );
     await assert.rejects(f.manage("replay", replay, other, key, project), /scope_required/);
-    assert.deepEqual(
-      await f.manage("replay", replay, other, foreignKey, foreignProject),
-      { found: false },
-    );
+    assert.deepEqual(await f.manage("replay", replay, other, foreignKey, foreignProject), {
+      found: false,
+    });
     assert.equal(
       (await f.db.query("select count(*)::int n from developer_batch_items_v1")).rows[0].n,
       1,
@@ -267,18 +266,15 @@ test("webhook claims bind active credentials, endpoint generation, destination a
       (await f.db.query("select claim_developer_webhooks_v1(1) result")).rows[0].result[0];
     const validate = async (delivery, destination = url) =>
       (
-        await f.db.query(
-          "select validate_developer_webhook_claim_v1($1,$2,$3,$4,$5,$6,$7) ok",
-          [
-            project,
-            job,
-            delivery.event.id,
-            delivery.lease_token,
-            delivery.endpoint.generation,
-            delivery.endpoint.secret_nonce,
-            destination,
-          ],
-        )
+        await f.db.query("select validate_developer_webhook_claim_v1($1,$2,$3,$4,$5,$6,$7) ok", [
+          project,
+          job,
+          delivery.event.id,
+          delivery.lease_token,
+          delivery.endpoint.generation,
+          delivery.endpoint.secret_nonce,
+          destination,
+        ])
       ).rows[0].ok;
     const first = await claim();
     assert.equal(first.endpoint.generation, endpoint.generation);

@@ -496,6 +496,45 @@ export class KovaGPT {
           }),
         );
       },
+      uploadMultipart: async (input, { idempotencyKey, signal } = {}) => {
+        if (typeof idempotencyKey !== "string" || !/^[\x21-\x7e]{1,128}$/.test(idempotencyKey))
+          fail("idempotency_key_required");
+        const snapshot = boundedInput(input, 262144);
+        const { filename, mimeType, text } = snapshot;
+        if (
+          Object.keys(snapshot).length !== 3 ||
+          typeof filename !== "string" ||
+          !/^[A-Za-z0-9][A-Za-z0-9._ -]{0,119}\.(txt|md|csv|json)$/.test(filename) ||
+          typeof text !== "string" ||
+          !text.isWellFormed() ||
+          text.includes("\0")
+        )
+          fail("file_invalid");
+        const mime = {
+          txt: "text/plain",
+          md: "text/markdown",
+          csv: "text/csv",
+          json: "application/json",
+        }[filename.split(".").at(-1)];
+        const file = new Blob([text], { type: mime });
+        if (mime !== mimeType || file.size < 1 || file.size > 32768) fail("file_invalid");
+        if (mime === "application/json") {
+          try {
+            JSON.parse(text);
+          } catch {
+            fail("file_invalid");
+          }
+        }
+        const form = new FormData();
+        form.append("file", file, filename);
+        return smallJson(
+          await this.#request("files", {
+            form,
+            signal,
+            headers: { "Idempotency-Key": idempotencyKey },
+          }),
+        );
+      },
       list: async ({ page = 0, signal } = {}) => {
         if (!Number.isSafeInteger(page) || page < 0 || page > 4) fail("file_page_invalid");
         return smallJson(await this.#request(`files?page=${page}`, { signal }));
@@ -506,7 +545,7 @@ export class KovaGPT {
         smallJson(await this.#request(`files?id=${fileId(id)}`, { signal, method: "DELETE" })),
     });
   }
-  async #request(path, { input, signal, headers = {}, generation = false, method } = {}) {
+  async #request(path, { input, form, signal, headers = {}, generation = false, method } = {}) {
     const combined = AbortSignal.any([
       AbortSignal.timeout(this.#timeout),
       ...(signal ? [signal] : []),
@@ -515,13 +554,17 @@ export class KovaGPT {
     let response;
     try {
       response = await this.#fetch(`${this.#origin}/api/v1/${path}`, {
-        method: method ?? (input === undefined ? "GET" : "POST"),
+        method: method ?? (input === undefined && form === undefined ? "GET" : "POST"),
         headers: {
           Authorization: `Bearer ${this.#apiKey}`,
           ...(input === undefined ? {} : { "Content-Type": "application/json" }),
           ...headers,
         },
-        ...(input === undefined ? {} : { body: JSON.stringify(input) }),
+        ...(form !== undefined
+          ? { body: form }
+          : input === undefined
+            ? {}
+            : { body: JSON.stringify(input) }),
         signal: combined,
         redirect: "error",
         credentials: "omit",

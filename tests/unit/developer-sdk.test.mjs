@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readDeveloperMultipartFile } from "../../src/lib/pricing/developer-file-policy.mjs";
 import {
   KovaGPT,
   KovaError,
@@ -475,4 +476,29 @@ test("paid queue operations preserve uncertainty after dispatch and never retry"
     f.client.batches.cancel(id),
     (error) => error instanceof KovaError && !error.requestMayHaveStarted,
   );
+});
+
+test("multipart SDK uploads match the server validator and preserve the stable retry key", async () => {
+  const input = { filename: "data.csv", mimeType: "text/csv", text: "A,é\nB,2" };
+  const f = fixture(async (url, init) => {
+    assert.equal(init.headers["Content-Type"], undefined);
+    assert.equal(init.headers["Idempotency-Key"], "upload-1");
+    assert.deepEqual(await readDeveloperMultipartFile(new Request(url, init)), input);
+    return Response.json({ id: "file" });
+  });
+  await f.client.files.uploadMultipart(input, { idempotencyKey: "upload-1" });
+  for (const invalid of [
+    { ...input, filename: "../data.csv" },
+    { ...input, mimeType: "text/plain" },
+    { ...input, project: "foreign" },
+    { ...input, text: "\ud800" },
+    { ...input, text: "é".repeat(16385) },
+    { filename: "bad.json", mimeType: "application/json", text: "NaN" },
+  ])
+    await assert.rejects(
+      f.client.files.uploadMultipart(invalid, { idempotencyKey: "upload-1" }),
+      /file_invalid/,
+    );
+  await assert.rejects(f.client.files.uploadMultipart(input), /idempotency_key_required/);
+  assert.equal(f.calls.length, 1);
 });

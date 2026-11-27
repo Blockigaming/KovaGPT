@@ -410,6 +410,14 @@ export class KovaGPT {
       },
       options: { idempotencyKey: string; signal?: AbortSignal },
     ): Promise<DeveloperFile>;
+    uploadMultipart(
+      input: {
+        filename: string;
+        mimeType: "text/plain" | "text/markdown" | "text/csv" | "application/json";
+        text: string;
+      },
+      options: { idempotencyKey: string; signal?: AbortSignal },
+    ): Promise<DeveloperFile>;
     list(options?: {
       page?: number;
       signal?: AbortSignal;

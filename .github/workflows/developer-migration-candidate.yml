@@ -36,6 +36,22 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npm rebuild supabase
           ./node_modules/.bin/supabase --version
+      - name: Archive pinned offline formatter and PostgreSQL test dependencies
+        run: |
+          set -euo pipefail
+          kit="$RUNNER_TEMP/developer-offline-test-kit"
+          mkdir -p "$kit"
+          tar -C node_modules -czf "$kit/node-modules.tar.gz" prettier @electric-sql/pglite
+          sha256sum package-lock.json > "$kit/package-lock.sha256"
+          cd "$kit"
+          sha256sum node-modules.tar.gz > SHA256SUMS
+      - name: Upload offline test dependencies
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: developer-offline-test-kit-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/developer-offline-test-kit/
+          if-no-files-found: error
+          retention-days: 1
       - name: Generate canonical migration candidates without remote access
         run: |
           set -euo pipefail
