@@ -33,10 +33,10 @@ begin
   then raise exception 'developer_owner_unavailable' using errcode='42501'; end if;
   if p_key is null or p_project is null or not exists(
     select 1 from public.developer_billing_keys k
-      join public.developer_account_owners a on a.account_id=k.account_id
+      join public.developer_account_owners ao on ao.account_id=k.account_id
       join public.developer_projects p on p.id=k.project_id and p.account_id=k.account_id
       join public.developer_credit_accounts acct on acct.id=k.account_id
-    where k.id=p_key and p.id=p_project and a.owner_id=p_owner
+    where k.id=p_key and p.id=p_project and ao.owner_id=p_owner
       and k.enabled and k.revoked_at is null and k.expires_at>now()
       and 'chat'=any(k.capabilities)
       and acct.suspended_at is null

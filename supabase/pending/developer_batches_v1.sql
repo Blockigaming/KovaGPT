@@ -22,7 +22,7 @@ create table public.developer_batch_items_v1 (
   operation_kind text not null default 'chat/completions' check(operation_kind in ('chat/completions','agent-turns','responses','moderations','embeddings','decisions')),
   run_at timestamptz,
   input jsonb not null check(jsonb_typeof(input)='object' and octet_length(input::text)<=16384),
-  authorization text not null check(length(authorization) between 1 and 2048),
+  "authorization" text not null check(length("authorization") between 1 and 2048),
   maximum_ticks bigint not null check(maximum_ticks between 1 and 100000000000000),
   request_group text not null check(request_group ~ '^[a-f0-9]{64}$'),
   state text not null default 'queued' check(state in ('queued','running','completed','uncertain','canceled')),
@@ -153,7 +153,7 @@ begin
         then raise exception 'developer_batch_invalid'; end if;
         previous_at:=scheduled_at;
       elsif j ? 'run_at' then raise exception 'developer_batch_invalid'; end if;
-      insert into public.developer_batch_items_v1(project_id,batch_id,id,ordinal,input,authorization,maximum_ticks,request_group,run_at,operation_kind)
+      insert into public.developer_batch_items_v1(project_id,batch_id,id,ordinal,input,"authorization",maximum_ticks,request_group,run_at,operation_kind)
         values(p_project,batch,(j->>'id')::uuid,n,j->'input',j->>'authorization',(j->>'maximum_ticks')::bigint,j->>'request_group',scheduled_at,coalesce(j->>'operation_kind','chat/completions'));
     end loop;
     return jsonb_build_object('object','batch')||(to_jsonb(b)-'owner_id'-'request_digest');

@@ -85,6 +85,10 @@ async function loadWorker(admin) {
     'import { supabaseAdmin } from "@/integrations/supabase/client.server";',
     'const supabaseAdmin = globalThis[Symbol.for("account-export-generation-test")];',
   );
+  source = source.replace(
+    'import { runtimeEnv } from "@/lib/runtime-env.server";',
+    'const runtimeEnv = () => undefined;',
+  );
   source = source.replaceAll(/"(?:@\/lib\/|\.\/)([^"\n]+)"/gu, (_, path) =>
     JSON.stringify(new URL(`../../src/lib/${path}`, import.meta.url).href),
   );

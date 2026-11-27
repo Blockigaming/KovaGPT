@@ -8,6 +8,7 @@ import test from "node:test";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/endpoint-reliability.mjs";
 import { developerConversationReference } from "../../src/lib/pricing/developer-conversation-policy.mjs";
+import { normalizeDeveloperOperation } from "../../src/lib/pricing/developer-api-aliases.mjs";
 import * as imagePolicy from "../../src/lib/multimodal/image-request-policy.mjs";
 
 function actualModule(path, bindings, expose, suffix = "") {
@@ -228,6 +229,7 @@ function pricingFixture() {
       __identity: identity,
       developerFileReferences: (_kind, body) => ({ body: { ...body }, ids: [] }),
       developerConversationReference,
+      normalizeDeveloperOperation,
       parseDeveloperInput: (kind, body) => ({
         capability:
           kind === "images" ? "image_generation" : kind === "embeddings" ? "embeddings" : "chat",
