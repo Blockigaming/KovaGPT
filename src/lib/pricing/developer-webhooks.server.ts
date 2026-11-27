@@ -107,13 +107,18 @@ type Claim = {
 
 // Resolve only A records, reject nonpublic or mixed answers, then connect to
 // the selected address directly with the original hostname as TLS identity.
-async function sendClaim(claim: Claim, config: NonNullable<ReturnType<typeof configuration>>) {
+async function sendClaim(
+  claim: Claim,
+  config: NonNullable<ReturnType<typeof configuration>>,
+  validate: () => Promise<boolean>,
+) {
   const url = webhookDestination(claim.endpoint.url, config.allowlist);
   const resolver = new Resolver({ timeout: 1500, tries: 1 });
   const addresses = await resolver.resolve4(url.hostname);
   if (!addresses.length || addresses.length > 16 || addresses.some((ip) => !publicWebhookIPv4(ip)))
     throw new Error("developer_webhook_destination_unavailable");
   const address = [...addresses].sort()[0];
+  if (!(await validate())) throw new Error("developer_webhook_delivery_unavailable");
   const body = JSON.stringify(claim.event);
   const timestamp = Math.floor(Date.now() / 1000);
   const signature = developerWebhookSignature(
@@ -169,7 +174,20 @@ export async function deliverDeveloperWebhooks() {
     (claimed.data as Claim[]).map(async (claim) => {
       let status: number | null = null;
       try {
-        status = await sendClaim(claim, config);
+        status = await sendClaim(claim, config, async () => {
+          const valid = await db
+            .rpc("validate_developer_webhook_claim_v1", {
+              p_project: claim.endpoint.project_id,
+              p_endpoint: claim.endpoint.id,
+              p_event: claim.event.id,
+              p_lease: claim.lease_token,
+              p_generation: claim.endpoint.generation,
+              p_nonce: claim.endpoint.secret_nonce,
+              p_url: claim.endpoint.url,
+            })
+            .abortSignal(AbortSignal.timeout(5000));
+          return !valid.error && valid.data === true;
+        });
       } catch {
         // A refused destination or transient failure consumes a bounded attempt.
       }

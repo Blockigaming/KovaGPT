@@ -1,0 +1,59 @@
+name: Developer migration candidate
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [main]
+    paths:
+      - supabase/pending/developer_*.sql
+      - scripts/release/materialize-developer-workspace-v2.mjs
+      - .github/workflows/developer-migration-candidate.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: developer-migration-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-candidate:
+    if: github.event.pull_request.number == 779 && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies and local CLI
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm rebuild supabase
+          ./node_modules/.bin/supabase --version
+      - name: Generate canonical migration candidates without remote access
+        run: |
+          set -euo pipefail
+          node scripts/release/materialize-developer-workspace-v2.mjs
+          mkdir -p artifacts/developer-migrations
+          git rev-parse HEAD > artifacts/developer-migrations/source-sha.txt
+          git add supabase/migrations release-migrations.json database-contract.json
+          git diff --cached --binary > artifacts/developer-migrations/candidate.patch
+          git diff --cached --check
+      - name: Upload migration candidates for review
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: developer-migration-candidate-${{ github.event.pull_request.head.sha }}
+          path: artifacts/developer-migrations/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Replay canonical migrations in isolated local Supabase
+        run: npm run release:db:isolated
+      - name: Run queue and accounting regressions
+        run: |
+          node --test tests/unit/developer-response-jobs-migration.test.mjs tests/unit/developer-batch-policy.test.mjs tests/unit/developer-webhook-policy.test.mjs

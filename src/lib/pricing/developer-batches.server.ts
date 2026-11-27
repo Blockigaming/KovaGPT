@@ -263,6 +263,15 @@ export async function processDeveloperBatch() {
       })
       .abortSignal(signal);
     if (active.error || active.data !== true) throw new Error("developer_scope_required");
+    const lease = await db
+      .rpc("validate_developer_batch_claim_v1", {
+        p_project: item.project_id,
+        p_batch: item.batch_id,
+        p_item: item.id,
+        p_lease: item.lease_token,
+      })
+      .abortSignal(signal);
+    if (lease.error || lease.data !== true) throw new Error("developer_batch_unavailable");
     output = await readResult(
       await executeAuthorizedBatchItem(
         { ...key.data, ownerId: claim.owner_id, db },

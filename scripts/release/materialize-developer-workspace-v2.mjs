@@ -30,7 +30,10 @@ for (const name of names) {
   // Ensure unique monotonic versions even if both CLI invocations occur
   // within the same second. Never assign an invented migration timestamp.
   if (name !== names[0]) await new Promise((done) => setTimeout(done, 1100));
-  execFileSync("supabase", ["migration", "new", name], { cwd: root, stdio: "inherit" });
+  execFileSync(resolve(root, "node_modules/.bin/supabase"), ["migration", "new", name], {
+    cwd: root,
+    stdio: "inherit",
+  });
   const generated = (await readdir(dir)).filter((file) => !files.includes(file));
   if (generated.length !== 1 || !new RegExp(`^\\d{14}_${name}\\.sql$`).test(generated[0])) {
     throw new Error("Expected exactly one CLI-generated migration.");

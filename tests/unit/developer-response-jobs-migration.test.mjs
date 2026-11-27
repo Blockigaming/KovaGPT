@@ -48,6 +48,7 @@ async function fixture() {
         ('${foreignKey}','${foreign}','${foreignProject}',true,null,now()+interval '1 day',array['chat']);
     `);
     await db.exec(await readFile("supabase/pending/developer_batches_v1.sql", "utf8"));
+    await db.exec(await readFile("supabase/pending/developer_webhooks_v1.sql", "utf8"));
     await db.exec("set role service_role");
     const manage = async (operation, input, who = owner, apiKey = key, target = project) =>
       (
@@ -198,6 +199,111 @@ test("uncertain jobs do not retain or return an unsettled result", async () => {
       (await f.db.query("select output from developer_batch_items_v1")).rows[0].output,
       null,
     );
+  } finally {
+    await f.db.close();
+  }
+});
+
+test("expired and canceled batch claims cannot authorize dispatch or overwrite recovery", async () => {
+  const f = await fixture();
+  try {
+    await f.manage("create", create());
+    const claim = await f.claim();
+    const args = [project, job, job, claim.item.lease_token];
+    const validate = async () =>
+      (await f.db.query("select validate_developer_batch_claim_v1($1,$2,$3,$4) ok", args))
+        .rows[0].ok;
+    assert.equal(await validate(), true);
+    await f.manage("cancel", { id: job, resource_kind: "response" });
+    assert.equal(await validate(), false);
+    await f.db.exec(
+      "update developer_batch_items_v1 set lease_expires_at=now()-interval '1 second'",
+    );
+    const stale = await f.db.query("select finish_developer_batch_v1($1,$2,$3,$4,$5) ok", [
+      ...args,
+      { text: "Late output" },
+    ]);
+    assert.equal(stale.rows[0].ok, false);
+    assert.equal(await f.claim(), null);
+    const result = await f.manage("get_item", {
+      id: job,
+      item_id: job,
+      resource_kind: "response",
+    });
+    assert.equal(result.state, "uncertain");
+    assert.equal(result.output, null);
+    await f.db.exec("reset role; set role anon");
+    await assert.rejects(
+      f.db.query("select validate_developer_batch_claim_v1($1,$2,$3,$4)", args),
+      /permission denied/,
+    );
+  } finally {
+    await f.db.close();
+  }
+});
+
+test("webhook claims bind active credentials, endpoint generation, destination and lease", async () => {
+  const f = await fixture();
+  try {
+    const url = "https://hooks.example.com/kova";
+    const manage = async (operation, input) =>
+      (
+        await f.db.query("select manage_developer_webhooks_v1($1,$2,$3,$4,$5) result", [
+          owner,
+          key,
+          project,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
+    const endpoint = await manage("create", {
+      id: job,
+      url,
+      events: ["request.settled"],
+    });
+    await manage("test", { id: job, event_id: id(10) });
+    const claim = async () =>
+      (await f.db.query("select claim_developer_webhooks_v1(1) result")).rows[0].result[0];
+    const validate = async (delivery, destination = url) =>
+      (
+        await f.db.query(
+          "select validate_developer_webhook_claim_v1($1,$2,$3,$4,$5,$6,$7) ok",
+          [
+            project,
+            job,
+            delivery.event.id,
+            delivery.lease_token,
+            delivery.endpoint.generation,
+            delivery.endpoint.secret_nonce,
+            destination,
+          ],
+        )
+      ).rows[0].ok;
+    const first = await claim();
+    assert.equal(first.endpoint.generation, endpoint.generation);
+    assert.equal(await validate(first), true);
+    assert.equal(await validate(first, "https://hooks.example.com/other"), false);
+    await manage("rotate", { id: job, expected_generation: endpoint.generation });
+    assert.equal(await validate(first), false);
+    await f.db.exec(
+      "update developer_webhook_deliveries_v1 set lease_expires_at=now()-interval '1 second'",
+    );
+    const stale = await f.db.query("select finish_developer_webhook_v1($1,$2,$3,$4,$5) ok", [
+      project,
+      job,
+      first.event.id,
+      first.lease_token,
+      200,
+    ]);
+    assert.equal(stale.rows[0].ok, false);
+    const second = await claim();
+    assert.equal(second.endpoint.generation, endpoint.generation + 1);
+    assert.notEqual(second.lease_token, first.lease_token);
+    assert.equal(await validate(second), true);
+    await f.db.exec("reset role");
+    await f.db.query("update developer_billing_keys set revoked_at=now() where id=$1", [key]);
+    await f.db.exec("set role service_role");
+    assert.equal(await validate(second), false);
   } finally {
     await f.db.close();
   }

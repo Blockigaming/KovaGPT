@@ -210,16 +210,18 @@ begin
   -- A claimed item is never automatically re-executed, even after a crash.
   update public.developer_batch_items_v1 i set state='uncertain',lease_token=null,lease_expires_at=null,finished_at=clock_timestamp()
     where (i.project_id,i.batch_id,i.id) in (select project_id,batch_id,id from public.developer_batch_items_v1
-      where state='running' and lease_expires_at<=now() order by lease_expires_at limit 100);
+      where state='running' and lease_expires_at<=clock_timestamp() order by lease_expires_at limit 100 for update skip locked)
+      and i.state='running' and i.lease_expires_at<=clock_timestamp();
   update public.developer_batch_items_v1 i set state='canceled',finished_at=clock_timestamp()
     where (i.project_id,i.batch_id,i.id) in (
       select x.project_id,x.batch_id,x.id from public.developer_batch_items_v1 x
       join public.developer_batches_v1 j on j.project_id=x.project_id and j.id=x.batch_id
       where x.state='queued' and (j.expires_at<=now() or j.canceled_at is not null
         or not public.developer_batch_key_active_v1(j.owner_id,j.project_id,j.api_key_id))
-      order by j.expires_at,x.ordinal limit 100);
+      order by j.expires_at,x.ordinal limit 100 for update of x skip locked)
+      and i.state='queued';
   delete from public.developer_batches_v1 j where (j.project_id,j.id) in (
-    select project_id,id from public.developer_batches_v1 where expires_at<now()-interval '7 days' order by expires_at limit 20);
+    select project_id,id from public.developer_batches_v1 where expires_at<now()-interval '7 days' order by expires_at limit 20 for update skip locked);
   select * into b from public.developer_batches_v1 j
     where j.canceled_at is null and j.paused_at is null and j.expires_at>now()
       and (j.resource_kind='batch' or (j.resource_kind='automation' and p_allow_automations is true)
@@ -239,6 +241,19 @@ end $$;
 revoke all on function public.claim_developer_batch_v1(boolean,boolean) from public,anon,authenticated;
 grant execute on function public.claim_developer_batch_v1(boolean,boolean) to service_role;
 
+-- Revalidate the claim immediately before dispatch; never revive an expired lease.
+create function public.validate_developer_batch_claim_v1(p_project uuid,p_batch uuid,p_item uuid,p_lease uuid)
+returns boolean language sql volatile security invoker set search_path='' as $
+  select exists(select 1 from public.developer_batch_items_v1 i
+    join public.developer_batches_v1 b on b.project_id=i.project_id and b.id=i.batch_id
+    where i.project_id=p_project and i.batch_id=p_batch and i.id=p_item
+      and i.state='running' and i.lease_token=p_lease and i.lease_expires_at>clock_timestamp()
+      and b.canceled_at is null and b.expires_at>clock_timestamp()
+      and public.developer_batch_key_active_v1(b.owner_id,b.project_id,b.api_key_id))
+$;
+revoke all on function public.validate_developer_batch_claim_v1(uuid,uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function public.validate_developer_batch_claim_v1(uuid,uuid,uuid,uuid) to service_role;
+
 create function public.finish_developer_batch_v1(p_project uuid,p_batch uuid,p_item uuid,p_lease uuid,p_output jsonb)
 returns boolean language plpgsql security invoker set search_path='' as $$
 declare b public.developer_batches_v1%rowtype; item public.developer_batch_items_v1%rowtype; settled boolean;
@@ -246,7 +261,7 @@ begin
   select * into b from public.developer_batches_v1 where project_id=p_project and id=p_batch for update;
   if not found then return false; end if;
   select * into item from public.developer_batch_items_v1
-    where project_id=p_project and batch_id=p_batch and id=p_item and state='running' and lease_token=p_lease for update;
+    where project_id=p_project and batch_id=p_batch and id=p_item and state='running' and lease_token=p_lease and lease_expires_at>clock_timestamp() for update;
   if not found then return false; end if;
   if p_output is not null and (jsonb_typeof(p_output)<>'object' or octet_length(p_output::text)>131072) then return false; end if;
   select exists(select 1 from public.developer_api_requests r

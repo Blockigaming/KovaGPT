@@ -162,11 +162,12 @@ begin
   -- discovery window and an eight-day deduplication window.
   delete from public.developer_webhook_deliveries_v1 d where (d.project_id,d.endpoint_id,d.id) in
     (select project_id,endpoint_id,id from public.developer_webhook_deliveries_v1
-      where created_at<now()-interval '8 days' order by created_at limit 100);
+      where created_at<now()-interval '8 days' order by created_at limit 100 for update skip locked);
   update public.developer_webhook_deliveries_v1 d set status='failed',lease_token=null,lease_expires_at=null,finished_at=clock_timestamp()
     where (d.project_id,d.endpoint_id,d.id) in(
       select project_id,endpoint_id,id from public.developer_webhook_deliveries_v1
-      where status='leased' and attempts>=5 and lease_expires_at<=now() order by created_at limit 100);
+      where status='leased' and attempts>=5 and lease_expires_at<=clock_timestamp() order by created_at limit 100 for update skip locked)
+      and d.status='leased' and d.attempts>=5 and d.lease_expires_at<=clock_timestamp();
   insert into public.developer_webhook_deliveries_v1(project_id,endpoint_id,request_id,event_type,payload)
     select e.project_id,e.id,r.id,'request.'||r.settlement_state,
       jsonb_build_object('request_id',r.id,'model',r.public_model,'capability',r.capability,
@@ -206,6 +207,19 @@ end $$;
 revoke all on function public.claim_developer_webhooks_v1(integer) from public,anon,authenticated;
 grant execute on function public.claim_developer_webhooks_v1(integer) to service_role;
 
+-- Recheck the destination and signing generation after DNS resolution, before sending.
+create function public.validate_developer_webhook_claim_v1(p_project uuid,p_endpoint uuid,p_event uuid,p_lease uuid,p_generation integer,p_nonce uuid,p_url text)
+returns boolean language sql volatile security invoker set search_path='' as $
+  select exists(select 1 from public.developer_webhook_deliveries_v1 d
+    join public.developer_webhook_endpoints_v1 e on e.project_id=d.project_id and e.id=d.endpoint_id
+    where d.project_id=p_project and d.endpoint_id=p_endpoint and d.id=p_event
+      and d.status='leased' and d.lease_token=p_lease and d.lease_expires_at>clock_timestamp()
+      and e.generation=p_generation and e.secret_nonce=p_nonce and e.url=p_url
+      and public.developer_webhook_key_active_v1(e.owner_id,e.project_id,e.api_key_id))
+$;
+revoke all on function public.validate_developer_webhook_claim_v1(uuid,uuid,uuid,uuid,integer,uuid,text) from public,anon,authenticated;
+grant execute on function public.validate_developer_webhook_claim_v1(uuid,uuid,uuid,uuid,integer,uuid,text) to service_role;
+
 create function public.finish_developer_webhook_v1(p_project uuid,p_endpoint uuid,p_event uuid,p_lease uuid,p_http_status integer)
 returns boolean language plpgsql security invoker set search_path='' as $$
 begin
@@ -215,7 +229,7 @@ begin
     http_status=p_http_status,lease_token=null,lease_expires_at=null,
     next_attempt_at=clock_timestamp()+make_interval(secs=>least(3600,30*power(2,attempts)::integer)),
     finished_at=case when p_http_status between 200 and 299 or attempts>=5 then clock_timestamp() else null end
-  where project_id=p_project and endpoint_id=p_endpoint and id=p_event and status='leased' and lease_token=p_lease;
+  where project_id=p_project and endpoint_id=p_endpoint and id=p_event and status='leased' and lease_token=p_lease and lease_expires_at>clock_timestamp();
   return found;
 end $$;
 revoke all on function public.finish_developer_webhook_v1(uuid,uuid,uuid,uuid,integer) from public,anon,authenticated;
