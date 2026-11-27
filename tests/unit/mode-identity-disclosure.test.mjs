@@ -13,7 +13,11 @@ test("mode identity distinguishes the Kova product from its underlying model pro
   assert.match(base, /Distinguish KovaGPT's product identity from its underlying model provider\./);
 });
 
-test("direct provider questions use only trusted server or runtime information", () => {
+test("ordinary identity questions are Kova-first, while explicit provider questions use trusted metadata", () => {
+  assert.match(base, /ordinary identity questions/);
+  assert.match(base, /assistant is developed and refined by Kova/);
+  assert.match(base, /do not volunteer upstream provider names or internal model IDs/);
+  assert.match(base, /Do not claim Kova trained or fine-tuned third-party foundation weights without verified evidence/);
   assert.match(base, /When directly asked about the active provider, underlying model/);
   assert.match(
     base,
