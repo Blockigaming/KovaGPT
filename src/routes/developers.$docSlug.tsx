@@ -1,12 +1,16 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { DEVELOPER_DOC_BY_SLUG } from "@/lib/developer-docs";
 import { PublicPageView } from "@/components/public/PublicSite";
-import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
+import { PUBLIC_WEBSITE_ROUTE_BY_PATH } from "@/lib/public-website-route-index.mjs";
 import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
 export const Route = createFileRoute("/developers/$docSlug")({
-  loader: ({ params }) => {
-    const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/developers/${params.docSlug}`);
-    if (websitePage) return { kind: "website" as const, item: websitePage };
+  loader: async ({ params }) => {
+    const websitePath = `/developers/${params.docSlug}`;
+    if (PUBLIC_WEBSITE_ROUTE_BY_PATH.has(websitePath)) {
+      const { PUBLIC_WEBSITE_PAGE_BY_PATH } = await import("@/lib/public-website-catalog.mjs");
+      const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(websitePath);
+      if (websitePage) return { kind: "website" as const, item: websitePage };
+    }
     const doc = DEVELOPER_DOC_BY_SLUG.get(params.docSlug);
     if (!doc) throw notFound();
     return { kind: "legacy" as const, item: doc };

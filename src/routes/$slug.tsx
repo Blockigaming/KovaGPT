@@ -13,7 +13,7 @@ import {
 } from "@/lib/locales";
 import { ReviewDirectory, ReviewWorkspace } from "@/components/public/ReviewWorkspace";
 import { findReviewPage } from "@/lib/review-page-content";
-import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
+import { PUBLIC_WEBSITE_ROUTE_BY_PATH } from "@/lib/public-website-route-index.mjs";
 import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
 import { ArrowRight } from "lucide-react";
 import {
@@ -260,8 +260,12 @@ const label = (value: string) =>
     .join(" ");
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
-    const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/${params.slug}`);
-    if (websitePage) return { kind: "website" as const, item: websitePage };
+    const websitePath = `/${params.slug}`;
+    if (PUBLIC_WEBSITE_ROUTE_BY_PATH.has(websitePath)) {
+      const { PUBLIC_WEBSITE_PAGE_BY_PATH } = await import("@/lib/public-website-catalog.mjs");
+      const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(websitePath);
+      if (websitePage) return { kind: "website" as const, item: websitePage };
+    }
     if (["review", "bot", "legal"].includes(params.slug))
       return {
         kind: "review-directory" as const,

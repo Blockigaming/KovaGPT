@@ -1,4 +1,7 @@
-import { PUBLIC_WEBSITE_INDEXABLE_PATHS, PUBLIC_WEBSITE_PAGES } from "./public-website-catalog.mjs";
+import {
+  PUBLIC_WEBSITE_INDEXABLE_PATHS,
+  PUBLIC_WEBSITE_ROUTE_INDEX,
+} from "./public-website-route-index.mjs";
 
 // Store shared path prefixes once, preserving the exact route registry.
 function prefixedPaths(prefix, slugs) {
@@ -686,7 +689,7 @@ const PUBLIC_INDEXABLE_PATHS = new Set([
 ]);
 const PUBLIC_FOLLOWABLE_NOINDEX_PATHS = new Set([
   ...PUBLIC_REVIEW_PATHS,
-  ...PUBLIC_WEBSITE_PAGES.filter((page) => !page.indexable).map((page) => page.path),
+  ...PUBLIC_WEBSITE_ROUTE_INDEX.filter((page) => !page.indexable).map((page) => page.path),
   "/login",
   "/signup",
 ]);

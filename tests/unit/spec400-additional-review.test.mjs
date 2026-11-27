@@ -277,7 +277,7 @@ test("all local review configurations resolve through the existing detail loader
       PUBLICATION_BY_KEY: new Map(),
     },
     "@/components/public/PublicSite": { PublicDetailPageView: "Detail", PublicPageView: "Page" },
-    "@/lib/public-website-catalog.mjs": { PUBLIC_WEBSITE_PAGE_BY_PATH: new Map() },
+    "@/lib/public-website-route-index.mjs": { PUBLIC_WEBSITE_ROUTE_BY_PATH: new Map() },
     "@/components/public/PublicWebsiteArticle": {
       PublicWebsiteArticle: "Website",
       websitePageHead: () => ({}),

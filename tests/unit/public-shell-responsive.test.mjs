@@ -1,4 +1,4 @@
-import * as publicCatalog from "../../src/lib/public-website-catalog.mjs";
+import * as publicCatalog from "../../src/lib/public-website-route-index.mjs";
 import * as seoPolicy from "../../src/lib/seo-policy.mjs";
 import * as appAccess from "../../src/lib/app-access-policy.mjs";
 import { readFileSync } from "node:fs";
@@ -13,7 +13,7 @@ function fixture(initialPath = "/features") {
   let focusCount = 0;
   const dependencies = {
     "./public/public-website.css": {},
-    "@/lib/public-website-catalog.mjs": publicCatalog,
+    "@/lib/public-website-route-index.mjs": publicCatalog,
     "@/lib/seo-policy.mjs": seoPolicy,
     "@/lib/app-access-policy.mjs": appAccess,
     react: { ...hooks.react, useMemo: (factory) => factory() },

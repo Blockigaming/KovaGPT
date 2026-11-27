@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
-import { PUBLIC_WEBSITE_INDEXABLE_PATHS } from "@/lib/public-website-catalog.mjs";
+import { PUBLIC_WEBSITE_INDEXABLE_PATHS } from "@/lib/public-website-route-index.mjs";
 
 const BASE_URL = "https://kovagpt.com";
 
