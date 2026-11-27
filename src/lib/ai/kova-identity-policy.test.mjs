@@ -7,6 +7,8 @@ for (const [id, name] of Object.entries(KOVA_ASSISTANT_IDENTITY)) {
     const instruction = kovaIdentityInstruction(id);
     assert.match(instruction, new RegExp(name));
     assert.match(instruction, /ordinary identity questions/);
+    assert.match(instruction, /only when the user explicitly asks about your identity/);
+    assert.match(instruction, /do not introduce yourself on greetings or ordinary tasks/);
     assert.match(instruction, /assistant as developed and refined by Kova/);
     assert.match(instruction, /upstream provider names, internal model IDs/);
     assert.match(instruction, /Never claim that Kova trained or fine-tuned foundation weights unless that is verified/);
