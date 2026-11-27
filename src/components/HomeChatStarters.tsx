@@ -23,9 +23,10 @@ export function HomeWelcome({
   const greeting = useHomeGreeting(owner, firstName, chatId);
   const homeScrollRef = useRef<HTMLElement>(null);
   const bottomRef = useRef<HTMLSpanElement>(null);
+  const hasRecentWork = conversations.length > 0;
 
   useEffect(() => {
-    if (!home || !owner) return;
+    if (!home || !owner || !hasRecentWork) return;
     const section = homeScrollRef.current;
     const bottom = bottomRef.current;
     if (!section || !bottom) return;
@@ -65,17 +66,17 @@ export function HomeWelcome({
         section.removeEventListener(event, stopFollowing);
       }
     };
-  }, [home, owner, chatId, conversations.length]);
+  }, [home, owner, chatId, hasRecentWork]);
 
   return (
     <HomeChatFrame
       home={home}
       scrollRef={homeScrollRef}
-      bottomRef={home && owner ? bottomRef : undefined}
+      bottomRef={home && owner && hasRecentWork ? bottomRef : undefined}
       headingId="chat-greeting"
       heading={greeting}
       recentWork={
-        home && conversations.length ? (
+        home && hasRecentWork ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
         ) : null
       }
