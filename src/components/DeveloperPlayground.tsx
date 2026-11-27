@@ -201,19 +201,18 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           },
         ];
       }
-      const input =
-        textOperation
-          ? {
-              model,
-              input: responseInput,
-              max_output_tokens: Number(maxOutput),
-              stream: operation === "streaming",
-              ...extra,
-              ...(effort && efforts.includes(effort) ? { reasoning: { effort } } : {}),
-            }
-          : operation === "images"
-            ? { model, prompt, size, quality, n: 1 }
-            : { model, input: prompt };
+      const input = textOperation
+        ? {
+            model,
+            input: responseInput,
+            max_output_tokens: Number(maxOutput),
+            stream: operation === "streaming",
+            ...extra,
+            ...(effort && efforts.includes(effort) ? { reasoning: { effort } } : {}),
+          }
+        : operation === "images"
+          ? { model, prompt, size, quality, n: 1 }
+          : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
