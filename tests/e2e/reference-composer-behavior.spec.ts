@@ -4,7 +4,7 @@ import { expectsSeparateModeRow } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: the two-row composer expands and contracts without a resize loop`, async ({
+  test(`${theme}: the composer expands and contracts without a resize loop`, async ({
     page,
   }, info) => {
     const resizeErrors: string[] = [];

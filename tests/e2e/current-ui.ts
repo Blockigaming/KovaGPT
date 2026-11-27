@@ -4,19 +4,14 @@ import { waitForKovaHydration } from "./hydration";
 
 export async function expectsSeparateModeRow(composer: Locator) {
   return composer.evaluate((frame) => {
-    const container = frame.closest(".spec400-chat-input")!;
-    const styles = getComputedStyle(container);
-    const contentWidth =
-      container.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
-    // A model name needs 22.5rem beside the actions; the Thinking toggle fits down to 20rem.
-    const thinkingOnly =
-      document.documentElement.dataset.kovaSurface !== "app" &&
-      frame.querySelector(".kova-thinking-toggle") !== null &&
-      frame.querySelector(".kova-consumer-model-trigger, .kova-home-model-placeholder") === null;
-    const threshold = thinkingOnly ? 20 : 22.5;
-    return (
-      contentWidth < threshold * parseFloat(getComputedStyle(document.documentElement).fontSize)
+    const attach = frame.querySelector(".kova-composer-plus");
+    const mode = frame.querySelector(
+      ".kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder",
     );
+    if (!attach || !mode) return false;
+    const attachBox = attach.getBoundingClientRect();
+    const modeBox = mode.getBoundingClientRect();
+    return modeBox.bottom <= attachBox.top || modeBox.top >= attachBox.bottom;
   });
 }
 
