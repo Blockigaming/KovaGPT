@@ -76,7 +76,17 @@ const recordInvoice = (
   value(
     db,
     "select developer_record_paid_pro_invoice_v2($1,$2,$3,'sub_fixture',$4,$5,$6,$5,8000,$7,$8,$9) result",
-    [event, invoice, customer, price, start, end, `inpay_${invoice}`, `pi_${invoice}`, `ch_${invoice}`],
+    [
+      event,
+      invoice,
+      customer,
+      price,
+      start,
+      end,
+      `inpay_${invoice}`,
+      `pi_${invoice}`,
+      `ch_${invoice}`,
+    ],
   );
 const refresh = (db, at = now) =>
   value(db, "select developer_refresh_pro_v2($1,$2) result", [owner, at]);
