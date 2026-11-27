@@ -65,3 +65,15 @@ test("search calls are reported separately from token quantities and absent meas
   assert.equal(summary.models[0].webSearchCalls, 2);
   assert.equal(summary.days[0].measuredSearchRequests, 2);
 });
+
+test("moderation requests remain a separate usage dimension, not a token count", () => {
+  const summary = summarizeDeveloperUsage([
+    { ...row, capability: "moderation", authoritative_usage: { moderation_requests: 1 } },
+    { ...row, capability: "moderation", authoritative_usage: { moderation_requests: 0 } },
+    { ...row, capability: "moderation" },
+  ]);
+  assert.equal(summary.measuredRequests, 0);
+  assert.equal(summary.measuredModerationRequests, 2);
+  assert.equal(summary.moderationRequests, 1);
+  assert.equal(summary.services[0].moderationRequests, 1);
+});

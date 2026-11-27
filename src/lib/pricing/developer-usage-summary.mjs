@@ -6,6 +6,8 @@ const newTotals = () => ({
   measuredRequests: 0,
   measuredSearchRequests: 0,
   webSearchCalls: 0,
+  measuredModerationRequests: 0,
+  moderationRequests: 0,
   tokens: Object.fromEntries(tokenFields.map((key) => [key, 0])),
   charges: Object.create(null),
 });
@@ -44,6 +46,11 @@ function add(totals, row) {
   if (typeof calls === "number" && Number.isSafeInteger(calls) && calls >= 0) {
     totals.measuredSearchRequests++;
     totals.webSearchCalls += calls;
+  }
+  const moderations = usage?.moderation_requests;
+  if (typeof moderations === "number" && Number.isSafeInteger(moderations) && moderations >= 0) {
+    totals.measuredModerationRequests++;
+    totals.moderationRequests += moderations;
   }
   if (row.final_customer_charge == null || !/^[A-Z]{3}$/.test(row.currency)) return;
   const value = chargeTicks(row.final_customer_charge);

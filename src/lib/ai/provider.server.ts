@@ -296,7 +296,9 @@ function parseTimeout(value: string | undefined): number {
 
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
-  const allowed = new Set<ProviderCapability>(DEFAULT_CAPABILITIES.concat("web_search", "moderation"));
+  const allowed = new Set<ProviderCapability>(
+    DEFAULT_CAPABILITIES.concat("web_search", "moderation"),
+  );
   const configured = value
     .split(",")
     .map((item) => item.trim())

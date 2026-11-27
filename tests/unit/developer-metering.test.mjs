@@ -443,3 +443,96 @@ test("hosted search settles authoritative completed tool calls, not client estim
   await (await runMeteredProvider(uncertain.options)).json();
   assert.equal(uncertain.calls[0].outcome, "uncertain");
 });
+
+function moderationFixture() {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  Object.assign(contract, {
+    provider: "openai",
+    upstreamModel: "omni-moderation-latest",
+    publicModel: "kova-moderation",
+    capability: "moderation",
+    meter: "moderation_requests",
+    expectedResponseModels: ["omni-moderation-2024-09-26"],
+    maximumUsage: { moderation_requests: 1 },
+  });
+  f.request = {
+    provider: "openai",
+    capability: "moderation",
+    body: { model: "omni-moderation-latest", input: "Synthetic test" },
+  };
+  f.config.registry = [
+    {
+      ...f.config.registry[0],
+      provider: "openai",
+      upstream_model: "omni-moderation-latest",
+      billing_dimension: "moderation_requests",
+      unit_quantity: 1,
+      unit_price: 0,
+    },
+  ];
+  return f;
+}
+
+test("moderation requires an explicitly approved per-request contract and price", () => {
+  const at = new Date("2026-09-05");
+  const f = moderationFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(p.options.usage.dimensions.moderation_requests, 1);
+  assert.ok(p.quote.maximumReservedCharge > 0);
+  for (const mutate of [
+    (v) => (v.config.registry = []),
+    (v) => (v.request.body.input = []),
+    (v) => (v.request.body.stream = true),
+    (v) => (v.request.provider = "azure_openai"),
+    (v) => {
+      v.config.version.public_price_configuration.contracts[0].maximumUsage = {
+        moderation_requests: 2,
+      };
+    },
+  ]) {
+    const bad = moderationFixture();
+    mutate(bad);
+    assert.throws(() => prepareDeveloperQuote(bad.config, bad.request, at));
+  }
+});
+
+test("moderation settles one validated response without inventing token usage", async () => {
+  const f = moderationFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  const value = {
+    id: "modr-fixture",
+    model: "omni-moderation-2024-09-26",
+    results: [
+      {
+        flagged: false,
+        categories: { hate: false, harassment: false },
+        category_scores: { hate: 0.001, harassment: 0.002 },
+      },
+    ],
+  };
+  const collector = createUsageCollector(false, true);
+  const encoded = JSON.stringify(value);
+  for (let i = 0; i < encoded.length; i += 3) collector.push(encoded.slice(i, i + 3));
+  const actual = authoritativeUsage(collector.value(), "moderation_requests");
+  assert.deepEqual(actual.dimensions, { moderation_requests: 1 });
+  const { calls, options } = harness({ prepared: p, send: async () => Response.json(value) });
+  await (await runMeteredProvider(options)).json();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].outcome, "settled");
+  assert.deepEqual(calls[0].result.usage, { moderation_requests: 1 });
+  for (const result of [
+    [],
+    [value.results[0], value.results[0]],
+    [{ ...value.results[0], flagged: true }],
+    [{ ...value.results[0], category_scores: { hate: 2, harassment: 0 } }],
+  ]) {
+    assert.equal(authoritativeUsage({ ...value, results: result }, "moderation_requests"), null);
+  }
+  const unknown = harness({
+    prepared: p,
+    send: async () => Response.json({ ...value, results: [] }),
+  });
+  await (await runMeteredProvider(unknown.options)).json();
+  assert.equal(unknown.calls[0].outcome, "uncertain");
+});

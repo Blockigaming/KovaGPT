@@ -1651,6 +1651,11 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         {currentSummary.data.webSearchCalls.toLocaleString()} recorded search calls
                       </p>
                     )}
+                    {(currentSummary.data.measuredModerationRequests ?? 0) > 0 && (
+                      <p className="text-sm tabular-nums">
+                        {currentSummary.data.moderationRequests.toLocaleString()} moderation requests
+                      </p>
+                    )}
                     {(["days", "models", "services", "statuses"] as const).map((group) => {
                       const rows = currentSummary.data[group];
                       const max = Math.max(1, ...rows.map((row) => row.requests));
@@ -1686,6 +1691,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                                     : "No measured tokens"}
                                   {(row.measuredSearchRequests ?? 0) > 0 &&
                                     ` · ${row.webSearchCalls.toLocaleString()} search calls`}
+                                  {(row.measuredModerationRequests ?? 0) > 0 &&
+                                    ` · ${row.moderationRequests.toLocaleString()} moderations`}
                                   {row.charges.length
                                     ? ` · ${row.charges.map((charge) => `${charge.amount} ${charge.currency} minor units`).join(" · ")}`
                                     : ""}

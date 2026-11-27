@@ -51,3 +51,11 @@ The Responses endpoint accepts a single native web-search tool with low search c
 ```
 
 The server selects the required tool, rejects mixed hosted tools, and reserves the approved token and call dimensions before dispatch. A contract needs an approved `web_search_calls` price, a reviewed maximum search input bound, and evidence that search-content charges are included in the returned input-token meter. Fixed-block search pricing and unqualified Azure contracts are excluded. Only actual, uniquely identified completed search calls contribute to settlement; malformed or missing required tool evidence leaves the reservation for reconciliation. The user can supply these fields through Advanced request options. The API catalog advertises support only when a matching contract and runtime gate exist. `KOVA_DEVELOPER_WEB_SEARCH_ENABLED` remains off pending provider-specific metering verification. No upstream rates, provider calls, or payment activity were authorized by this implementation.
+
+## Standalone moderation (disabled until qualified)
+
+`POST /api/v1/moderations` accepts a public model alias and one nonempty text input of at most 8,000 characters. A separately scoped `moderation` key, reviewed `moderation_requests` pricing contract, signed quote and idempotency key are required. Only explicitly approved standard OpenAI moderation models are supported. The response must contain one matching classification result and a valid provider request ID before settlement. No token counts are invented; request counts appear separately in usage analytics and CSV exports.
+
+OpenAI's standard moderation endpoint is free to use; Kova's own reviewed infrastructure and collection-cost policy determines any customer charge. This implementation does not establish a commercial rate. The staged workspace migration adds the new key scope, and `KOVA_DEVELOPER_MODERATION_ENABLED` plus the configured provider capability must be enabled only after migration replay, provider verification and owner review. Image moderation, bulk classification and specialized restricted classifiers are not part of this implementation.
+
+Reference: https://developers.openai.com/api/reference/resources/moderations/methods/create

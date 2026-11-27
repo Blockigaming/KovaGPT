@@ -84,7 +84,7 @@ export function developerFailure(error: unknown) {
 function developerModerationEnabled() {
   if (runtimeEnv("KOVA_DEVELOPER_MODERATION_ENABLED") !== "true") return false;
   const config = getAiProviderConfig("moderation");
-  return config.configured && config.capabilities.includes("moderation");
+  return config.configured && config.capabilities?.includes("moderation") === true;
 }
 export function developerEnabled() {
   return (

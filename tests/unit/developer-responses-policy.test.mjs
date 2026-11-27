@@ -210,3 +210,20 @@ test("explicit bounded web search uses only the native nonstream hosted tool", (
     );
   }
 });
+
+test("standalone moderation requires a bounded text input and its own key capability", () => {
+  const body = { model: "kova-moderation", input: "Synthetic test" };
+  assert.deepEqual(parseDeveloperInput("moderations", body), {
+    body,
+    publicModel: body.model,
+    capability: "moderation",
+  });
+  for (const invalid of [
+    { ...body, input: [] },
+    { ...body, input: " " },
+    { ...body, input: "x".repeat(8001) },
+    { ...body, stream: true },
+    { ...body, file_ids: ["fixture"] },
+  ])
+    assert.throws(() => parseDeveloperInput("moderations", invalid));
+});
