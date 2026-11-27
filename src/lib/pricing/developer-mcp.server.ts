@@ -9,6 +9,7 @@ import {
   developerJson,
   developerQuote,
   executeDeveloper,
+  executeDeveloperFileSearch,
 } from "./developer-platform.server";
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { developerFileTools, executeDeveloperMcpFile } from "./developer-mcp-files.server";
@@ -94,6 +95,28 @@ const objectSchema = (properties: Record<string, unknown>, required: string[]) =
   required,
   additionalProperties: false,
 });
+const fileSearchTool = {
+  name: "kova_search_files",
+  fileOperation: "search",
+  scope: "files",
+  description:
+    "Search up to four explicitly selected private developer text files in this project. Returns source snippets, not generated answers. No inference quote is required.",
+  inputSchema: objectSchema(
+    {
+      query: text(256),
+      file_ids: {
+        type: "array",
+        minItems: 1,
+        maxItems: 4,
+        uniqueItems: true,
+        items: { type: "string", format: "uuid" },
+      },
+      limit: integer(10),
+    },
+    ["query", "file_ids"],
+  ),
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+};
 const paidTools = [
   { name: "kova_generate_text", operation: "responses", scope: "chat", schema: inputSchema },
   {
@@ -184,6 +207,48 @@ const paidTools = [
     ),
   },
   {
+    name: "kova_speech",
+    operation: "audio/speech",
+    scope: "audio_speech",
+    schema: objectSchema(
+      { model, input: text(1000), voice: { const: "default" }, response_format: { const: "mp3" } },
+      ["model", "input", "voice"],
+    ),
+  },
+  {
+    name: "kova_browse",
+    operation: "browser",
+    scope: "cloud_browser",
+    schema: objectSchema(
+      {
+        model,
+        url: { ...text(2048), format: "uri" },
+        navigate: {
+          type: "array",
+          minItems: 1,
+          maxItems: 2,
+          uniqueItems: true,
+          items: { ...text(2048), format: "uri" },
+        },
+      },
+      ["model", "url"],
+    ),
+  },
+  {
+    name: "kova_propose_computer_action",
+    operation: "computer-use",
+    scope: "computer_use",
+    schema: objectSchema(
+      {
+        model,
+        input: text(8000),
+        screenshot: { ...text(50000), pattern: "^data:image/png;base64," },
+        max_output_tokens: integer(2048),
+      },
+      ["model", "input", "screenshot", "max_output_tokens"],
+    ),
+  },
+  {
     name: "kova_agent_turn",
     operation: "agent-turns",
     scope: "chat",
@@ -196,7 +261,7 @@ const paidTools = [
 function definitionsForScopes(scopes: string[]) {
   const permitted = paidTools.filter((tool) => scopes.includes(tool.scope));
   return [
-    ...developerFileTools.filter((tool) => scopes.includes(tool.scope)),
+    ...[...developerFileTools, fileSearchTool].filter((tool) => scopes.includes(tool.scope)),
     ...(permitted.length
       ? [
           {
@@ -254,7 +319,7 @@ async function handleMcpMessage(request: Request) {
     const accept = request.headers.get("accept") ?? "";
     if (!accept.includes("application/json") || !accept.includes("text/event-stream"))
       return developerJson({ error: "mcp_accept_required" }, 406);
-    const body = await readBoundedJsonObject(request, 70000);
+    const body = await readBoundedJsonObject(request, 70000, request.signal);
     const id = body.id;
     const error = (code: number, message: string) =>
       developerJson({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
@@ -328,21 +393,31 @@ async function handleMcpMessage(request: Request) {
           (args.input as Record<string, unknown>).stream === true
         )
           throw new Error("developer_mcp_stream_invalid");
-        const output =
-          "fileOperation" in tool
-            ? await executeDeveloperMcpFile(identity, tool.fileOperation, args)
-            : tool.name === "kova_quote"
-              ? await developerQuote(identity, String(args.operation), args.input)
-              : await (
-                  await executeDeveloper(
-                    identity,
-                    "operation" in tool ? tool.operation : "",
-                    args.input,
-                    String(args.requestKey ?? ""),
-                    typeof args.quoteToken === "string" ? args.quoteToken : null,
-                    request.signal,
-                  )
-                ).json();
+        request.signal.throwIfAborted();
+        let output: unknown;
+        if ("fileOperation" in tool) {
+          output =
+            tool.fileOperation === "search"
+              ? await executeDeveloperFileSearch(identity, args, request.signal)
+              : await executeDeveloperMcpFile(identity, tool.fileOperation, args);
+        } else if (tool.name === "kova_quote") {
+          output = await developerQuote(identity, String(args.operation), args.input);
+        } else {
+          const response = await executeDeveloper(
+            identity,
+            "operation" in tool ? tool.operation : "",
+            args.input,
+            String(args.requestKey ?? ""),
+            typeof args.quoteToken === "string" ? args.quoteToken : null,
+            request.signal,
+          );
+          if (!response.ok) {
+            await response.body?.cancel().catch(() => {});
+            throw new Error("developer_provider_unavailable");
+          }
+          output = await response.json();
+        }
+        request.signal.throwIfAborted();
         result = {
           content: [{ type: "text", text: JSON.stringify(output) }],
           structuredContent: output,

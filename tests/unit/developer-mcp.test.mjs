@@ -14,7 +14,8 @@ let transformed = source.replace(
  const developerJson=(value,status=200)=>Response.json(value,{status});
  const developerFailure=(error)=>developerJson({error:{message:error.message}},503);
  const developerQuote=async()=>{state.quotes=(state.quotes??0)+1;return {quoteToken:'signed',maximumCharge:10};};
- const executeDeveloper=async(identity,operation,input,key,quote)=>{state.calls++;state.last={identity,operation,input,key,quote};return Response.json({output:'text'});};
+ const executeDeveloper=async(identity,operation,input,key,quote)=>{state.calls++;state.last={identity,operation,input,key,quote};return state.failedResponse?Response.json({secret:"upstream-private"},{status:502}):Response.json({output:'text'});};
+ const executeDeveloperFileSearch=async(identity,args,signal)=>{signal.throwIfAborted();state.fileCalls.push({identity,operation:"search",args});return {object:"list",data:[]};};
 `,
 );
 transformed = transformed.replace(
@@ -157,7 +158,13 @@ test("MCP files remain hidden without consent and route scoped calls without cre
     ).json();
     assert.deepEqual(
       list.result.tools.map((tool) => tool.name),
-      ["kova_list_files", "kova_read_file", "kova_upload_text_file", "kova_delete_file"],
+      [
+        "kova_list_files",
+        "kova_read_file",
+        "kova_upload_text_file",
+        "kova_delete_file",
+        "kova_search_files",
+      ],
     );
     assert.equal(
       (await (await invoke("kova_read_file", { id: "file" })).json()).result.structuredContent.id,
@@ -255,5 +262,90 @@ test("additional MCP tools use the same scope, quote and metered execution bound
     assert.equal(state.calls, before + 3);
   } finally {
     state.scopes = ["chat"];
+  }
+});
+
+test("hosted MCP tools share current scopes, paid quotes and redacted terminal errors", async () => {
+  const invoke = (name, args) =>
+    handleDeveloperMcp(
+      request({ jsonrpc: "2.0", id: 12, method: "tools/call", params: { name, arguments: args } }),
+    );
+  const before = state.calls;
+  try {
+    state.scopes = ["audio_speech", "cloud_browser", "computer_use", "files"];
+    const list = await (
+      await handleDeveloperMcp(request({ jsonrpc: "2.0", id: 13, method: "tools/list" }))
+    ).json();
+    assert.deepEqual(
+      list.result.tools.filter((t) => t.name.startsWith("kova_")).map((t) => t.name),
+      [
+        "kova_list_files",
+        "kova_read_file",
+        "kova_upload_text_file",
+        "kova_delete_file",
+        "kova_search_files",
+        "kova_quote",
+        "kova_speech",
+        "kova_browse",
+        "kova_propose_computer_action",
+      ],
+    );
+    assert.equal(
+      (await (await invoke("kova_search_files", { query: "test", file_ids: ["file"] })).json())
+        .result.structuredContent.object,
+      "list",
+    );
+    assert.equal(state.fileCalls.at(-1).operation, "search");
+    assert.equal(state.calls, before);
+    for (const [tool, operation, input] of [
+      ["kova_speech", "audio/speech", { model: "voice", input: "test", voice: "default" }],
+      ["kova_browse", "browser", { model: "browser", url: "https://example.com" }],
+      [
+        "kova_propose_computer_action",
+        "computer-use",
+        {
+          model: "computer",
+          input: "test",
+          screenshot: "data:image/png;base64,test",
+          max_output_tokens: 100,
+        },
+      ],
+    ]) {
+      assert.equal(
+        (await (await invoke("kova_quote", { operation, input })).json()).result.structuredContent
+          .quoteToken,
+        "signed",
+      );
+      const args = { input, quoteToken: "signed", requestKey: "stable" };
+      assert.equal(
+        (await (await invoke(tool, args)).json()).result.structuredContent.output,
+        "text",
+      );
+      assert.equal(state.last.operation, operation);
+      state.failedResponse = true;
+      const failure = await (await invoke(tool, args)).json();
+      assert.equal(failure.result.isError, true);
+      assert.equal(failure.result.structuredContent, undefined);
+      assert.ok(!JSON.stringify(failure).includes("upstream-private"));
+      state.failedResponse = false;
+    }
+    state.scopes = [];
+    assert.equal(
+      (
+        await (
+          await invoke("kova_browse", { input: {}, quoteToken: "signed", requestKey: "stable" })
+        ).json()
+      ).error.code,
+      -32602,
+    );
+    assert.equal(
+      (await (await invoke("kova_search_files", { query: "test", file_ids: ["file"] })).json())
+        .error.code,
+      -32602,
+    );
+    assert.equal(state.calls, before + 6);
+  } finally {
+    state.scopes = ["chat"];
+    state.failedResponse = false;
   }
 });

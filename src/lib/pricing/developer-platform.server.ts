@@ -1116,6 +1116,29 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
     );
   return developerJson({ object: "list", data: models, pricingVersion: pricing.id });
 }
+// Share the same scope, rate and project boundary between REST and authenticated MCP.
+export async function executeDeveloperFileSearch(
+  identity: DeveloperIdentity,
+  body: unknown,
+  signal?: AbortSignal,
+) {
+  signal?.throwIfAborted();
+  if (!identity.capabilities.includes("files")) throw new Error("developer_scope_required");
+  if (runtimeEnv("KOVA_DEVELOPER_FILE_SEARCH_ENABLED") !== "true")
+    throw new Error("developer_file_search_unavailable");
+  const input = parseDeveloperFileSearch(body);
+  const rate = await consumeApplicationRateLimit({
+    identity: `developer:${identity.id}`,
+    action: "developer_file_search",
+    limit: 30,
+    windowSeconds: 60,
+  });
+  if (!rate.allowed) throw new Error("developer_rate_limit");
+  signal?.throwIfAborted();
+  const files = await readDeveloperFileRecords(identity, input.fileIds);
+  signal?.throwIfAborted();
+  return searchDeveloperFileRecords(input, files);
+}
 export async function handleDeveloperApi(request: Request, operation: string) {
   try {
     const identity = await authenticateDeveloper(request);
@@ -1134,21 +1157,8 @@ export async function handleDeveloperApi(request: Request, operation: string) {
       Buffer.byteLength(JSON.stringify(body)) > 65536
     )
       throw new Error("developer_input_too_large");
-    if (operation === "file_search") {
-      if (!identity.capabilities.includes("files")) throw new Error("developer_scope_required");
-      if (runtimeEnv("KOVA_DEVELOPER_FILE_SEARCH_ENABLED") !== "true")
-        throw new Error("developer_file_search_unavailable");
-      const input = parseDeveloperFileSearch(body);
-      const rate = await consumeApplicationRateLimit({
-        identity: `developer:${identity.id}`,
-        action: "developer_file_search",
-        limit: 30,
-        windowSeconds: 60,
-      });
-      if (!rate.allowed) throw new Error("developer_rate_limit");
-      const files = await readDeveloperFileRecords(identity, input.fileIds);
-      return developerJson(searchDeveloperFileRecords(input, files));
-    }
+    if (operation === "file_search")
+      return developerJson(await executeDeveloperFileSearch(identity, body, request.signal));
     if (operation === "quotes") {
       if (
         typeof body.operation !== "string" ||

@@ -22,6 +22,7 @@ Implementation: I = supported source implementation covers the named requirement
 - 095b037: file-backed analysis, 54 Node / 28 Python passing. 1c3632e: OpenAPI and reference, 5 tests passing.
 - d6de895: 46 Node tests passing (developer-browser-policy, developer-metering, developer-platform-ingress, developer-openapi, developer-reference).
 - f9a4323: 26 Node SDK tests and 29 Python SDK tests passing (developer-sdk.test.mjs and sdk/python unittest suite).
+- Latest MCP batch: 31 focused Node tests passing (MCP, MCP files, OAuth transport, developer platform ingress and file search); shared scope and rate checks, revoked-scope denial and redacted terminal errors.
 - Tests listed without a pass count identify existing regression fixtures, not an assertion that every fixture was rerun on this snapshot. No real paid provider calls were made. Superseded 1c3632e full CI canceled; f9a4323 workflows had not registered at observation.
 
 ## Requirement ledger
@@ -52,7 +53,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R22 | P | F | 016b836 multipart form upload and private text file CRUD/retention; resumable upload completion/cancel lifecycle missing. |
 | R23 | I | F | file-search, developer-file-search-policy and project file ownership; scoped text retrieval with sources. |
 | R24 | I | T | dc071f1 atomic vector upsert batches, CRUD, cosine retrieval and rollback; vector-policy and files-migration. |
-| R25 | P | F | 65996f1 MCP scoped tool execution and OAuth access; full outbound connection lifecycle and hosted tool discovery missing. |
+| R25 | P | F | Scoped inbound OAuth access, file search, speech, read-only browser navigation and computer proposals via MCP; outbound connections and remaining hosted tools missing. |
 | R26 | I | F | moderations route and developer-moderation-policy; dc071f1 bounded queued invocation support. |
 | R27 | I | F | Webhook endpoint CRUD, signing, rotation, history and retries; 8c14be3 replay and webhook/worker tests. |
 | R28 | I | T | Batch API, cancellation, leases, results and settlement; dc071f1, be68daf batch-policy and response-jobs-migration. |
