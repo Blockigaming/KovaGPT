@@ -45,3 +45,7 @@ Use `file_search`, `vector_create`, `vector_upsert`, `vector_search`, `vector_li
 ## Verify webhook deliveries
 
 Use `verify_webhook_signature(secret=secret, event_id=event_id, timestamp=timestamp, body=raw_body, signature=signature)` with your endpoint's signing secret, the original HTTP body (bytes or UTF-8 string), and the `X-Kova-Webhook-Id`, `X-Kova-Webhook-Timestamp` and `X-Kova-Webhook-Signature` headers. Reject false results before parsing JSON. The helper checks the HMAC and five-minute timestamp window. Persist processed event IDs atomically to prevent duplicate side effects; legitimate delivery retries are possible within the window. Never reserialize JSON before verification.
+
+### Multipart file upload
+
+The same `POST /api/v1/files` route also accepts `multipart/form-data` containing exactly one `file` part. Send the scoped bearer key and a stable `Idempotency-Key` header. Supported UTF-8 text formats are TXT, Markdown, CSV and JSON, with the corresponding MIME type and a maximum of 32 KiB of file content. The multipart envelope is limited to 64 KiB. The existing file activation flag, project ownership, storage quotas and retention still apply. This is a single-request upload, not resumable chunk assembly.

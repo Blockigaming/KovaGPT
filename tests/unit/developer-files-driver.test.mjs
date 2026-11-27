@@ -210,3 +210,46 @@ test("raw file reads refuse foreign-project or expired records before retrieval 
     /file_unavailable/,
   );
 });
+
+test("multipart upload uses the same scoped file record and rejects extra parts and oversized files", async () => {
+  const f = await fixture();
+  const send = (form) =>
+    f.module.handleDeveloperFiles(
+      new Request("https://kovagpt.com/api/v1/files", {
+        method: "POST",
+        headers: { "idempotency-key": "stable" },
+        body: form,
+      }),
+    );
+  const form = new FormData();
+  form.append("file", new Blob(["hello café"], { type: "text/plain" }), "safe.txt");
+  assert.equal((await send(form)).status, 400);
+  assert.equal(f.state.calls.length, 0);
+  f.state.enabled = true;
+  assert.equal((await send(form)).status, 201);
+  const saved = f.state.calls[0].args;
+  assert.equal(saved.p_project, project);
+  assert.equal(saved.p_key, key);
+  assert.deepEqual(saved.p_input, {
+    filename: "safe.txt",
+    mimeType: "text/plain",
+    text: "hello café",
+    requestDigest: createHash("sha256").update("stable").digest("hex"),
+  });
+  form.append("project_id", owner);
+  assert.equal((await send(form)).status, 400);
+  const duplicate = new FormData();
+  duplicate.append("file", new Blob(["a"], { type: "text/plain" }), "a.txt");
+  duplicate.append("file", new Blob(["b"], { type: "text/plain" }), "b.txt");
+  assert.equal((await send(duplicate)).status, 400);
+  const large = new FormData();
+  large.append("file", new Blob(["x".repeat(32769)], { type: "text/plain" }), "safe.txt");
+  assert.equal((await send(large)).status, 400);
+  const invalid = new FormData();
+  invalid.append("file", new Blob(["not JSON"], { type: "application/json" }), "safe.json");
+  assert.equal((await send(invalid)).status, 400);
+  const binary = new FormData();
+  binary.append("file", new Blob([Uint8Array.of(255)], { type: "text/plain" }), "safe.txt");
+  assert.equal((await send(binary)).status, 400);
+  assert.equal(f.state.calls.length, 1);
+});

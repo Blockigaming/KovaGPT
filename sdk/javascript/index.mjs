@@ -621,8 +621,14 @@ export function chatCompletionEvents(response, options) {
 /** Verify the original webhook payload before parsing or handling the event. */
 export function verifyWebhookSignature(value) {
   try {
-    const { secret, eventId, timestamp, body, signature, now = Math.floor(Date.now() / 1000) } =
-      value;
+    const {
+      secret,
+      eventId,
+      timestamp,
+      body,
+      signature,
+      now = Math.floor(Date.now() / 1000),
+    } = value;
     if (
       typeof secret !== "string" ||
       !/^whsec_[A-Za-z0-9_-]{43}$/.test(secret) ||

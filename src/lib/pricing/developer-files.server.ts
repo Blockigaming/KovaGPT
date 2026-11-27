@@ -11,7 +11,7 @@ import {
   developerJson,
 } from "./developer-platform.server";
 import { developerUuid, developerRequestKey } from "./developer-platform-policy.mjs";
-import { developerFileUpload } from "./developer-file-policy.mjs";
+import { developerFileUpload, readDeveloperMultipartFile } from "./developer-file-policy.mjs";
 
 export async function handleDeveloperFiles(request: Request, ownerConsole = false) {
   try {
@@ -47,8 +47,9 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
     if (request.method === "POST") {
       if (runtimeEnv("KOVA_DEVELOPER_FILES_ENABLED") !== "true")
         throw new Error("developer_files_disabled");
-      if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
-        throw new Error("developer_json_required");
+      const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim();
+      if (contentType !== "application/json" && contentType !== "multipart/form-data")
+        throw new Error("developer_input_invalid");
       operation = "create";
       if (ownerConsole) {
         if (!projectId) throw new Error("developer_scope_required");
@@ -56,7 +57,9 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
       }
       const requestKey = developerRequestKey(request.headers.get("idempotency-key"));
       input = {
-        ...developerFileUpload(await readBoundedJsonObject(request, 131072)),
+        ...(contentType === "multipart/form-data"
+          ? await readDeveloperMultipartFile(request)
+          : developerFileUpload(await readBoundedJsonObject(request, 131072, request.signal))),
         requestDigest: createHash("sha256")
           .update(ownerConsole ? `owner-console:${requestKey}` : requestKey)
           .digest("hex"),

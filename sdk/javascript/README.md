@@ -52,3 +52,7 @@ References: [OpenAI function calling](https://developers.openai.com/api/docs/gui
 ## Verify webhook deliveries
 
 Use the server-side `verifyWebhookSignature({ secret, eventId, timestamp, body, signature })` export with your endpoint's signing secret, the original raw HTTP body (UTF-8 string or bytes), and the `X-Kova-Webhook-Id`, `X-Kova-Webhook-Timestamp` and `X-Kova-Webhook-Signature` headers. Reject false results before parsing JSON. The helper checks the HMAC and five-minute timestamp window. Persist processed event IDs atomically to prevent duplicate side effects; legitimate delivery retries are possible within the window. Never reserialize JSON before verification.
+
+### Multipart file upload
+
+The same `POST /api/v1/files` route also accepts `multipart/form-data` containing exactly one `file` part. Send the scoped bearer key and a stable `Idempotency-Key` header. Supported UTF-8 text formats are TXT, Markdown, CSV and JSON, with the corresponding MIME type and a maximum of 32 KiB of file content. The multipart envelope is limited to 64 KiB. The existing file activation flag, project ownership, storage quotas and retention still apply. This is a single-request upload, not resumable chunk assembly.

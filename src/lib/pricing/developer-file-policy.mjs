@@ -1,3 +1,5 @@
+import { readBoundedUtf8 } from "../bounded-json.server.mjs";
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = () => {
   throw new Error("developer_file_invalid");
@@ -46,6 +48,36 @@ export function developerFileUpload(input) {
   }
   return { filename: input.filename, mimeType: mime, text: input.text };
 }
+// Only one UTF-8 text file, with the same validator and quota as JSON uploads.
+export async function readDeveloperMultipartFile(request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (
+    contentType.length > 256 ||
+    contentType.split(";", 1)[0].trim().toLowerCase() !== "multipart/form-data"
+  )
+    fail();
+  const raw = await readBoundedUtf8(request, 65536, request.signal);
+  let form;
+  try {
+    form = await new Response(raw, { headers: { "content-type": contentType } }).formData();
+  } catch {
+    fail();
+  }
+  const entries = [...form.entries()];
+  if (entries.length !== 1 || entries[0][0] !== "file") fail();
+  const file = entries[0][1];
+  if (typeof file === "string" || file.size < 1 || file.size > 32768) fail();
+  let text;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      await file.arrayBuffer(),
+    );
+  } catch {
+    fail();
+  }
+  return developerFileUpload({ filename: file.name, mimeType: file.type, text });
+}
+
 export function expandDeveloperFileContent(body, files, now = Date.now()) {
   if (!files.length) return { body, bindings: [], expiresAt: null };
   const messages =
