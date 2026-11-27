@@ -83,6 +83,43 @@ class SDKTests(unittest.TestCase):
         self.addCleanup(self.mock.stop)
         self.client = Client(KEY)
 
+    def test_recorded_translation_and_research_review_workflows(self):
+        transcript = {"id": "req_test", "status": "completed", "text": "bonjour", "usage": {"type": "duration", "seconds": 1}}
+        data = {"model": "kova-fast", "transcription": transcript, "target_language": "en", "max_output_tokens": 100}
+        with self.assertRaisesRegex(KovaError, "transcription_incomplete"):
+            self.client.translate_transcript({**data, "transcription": {**transcript, "status": "failed"}}, **BUDGET)
+        self.assertEqual(len(self.calls), 0)
+        self.responses.extend([FakeResponse(quote()), FakeResponse({"status": "completed"})])
+        self.client.translate_transcript(data, **BUDGET).json()
+        body = json.loads(self.calls[1][2])
+        self.assertEqual(json.loads(body["input"]), {"target_language": "en", "transcript": "bonjour"})
+        self.assertEqual(json.loads(self.calls[0][2]), {"operation": "responses", "input": body})
+        plan_input = {"model": "kova-fast", "question": "How does it work?", "max_output_tokens": 100}
+        plan_response = {"id": "resp_plan", "status": "completed", "output": [{"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": '{"queries":["first","second"]}'}]}]}
+        self.responses.extend([FakeResponse(quote()), FakeResponse(plan_response)])
+        self.assertEqual(self.client.research_plan(plan_input, **BUDGET), {"queries": ["first", "second"], "response_id": "resp_plan"})
+        items = [{"id": "11111111-1111-4111-8111-111111111111", "query": "first"}, {"id": "22222222-2222-4222-8222-222222222222", "query": "second"}]
+        draft_input = {"id": ID, "currency": "USD", "maximum_charge": 10, "model": "kova-fast", "queries": items, "max_output_tokens": 100, "max_tool_calls": 1}
+        self.responses.extend([FakeResponse(quote()), FakeResponse(quote())])
+        draft = self.client.research_prepare(draft_input)
+        self.assertEqual(len(draft["items"]), 2)
+        self.assertEqual(len(self.calls), 6)
+        self.assertTrue(all(call[1] == "/api/v1/quotes" for call in self.calls[4:6]))
+        self.responses.extend([FakeResponse(quote()), FakeResponse(quote())])
+        with self.assertRaisesRegex(KovaError, "quote_outside_budget"):
+            self.client.research_prepare({**draft_input, "maximum_charge": 9})
+        item = {**items[0], "status": "completed", "result_status": "completed", "settlement_state": "settled", "text": "Evidence", "citations": [{"url": "https://example.com/report", "title": "Report"}]}
+        run = {"id": ID, "object": "research.run", "status": "partial", "items": [item, {**item, **items[1], "settlement_state": "uncertain", "text": "NOT SETTLED"}]}
+        self.responses.append(FakeResponse(run))
+        with self.assertRaisesRegex(KovaError, "research_not_ready"):
+            self.client.research_synthesize(ID, plan_input, **BUDGET)
+        self.assertEqual(len(self.calls), 9)
+        self.responses.extend([FakeResponse(run), FakeResponse(quote()), FakeResponse({"status": "completed"})])
+        self.client.research_synthesize(ID, {**plan_input, "allow_partial": True}, **BUDGET).json()
+        body = json.loads(self.calls[-1][2])
+        self.assertEqual(len(json.loads(body["input"])["evidence"]), 1)
+        self.assertNotIn("NOT SETTLED", body["input"])
+
     def test_analysis_preserves_project_file_references(self):
         data = {**DATA, "file_ids": [ID]}
         self.responses.extend([FakeResponse(quote()), FakeResponse({"text": "result"})])

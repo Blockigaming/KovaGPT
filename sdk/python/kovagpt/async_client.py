@@ -5,7 +5,9 @@ import functools
 import json
 import threading
 
-from . import APIResponse, Client, KovaError, _json_body, response_events, chat_completion_events
+from . import (APIResponse, Client, KovaError, _json_body, response_events, chat_completion_events,
+               _translation_request, _research_plan_request, _research_plan_result,
+               _research_synthesis_request, _research_draft, _research_quoted_draft, _identifier, _UUID, _require)
 
 
 class AsyncRequestCancelled(asyncio.CancelledError):
@@ -168,6 +170,26 @@ class AsyncClient:
         quote = await self.quote(operation, snapshot)
         return await self.execute(operation, snapshot, quote=quote, currency=currency,
                                   maximum_charge=maximum_charge, idempotency_key=idempotency_key)
+
+    async def translate_transcript(self, data, **budget):
+        return await self.run("responses", _translation_request(data), **budget)
+
+    async def research_prepare(self, data):
+        draft = _research_draft(data)
+        quotes = await asyncio.gather(*(self.quote("search", item["input"]) for item in draft["items"]))
+        return _research_quoted_draft(draft, quotes)
+
+    async def research_plan(self, data, **budget):
+        async with await self.run("responses", _research_plan_request(data), **budget) as response:
+            return _research_plan_result(await response.json(131072))
+
+    async def research_synthesize(self, run_id, data, **budget):
+        self._client._budget(**budget)
+        run_id = _identifier(run_id, _UUID, "research_id_invalid").lower()
+        snapshot = json.loads(_json_body(data))
+        run = await self.research_retrieve(run_id)
+        _require(isinstance(run, dict) and run.get("id") == run_id, "research_not_ready")
+        return await self.run("responses", _research_synthesis_request(run, snapshot), **budget)
 
     async def image_edit(self, data, **budget):
         if not (isinstance(data, dict) and isinstance(data.get("image"), str)

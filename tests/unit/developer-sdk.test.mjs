@@ -550,3 +550,108 @@ test("analysis keeps the exact project file IDs in the signed request", async ()
   assert.deepEqual(JSON.parse(f.calls[1].body), data);
   assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/analysis");
 });
+
+test("recorded audio translation is a separately quoted text request, never a hidden audio dispatch", async () => {
+  const f = fixture();
+  const data = {
+    model: "kova-fast",
+    transcription: {
+      id: "req_test",
+      status: "completed",
+      text: "bonjour",
+      usage: { type: "duration", seconds: 1 },
+    },
+    target_language: "en",
+    max_output_tokens: 100,
+  };
+  await assert.rejects(
+    f.client.audio.translations.create(
+      { ...data, transcription: { ...data.transcription, status: "failed" } },
+      options,
+    ),
+    /transcription_incomplete/,
+  );
+  assert.equal(f.calls.length, 0);
+  await f.client.audio.translations.create(data, options);
+  assert.equal(f.calls.length, 2);
+  const body = JSON.parse(f.calls[1].body);
+  assert.deepEqual(JSON.parse(body.input), { target_language: "en", transcript: "bonjour" });
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/responses");
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "responses", input: body });
+});
+
+test("research planning, quote-only preparation and separately authorized synthesis use durable run IDs", async () => {
+  const id = "55555555-5555-4555-8555-555555555555";
+  const queryIds = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
+  const data = { model: "kova-fast", question: "How does it work?", max_output_tokens: 100 };
+  const response = {
+    id: "resp_plan",
+    status: "completed",
+    output: [
+      {
+        type: "message",
+        role: "assistant",
+        content: [{ type: "output_text", text: JSON.stringify({ queries: ["first", "second"] }) }],
+      },
+    ],
+  };
+  const item = {
+    id: queryIds[0],
+    query: "first",
+    status: "completed",
+    result_status: "completed",
+    settlement_state: "settled",
+    text: "Evidence",
+    citations: [{ url: "https://example.com/report", title: "Report" }],
+  };
+  let run = {
+    id,
+    object: "research.run",
+    status: "completed",
+    items: [item, { ...item, id: queryIds[1], query: "second" }],
+  };
+  const f = fixture((url) =>
+    url.endsWith("quotes")
+      ? Response.json(quote())
+      : url.includes("research-runs?id=")
+        ? Response.json(run)
+        : Response.json(response),
+  );
+  const plan = await f.client.researchRuns.plan(data, options);
+  assert.deepEqual(plan, { queries: ["first", "second"], response_id: "resp_plan" });
+  assert.equal(f.calls.length, 2);
+  const draftInput = {
+    id,
+    currency: "USD",
+    maximum_charge: 10,
+    model: data.model,
+    queries: plan.queries.map((query, i) => ({ id: queryIds[i], query })),
+    max_output_tokens: 100,
+    max_tool_calls: 1,
+  };
+  const draft = await f.client.researchRuns.prepare(draftInput);
+  assert.equal(f.calls.length, 4);
+  assert.equal(draft.items.length, 2);
+  assert.equal(draft.items[0].quote_token, quote().quoteToken);
+  assert.ok(f.calls.slice(2).every((call) => call.url.endsWith("quotes")));
+  await assert.rejects(
+    f.client.researchRuns.prepare({ ...draftInput, maximum_charge: 9 }),
+    /quote_outside_budget/,
+  );
+  assert.equal(f.calls.length, 6);
+  await f.client.researchRuns.synthesize(id, data, options);
+  assert.equal(f.calls.length, 9);
+  const body = JSON.parse(f.calls[8].body);
+  assert.equal(JSON.parse(body.input).evidence.length, 2);
+  assert.deepEqual(JSON.parse(f.calls[7].body), { operation: "responses", input: body });
+  run = {
+    ...run,
+    status: "partial",
+    items: [item, { ...item, id: queryIds[1], settlement_state: "uncertain", text: "NOT SETTLED" }],
+  };
+  await assert.rejects(f.client.researchRuns.synthesize(id, data, options), /research_not_ready/);
+  assert.equal(f.calls.length, 10);
+  await f.client.researchRuns.synthesize(id, { ...data, allow_partial: true }, options);
+  assert.equal(JSON.parse(JSON.parse(f.calls[12].body).input).evidence.length, 1);
+  assert.ok(!f.calls[12].body.includes("NOT SETTLED"));
+});

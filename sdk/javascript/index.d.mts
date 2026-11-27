@@ -300,6 +300,37 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
   };
   readonly researchRuns: {
+    prepare(
+      input: {
+        id: string;
+        currency: string;
+        maximum_charge: number;
+        model: string;
+        queries: { id: string; query: string }[];
+        max_output_tokens: number;
+        max_tool_calls: 1 | 2 | 3;
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<{
+      id: string;
+      currency: string;
+      maximum_charge: number;
+      items: Extract<BatchInvocation, { operation: "search" }>[];
+    }>;
+    plan(
+      input: { model: string; question: string; max_output_tokens: number },
+      options: Budget,
+    ): Promise<{ queries: string[]; response_id: string | null }>;
+    synthesize(
+      id: string,
+      input: {
+        model: string;
+        question: string;
+        max_output_tokens: number;
+        allow_partial?: boolean;
+      },
+      options: Budget,
+    ): Promise<Response>;
     create(
       input: {
         id: string;
@@ -487,6 +518,23 @@ export class KovaGPT {
   readonly audio: {
     speech: { create(input: SpeechInput, options: Budget): Promise<Response> };
     transcriptions: { create(input: TranscriptionInput, options: Budget): Promise<Response> };
+    /** A separate, metered Responses translation of a completed transcription, not a native live audio endpoint. */
+    translations: {
+      create(
+        input: {
+          model: string;
+          transcription: {
+            id: string;
+            status: "completed";
+            text: string;
+            usage: { type: "duration"; seconds: number };
+          };
+          target_language: string;
+          max_output_tokens: number;
+        },
+        options: Budget,
+      ): Promise<Response>;
+    };
   };
   readonly moderations: { create(input: ModerationsInput, options: Budget): Promise<Response> };
   readonly usage: {
