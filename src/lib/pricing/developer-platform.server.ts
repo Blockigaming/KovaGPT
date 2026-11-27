@@ -12,6 +12,7 @@ import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import {
   developerResponses,
   developerAnalysis,
+  developerComputerUse,
   deleteDeveloperAnalysisContainer,
   developerModerations,
   developerDecisions,
@@ -33,6 +34,7 @@ import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
 import { readDeveloperDecisionResponse } from "./developer-decisions-policy.mjs";
 import { readDeveloperAnalysisResponse } from "./developer-analysis-policy.mjs";
+import { readDeveloperComputerResponse } from "./developer-computer-policy.mjs";
 import {
   expandDeveloperAgentTurn,
   parseDeveloperAgentRequest,
@@ -146,6 +148,19 @@ function developerAnalysisEnabled() {
     config.configured &&
     config.provider === "openai" &&
     config.capabilities?.includes("file_analysis") === true
+  );
+}
+function developerComputerEnabled() {
+  if (
+    runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_COMPUTER_USE_ENABLED") !== "true"
+  )
+    return false;
+  const config = getAiProviderConfig("computer_use");
+  return (
+    config.configured &&
+    config.provider === "openai" &&
+    config.capabilities?.includes("computer_use") === true
   );
 }
 export function developerEnabled() {
@@ -418,6 +433,8 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     throw new Error("developer_moderation_unavailable");
   if (parsed.capability === "decisions" && (!developerDecisionsEnabled() || provider !== "openai"))
     throw new Error("developer_decision_unavailable");
+  if (parsed.capability === "computer_use" && !developerComputerEnabled())
+    throw new Error("developer_computer_unavailable");
   if (parsed.capability === "file_analysis" && !developerAnalysisEnabled())
     throw new Error("developer_analysis_unavailable");
   if (
@@ -581,6 +598,7 @@ export async function executeDeveloper(
           { signal },
         );
       }
+      if (kind === "computer-use") return developerComputerUse(parsed.body, { signal });
       if (kind === "analysis") return developerAnalysis(parsed.body, { signal });
       const call =
         parsed.operation === "responses"
@@ -599,6 +617,15 @@ export async function executeDeveloper(
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
   }
+  if (kind === "computer-use")
+    return developerJson(
+      await readDeveloperComputerResponse(
+        response,
+        parsed.body,
+        parsed.prepared.contract.expectedResponseModels,
+        parsed.publicModel,
+      ),
+    );
   if (kind === "analysis")
     return developerJson(
       await readDeveloperAnalysisResponse(
@@ -868,6 +895,7 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             (entry.capability !== "moderation" || developerModerationEnabled()) &&
             (entry.capability !== "decisions" || developerDecisionsEnabled()) &&
             (entry.capability !== "file_analysis" || developerAnalysisEnabled()) &&
+            (entry.capability !== "computer_use" || developerComputerEnabled()) &&
             entry.provider === getAiProviderConfig(entry.capability as ProviderCapability).provider,
         )
         .map(
@@ -1034,6 +1062,7 @@ export async function handleDeveloperConsole(request: Request) {
           moderationEnabled: developerModerationEnabled(),
           decisionsEnabled: developerDecisionsEnabled(),
           analysisEnabled: developerAnalysisEnabled(),
+          computerEnabled: developerComputerEnabled(),
           consumerCreditSharing,
           accounts: [],
           projects: [],
@@ -1181,6 +1210,7 @@ export async function handleDeveloperConsole(request: Request) {
         moderationEnabled: developerModerationEnabled(),
         decisionsEnabled: developerDecisionsEnabled(),
         analysisEnabled: developerAnalysisEnabled(),
+        computerEnabled: developerComputerEnabled(),
         consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,
@@ -1278,7 +1308,8 @@ export async function handleDeveloperConsole(request: Request) {
           body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value))) ||
           (body.scopes.includes("moderation") && !developerModerationEnabled()) ||
           (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
-          (body.scopes.includes("file_analysis") && !developerAnalysisEnabled())
+          (body.scopes.includes("file_analysis") && !developerAnalysisEnabled()) ||
+          (body.scopes.includes("computer_use") && !developerComputerEnabled())
         )
           throw new Error("developer_key_invalid");
         const keyId = crypto.randomUUID();

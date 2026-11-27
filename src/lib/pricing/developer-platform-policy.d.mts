@@ -20,6 +20,7 @@ export function parseDeveloperInput(
     | "embeddings"
     | "moderation"
     | "decisions"
-    | "file_analysis";
+    | "file_analysis"
+    | "computer_use";
   publicModel: string;
 };

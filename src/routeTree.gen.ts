@@ -199,6 +199,7 @@ import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/l
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
 import { Route as ApiV1AgentTurnsRouteImport } from './routes/api/v1/agent-turns'
 import { Route as ApiV1AgentsRouteImport } from './routes/api/v1/agents'
+import { Route as ApiV1ComputerUseRouteImport } from './routes/api/v1/computer-use'
 import { Route as ApiV1AnalysisRouteImport } from './routes/api/v1/analysis'
 import { Route as ApiV1AutomationsRouteImport } from './routes/api/v1/automations'
 import { Route as ApiV1BatchesRouteImport } from './routes/api/v1/batches'
@@ -1226,6 +1227,11 @@ const ApiV1AgentsRoute = ApiV1AgentsRouteImport.update({
   path: '/api/v1/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1ComputerUseRoute = ApiV1ComputerUseRouteImport.update({
+  id: '/api/v1/computer-use',
+  path: '/api/v1/computer-use',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1AnalysisRoute = ApiV1AnalysisRouteImport.update({
   id: '/api/v1/analysis',
   path: '/api/v1/analysis',
@@ -1703,6 +1709,7 @@ export interface FileRoutesByFullPath {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
@@ -1949,6 +1956,7 @@ export interface FileRoutesByTo {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
@@ -2196,6 +2204,7 @@ export interface FileRoutesById {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
   '/api/v1/analysis': typeof ApiV1AnalysisRoute
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
@@ -2444,6 +2453,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/computer-use'
     | '/api/v1/analysis'
     | '/api/v1/automations'
     | '/api/v1/batches'
@@ -2690,6 +2700,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/computer-use'
     | '/api/v1/analysis'
     | '/api/v1/automations'
     | '/api/v1/batches'
@@ -2936,6 +2947,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/computer-use'
     | '/api/v1/analysis'
     | '/api/v1/automations'
     | '/api/v1/batches'
@@ -3173,6 +3185,7 @@ export interface RootRouteChildren {
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
   ApiV1AgentTurnsRoute: typeof ApiV1AgentTurnsRoute
   ApiV1AgentsRoute: typeof ApiV1AgentsRoute
+  ApiV1ComputerUseRoute: typeof ApiV1ComputerUseRoute
   ApiV1AnalysisRoute: typeof ApiV1AnalysisRoute
   ApiV1AutomationsRoute: typeof ApiV1AutomationsRoute
   ApiV1BatchesRoute: typeof ApiV1BatchesRoute
@@ -4559,6 +4572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/computer-use': {
+      id: '/api/v1/computer-use'
+      path: '/api/v1/computer-use'
+      fullPath: '/api/v1/computer-use'
+      preLoaderRoute: typeof ApiV1ComputerUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/analysis': {
       id: '/api/v1/analysis'
       path: '/api/v1/analysis'
@@ -5244,6 +5264,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
   ApiV1AgentTurnsRoute: ApiV1AgentTurnsRoute,
   ApiV1AgentsRoute: ApiV1AgentsRoute,
+  ApiV1ComputerUseRoute: ApiV1ComputerUseRoute,
   ApiV1AnalysisRoute: ApiV1AnalysisRoute,
   ApiV1AutomationsRoute: ApiV1AutomationsRoute,
   ApiV1BatchesRoute: ApiV1BatchesRoute,

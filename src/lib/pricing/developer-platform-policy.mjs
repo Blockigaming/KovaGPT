@@ -5,6 +5,7 @@ import {
 import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
 import { developerDecisionFields } from "./developer-decisions-policy.mjs";
 import { developerAnalysisFields } from "./developer-analysis-policy.mjs";
+import { developerComputerFields } from "./developer-computer-policy.mjs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = (code) => {
   throw new Error(code);
@@ -17,6 +18,7 @@ export const DEVELOPER_SCOPES = Object.freeze([
   "moderation",
   "decisions",
   "file_analysis",
+  "computer_use",
   "files",
 ]);
 export function developerUuid(value) {
@@ -76,7 +78,9 @@ export function parseDeveloperInput(kind, input) {
               ? ["input", "questions"]
               : kind === "analysis"
                 ? ["input", "max_output_tokens"]
-                : fail("developer_operation_invalid");
+                : kind === "computer-use"
+                  ? ["input", "screenshot", "max_output_tokens"]
+                  : fail("developer_operation_invalid");
   if (Object.keys(input).some((key) => ![...common, ...fields].includes(key)))
     fail("developer_field_invalid");
   if (
@@ -123,6 +127,9 @@ export function parseDeveloperInput(kind, input) {
     body.quality = input.quality;
     if (input.image !== undefined) body.image = developerImageEditValue(input.image);
     capability = "image_generation";
+  } else if (kind === "computer-use") {
+    Object.assign(body, developerComputerFields(input));
+    capability = "computer_use";
   } else if (kind === "analysis") {
     Object.assign(body, developerAnalysisFields(input));
     capability = "file_analysis";

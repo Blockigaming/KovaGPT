@@ -39,7 +39,8 @@ export type ProviderCapability =
   | "embeddings"
   | "image_generation"
   | "vision"
-  | "file_analysis";
+  | "file_analysis"
+  | "computer_use";
 
 export type ProviderErrorCode =
   "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
@@ -170,7 +171,7 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 }
 
 function providerTarget(capability?: ProviderCapability): ProviderTarget {
-  if (capability === "moderation" || capability === "decisions") {
+  if (capability === "moderation" || capability === "decisions" || capability === "computer_use") {
     return {
       provider: "openai",
       baseUrl: OPENAI_API_BASE_URL,
@@ -298,7 +299,7 @@ function parseTimeout(value: string | undefined): number {
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
   const allowed = new Set<ProviderCapability>(
-    DEFAULT_CAPABILITIES.concat("web_search", "moderation", "decisions"),
+    DEFAULT_CAPABILITIES.concat("web_search", "moderation", "decisions", "computer_use"),
   );
   const configured = value
     .split(",")
@@ -737,6 +738,10 @@ export function providerErrorResponse(error: unknown, fallbackStatus = 502): Res
 /** Versioned developer ingress uses the native, metered Responses contract. */
 export async function developerResponses(body: JsonObject, init?: RequestInit): Promise<Response> {
   return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
+}
+
+export async function developerComputerUse(body: JsonObject, init?: RequestInit): Promise<Response> {
+  return providerFetch("/responses", "computer_use", body, init);
 }
 
 export async function developerAnalysis(body: JsonObject, init?: RequestInit): Promise<Response> {

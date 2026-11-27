@@ -11,6 +11,7 @@ import {
   analysisContainerReceipt,
   validDeveloperAnalysisRequest,
 } from "./developer-analysis-policy.mjs";
+import { validDeveloperComputerRequest } from "./developer-computer-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -21,6 +22,7 @@ const finite = (value, maximum = 1e9) =>
 const integer = (value) => finite(value, 1e7) && Number.isSafeInteger(value);
 const dimensionsByMeter = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_computer: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   responses_analysis: [
     "input_tokens",
@@ -82,7 +84,9 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   const decisionsMeter = contract.meter === "decisions_tokens";
   const searchMeter = contract.meter === "responses_search";
   const analysisMeter = contract.meter === "responses_analysis";
-  const responsesMeter = searchMeter || analysisMeter || contract.meter === "responses_tokens";
+  const computerMeter = contract.meter === "responses_computer";
+  const responsesMeter =
+    searchMeter || analysisMeter || computerMeter || contract.meter === "responses_tokens";
   if (
     Object.keys(contract.maximumUsage).sort().join() !== [...dimensions].sort().join() ||
     dimensions.some((key) => !integer(contract.maximumUsage[key])) ||
@@ -154,6 +158,18 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     (!analysisMeter && contract.maximumAnalysisInputTokens !== undefined)
   )
     fail("billing_analysis_contract_invalid");
+  if (
+    computerMeter !== (request.capability === "computer_use") ||
+    (computerMeter &&
+      (request.provider !== "openai" ||
+        !integer(contract.maximumComputerInputTokens) ||
+        contract.maximumComputerInputTokens < 1 ||
+        !integer(contract.maximumInlineImageTokens) ||
+        contract.maximumInlineImageTokens < 1 ||
+        !validDeveloperComputerRequest(request.body))) ||
+    (!computerMeter && contract.maximumComputerInputTokens !== undefined)
+  )
+    fail("billing_computer_contract_invalid");
   let search;
   try {
     search = analysisMeter ? null : developerSearchOptions(request.body);
@@ -192,7 +208,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   const inlineImageTokens = contract.maximumInlineImageTokens;
   if (
     inlineImageTokens !== undefined &&
-    (contract.meter !== "responses_tokens" ||
+    ((contract.meter !== "responses_tokens" && !computerMeter) ||
       !integer(inlineImageTokens) ||
       inlineImageTokens < 1 ||
       inlineImageTokens > contract.maximumUsage.input_tokens)
@@ -222,7 +238,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   }
   if (responsesMeter) {
     if (
-      !["chat", "streaming", "reasoning", "tool_calls", "vision", "file_analysis"].includes(
+      !["chat", "streaming", "reasoning", "tool_calls", "vision", "file_analysis", "computer_use"].includes(
         request.capability,
       ) ||
       !integer(request.body.max_output_tokens) ||
@@ -242,7 +258,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     const encodedInput = JSON.stringify(request.body.input);
     const imageMarkers = encodedInput?.match(/"type"\s*:\s*"input_image"/g)?.length ?? 0;
     if (
-      (!search && !analysisMeter && request.body.tools?.some((tool) => tool.type !== "function")) ||
+      (!search && !analysisMeter && !computerMeter && request.body.tools?.some((tool) => tool.type !== "function")) ||
       /"type"\s*:\s*"(?:input_file|input_audio)"/.test(encodedInput) ||
       imageMarkers !== images.length ||
       images.length > 1
@@ -256,7 +272,10 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
         fail("billing_dimensions_unsupported");
       }
       const requestBytes = new TextEncoder().encode(JSON.stringify(request.body)).byteLength;
-      if (requestBytes + inlineImageTokens > contract.maximumUsage.input_tokens)
+      if (
+        requestBytes + inlineImageTokens + (computerMeter ? contract.maximumComputerInputTokens : 0) >
+        contract.maximumUsage.input_tokens
+      )
         fail("billing_input_bound_exceeded");
     }
   } else if (contract.meter === "embedding_tokens" && request.capability !== "embeddings")
@@ -365,7 +384,7 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   if (meter !== "moderation_requests" && !object(response.usage)) return null;
   const usage = response.usage;
   let dimensions;
-  if (["responses_tokens", "responses_search", "responses_analysis"].includes(meter)) {
+  if (["responses_tokens", "responses_search", "responses_analysis", "responses_computer"].includes(meter)) {
     if (!["completed", "incomplete"].includes(response.status)) return null;
     const cached = usage.input_tokens_details?.cached_tokens;
     if (

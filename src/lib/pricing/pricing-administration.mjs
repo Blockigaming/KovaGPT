@@ -1,5 +1,6 @@
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
 import { developerAnalysisFields } from "./developer-analysis-policy.mjs";
+import { developerComputerFields } from "./developer-computer-policy.mjs";
 
 const fail = (code) => {
   throw new Error(`pricing_admin_${code}`);
@@ -16,6 +17,7 @@ const number = (v, max = 1e9) =>
 const keys = (v, allowed) => object(v) && Object.keys(v).every((key) => allowed.includes(key));
 const meters = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_computer: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   responses_analysis: [
     "input_tokens",
@@ -191,6 +193,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "maximumImageEditInputTokens",
         "maximumWebSearchInputTokens",
         "maximumAnalysisInputTokens",
+        "maximumComputerInputTokens",
         "searchContentAccounting",
       ]) ||
       !["azure_openai", "openai"].includes(c.provider) ||
@@ -218,6 +221,12 @@ export function validatePricingProposal(raw, now = Date.now()) {
       fail("image_bounds_invalid");
     const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "responses_computer")
+      Object.assign(body, developerComputerFields({
+        input: "test",
+        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+        max_output_tokens: 1,
+      }));
     if (c.meter === "responses_analysis")
       Object.assign(body, developerAnalysisFields({ input: "test", max_output_tokens: 1 }));
     if (c.meter === "responses_search")
