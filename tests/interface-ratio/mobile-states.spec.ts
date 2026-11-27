@@ -200,7 +200,7 @@ test("tablet Settings remains inside the visible viewport when searching", async
   await expectReachable(field, 24, 384);
   await expectReachable(close, 24, 384);
   await expect(settings.getByRole("tab", { name: "Appearance", exact: true })).toBeVisible();
-  await close.click();
+  await close.click({ delay: 150 });
   await expect(settings).toBeHidden();
   await expect(page.locator("html")).not.toHaveAttribute("data-kova-keyboard");
 });

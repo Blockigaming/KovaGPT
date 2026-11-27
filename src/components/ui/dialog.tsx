@@ -112,6 +112,15 @@ const DialogContent = React.forwardRef<
           {children}
           <DialogPrimitive.Close
             data-kova-dialog-close=""
+            onPointerDown={(event) => {
+              // Keep the keyboard viewport stable until the close click lands.
+              if (
+                event.button === 0 &&
+                event.currentTarget.ownerDocument.documentElement.hasAttribute("data-kova-keyboard")
+              ) {
+                event.preventDefault();
+              }
+            }}
             data-ui-reference="chatgpt.button.icon"
             className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground ring-offset-background cursor-pointer transition-colors duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
           >
