@@ -191,6 +191,7 @@ export async function acquireGeneration(input: {
   reservedTokens: number;
   estimatedCostUsd: number;
   contextTrimmed: boolean;
+  creditFallback?: { messageOverflow: boolean };
   signal?: AbortSignal;
 }): Promise<Acquisition> {
   const config = getAiRuntimeConfig();
@@ -199,7 +200,11 @@ export async function acquireGeneration(input: {
   const principalConcurrency = input.userId
     ? config.maxConcurrentPerUser
     : config.maxConcurrentPerGuest;
-  let acquisitionQuery = db.rpc("acquire_ai_generation", {
+  const acquisitionRpc = input.creditFallback
+    ? "acquire_credit_eligible_generation"
+    : "acquire_ai_generation";
+  let acquisitionQuery = db.rpc(acquisitionRpc, {
+    ...(input.creditFallback ? { p_message_overflow: input.creditFallback.messageOverflow } : {}),
     p_request_id: input.requestId,
     p_idempotency_key: input.idempotencyKey,
     p_user_id: input.userId,

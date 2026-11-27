@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 230,
-  "latest": "20261123214500_kova_plaid_granola_connector_writes.sql",
+  "count": 235,
+  "latest": "20261126124000_kova_quota_observations.sql",
   "migrations": [
     {
       "order": 1,
@@ -4796,6 +4796,102 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 231,
+      "filename": "20261126120000_kova_chat_limit_resets.sql",
+      "timestamp": "20261126120000",
+      "sha256": "11471361f442cc10c6c574c71208eea177252e6e4eae6a5c9c69ad6bb70d5546",
+      "tables": ["kova_private"],
+      "functions": [
+        "kova_chat_limit_resets",
+        "kova_grant_chat_limit_reset",
+        "kova_redeem_chat_limit_reset",
+        "kova_plan_cost_progress",
+        "try_consume_paid_message",
+        "kova_chat_usage_breakdown"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 232,
+      "filename": "20261126121000_kova_usage_credit_orders.sql",
+      "timestamp": "20261126121000",
+      "sha256": "d447a7d2a3a14340cb8dd99095185b3c5a65651ddb0fd29028ecaa64bc59f451",
+      "tables": ["kova_private"],
+      "functions": [
+        "kova_prepare_credit_order",
+        "kova_fund_credit_order",
+        "kova_revoke_credit_payment",
+        "kova_claim_credit_gift",
+        "kova_credit_wallet"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["on", "on"]
+    },
+    {
+      "order": 233,
+      "filename": "20261126122000_kova_gift_delivery.sql",
+      "timestamp": "20261126122000",
+      "sha256": "dd8a73b9055128654204feb92bc7b63641c89137e3c57a95766e0c536c0f1c93",
+      "tables": [],
+      "functions": [
+        "kova_set_gift_delivery",
+        "kova_take_gift_delivery",
+        "kova_finish_gift_delivery"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 234,
+      "filename": "20261126123000_kova_usage_credit_spending.sql",
+      "timestamp": "20261126123000",
+      "sha256": "ce51be71ba0ec727afe19fe9070b1011a6f322566856bd7d3439679543796018",
+      "tables": ["kova_private"],
+      "functions": [
+        "settle_usage_credit_spend",
+        "acquire_ai_generation",
+        "kova_credit_spending_history",
+        "acquire_credit_eligible_generation",
+        "kova_fund_credit_order_with_fee",
+        "kova_live_credit_checkout_ready",
+        "kova_reconcile_stale_credit_spend",
+        "kova_stale_credit_holds"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["on"]
+    },
+    {
+      "order": 235,
+      "filename": "20261126124000_kova_quota_observations.sql",
+      "timestamp": "20261126124000",
+      "sha256": "af700581bbca8caf87a5b39b2d7ef1e8a59b40d2ec43cbab4da929aecff588e8",
+      "tables": ["kova_private"],
+      "functions": ["kova_observe_chat_quota"],
+      "destructive": true,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

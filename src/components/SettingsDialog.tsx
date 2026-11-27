@@ -5,6 +5,9 @@ import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
+import { GiftCardSettings, UsageCredits } from "@/components/GiftCardSettings";
+import { UsageLimitResets } from "@/components/UsageLimitResets";
+import { UsageWallet } from "@/components/UsageWallet";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
 import { BillingWorkspace, BillingSubscriptionFacts } from "@/components/BillingWorkspace";
@@ -76,6 +79,7 @@ import {
   ArrowLeft,
   X,
   BarChart3,
+  PackageOpen as Gift,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
@@ -89,6 +93,8 @@ import {
   useMemo,
   useRef,
   useState,
+  lazy,
+  Suspense,
   type MouseEvent as ReactMouseEvent,
   type ComponentProps,
 } from "react";
@@ -200,7 +206,8 @@ const SETTINGS_SEARCH_TOPICS: Record<string, string> = {
   data: "history delete clear chats archive download export privacy public shared links training",
   memory: "remember forget saved memories instructions preferences personalization context",
   shortcuts: "keyboard hotkeys commands enter send key bindings",
-  usage: "quota limits remaining tokens messages images uploads model allowance",
+  usage: "quota limits remaining tokens messages images uploads model allowance credits",
+  "gift-cards": "buy send redeem gift card email text balance",
   linked: "plugins apps connectors integrations gmail drive calendar github outlook notion slack",
   "cloud-browser": "browser website allow block approvals automation permissions",
   family: "family invite invitations members shared plan household",
@@ -230,6 +237,7 @@ const SETTINGS_DESCRIPTIONS: Record<string, string> = {
   storage: "Review and manage your stored files.",
   shortcuts: "Keyboard shortcuts for working faster on desktop.",
   usage: "Your current usage and plan allowances.",
+  "gift-cards": "Choose a design and preview a KovaGPT gift card.",
   "cloud-browser": "Browser permissions, websites, and saved rules.",
   family: "Manage family access and shared plan settings.",
   location: "Control how your location is used.",
@@ -260,6 +268,7 @@ const TAB_GROUPS: TabGroup[] = [
         icon: BarChart3,
         keywords: ["limits", "messages", "images", "uploads"],
       },
+      { v: "gift-cards", label: "Gift cards", icon: Gift },
       { v: "email", label: "Email", icon: Mail },
     ],
   },
@@ -320,6 +329,10 @@ function SettingsPageContent({ children, className }: ComponentProps<typeof Dial
     </section>
   );
 }
+
+const UsageAnalytics = lazy(() =>
+  import("@/components/UsageAnalytics").then((module) => ({ default: module.UsageAnalytics })),
+);
 
 export function SettingsDialog({
   open,
@@ -1169,6 +1182,7 @@ export function SettingsDialog({
           icon: CreditCard,
           keywords: ["subscription", "plan", "payment", "invoice"],
         },
+        { v: "gift-cards", label: "Gift cards", icon: Gift },
         { v: "report", label: "Report an issue", icon: Bug },
         { v: "help", label: "Help center", icon: LifeBuoy },
         { v: "about", label: "About", icon: Info },
@@ -1943,55 +1957,100 @@ export function SettingsDialog({
 
               {/* USAGE */}
               <TabsContent aria-labelledby={currentSectionHeadingId} value="usage">
-                <section className="space-y-3">
-                  <div
-                    ref={usageStatusRef}
-                    className="kova-settings-usage-summary"
-                    role="region"
-                    aria-label="Usage status"
-                    tabIndex={-1}
-                    aria-busy={usageLoading}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <h3>Current usage</h3>
-                      {(usage || subSummary) && (
-                        <span className="kova-settings-current-plan capitalize">
-                          {usage?.tier ?? subSummary?.effectiveTier}
-                        </span>
-                      )}
-                    </div>
-                    {!userKey ? (
-                      <p className="text-sm text-muted-foreground">Sign in to see your usage.</p>
-                    ) : (!usageLoaded || usageLoading) && !usage ? (
-                      <div className="text-sm text-muted-foreground" role="status">
-                        Loading usage…
+                <Tabs defaultValue="overview">
+                  <TabsList aria-label="Usage views" className="mb-4 rounded-full">
+                    <TabsTrigger value="overview" className="rounded-full">
+                      Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="analytics" className="rounded-full">
+                      Analytics
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="overview">
+                    <section className="space-y-3">
+                      <div
+                        ref={usageStatusRef}
+                        className="kova-settings-usage-summary"
+                        role="region"
+                        aria-label="Usage status"
+                        tabIndex={-1}
+                        aria-busy={usageLoading}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <h3>Current usage</h3>
+                          {(usage || subSummary) && (
+                            <span className="kova-settings-current-plan capitalize">
+                              {usage?.tier ?? subSummary?.effectiveTier}
+                            </span>
+                          )}
+                        </div>
+                        {!userKey ? (
+                          <p className="text-sm text-muted-foreground">
+                            Sign in to see your usage.
+                          </p>
+                        ) : (!usageLoaded || usageLoading) && !usage ? (
+                          <div className="text-sm text-muted-foreground" role="status">
+                            Loading usage…
+                          </div>
+                        ) : usage ? (
+                          <PlanUsageBars usage={usage} />
+                        ) : (
+                          <div className="kova-settings-inline-error" role="alert">
+                            <p>Usage data isn't available right now.</p>
+                            <button type="button" onClick={retryUsage}>
+                              Retry usage
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    ) : usage ? (
-                      <PlanUsageBars usage={usage} />
-                    ) : (
-                      <div className="kova-settings-inline-error" role="alert">
-                        <p>Usage data isn't available right now.</p>
-                        <button type="button" onClick={retryUsage}>
-                          Retry usage
-                        </button>
-                      </div>
+                    </section>
+                    {userKey && usage && (
+                      <UsageLimitResets
+                        key={userKey}
+                        ownerId={userKey}
+                        tier={usage.tier}
+                        onReset={() => setUsageRetry((value) => value + 1)}
+                      />
                     )}
-                  </div>
-                </section>
-                <section className="kova-settings-section">
-                  <h3>How limits work</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat
-                    limit. Each meter shows its next reset or refresh.
-                  </p>
-                  <Link
-                    to="/pricing"
-                    onClick={closeForNavigation}
-                    className="mt-4 inline-flex min-h-11 items-center font-medium underline underline-offset-4"
-                  >
-                    Compare Kova plans
-                  </Link>
-                </section>
+                    {userKey && (
+                      <UsageCredits
+                        tier={usage?.tier ?? subSummary?.effectiveTier}
+                        onOpenGiftCards={() => selectTab("gift-cards")}
+                      />
+                    )}
+                    {userKey && <UsageWallet key={userKey} ownerId={userKey} />}
+                    <section className="kova-settings-section">
+                      <h3>How limits work</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly
+                        chat limit. Each meter shows its next reset or refresh.
+                      </p>
+                      <Link
+                        to="/pricing"
+                        onClick={closeForNavigation}
+                        className="mt-4 inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+                      >
+                        Compare Kova plans
+                      </Link>
+                    </section>
+                  </TabsContent>
+                  <TabsContent value="analytics">
+                    {userKey ? (
+                      <Suspense fallback={<p role="status">Loading usage analytics…</p>}>
+                        <UsageAnalytics key={userKey} ownerId={userKey} />
+                      </Suspense>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Sign in to see your usage history.
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </TabsContent>
+
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="gift-cards">
+                <GiftCardSettings key={userKey ?? "guest"} ownerId={userKey ?? undefined} />
+                {userKey && <UsageWallet key={userKey} ownerId={userKey} gift />}
               </TabsContent>
 
               {/* BILLING */}

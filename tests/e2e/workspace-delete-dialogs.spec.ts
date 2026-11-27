@@ -100,14 +100,7 @@ for (const theme of ["light", "dark"] as const) {
         });
         expect(bounds.left).toBeGreaterThanOrEqual(0);
         expect(bounds.right).toBeLessThanOrEqual(bounds.width + 1);
-        const topAligned = await page.evaluate(
-          () =>
-            matchMedia(
-              "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
-            ).matches,
-        );
-        if (topAligned) expect(bounds.top).toBeCloseTo(16, 0);
-        else expect((bounds.top + bounds.bottom) / 2).toBeCloseTo(bounds.height / 2, 0);
+        expect((bounds.top + bounds.bottom) / 2).toBeCloseTo(bounds.height / 2, 0);
         expect(bounds.bottom).toBeLessThanOrEqual(bounds.height + 1);
         expect(bounds.radius).toBeGreaterThan(0);
         await page.screenshot({

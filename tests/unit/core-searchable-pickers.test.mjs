@@ -327,6 +327,7 @@ test("Settings retains every destination and includes a legacy current section t
       "family",
       "location",
       "billing",
+      "gift-cards",
       "report",
       "help",
       "about",

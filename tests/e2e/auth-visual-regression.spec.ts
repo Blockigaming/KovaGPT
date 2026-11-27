@@ -149,6 +149,15 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
 
   expect(authNetwork.writes).toEqual([]);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
+  if (testInfo.project.name === "phone-390x844") {
+    const centerOffset = await dialog.evaluate((element) => {
+      const { top, height } = element.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const visibleCenter = (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight) / 2;
+      return Math.abs(top + height / 2 - visibleCenter);
+    });
+    expect(centerOffset).toBeLessThan(2);
+  }
   await expect(page).toHaveScreenshot("guest-auth-dialog.png", {
     animations: "disabled",
     caret: "hide",

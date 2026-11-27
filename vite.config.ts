@@ -128,6 +128,10 @@ export default defineConfig(({ mode }) => {
               path.resolve(configDir, "src/lib/appearance-preferences.mjs").replaceAll("\\", "/")
             )
               return "appearance-preferences";
+            if (normalizedId === `${configDir.replaceAll("\\", "/")}/src/lib/localization.ts`)
+              return "localization";
+            if (normalizedId === `${configDir.replaceAll("\\", "/")}/src/lib/chat-send-next.ts`)
+              return "chat-send-next";
             if (!id.includes("node_modules")) return;
             if (
               id.includes("/react-markdown/") ||

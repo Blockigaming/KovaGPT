@@ -202,3 +202,116 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
       resetsAt: nextMidnight.toISOString(),
     };
   });
+
+export const getMyUsageHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string }) => data)
+  .handler(async ({ context, data }) => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const days = Array.from({ length: 30 }, (_, index) => {
+      const date = new Date(today);
+      date.setUTCDate(date.getUTCDate() - 29 + index);
+      return date.toISOString().slice(0, 10);
+    });
+    const { data: rows, error } = await loose(supabaseAdmin)
+      .from("daily_usage")
+      .select("usage_date,chats,thinking_chats")
+      .eq("user_id", context.userId)
+      .gte("usage_date", days[0])
+      .lte("usage_date", days[29])
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (error) throw new Error("Usage history is temporarily unavailable.");
+    const entries = new Map<string, { chats: number; thinking_chats: number }>(
+      (rows ?? []).map((row: { usage_date: string; chats: number; thinking_chats: number }) => [
+        row.usage_date,
+        row,
+      ]),
+    );
+    return days.map((date) => {
+      const row = entries.get(date);
+      const thinking = row?.thinking_chats ?? 0;
+      return { date, regular: Math.max(0, (row?.chats ?? 0) - thinking), thinking };
+    });
+  });
+
+type ChatLimitReset = {
+  id: string;
+  grantedAt: string;
+  expiresAt: string;
+  redeemedAt: string | null;
+  weekly: boolean;
+  fiveHour: boolean;
+  manual: boolean;
+};
+
+export const getMyChatLimitResets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string }) => data)
+  .handler(async ({ context, data }): Promise<ChatLimitReset[]> => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+    const result = await loose(supabaseAdmin).rpc("kova_chat_limit_resets", {
+      p_user: context.userId,
+      p_plan: tier,
+    });
+    if (result.error || !Array.isArray(result.data)) throw new Error("Resets are unavailable.");
+    return result.data as ChatLimitReset[];
+  });
+
+export const redeemMyChatLimitReset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string; id: string; weekly: boolean; fiveHour: boolean }) => data)
+  .handler(async ({ context, data }) => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+    const result = await loose(supabaseAdmin).rpc("kova_redeem_chat_limit_reset", {
+      p_user: context.userId,
+      p_id: data.id,
+      p_plan: tier,
+      p_weekly: data.weekly,
+      p_five_hour: data.fiveHour,
+    });
+    if (result.error || result.data !== true) throw new Error("This reset could not be applied.");
+    return true;
+  });
+
+type UsageBreakdown = {
+  models: { model: string; messages: number }[];
+  chats: { id: string; messages: number }[];
+  tools: { day: string; calls: number }[];
+};
+
+export const getMyChatUsageBreakdown = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string; days: 7 | 30 }) => data)
+  .handler(async ({ context, data }): Promise<UsageBreakdown> => {
+    if (data.ownerId !== context.userId || ![7, 30].includes(data.days))
+      throw new Error("Invalid usage range.");
+    const result = await loose(supabaseAdmin)
+      .rpc("kova_chat_usage_breakdown", { p_user: context.userId, p_days: data.days })
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (result.error || !result.data) throw new Error("Chat breakdown is unavailable.");
+    return result.data as UsageBreakdown;
+  });
+
+type QuotaObservation = {
+  kind: "weekly" | "five_hour";
+  start: string;
+  observedAt: string;
+  percent: number | null;
+};
+
+export const getMyQuotaObservations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string }) => data)
+  .handler(async ({ context, data }): Promise<QuotaObservation[]> => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const plan = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+    const result = await loose(supabaseAdmin)
+      .rpc("kova_observe_chat_quota", { p_user: context.userId, p_plan: plan })
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (result.error || !Array.isArray(result.data)) throw new Error("Quota history unavailable.");
+    return result.data as QuotaObservation[];
+  });
