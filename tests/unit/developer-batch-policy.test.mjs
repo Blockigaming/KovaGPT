@@ -104,3 +104,27 @@ test("scheduled automation requires ordered future UTC invocations and explicit 
   );
   assert.throws(() => parse("POST", "", { operation: "pause", id }), /batch_invalid/);
 });
+
+test("mixed agent batches preserve explicit operation, definition and skill versions", () => {
+  const second = "33333333-3333-4333-8333-333333333333";
+  const invocation = {
+    id: second,
+    operation: "agent-turns",
+    input: { agent_id: id, version: 2, input: "Review evidence.", skills: [{ id: item, version: 1 }] },
+    quote_token: request.items[0].quote_token,
+  };
+  const result = parse("POST", "", { ...request, items: [request.items[0], invocation] });
+  assert.equal(result.input.items[0].operation, "chat/completions");
+  assert.deepEqual(result.input.items[1], invocation);
+  assert.throws(
+    () => parse("POST", "", { ...request, items: [{ ...invocation, operation: "images" }] }),
+    /batch_invalid/,
+  );
+  assert.throws(
+    () => parse("POST", "", {
+      ...request,
+      items: [{ ...invocation, input: { ...invocation.input, version: 0 } }],
+    }),
+    /agent_invalid/,
+  );
+});

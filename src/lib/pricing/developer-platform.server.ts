@@ -634,6 +634,9 @@ export async function executeDeveloper(
 }
 
 type BatchAuthorization = {
+  operation: "chat/completions" | "agent-turns";
+  agentBinding: unknown;
+  skillBinding: string | null;
   runAt: number | null;
   batch: string;
   item: string;
@@ -648,16 +651,23 @@ type BatchAuthorization = {
 export async function authorizeDeveloperBatchItem(
   identity: DeveloperIdentity,
   batch: string,
-  item: { id: string; input: Record<string, unknown>; quote_token: string; run_at?: string },
+  item: {
+    id: string;
+    operation: "chat/completions" | "agent-turns";
+    input: Record<string, unknown>;
+    quote_token: string;
+    run_at?: string;
+  },
   currency: string,
   expiresAt: number,
 ) {
   const quote = readDeveloperQuote(identity, item.quote_token);
-  const parsed = await preparePublicRequest(identity, "chat/completions", item.input);
-  checkDeveloperQuote(quote, "chat/completions", parsed);
+  const parsed = await preparePublicRequest(identity, item.operation, item.input);
+  checkDeveloperQuote(quote, item.operation, parsed);
   if (
     parsed.body.stream !== false ||
     parsed.capability !== "chat" ||
+    Number(parsed.body.max_output_tokens) > 2048 ||
     currency !== parsed.version.currency ||
     !Number.isSafeInteger(expiresAt) ||
     expiresAt <= Date.now() ||
@@ -668,6 +678,9 @@ export async function authorizeDeveloperBatchItem(
   if (runAt !== null && (!Number.isSafeInteger(runAt) || runAt <= Date.now() || runAt >= expiresAt))
     throw new Error("developer_batch_invalid");
   const authorization: BatchAuthorization = {
+    operation: item.operation,
+    agentBinding: parsed.agentBinding,
+    skillBinding: parsed.skillBinding,
     runAt,
     batch,
     item: item.id,
@@ -682,6 +695,7 @@ export async function authorizeDeveloperBatchItem(
   const payload = Buffer.from(JSON.stringify(authorization)).toString("base64url");
   return {
     id: item.id,
+    operation_kind: item.operation,
     input: item.input,
     authorization: payload + "." + digest("batch-authorization-v1", payload),
     maximum_ticks: batchChargeTicks(quote.maximumCharge),
@@ -699,6 +713,7 @@ export async function executeAuthorizedBatchItem(
   token: string,
   currency: string,
   maximumTicks: number,
+  operation: string,
   runAt: string | null,
   signal?: AbortSignal,
 ) {
@@ -715,6 +730,8 @@ export async function executeAuthorizedBatchItem(
     Buffer.from(payload, "base64url").toString("utf8"),
   ) as BatchAuthorization;
   if (
+    !["chat/completions", "agent-turns"].includes(operation) ||
+    authorization.operation !== operation ||
     authorization.batch !== batch ||
     authorization.item !== item ||
     authorization.key !== identity.id ||
@@ -732,16 +749,16 @@ export async function executeAuthorizedBatchItem(
     key: identity.id,
     version: authorization.version,
     fingerprint: authorization.fingerprint,
-    operation: "chat/completions",
-    agentBinding: null,
-    skillBinding: null,
+    operation: authorization.operation,
+    agentBinding: authorization.agentBinding,
+    skillBinding: authorization.skillBinding,
     maximumCharge: authorization.maximumCharge,
     expiresAt: Math.min(Date.now() + 120000, authorization.expiresAt),
   };
   const signed = Buffer.from(JSON.stringify(quote)).toString("base64url");
   return executeDeveloper(
     identity,
-    "chat/completions",
+    authorization.operation,
     input,
     developerBatchRequestKey(batch, item),
     signed + "." + digest("quote", signed),

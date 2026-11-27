@@ -1,3 +1,5 @@
+import { parseDeveloperAgentTurn } from "./developer-agent-policy.mjs";
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = () => {
   throw new Error("developer_batch_invalid");
@@ -102,7 +104,9 @@ export function parseDeveloperBatchRequest(
     )
       fail();
     const items = body.items.map((item) => {
-      exact(item, ["id", "input", "quote_token", ...(scheduled ? ["run_at"] : [])]);
+      exact(item, ["id", "input", "quote_token", ...(scheduled ? ["run_at"] : [])], ["operation"]);
+      const operation = item.operation ?? "chat/completions";
+      if (!["chat/completions", "agent-turns"].includes(operation)) fail();
       if (
         typeof item.quote_token !== "string" ||
         item.quote_token.length > 2048 ||
@@ -120,9 +124,12 @@ export function parseDeveloperBatchRequest(
         )
           fail();
       }
+      const input = operation === "agent-turns" ? parseDeveloperAgentTurn(item.input) : chatInput(item.input);
+      if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 12288) fail();
       return {
         id: id(item.id),
-        input: chatInput(item.input),
+        operation,
+        input,
         quote_token: item.quote_token,
         ...(scheduled ? { run_at: item.run_at } : {}),
       };

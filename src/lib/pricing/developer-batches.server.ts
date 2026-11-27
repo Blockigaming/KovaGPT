@@ -133,6 +133,7 @@ type Claim = {
     input: Record<string, unknown>;
     authorization: string;
     maximum_ticks: number;
+    operation_kind: string;
     run_at: string | null;
     lease_token: string;
   };
@@ -217,6 +218,7 @@ export async function processDeveloperBatch() {
         item.authorization,
         claim.currency,
         Number(item.maximum_ticks),
+        item.operation_kind,
         item.run_at,
         signal,
       ),

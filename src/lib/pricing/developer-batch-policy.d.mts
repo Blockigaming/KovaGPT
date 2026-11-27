@@ -1,5 +1,6 @@
 export type BatchItem = {
   id: string;
+  operation: "chat/completions" | "agent-turns";
   input: Record<string, unknown>;
   quote_token: string;
   run_at?: string;

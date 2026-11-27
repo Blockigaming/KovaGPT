@@ -93,6 +93,19 @@ export interface AnalysisInput {
   input: string;
   max_output_tokens: number;
 }
+export type BatchInvocation = {
+  id: string;
+  quote_token: string;
+} & (
+  | {
+      operation?: "chat/completions";
+      input: Omit<ChatCompletionInput, "max_tokens" | "max_completion_tokens" | "stream"> & {
+        max_completion_tokens: number;
+        stream?: false;
+      };
+    }
+  | { operation: "agent-turns"; input: AgentTurnInput }
+);
 export interface AgentDefinition {
   name: string;
   model: string;
@@ -217,14 +230,7 @@ export class KovaGPT {
         id: string;
         currency: string;
         maximum_charge: number;
-        items: {
-          id: string;
-          input: Omit<ChatCompletionInput, "max_tokens" | "max_completion_tokens" | "stream"> & {
-            max_completion_tokens: number;
-            stream?: false;
-          };
-          quote_token: string;
-        }[];
+        items: BatchInvocation[];
       },
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;
@@ -243,15 +249,7 @@ export class KovaGPT {
         id: string;
         currency: string;
         maximum_charge: number;
-        items: {
-          id: string;
-          input: Omit<ChatCompletionInput, "max_tokens" | "max_completion_tokens" | "stream"> & {
-            max_completion_tokens: number;
-            stream?: false;
-          };
-          quote_token: string;
-          run_at: string;
-        }[];
+        items: (BatchInvocation & { run_at: string })[];
       },
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;

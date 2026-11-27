@@ -19,6 +19,7 @@ create table public.developer_batch_items_v1 (
   batch_id uuid not null,
   id uuid not null,
   ordinal integer not null check(ordinal between 1 and 8),
+  operation_kind text not null default 'chat/completions' check(operation_kind in ('chat/completions','agent-turns')),
   run_at timestamptz,
   input jsonb not null check(jsonb_typeof(input)='object' and octet_length(input::text)<=16384),
   authorization text not null check(length(authorization) between 1 and 2048),
@@ -121,6 +122,7 @@ begin
       if coalesce(j->>'id','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
         or coalesce(j->>'maximum_ticks','') !~ '^[1-9][0-9]{0,14}$'
         or jsonb_typeof(j->'maximum_ticks') is distinct from 'number'
+        or coalesce(j->>'operation_kind','chat/completions') not in ('chat/completions','agent-turns')
         or coalesce(j->>'request_group','') !~ '^[a-f0-9]{64}$'
         or length(coalesce(j->>'authorization','')) not between 1 and 2048
         or jsonb_typeof(j->'input') is distinct from 'object'
@@ -137,8 +139,8 @@ begin
         then raise exception 'developer_batch_invalid'; end if;
         previous_at:=scheduled_at;
       elsif j ? 'run_at' then raise exception 'developer_batch_invalid'; end if;
-      insert into public.developer_batch_items_v1(project_id,batch_id,id,ordinal,input,authorization,maximum_ticks,request_group,run_at)
-        values(p_project,batch,(j->>'id')::uuid,n,j->'input',j->>'authorization',(j->>'maximum_ticks')::bigint,j->>'request_group',scheduled_at);
+      insert into public.developer_batch_items_v1(project_id,batch_id,id,ordinal,input,authorization,maximum_ticks,request_group,run_at,operation_kind)
+        values(p_project,batch,(j->>'id')::uuid,n,j->'input',j->>'authorization',(j->>'maximum_ticks')::bigint,j->>'request_group',scheduled_at,coalesce(j->>'operation_kind','chat/completions'));
     end loop;
     return jsonb_build_object('object','batch')||(to_jsonb(b)-'owner_id'-'request_digest');
   elsif b.id is null then raise exception 'developer_batch_not_found';
@@ -155,7 +157,7 @@ begin
     return jsonb_build_object('id',batch,'paused_at',b.paused_at);
   elsif p_operation='get' then
     select coalesce(jsonb_agg(to_jsonb(t) order by t.ordinal),'[]'::jsonb) into result from (
-      select i.id,i.ordinal,i.state,i.maximum_ticks,i.run_at,i.finished_at,r.id as request_id,r.settlement_state,r.final_customer_charge
+      select i.id,i.ordinal,i.operation_kind,i.state,i.maximum_ticks,i.run_at,i.finished_at,r.id as request_id,r.settlement_state,r.final_customer_charge
       from public.developer_batch_items_v1 i left join public.developer_api_requests r
         on r.api_key_id=b.api_key_id and r.project_id=b.project_id and r.request_group=i.request_group
       where i.project_id=p_project and i.batch_id=batch
@@ -234,7 +236,7 @@ grant execute on function public.finish_developer_batch_v1(uuid,uuid,uuid,uuid,j
 
 create view public.developer_batch_export_records_v1 with(security_invoker=true) as
   select b.owner_id,b.project_id,b.id as batch_id,b.api_key_id,b.currency,b.maximum_ticks,b.created_at,b.expires_at,b.canceled_at,b.resource_kind,b.paused_at,
-    i.id as item_id,i.run_at,i.input,i.output,i.state,i.finished_at
+    i.id as item_id,i.operation_kind,i.run_at,i.input,i.output,i.state,i.finished_at
   from public.developer_batches_v1 b join public.developer_batch_items_v1 i on i.project_id=b.project_id and i.batch_id=b.id;
 revoke all on public.developer_batch_export_records_v1 from public,anon,authenticated;
 grant select on public.developer_batch_export_records_v1 to service_role;
