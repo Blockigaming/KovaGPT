@@ -29,9 +29,26 @@ jobs:
             https://downloads.gradle.org/distributions/gradle-8.11.1-bin.zip
           printf '%s  %s\n' f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6 "$archive" | sha256sum --check --strict
           unzip -q "$archive" -d "$RUNNER_TEMP"
-          "$RUNNER_TEMP/gradle-8.11.1/bin/gradle" -p android --no-daemon :app:lintDebug :app:assembleDebug
-          "$RUNNER_TEMP/gradle-8.11.1/bin/gradle" -p android --no-daemon \
-            -PkovaHealthStagingHost=staging.kovagpt.com :app:assembleDebug
+          gradle="$RUNNER_TEMP/gradle-8.11.1/bin/gradle"
+          log="$RUNNER_TEMP/android-health-gradle.log"
+          build_android() {
+            local attempt status
+            for attempt in 1 2 3; do
+              if "$gradle" -p android --no-daemon "$@" >"$log" 2>&1; then
+                cat "$log"
+                return 0
+              else
+                status=$?
+              fi
+              cat "$log"
+              if (( attempt == 3 )) || ! grep -Eq "Could not GET 'https://repo[.]maven[.]apache[.]org/[^']+'.*status code 429" "$log"; then
+                return "$status"
+              fi
+              sleep "$((attempt * 20))"
+            done
+          }
+          build_android :app:lintDebug :app:assembleDebug
+          build_android -PkovaHealthStagingHost=staging.kovagpt.com :app:assembleDebug
           grep -F '"staging.kovagpt.com"' android/app/build/generated/source/buildConfig/debug/com/kovagpt/health/BuildConfig.java
           grep -F '"com.kovagpt.health.staging"' android/app/build/generated/source/buildConfig/debug/com/kovagpt/health/BuildConfig.java
   bridge:
