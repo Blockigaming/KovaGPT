@@ -35,6 +35,7 @@ import {
   parseDeveloperAgentRequest,
   parseDeveloperAgentTurn,
 } from "./developer-agent-policy.mjs";
+import { expandDeveloperSkills, parseDeveloperSkillRequest } from "./developer-skill-policy.mjs";
 import { loadDeveloperFileContent, readDeveloperFileRecords } from "./developer-file-content.server";
 import {
   parseDeveloperFileSearch,
@@ -279,8 +280,72 @@ export async function handleDeveloperAgentDefinitions(request: Request) {
     return developerFailure(error);
   }
 }
+function requireDeveloperSkills(identity: DeveloperIdentity) {
+  if (!identity.capabilities.includes("chat")) throw new Error("developer_scope_required");
+  if (
+    runtimeEnv("KOVA_DEVELOPER_SKILL_SCHEMA_READY") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_SKILLS_ENABLED") !== "true"
+  )
+    throw new Error("developer_skill_unavailable");
+}
+async function skillResource(
+  identity: DeveloperIdentity,
+  operation: string,
+  input: Record<string, unknown>,
+  signal?: AbortSignal,
+) {
+  requireDeveloperSkills(identity);
+  const result = await identity.db
+    .rpc("manage_developer_skills_v1", {
+      p_owner: identity.ownerId,
+      p_key: identity.id,
+      p_project: identity.project_id,
+      p_operation: operation,
+      p_input: input,
+    })
+    .abortSignal(
+      signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000),
+    );
+  if (result.error || !result.data) {
+    const known = result.error?.message?.match(
+      /^developer_(?:skill_not_found|skill_quota_exceeded|skill_conflict|skill_invalid|scope_required|owner_unavailable)$/,
+    )?.[0];
+    throw new Error(known ?? "developer_skill_unavailable");
+  }
+  return result.data;
+}
+export async function handleDeveloperSkills(request: Request) {
+  try {
+    const identity = await authenticateDeveloper(request);
+    requireDeveloperSkills(identity);
+    const rate = await consumeApplicationRateLimit({
+      identity: `developer:${identity.id}`,
+      action: "developer_skill_definitions",
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rate.allowed) throw new Error("developer_rate_limit");
+    if (
+      request.method === "POST" &&
+      request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
+    )
+      throw new Error("developer_json_required");
+    const parsed = parseDeveloperSkillRequest(
+      request.method,
+      new URL(request.url).searchParams,
+      request.method === "POST"
+        ? await readBoundedJsonObject(request, 16384, request.signal)
+        : undefined,
+    );
+    const result = await skillResource(identity, parsed.operation, parsed.input, request.signal);
+    return developerJson(result, parsed.operation === "create" ? 201 : 200);
+  } catch (error) {
+    return developerFailure(error);
+  }
+}
 async function preparePublicRequest(identity: DeveloperIdentity, kind: string, raw: unknown) {
   let agentBinding: { id: string; version: number; createdAt: string } | null = null;
+  let skillBinding: string | null = null;
   if (kind === "agent-turns") {
     requireDeveloperAgents(identity);
     const turn = parseDeveloperAgentTurn(raw);
@@ -288,7 +353,17 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     if (typeof saved.created_at !== "string" || !Number.isFinite(Date.parse(saved.created_at)))
       throw new Error("developer_agent_unavailable");
     agentBinding = { id: turn.agent_id, version: turn.version, createdAt: saved.created_at };
-    raw = expandDeveloperAgentTurn(turn, saved);
+    const expanded = expandDeveloperAgentTurn(turn, saved);
+    if (turn.skills?.length) {
+      requireDeveloperSkills(identity);
+      const rows = await Promise.all(
+        turn.skills.map((ref) => skillResource(identity, "get", { id: ref.id, version: ref.version })),
+      );
+      const result = expandDeveloperSkills(String(expanded.instructions), turn.skills, rows);
+      expanded.instructions = result.instructions;
+      skillBinding = createHash("sha256").update(JSON.stringify(result.bindings)).digest("hex");
+    }
+    raw = expanded;
   }
   const normalized = normalizeDeveloperOperation(kind === "agent-turns" ? "responses" : kind, raw);
   const references = developerFileReferences(normalized.operation, normalized.input);
@@ -362,6 +437,7 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     ...parsed,
     operation: normalized.operation,
     agentBinding,
+    skillBinding,
     version,
     prepared,
     fingerprint,
@@ -377,6 +453,7 @@ export async function developerQuote(identity: DeveloperIdentity, kind: string, 
     fingerprint: value.fingerprint,
     operation: kind,
     agentBinding: value.agentBinding,
+    skillBinding: value.skillBinding,
     maximumCharge: Number(value.prepared.quote.maximumReservedCharge),
     expiresAt: Math.min(Date.now() + 120000, value.fileExpiresAt ?? Infinity),
   };
@@ -419,6 +496,7 @@ export async function executeDeveloper(
   if (
     quote.operation !== kind ||
     JSON.stringify(quote.agentBinding ?? null) !== JSON.stringify(parsed.agentBinding) ||
+    (quote.skillBinding ?? null) !== parsed.skillBinding ||
     quote.version !== parsed.version.id ||
     quote.fingerprint !== parsed.fingerprint ||
     quote.maximumCharge < Number(parsed.prepared.quote.maximumReservedCharge)

@@ -1,4 +1,10 @@
-export type DeveloperAgentTurn = { agent_id: string; version: number; input: string };
+import type { DeveloperSkillReference } from "./developer-skill-policy.mjs";
+export type DeveloperAgentTurn = {
+  agent_id: string;
+  version: number;
+  input: string;
+  skills?: DeveloperSkillReference[];
+};
 export function parseDeveloperAgentRequest(
   method: string,
   params: URLSearchParams,

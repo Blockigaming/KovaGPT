@@ -1,3 +1,5 @@
+import { parseDeveloperSkillReferences } from "./developer-skill-policy.mjs";
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = () => {
   throw new Error("developer_agent_invalid");
@@ -81,11 +83,12 @@ export function parseDeveloperAgentRequest(method, params, body) {
   fail();
 }
 export function parseDeveloperAgentTurn(value) {
-  exact(value, ["agent_id", "version", "input"]);
+  exact(value, ["agent_id", "version", "input", ...(value?.skills === undefined ? [] : ["skills"])]);
   return {
     agent_id: id(value.agent_id),
     version: integer(value.version, 1, 20),
     input: text(value.input, 16000),
+    ...(value.skills === undefined ? {} : { skills: parseDeveloperSkillReferences(value.skills) }),
   };
 }
 // Only the authenticated, immutable definition determines the provider request.

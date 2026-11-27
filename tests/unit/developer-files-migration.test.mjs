@@ -489,3 +489,45 @@ test("agent definitions preserve immutable revisions and owner boundaries", asyn
     await f.db.close();
   }
 });
+
+test("skill versions are private, immutable and project scoped", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_skills_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input, user = owner) =>
+      (
+        await f.db.query("select manage_developer_skills_v1($1,$2,$3,$4,$5) result", [
+          user, key, f.account.projectId, operation, input,
+        ])
+      ).rows[0].result;
+    const skill = id(71);
+    const definition = {
+      name: "Review",
+      description: "Review evidence",
+      instructions: "Cite the evidence.",
+    };
+    const create = { id: skill, definition };
+    assert.equal((await run("create", create)).version, 1);
+    assert.equal((await run("create", create)).version, 1);
+    await assert.rejects(run("create", { ...create, definition: { ...definition, code: "run" } }), /skill_invalid/);
+    const update = { id: skill, expected_version: 1, definition: { ...definition, instructions: "List evidence." } };
+    assert.equal((await run("update", update)).version, 2);
+    assert.equal((await run("update", update)).version, 2);
+    await assert.rejects(run("update", { ...update, definition: { ...definition, instructions: "Changed" } }), /skill_conflict/);
+    assert.equal((await run("get", { id: skill, version: 1 })).definition.instructions, definition.instructions);
+    assert.equal((await run("get", { id: skill })).version, 2);
+    assert.equal((await run("list", {})).data[0].definition, undefined);
+    await assert.rejects(run("get", { id: skill }, other), /scope_required/);
+    for (const role of ["anon", "authenticated"])
+      assert.equal((await f.db.query("select has_table_privilege($1,'developer_skill_versions_v1','select') allowed", [role])).rows[0].allowed, false);
+    await run("delete", { id: skill });
+    await assert.rejects(run("get", { id: skill, version: 1 }), /skill_not_found/);
+    await run("create", create);
+    await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
+    assert.equal((await f.db.query("select count(*)::int n from developer_skill_versions_v1")).rows[0].n, 0);
+  } finally {
+    await f.db.close();
+  }
+});

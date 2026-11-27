@@ -228,6 +228,33 @@ export class KovaGPT {
         smallJson(await this.#request(agentPath(id), { method: "DELETE", signal })),
       turn: (input, options) => this.run("agent-turns", input, options),
     });
+    const skillPath = (id, version) => {
+      if (
+        typeof id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+      )
+        fail("skill_id_invalid");
+      if (version !== undefined && (!Number.isSafeInteger(version) || version < 1 || version > 20))
+        fail("skill_version_invalid");
+      return "skills?id=" + id + (version === undefined ? "" : "&version=" + version);
+    };
+    const skillPost = async (operation, input, { signal } = {}) =>
+      smallJson(
+        await this.#request("skills", {
+          input: boundedInput({ ...boundedInput(input), operation }, 16384),
+          signal,
+        }),
+        65536,
+      );
+    this.skills = Object.freeze({
+      create: (input, options) => skillPost("create", input, options),
+      update: (input, options) => skillPost("update", input, options),
+      list: async ({ signal } = {}) => smallJson(await this.#request("skills", { signal })),
+      retrieve: async (id, { version, signal } = {}) =>
+        smallJson(await this.#request(skillPath(id, version), { signal })),
+      delete: async (id, { signal } = {}) =>
+        smallJson(await this.#request(skillPath(id), { method: "DELETE", signal })),
+    });
     this.conversations = Object.freeze({
       create: (input, options) => conversationPost("create", input, options),
       append: (input, options) => conversationPost("append", input, options),

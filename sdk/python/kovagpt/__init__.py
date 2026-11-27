@@ -343,6 +343,34 @@ class Client:
     def agent_turn(self, data, **budget):
         return self.run("agent-turns", data, **budget)
 
+    @staticmethod
+    def _skill_path(skill_id, version=None):
+        path = "skills?id=" + _identifier(skill_id, _UUID, "skill_id_invalid")
+        if version is not None:
+            _require(type(version) is int and 1 <= version <= 20, "skill_version_invalid")
+            path += f"&version={version}"
+        return path
+
+    def _skill_post(self, operation, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("skills", method="POST",
+                             body=_json_body({**data, "operation": operation}, 16384)).json(65536)
+
+    def skill_create(self, data):
+        return self._skill_post("create", data)
+
+    def skill_update(self, data):
+        return self._skill_post("update", data)
+
+    def skill_list(self):
+        return self._get("skills")
+
+    def skill_retrieve(self, skill_id, *, version=None):
+        return self._get(self._skill_path(skill_id, version))
+
+    def skill_delete(self, skill_id):
+        return self._request(self._skill_path(skill_id), method="DELETE").json(65536)
+
     def quote(self, operation, data):
         _require(isinstance(operation, str) and operation in _OPERATIONS, "operation_invalid")
         snapshot = _json_body(data)

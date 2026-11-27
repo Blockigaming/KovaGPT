@@ -96,6 +96,12 @@ export interface AgentTurnInput {
   agent_id: string;
   version: number;
   input: string;
+  skills?: { id: string; version: number }[];
+}
+export interface SkillDefinition {
+  name: string;
+  description: string;
+  instructions: string;
 }
 export type DecisionQuestion = {
   name: string;
@@ -162,6 +168,22 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     turn(input: AgentTurnInput, options: Budget): Promise<Response>;
+  };
+  readonly skills: {
+    create(
+      input: { id: string; definition: SkillDefinition },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    update(
+      input: { id: string; definition: SkillDefinition; expected_version: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(
+      id: string,
+      options?: { version?: number; signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   };
   readonly conversations: {
     create(input: { id: string; title: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
