@@ -24,7 +24,8 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, DEFAULT_THEME_COLOR, LIGHT_THEME_COLOR, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { isIOSWebsiteOnlyPath, nativeKovaPlatform } from "@/lib/kova-native";
 import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { DrawerNavigationFocus } from "@/components/DrawerNavigationFocus";
@@ -384,6 +385,10 @@ function RootThemeManager() {
 }
 
 function DestinationOutlet() {
+  const [isIOSApp, setIsIOSApp] = useState(false);
+  useLayoutEffect(() => {
+    setIsIOSApp(nativeKovaPlatform() === "ios");
+  }, []);
   const changingPage = useRouterState({
     select: (state) =>
       state.status === "pending" &&
@@ -392,6 +397,19 @@ function DestinationOutlet() {
       ),
   });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (isIOSApp && isIOSWebsiteOnlyPath(pathname)) {
+    return (
+      <main id="main-content" className="kova-state-screen">
+        <section className="kova-state-panel" aria-labelledby="ios-workspace-title">
+          <h1 id="ios-workspace-title">This page is available on the web</h1>
+          <p>Return to your KovaGPT assistant workspace.</p>
+          <Link to="/" className="kova-state-primary">
+            Return to chat
+          </Link>
+        </section>
+      </main>
+    );
+  }
   const openingChat =
     pathname === "/" || /^\/(?:projects\/[^/]+\/chat|share)\/[^/]+$/.test(pathname);
   return changingPage ? (
