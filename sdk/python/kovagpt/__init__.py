@@ -202,6 +202,9 @@ class Client:
     def usage_retrieve(self, request_id):
         return self._get("usage?id=" + _identifier(request_id, _UUID, "usage_id_invalid"))
 
+    def file_search(self, data):
+        return self._request("file-search", method="POST", body=_json_body(data)).json(65536)
+
     def file_list(self, *, page=0):
         _require(type(page) is int and 0 <= page <= 4, "file_page_invalid")
         return self._get(f"files?page={page}")

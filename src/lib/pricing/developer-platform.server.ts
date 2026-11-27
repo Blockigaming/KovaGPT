@@ -28,7 +28,11 @@ import { developerFileReferences } from "./developer-file-policy.mjs";
 import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
-import { loadDeveloperFileContent } from "./developer-file-content.server";
+import { loadDeveloperFileContent, readDeveloperFileRecords } from "./developer-file-content.server";
+import {
+  parseDeveloperFileSearch,
+  searchDeveloperFileRecords,
+} from "./developer-file-search-policy.mjs";
 import {
   DEVELOPER_SCOPES,
   developerRequestKey,
@@ -522,6 +526,21 @@ export async function handleDeveloperApi(request: Request, operation: string) {
     if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
       throw new Error("developer_json_required");
     const body = await readBoundedJsonObject(request, 65536, request.signal);
+    if (operation === "file_search") {
+      if (!identity.capabilities.includes("files")) throw new Error("developer_scope_required");
+      if (runtimeEnv("KOVA_DEVELOPER_FILE_SEARCH_ENABLED") !== "true")
+        throw new Error("developer_file_search_unavailable");
+      const input = parseDeveloperFileSearch(body);
+      const rate = await consumeApplicationRateLimit({
+        identity: `developer:${identity.id}`,
+        action: "developer_file_search",
+        limit: 30,
+        windowSeconds: 60,
+      });
+      if (!rate.allowed) throw new Error("developer_rate_limit");
+      const files = await readDeveloperFileRecords(identity, input.fileIds);
+      return developerJson(searchDeveloperFileRecords(input, files));
+    }
     if (operation === "quotes") {
       if (
         typeof body.operation !== "string" ||

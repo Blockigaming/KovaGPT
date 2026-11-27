@@ -1232,7 +1232,7 @@ const developerPages = [
       ),
       section(
         "Supported formats and Responses",
-        "Plain text, Markdown, CSV and JSON are supported up to 32 KiB per file. Files expire after 30 days. Responses can reference up to four unique project file_ids; deletion or expiry invalidates the quote. Remote URLs, provider file IDs and consumer Library access are not supported.",
+        "Plain text, Markdown, CSV and JSON are supported up to 32 KiB per file. Files expire after 30 days. Responses can reference up to four unique project file_ids; deletion or expiry invalidates the quote. The gated POST /api/v1/file-search endpoint performs bounded lexical retrieval over explicitly selected project files. Remote URLs, provider file IDs and consumer Library access are not supported.",
       ),
     ],
     [link("Responses", "/developers/responses"), link("Consumer file guide", "/features/files")],

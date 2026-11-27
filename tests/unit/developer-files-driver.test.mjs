@@ -117,6 +117,7 @@ test("file expansion verifies digest and key/project-scoped reads before returni
   f.state.rows = {
     id: file,
     filename: "data.csv",
+    project_id: project,
     content,
     byte_size: 3,
     content_digest: createHash("sha256").update(content).digest("hex"),
@@ -175,4 +176,31 @@ test("owner console uploads require the pinned principal, explicit project and f
     f.state.calls[0].args.p_input.requestDigest,
     createHash("sha256").update("owner-console:stable").digest("hex"),
   );
+});
+
+test("raw file reads refuse foreign-project or expired records before retrieval can return data", async () => {
+  const f = await fixture("developer-file-content.server.ts");
+  const content = "private text";
+  f.state.rows = {
+    id: file,
+    project_id: project,
+    filename: "data.txt",
+    content,
+    byte_size: Buffer.byteLength(content),
+    content_digest: createHash("sha256").update(content).digest("hex"),
+    expires_at: new Date(Date.now() + 50000).toISOString(),
+  };
+  const identity = {
+    ownerId: owner,
+    id: key,
+    project_id: project,
+    capabilities: ["files"],
+    db: f.db,
+  };
+  assert.equal((await f.module.readDeveloperFileRecords(identity, [file]))[0].content, content);
+  f.state.rows.project_id = owner;
+  await assert.rejects(() => f.module.readDeveloperFileRecords(identity, [file]), /file_unavailable/);
+  f.state.rows.project_id = project;
+  f.state.rows.expires_at = new Date(Date.now() - 1000).toISOString();
+  await assert.rejects(() => f.module.readDeveloperFileRecords(identity, [file]), /file_unavailable/);
 });

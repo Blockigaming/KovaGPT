@@ -118,6 +118,23 @@ export class KovaError extends Error {
 }
 export class KovaGPT {
   readonly files: {
+    search(
+      input: { query: string; file_ids: string[]; limit?: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<{
+      object: "list";
+      search_type: "lexical";
+      offset_unit: "unicode_code_point";
+      data: {
+        file_id: string;
+        filename: string;
+        content_digest: string;
+        start: number;
+        end: number;
+        score: number;
+        snippet: string;
+      }[];
+    }>;
     upload(
       input: {
         filename: string;

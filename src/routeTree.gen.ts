@@ -198,6 +198,7 @@ import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revok
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
 import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
+import { Route as ApiV1FileSearchRouteImport } from './routes/api/v1/file-search'
 import { Route as ApiV1FilesRouteImport } from './routes/api/v1/files'
 import { Route as ApiV1ImagesRouteImport } from './routes/api/v1/images'
 import { Route as ApiV1ModelsRouteImport } from './routes/api/v1/models'
@@ -1210,6 +1211,11 @@ const ApiV1EmbeddingsRoute = ApiV1EmbeddingsRouteImport.update({
   path: '/api/v1/embeddings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1FileSearchRoute = ApiV1FileSearchRouteImport.update({
+  id: '/api/v1/file-search',
+  path: '/api/v1/file-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1FilesRoute = ApiV1FilesRouteImport.update({
   id: '/api/v1/files',
   path: '/api/v1/files',
@@ -1636,6 +1642,7 @@ export interface FileRoutesByFullPath {
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
@@ -1871,6 +1878,7 @@ export interface FileRoutesByTo {
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
@@ -2107,6 +2115,7 @@ export interface FileRoutesById {
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
@@ -2344,6 +2353,7 @@ export interface FileRouteTypes {
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
     | '/api/v1/embeddings'
+    | '/api/v1/file-search'
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
@@ -2579,6 +2589,7 @@ export interface FileRouteTypes {
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
     | '/api/v1/embeddings'
+    | '/api/v1/file-search'
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
@@ -2814,6 +2825,7 @@ export interface FileRouteTypes {
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
     | '/api/v1/embeddings'
+    | '/api/v1/file-search'
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
@@ -3040,6 +3052,7 @@ export interface RootRouteChildren {
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
   ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
+  ApiV1FileSearchRoute: typeof ApiV1FileSearchRoute
   ApiV1FilesRoute: typeof ApiV1FilesRoute
   ApiV1ImagesRoute: typeof ApiV1ImagesRoute
   ApiV1ModelsRoute: typeof ApiV1ModelsRoute
@@ -4409,6 +4422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1EmbeddingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/file-search': {
+      id: '/api/v1/file-search'
+      path: '/api/v1/file-search'
+      fullPath: '/api/v1/file-search'
+      preLoaderRoute: typeof ApiV1FileSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/files': {
       id: '/api/v1/files'
       path: '/api/v1/files'
@@ -5023,6 +5043,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
   ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,
+  ApiV1FileSearchRoute: ApiV1FileSearchRoute,
   ApiV1FilesRoute: ApiV1FilesRoute,
   ApiV1ImagesRoute: ApiV1ImagesRoute,
   ApiV1ModelsRoute: ApiV1ModelsRoute,

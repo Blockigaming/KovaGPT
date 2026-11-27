@@ -154,14 +154,15 @@ async function fixture(options = {}) {
       path === "./developer-usage-summary.mjs" ||
       path === "./developer-image-edit-policy.mjs" ||
       path === "./developer-api-aliases.mjs" ||
-      path === "./developer-chat-compat.mjs"
+      path === "./developer-chat-compat.mjs" ||
+      path === "./developer-file-search-policy.mjs"
     )
       return full.replace(
         JSON.stringify(path),
         JSON.stringify(new URL(`../../src/lib/pricing/${path.slice(2)}`, import.meta.url).href),
       );
     if (path === "./developer-file-content.server")
-      return 'const loadDeveloperFileContent=async(identity,body,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].loadFiles(body,ids);';
+      return 'const loadDeveloperFileContent=async(identity,body,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].loadFiles(body,ids),readDeveloperFileRecords=async(identity,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].readFiles(identity,ids);';
     if (path === "@supabase/supabase-js")
       return 'const createClient=()=>globalThis[Symbol.for("kova.developer-ingress-test")].db;';
     if (path === "@/lib/api-auth.server")

@@ -109,6 +109,14 @@ class SDKTests(unittest.TestCase):
             list(response_events(response))
         self.assertTrue(response.closed)
 
+    def test_file_search_uses_scoped_read_without_inference_quote(self):
+        self.responses.append(FakeResponse({"data": [], "search_type": "lexical"}))
+        body = {"query": "hello", "file_ids": [ID]}
+        self.assertEqual(self.client.file_search(body)["search_type"], "lexical")
+        self.assertEqual(self.calls[0][:2], ("POST", "/api/v1/file-search"))
+        self.assertEqual(json.loads(self.calls[0][2]), body)
+        self.assertNotIn("X-Kova-Quote", self.calls[0][3])
+
     def test_search_and_chat_aliases_keep_signed_quotes(self):
         for operation, method, body in [
             ("search", self.client.search, {"model": "kova-search", "query": "hello", "max_output_tokens": 100, "max_tool_calls": 1}),

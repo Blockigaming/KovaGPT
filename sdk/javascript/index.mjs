@@ -172,6 +172,11 @@ export class KovaGPT {
       return id;
     };
     this.files = Object.freeze({
+      search: async (input, { signal } = {}) =>
+        smallJson(
+          await this.#request("file-search", { input: boundedInput(input), signal }),
+          65536,
+        ),
       upload: async (input, { idempotencyKey, signal } = {}) => {
         if (typeof idempotencyKey !== "string" || !/^[\x21-\x7e]{1,128}$/.test(idempotencyKey))
           fail("idempotency_key_required");
