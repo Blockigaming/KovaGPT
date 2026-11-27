@@ -116,7 +116,21 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 62_583,
       gzip: 21_805,
     }),
+    Object.freeze({
+      head: "4dc7dd19a811597973407232959dd89390794e8d",
+      source: "main CI production build, run 45883573068",
+      raw: 62_849,
+      gzip: 21_879,
+    }),
+    Object.freeze({
+      tree: "mobile-polish-conversation-limits",
+      source: "Node 22 local production build, phone polish, conversation limits and warm-up",
+      raw: 62_976,
+      gzip: 21_942,
+    }),
   ]),
+  phonePolishRawAdjustment:
+    "Main (4dc7dd1, CI run 45883573068) already measured the home route at 62,849 raw bytes against the 62,750 raw ceiling. The phone-polish candidate measured 62,976 raw / 21,942 gzip in a local production build; the conversation limits and view warm-up load on demand from the composer. The raw ceiling moves to 63,100, leaving 124 bytes of headroom; the gzip ceiling moves to 22,000 for CI hash variance (58 bytes of headroom over the local build); main entry, omega and chart ceilings are unchanged.",
   responseFileBrowserAdjustment:
     "PR #771 run 45829792418 measured the home route at 62,583 raw / 21,805 gzip bytes and the shared entry at 651,002 raw / 201,727 gzip bytes after lazy browser handoff and transport deferral. The 21,950 and 202,000 gzip ceilings retain 145 and 273 bytes of headroom (0.67% and 0.14%). Raw, omega and chart ceilings and fail-closed chunk identification remain unchanged.",
   composerAvailabilityAdjustment:
@@ -138,7 +152,7 @@ export const BUNDLE_BASELINE = Object.freeze({
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_750, gzip: 21_950 }),
+  initial: Object.freeze({ raw: 63_100, gzip: 22_000 }),
   main: Object.freeze({ raw: 670_000, gzip: 202_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),

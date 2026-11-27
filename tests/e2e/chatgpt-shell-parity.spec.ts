@@ -229,7 +229,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
         ).toHaveCount(0);
         if (await usesSidebarDrawer(page)) {
           await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);
-          await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
+          await expect(page.getByRole("button", { name: "Start temporary chat" })).toBeVisible();
         } else {
           await expectAuthenticatedDesktopReady(page);
         }

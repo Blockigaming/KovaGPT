@@ -3168,6 +3168,7 @@ function KovaGPT() {
       value={principalReady ? input : ""}
       onChange={setInput}
       onSubmit={submitComposer}
+      messageCount={isSignedIn ? (active?.messages.length ?? 0) : undefined}
       onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
       onStop={stop}
 
