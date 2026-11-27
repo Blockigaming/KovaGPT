@@ -28,6 +28,11 @@ test("server-routed basic, advanced and premium responses use the approved exact
       prompt.includes(`Your exact product name for this response is ${expected}, built by Kova.`),
     );
     assert.ok(prompt.includes(`configured provider model is ${route.modelId}.`));
+    assert.match(prompt, /ordinary identity questions/);
+    assert.match(prompt, /assistant as developed and refined by Kova/);
+    assert.match(prompt, /Do not volunteer upstream provider names or internal model IDs/);
+    assert.match(prompt, /When explicitly asked about the underlying provider/);
+    assert.match(prompt, /Do not claim Kova trained or fine-tuned foundation weights without verified evidence/);
     assert.match(prompt, /first assistant reply/);
     assert.match(prompt, /For a direct task, answer it/);
   }
