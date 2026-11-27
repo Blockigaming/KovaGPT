@@ -1,7 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Bell, Check, Inbox, Mail, MailOpen, RefreshCw, Reply, Search, Send, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  Inbox,
+  Mail,
+  MailOpen,
+  RefreshCw,
+  Reply,
+  Search,
+  Send,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
@@ -144,18 +156,15 @@ function Mailbox({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [noticeError, setNoticeError] = useState(false);
-  const [sent, setSent] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const mounted = useRef(false);
   const operation = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const target = { owner, account: account.id, provider: account.provider };
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      if (timer.current) clearTimeout(timer.current);
     };
   }, []);
 
@@ -266,9 +275,7 @@ function Mailbox({
       const result = await reply({ data: { ...target, id: message.id, body: draft, confirmed: true } });
       if (!mounted.current || !result.sent) return;
       setDraft("");
-      setSent(true);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setSent(false), 3500);
+      toast.success("Email sent");
     });
   }
   function loadMore() {
@@ -300,7 +307,6 @@ function Mailbox({
 
   return (
     <section className="kova-inbox-panel" data-density={compact ? "compact" : "comfortable"}>
-      {sent && <div role="status" className="kova-inbox-sent"><Check aria-hidden="true" /> Email sent</div>}
       {error && <p role="alert" className="kova-inbox-error">{error}</p>}
       {noticeError && <p role="status" className="kova-inbox-error">Kova notifications are temporarily unavailable.</p>}
       {opened ? (

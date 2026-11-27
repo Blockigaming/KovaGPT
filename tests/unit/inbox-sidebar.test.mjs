@@ -35,3 +35,10 @@ test("Inbox is gated by active mail connections and uses connector actions outsi
   assert.match(route, /if \(!mounted.current \|\| !result.sent\) return/);
   assert.doesNotMatch(route, /chat\/send|onSendMessage|useChatController/);
 });
+
+test("Inbox success notifications use the shared application toast and no private popup", () => {
+  const route = readFileSync("src/routes/inbox.tsx", "utf8");
+  const styles = readFileSync("src/styles/inbox.css", "utf8");
+  assert.match(route, /if \(!mounted.current \|\| !result.sent\) return;\s*setDraft\(""\);\s*toast.success\("Email sent"\);/);
+  assert.doesNotMatch(route + styles, /kova-inbox-sent/);
+});

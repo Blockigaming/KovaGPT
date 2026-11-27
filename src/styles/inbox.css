@@ -181,26 +181,6 @@
   padding: 24px;
   color: var(--muted-foreground);
 }
-.kova-inbox-sent {
-  position: fixed;
-  z-index: 100;
-  inset-block-start: 24px;
-  inset-inline-end: 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 18px;
-  border: 0;
-  border-radius: 16px;
-  color: var(--foreground);
-  background: var(--composer-background);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 18%);
-  pointer-events: none;
-}
-.kova-inbox-sent svg {
-  width: 18px;
-  height: 18px;
-}
 @media (max-width: 767px) {
   .kova-inbox {
     padding: 14px 10px;
@@ -228,10 +208,5 @@
   }
   .kova-inbox-panel[data-density="compact"] .kova-inbox-row {
     min-height: 64px;
-  }
-  .kova-inbox-sent {
-    inset: 50% auto auto 50%;
-    transform: translate(-50%, -50%);
-    border: 0;
   }
 }
