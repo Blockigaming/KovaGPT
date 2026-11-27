@@ -8,7 +8,7 @@ import time
 from urllib.parse import urlsplit
 
 __all__ = ["Client", "KovaError", "APIResponse", "response_events", "chat_completion_events"]
-_OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions"))
+_OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions", "decisions"))
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", re.I)
 _MODEL = re.compile(r"[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*")
 _KEY = re.compile(r"kova_[0-9a-f-]{36}_[A-Za-z0-9_-]{43}")
@@ -363,6 +363,9 @@ class Client:
 
     def embeddings(self, data, **budget):
         return self.run("embeddings", data, **budget)
+
+    def decisions(self, data, **budget):
+        return self.run("decisions", data, **budget)
 
     def moderations(self, data, **budget):
         return self.run("moderations", data, **budget)

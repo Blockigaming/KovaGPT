@@ -5,6 +5,7 @@ const operations = new Set([
   "moderations",
   "search",
   "chat/completions",
+  "decisions",
 ]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
@@ -124,6 +125,7 @@ export class KovaGPT {
       }),
     });
     this.search = (input, options) => this.run("search", input, options);
+    this.decisions = Object.freeze({ create: (input, options) => this.run("decisions", input, options) });
     this.images = Object.freeze({
       generate: (input, options) => this.run("images", input, options),
       edit: (input, options) => {

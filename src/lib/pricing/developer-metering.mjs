@@ -3,6 +3,7 @@ import { developerInlineImage } from "./developer-responses-policy.mjs";
 import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
 import { developerSearchOptions } from "./developer-search-policy.mjs";
 import { validModerationRequest, validModerationResult } from "./developer-moderation-policy.mjs";
+import { validDeveloperDecisionRequest, developerDecisionUsage } from "./developer-decisions-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -15,6 +16,7 @@ const dimensionsByMeter = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   embedding_tokens: ["input_tokens"],
+  decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
@@ -64,6 +66,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   }
   const dimensions = dimensionsByMeter[contract.meter];
   const moderationMeter = contract.meter === "moderation_requests";
+  const decisionsMeter = contract.meter === "decisions_tokens";
   const searchMeter = contract.meter === "responses_search";
   const responsesMeter = searchMeter || contract.meter === "responses_tokens";
   if (
@@ -90,7 +93,8 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   if (imageEdit) delete textBody.image;
   if (
     !moderationMeter &&
-    new TextEncoder().encode(JSON.stringify(textBody)).byteLength > contract.maximumUsage.input_tokens
+    new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
+      (decisionsMeter ? contract.maximumUsage.decision_input_tokens : contract.maximumUsage.input_tokens)
   )
     fail("billing_input_bound_exceeded");
   if (
@@ -114,6 +118,12 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
         !validModerationRequest(request.body)))
   )
     fail("billing_moderation_contract_invalid");
+  if (
+    decisionsMeter !== (request.capability === "decisions") ||
+    (decisionsMeter &&
+      (request.provider !== "openai" || !validDeveloperDecisionRequest(request.body)))
+  )
+    fail("billing_decision_contract_invalid");
   let search;
   try {
     search = developerSearchOptions(request.body);
@@ -359,6 +369,9 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   } else if (meter === "moderation_requests") {
     if (!validModerationResult(response)) return null;
     dimensions = { moderation_requests: 1 };
+  } else if (meter === "decisions_tokens") {
+    dimensions = developerDecisionUsage(usage);
+    if (!dimensions) return null;
   } else if (meter === "embedding_tokens") {
     if (!integer(usage.prompt_tokens)) return null;
     dimensions = { input_tokens: usage.prompt_tokens };

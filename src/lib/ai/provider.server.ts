@@ -35,6 +35,7 @@ export type ProviderCapability =
   | "tool_calls"
   | "web_search"
   | "moderation"
+  | "decisions"
   | "embeddings"
   | "image_generation"
   | "vision"
@@ -169,7 +170,7 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 }
 
 function providerTarget(capability?: ProviderCapability): ProviderTarget {
-  if (capability === "moderation") {
+  if (capability === "moderation" || capability === "decisions") {
     return {
       provider: "openai",
       baseUrl: OPENAI_API_BASE_URL,
@@ -297,7 +298,7 @@ function parseTimeout(value: string | undefined): number {
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
   const allowed = new Set<ProviderCapability>(
-    DEFAULT_CAPABILITIES.concat("web_search", "moderation"),
+    DEFAULT_CAPABILITIES.concat("web_search", "moderation", "decisions"),
   );
   const configured = value
     .split(",")
@@ -1080,4 +1081,8 @@ export async function embeddings(body: JsonObject, init?: RequestInit): Promise<
 
 export async function developerModerations(body: JsonObject, init?: RequestInit): Promise<Response> {
   return providerFetch("/moderations", "moderation", body, init);
+}
+
+export async function developerDecisions(body: JsonObject, init?: RequestInit): Promise<Response> {
+  return providerFetch("/decisions", "decisions", body, init);
 }

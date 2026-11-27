@@ -155,7 +155,8 @@ async function fixture(options = {}) {
       path === "./developer-image-edit-policy.mjs" ||
       path === "./developer-api-aliases.mjs" ||
       path === "./developer-chat-compat.mjs" ||
-      path === "./developer-file-search-policy.mjs"
+      path === "./developer-file-search-policy.mjs" ||
+      path === "./developer-decisions-policy.mjs"
     )
       return full.replace(
         JSON.stringify(path),
@@ -174,7 +175,7 @@ async function fixture(options = {}) {
     if (path === "@/lib/ai/provider.server" && options.providerUrl)
       return full.replace(JSON.stringify(path), JSON.stringify(options.providerUrl));
     if (path === "@/lib/ai/provider.server")
-      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>({provider:"azure_openai"}),providerModelId=(model)=>model;';
+      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),developerDecisions=developerResponses,developerModerations=developerResponses,embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>({provider:"azure_openai"}),providerModelId=(model)=>model;';
     if (path === "./developer-billing.server")
       return 'const withDeveloperBilling=(identity,callback)=>globalThis[Symbol.for("kova.developer-ingress-test")].billing(identity,callback);';
     return "";

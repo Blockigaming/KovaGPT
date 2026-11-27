@@ -17,6 +17,7 @@ const meters = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   embedding_tokens: ["input_tokens"],
+  decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
@@ -215,6 +216,12 @@ export function validatePricingProposal(raw, now = Date.now()) {
         tool_choice: "required",
         max_tool_calls: c.maximumUsage?.web_search_calls,
         stream: false,
+      });
+    if (c.meter === "decisions_tokens")
+      Object.assign(body, {
+        input: "test",
+        questions: [{ type: "predicate", name: "test", instructions: "Is the input text?" }],
+        prompt_cache_options: { mode: "explicit" },
       });
     if (c.meter === "image_tokens")
       Object.assign(body, { n: 1, size: c.allowedSizes[0], quality: c.allowedQualities[0] });

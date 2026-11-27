@@ -4,7 +4,8 @@ export type Operation =
   | "embeddings"
   | "moderations"
   | "search"
-  | "chat/completions";
+  | "chat/completions"
+  | "decisions";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -81,7 +82,21 @@ export type OperationInput =
   | EmbeddingsInput
   | ModerationsInput
   | SearchInput
-  | ChatCompletionInput;
+  | ChatCompletionInput
+  | DecisionInput;
+export type DecisionQuestion = {
+  name: string;
+  instructions: string;
+} & (
+  | { type: "predicate" }
+  | { type: "choice"; choices: { value: string | boolean; description?: string }[] }
+  | { type: "score"; levels: { label: string; description?: string }[] }
+);
+export interface DecisionInput {
+  model: string;
+  input: string;
+  questions: DecisionQuestion[];
+}
 export interface ModerationsInput {
   model: string;
   input: string;
@@ -117,6 +132,7 @@ export class KovaError extends Error {
   requestMayHaveStarted: boolean;
 }
 export class KovaGPT {
+  readonly decisions: { create(input: DecisionInput, options: Budget): Promise<Response> };
   readonly conversations: {
     create(input: { id: string; title: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     append(

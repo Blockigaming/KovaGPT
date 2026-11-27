@@ -97,3 +97,13 @@ The schema is staged in `supabase/pending/developer_vector_stores_v1.sql` and in
 A chat- or streaming-scoped key is required. The server checks owner, project, key, account and deletion/lockdown fences inside the database transaction. Maximum 50 conversations per owner, 100 lifetime items per conversation, 8 KiB per message, 48 KiB serialized history, and 30-day retention. Conversation storage is independent of consumer chats and performs no implicit inference. Clients explicitly retrieve a snapshot, map active items to role/content messages and send them through the ordinary quoted Responses or Chat Completions flow; automatic server-side response appends, compaction and provider conversation IDs are not implemented.
 
 The staged SQL, owner-filtered export integration and expiry worker must pass canonical migration replay before `KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY` and `KOVA_DEVELOPER_CONVERSATIONS_ENABLED` are enabled. The separately gated vector export view is also connected to account export collection. No production schema or data is changed by committing this source.
+
+## Native Decisions (gated)
+
+POST /api/v1/decisions takes model, input (shared text, up to 16 KiB), and 1–16 uniquely named questions. Each question has type predicate, choice or score, name and instructions. Choices take 2–10 distinct string or boolean values; scores take 2–10 ordered labels. Optional option descriptions are bounded. Quote operation decisions with the exact input, then submit the matching signed quote and stable Idempotency-Key. This is a direct native OpenAI Decisions call for an operator-approved gpt-6-luna contract, not a Responses emulation.
+
+The adapter sets explicit cache mode with no breakpoints. A valid authoritative receipt must show no cached or cache-write tokens, a matching provider model and a request ID from the transport or body. The dedicated decisions_tokens meter uses decision_input_tokens, never the ordinary Responses input rate for the same upstream model. There is no hard-coded commercial rate. The existing reservation, immutable rates and settlement path remain mandatory. Native refusals are preserved; invalid question identities, distributions and scores fail closed. Model names are mapped to the public alias.
+
+Activation requires the reviewed workspace migration with the decisions scope, KOVA_DEVELOPER_WORKSPACE_V2, KOVA_DEVELOPER_DECISIONS_ENABLED, provider capability configuration, verified price registry, and live provider qualification. This first implementation supports only text, no prompt caching, images, JSON parts, streaming or voice linkage. JavaScript decisions.create and Python decisions use the same signed quote contract.
+
+Reference: https://developers.openai.com/api/docs/guides/decisions

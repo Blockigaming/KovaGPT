@@ -79,6 +79,7 @@ type ConsoleData = {
   enabled: boolean;
   workspaceV2?: boolean;
   moderationEnabled?: boolean;
+  decisionsEnabled?: boolean;
   consumerCreditSharing?: boolean;
   accounts: Row[];
   projects: Row[];
@@ -1220,8 +1221,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                 </div>
                 <fieldset>
                   <legend>New key capabilities</legend>
-                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation"]
-                    .filter((scope) => scope !== "moderation" || data?.moderationEnabled)
+                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation", "decisions"]
+                    .filter((scope) => (scope !== "moderation" || data?.moderationEnabled) && (scope !== "decisions" || data?.decisionsEnabled))
                     .map((scope) => (
                     <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
                       <input
@@ -1455,7 +1456,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                   className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                 >
                   <option value="">All services</option>
-                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation"].map((item) => (
+                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation", "decisions"].map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>

@@ -164,6 +164,11 @@ export async function meterProviderRequest(
     runtimeEnv("KOVA_DEVELOPER_MODERATION_ENABLED") !== "true"
   )
     throw new Error("developer_moderation_unavailable");
+  if (
+    input.capability === "decisions" &&
+    runtimeEnv("KOVA_DEVELOPER_DECISIONS_ENABLED") !== "true"
+  )
+    throw new Error("developer_decision_unavailable");
   const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
   const call = current.nextCall++;
   if (call >= 16) throw new Error("developer_call_limit");

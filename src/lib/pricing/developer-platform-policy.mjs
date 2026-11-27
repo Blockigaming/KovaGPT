@@ -3,6 +3,7 @@ import {
   developerResponseFeatures,
 } from "./developer-responses-policy.mjs";
 import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
+import { developerDecisionFields } from "./developer-decisions-policy.mjs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = (code) => {
   throw new Error(code);
@@ -13,6 +14,7 @@ export const DEVELOPER_SCOPES = Object.freeze([
   "image_generation",
   "embeddings",
   "moderation",
+  "decisions",
   "files",
 ]);
 export function developerUuid(value) {
@@ -68,7 +70,9 @@ export function parseDeveloperInput(kind, input) {
           ? ["input", "dimensions"]
           : kind === "moderations"
             ? ["input"]
-            : fail("developer_operation_invalid");
+            : kind === "decisions"
+              ? ["input", "questions"]
+              : fail("developer_operation_invalid");
   if (Object.keys(input).some((key) => ![...common, ...fields].includes(key)))
     fail("developer_field_invalid");
   if (
@@ -115,6 +119,9 @@ export function parseDeveloperInput(kind, input) {
     body.quality = input.quality;
     if (input.image !== undefined) body.image = developerImageEditValue(input.image);
     capability = "image_generation";
+  } else if (kind === "decisions") {
+    Object.assign(body, developerDecisionFields(input));
+    capability = "decisions";
   } else if (kind === "moderations") {
     body.input = text(input.input, 8000);
     capability = "moderation";

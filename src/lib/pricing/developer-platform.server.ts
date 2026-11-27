@@ -12,6 +12,7 @@ import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import {
   developerResponses,
   developerModerations,
+  developerDecisions,
   embeddings,
   imageGenerations,
   imageEdits,
@@ -28,6 +29,7 @@ import { developerFileReferences } from "./developer-file-policy.mjs";
 import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
+import { readDeveloperDecisionResponse } from "./developer-decisions-policy.mjs";
 import { loadDeveloperFileContent, readDeveloperFileRecords } from "./developer-file-content.server";
 import {
   parseDeveloperFileSearch,
@@ -108,6 +110,14 @@ function developerModerationEnabled() {
   if (runtimeEnv("KOVA_DEVELOPER_MODERATION_ENABLED") !== "true") return false;
   const config = getAiProviderConfig("moderation");
   return config.configured && config.capabilities?.includes("moderation") === true;
+}
+function developerDecisionsEnabled() {
+  if (
+    runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_DECISIONS_ENABLED") !== "true"
+  ) return false;
+  const config = getAiProviderConfig("decisions");
+  return config.configured && config.capabilities?.includes("decisions") === true;
 }
 export function developerEnabled() {
   return (
@@ -222,6 +232,8 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     (!developerModerationEnabled() || provider !== "openai")
   )
     throw new Error("developer_moderation_unavailable");
+  if (parsed.capability === "decisions" && (!developerDecisionsEnabled() || provider !== "openai"))
+    throw new Error("developer_decision_unavailable");
   if (
     parsed.body.max_tool_calls !== undefined &&
     (runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true" ||
@@ -354,7 +366,9 @@ export async function executeDeveloper(
             ? imageGenerations
             : kind === "moderations"
               ? developerModerations
-              : embeddings;
+              : kind === "decisions"
+                ? developerDecisions
+                : embeddings;
       return call(parsed.body, { signal });
     },
   );
@@ -362,6 +376,13 @@ export async function executeDeveloper(
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
   }
+  if (kind === "decisions")
+    return developerJson(await readDeveloperDecisionResponse(
+      response,
+      parsed.body.questions as Record<string, unknown>[],
+      parsed.prepared.contract.expectedResponseModels,
+      parsed.publicModel,
+    ));
   if (kind === "chat/completions")
     return developerChatCompletion(response, {
       publicModel: parsed.publicModel,
@@ -389,7 +410,7 @@ const publicUsage = (row: Record<string, unknown>) => {
   };
   return {
     ...rest,
-    input_tokens: dimension("input_tokens"),
+    input_tokens: dimension("input_tokens") ?? dimension("decision_input_tokens"),
     cached_input_tokens: dimension("cached_input_tokens"),
     image_input_tokens: dimension("image_input_tokens"),
     output_tokens: dimension("output_tokens"),
@@ -477,6 +498,7 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             (id === null || entry.publicModel === id) &&
             identity.capabilities.includes(entry.capability) &&
             (entry.capability !== "moderation" || developerModerationEnabled()) &&
+            (entry.capability !== "decisions" || developerDecisionsEnabled()) &&
             entry.provider ===
               getAiProviderConfig(entry.capability as ProviderCapability).provider,
         )
@@ -642,6 +664,7 @@ export async function handleDeveloperConsole(request: Request) {
           enabled: developerEnabled(),
           workspaceV2,
           moderationEnabled: developerModerationEnabled(),
+          decisionsEnabled: developerDecisionsEnabled(),
           consumerCreditSharing,
           accounts: [],
           projects: [],
@@ -787,6 +810,7 @@ export async function handleDeveloperConsole(request: Request) {
         enabled: developerEnabled(),
         workspaceV2,
         moderationEnabled: developerModerationEnabled(),
+          decisionsEnabled: developerDecisionsEnabled(),
         consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,
@@ -882,7 +906,8 @@ export async function handleDeveloperConsole(request: Request) {
           !body.scopes.length ||
           body.scopes.length > DEVELOPER_SCOPES.length ||
           body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value))) ||
-          (body.scopes.includes("moderation") && !developerModerationEnabled())
+          (body.scopes.includes("moderation") && !developerModerationEnabled()) ||
+          (body.scopes.includes("decisions") && !developerDecisionsEnabled())
         )
           throw new Error("developer_key_invalid");
         const keyId = crypto.randomUUID();
