@@ -363,9 +363,10 @@ function KovaGPT() {
   const [tempChatContext, setTempChatContext] = useState<TemporaryChatContext>("clean");
   const [tempChatStartOpen, setTempChatStartOpen] = useState(false);
   // Warm the conversation view so the first message of a long chat is already loaded.
+  // Signed-out visitors have no chats to open, so they skip it.
   useEffect(() => {
-    preloadConversationView();
-  }, []);
+    if (isLoaded && isSignedIn) preloadConversationView();
+  }, [isLoaded, isSignedIn]);
   const temporaryTriggerRef = useRef<HTMLElement | null>(null);
   const temporaryReturnUrlRef = useRef<string | undefined>(undefined);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
