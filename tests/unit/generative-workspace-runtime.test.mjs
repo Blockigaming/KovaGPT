@@ -31,6 +31,10 @@ function find(root, predicate) {
 }
 const route = parse("src/routes/index.tsx");
 const message = parse("src/components/ChatMessage.tsx");
+const focusedElement = find(
+  route,
+  (node) => ts.isVariableDeclaration(node) && node.name.getText(route) === "focusedElement",
+).initializer.getText(route);
 const openResult = find(
   route,
   (node) => ts.isVariableDeclaration(node) && node.name.getText(route) === "openResult",
@@ -65,6 +69,7 @@ const routeCanvasOpener = find(
 ).initializer.expression.getText(route);
 const compiled = ts.transpileModule(
   `
+const focusedElement = ${focusedElement};
 globalThis.bindOpenResult = (nextPromptScope) => (${openResult});
 globalThis.bindRouteCanvasOpener = () => (${routeCanvasOpener});
 globalThis.bindMessageCanvasOpener = (message, index, part) => (${widgetAttribute(message, "onOpenCanvas", "onOpenCanvas")});

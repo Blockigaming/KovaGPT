@@ -256,7 +256,14 @@ export function createTranscriptReadingAnchorController(
     compensationFrame =
       window?.requestAnimationFrame(() => {
         compensationFrame = null;
-        compensate();
+        if (!current()) return;
+        let changed = false;
+        for (const [target, previous] of sizes) {
+          const rect = target.getBoundingClientRect();
+          if (previous[0] !== rect.width || previous[1] !== rect.height) changed = true;
+          sizes.set(target, [rect.width, rect.height]);
+        }
+        if (changed) compensate();
       }) ?? null;
   };
   const layoutChanged = () => {
@@ -323,20 +330,7 @@ export function createTranscriptReadingAnchorController(
       queueCapture();
     }
   };
-  const observer = window?.ResizeObserver
-    ? new window.ResizeObserver((entries) => {
-        let changed = false;
-        for (const entry of entries) {
-          const rect = entry.target.getBoundingClientRect();
-          const previous = sizes.get(entry.target);
-          if (previous && (previous[0] !== rect.width || previous[1] !== rect.height))
-            changed = true;
-          sizes.set(entry.target, [rect.width, rect.height]);
-        }
-        // Scroll and style writes must not occur during ResizeObserver delivery.
-        if (changed) queueCompensation();
-      })
-    : null;
+  const observer = window?.ResizeObserver ? new window.ResizeObserver(queueCompensation) : null;
   const observe = (target: HTMLElement) => {
     if (sizes.has(target)) return;
     const rect = target.getBoundingClientRect();

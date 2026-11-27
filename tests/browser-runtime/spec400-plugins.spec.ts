@@ -682,13 +682,7 @@ test("new master entries show the correct native and OAuth setup requirements", 
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Back to Connections" }).click();
   await search.fill("HubSpot");
-  await page.getByRole("link", { name: "HubSpot", exact: true }).click();
-  await expect(
-    page.locator(".kova-connection-hero").getByText("Coming soon", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("article").getByRole("button", { name: "Connect", exact: true }),
-  ).toHaveCount(0);
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(0);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
@@ -893,8 +887,8 @@ test("all connectors have custom overviews and working permissions pages", async
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await detail.getByRole("button", { name: "Back to Connections" }).click();
   }
-  expect(descriptions.size).toBe(38);
-  expect(examples.size).toBe(38);
+  expect(descriptions.size).toBe(MASTER_CONNECTORS.length);
+  expect(examples.size).toBe(MASTER_CONNECTORS.length);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 

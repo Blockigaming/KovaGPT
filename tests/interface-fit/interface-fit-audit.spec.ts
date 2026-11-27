@@ -224,6 +224,7 @@ if (scope === "public") {
     // No legacy chats: background retries have no migration decision to show.
     // The pressed-control regression separately covers a pending migration.
     await fixture(page, "dark", true, false, "plus");
+    let requests = 0;
     let hold = false;
     let heldRequests = 0;
     let release!: () => void;
@@ -231,6 +232,7 @@ if (scope === "public") {
       release = resolve;
     });
     await page.route("**/api/chat/history**", async (route) => {
+      requests++;
       if (hold) {
         heldRequests++;
         await pending;
@@ -247,6 +249,9 @@ if (scope === "public") {
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const composer = page.locator(".spec400-composer").filter({ has: input });
     await expect(input).toBeEnabled();
+    // The first history request establishes that the hosted owner is initialized.
+    await expect.poll(() => requests, { timeout: 10_000 }).toBeGreaterThan(0);
+    await page.evaluate(() => document.fonts.ready);
     await expect(notice).toHaveCount(0);
     const beforeTop = (await composer.boundingBox())!.y;
     hold = true;
