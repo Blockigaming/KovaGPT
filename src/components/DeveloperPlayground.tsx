@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createDeveloperPlaygroundStream } from "@/lib/pricing/developer-playground-stream.mjs";
 import { parseDeveloperPlaygroundOptions } from "@/lib/pricing/developer-playground-options.mjs";
 
-type Operation = "responses" | "streaming" | "images" | "embeddings";
+type Operation = "responses" | "streaming" | "images" | "embeddings" | "moderations";
 type Model = {
   id: string;
   capability: string;
@@ -27,6 +27,7 @@ const capability: Record<Operation, string> = {
   streaming: "streaming",
   images: "image_generation",
   embeddings: "embeddings",
+  moderations: "moderation",
 };
 
 function record(value: unknown): Record<string, unknown> {
@@ -385,6 +386,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="streaming">Streaming responses</option>
               <option value="images">Image generation</option>
               <option value="embeddings">Embeddings</option>
+              <option value="moderations">Moderation</option>
             </select>
           </label>
           <label className="block space-y-1 text-sm">

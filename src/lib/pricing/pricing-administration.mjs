@@ -17,6 +17,7 @@ const meters = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   embedding_tokens: ["input_tokens"],
+  moderation_requests: ["moderation_requests"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
 export function canonicalPricingJson(value) {
@@ -205,7 +206,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         c.allowedQualities.some((x) => !["auto", "low", "medium", "high"].includes(x)))
     )
       fail("image_bounds_invalid");
-    const body = { model: c.upstreamModel, input: "" };
+    const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
     if (c.meter === "responses_search")
       Object.assign(body, {

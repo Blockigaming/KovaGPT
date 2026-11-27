@@ -201,6 +201,7 @@ import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
 import { Route as ApiV1FilesRouteImport } from './routes/api/v1/files'
 import { Route as ApiV1ImagesRouteImport } from './routes/api/v1/images'
 import { Route as ApiV1ModelsRouteImport } from './routes/api/v1/models'
+import { Route as ApiV1ModerationsRouteImport } from './routes/api/v1/moderations'
 import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
 import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
 import { Route as ApiV1UsageRouteImport } from './routes/api/v1/usage'
@@ -1222,6 +1223,11 @@ const ApiV1ModelsRoute = ApiV1ModelsRouteImport.update({
   path: '/api/v1/models',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1ModerationsRoute = ApiV1ModerationsRouteImport.update({
+  id: '/api/v1/moderations',
+  path: '/api/v1/moderations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1QuotesRoute = ApiV1QuotesRouteImport.update({
   id: '/api/v1/quotes',
   path: '/api/v1/quotes',
@@ -1621,6 +1627,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/moderations': typeof ApiV1ModerationsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
@@ -1853,6 +1860,7 @@ export interface FileRoutesByTo {
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/moderations': typeof ApiV1ModerationsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
@@ -2086,6 +2094,7 @@ export interface FileRoutesById {
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/moderations': typeof ApiV1ModerationsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
@@ -2320,6 +2329,7 @@ export interface FileRouteTypes {
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
+    | '/api/v1/moderations'
     | '/api/v1/quotes'
     | '/api/v1/responses'
     | '/api/v1/usage'
@@ -2552,6 +2562,7 @@ export interface FileRouteTypes {
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
+    | '/api/v1/moderations'
     | '/api/v1/quotes'
     | '/api/v1/responses'
     | '/api/v1/usage'
@@ -2784,6 +2795,7 @@ export interface FileRouteTypes {
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
+    | '/api/v1/moderations'
     | '/api/v1/quotes'
     | '/api/v1/responses'
     | '/api/v1/usage'
@@ -3007,6 +3019,7 @@ export interface RootRouteChildren {
   ApiV1FilesRoute: typeof ApiV1FilesRoute
   ApiV1ImagesRoute: typeof ApiV1ImagesRoute
   ApiV1ModelsRoute: typeof ApiV1ModelsRoute
+  ApiV1ModerationsRoute: typeof ApiV1ModerationsRoute
   ApiV1QuotesRoute: typeof ApiV1QuotesRoute
   ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
   ApiV1UsageRoute: typeof ApiV1UsageRoute
@@ -4391,6 +4404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/moderations': {
+      id: '/api/v1/moderations'
+      path: '/api/v1/moderations'
+      fullPath: '/api/v1/moderations'
+      preLoaderRoute: typeof ApiV1ModerationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/quotes': {
       id: '/api/v1/quotes'
       path: '/api/v1/quotes'
@@ -4966,6 +4986,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1FilesRoute: ApiV1FilesRoute,
   ApiV1ImagesRoute: ApiV1ImagesRoute,
   ApiV1ModelsRoute: ApiV1ModelsRoute,
+  ApiV1ModerationsRoute: ApiV1ModerationsRoute,
   ApiV1QuotesRoute: ApiV1QuotesRoute,
   ApiV1ResponsesRoute: ApiV1ResponsesRoute,
   ApiV1UsageRoute: ApiV1UsageRoute,

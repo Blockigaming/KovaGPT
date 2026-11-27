@@ -1,6 +1,7 @@
 import { quoteRequest, reconcileCharge, PricingUnavailableError } from "./cost-plus.mjs";
 import { developerInlineImage } from "./developer-responses-policy.mjs";
 import { developerSearchOptions } from "./developer-search-policy.mjs";
+import { validModerationRequest, validModerationResult } from "./developer-moderation-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -13,6 +14,7 @@ const dimensionsByMeter = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
   embedding_tokens: ["input_tokens"],
+  moderation_requests: ["moderation_requests"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
 
@@ -40,6 +42,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   if (!contract || !dimensionsByMeter[contract.meter] || !object(contract.maximumUsage))
     fail("billing_contract_missing");
   const dimensions = dimensionsByMeter[contract.meter];
+  const moderationMeter = contract.meter === "moderation_requests";
   const searchMeter = contract.meter === "responses_search";
   const responsesMeter = searchMeter || contract.meter === "responses_tokens";
   if (
@@ -63,8 +66,9 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   )
     fail("billing_model_identity_missing");
   if (
+    !moderationMeter &&
     new TextEncoder().encode(JSON.stringify(request.body)).byteLength >
-    contract.maximumUsage.input_tokens
+      contract.maximumUsage.input_tokens
   )
     fail("billing_input_bound_exceeded");
   if (
@@ -80,6 +84,14 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
+  if (
+    moderationMeter !== (request.capability === "moderation") ||
+    (moderationMeter &&
+      (request.provider !== "openai" ||
+        contract.maximumUsage.moderation_requests !== 1 ||
+        !validModerationRequest(request.body)))
+  )
+    fail("billing_moderation_contract_invalid");
   let search;
   try {
     search = developerSearchOptions(request.body);
@@ -285,8 +297,9 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
 
 export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   const response = value?.response ?? value;
-  if (!object(response?.usage) || (expectedModels && !expectedModels.includes(response.model)))
+  if (!object(response) || (expectedModels && !expectedModels.includes(response.model)))
     return null;
+  if (meter !== "moderation_requests" && !object(response.usage)) return null;
   const usage = response.usage;
   let dimensions;
   if (meter === "responses_tokens" || meter === "responses_search") {
@@ -320,6 +333,9 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
       }
       dimensions.web_search_calls = ids.size;
     }
+  } else if (meter === "moderation_requests") {
+    if (!validModerationResult(response)) return null;
+    dimensions = { moderation_requests: 1 };
   } else if (meter === "embedding_tokens") {
     if (!integer(usage.prompt_tokens)) return null;
     dimensions = { input_tokens: usage.prompt_tokens };
@@ -382,9 +398,10 @@ export function settleDeveloperQuote(prepared, actual) {
 }
 
 /** Retain accounting fields. Only the search meter temporarily collects bounded output metadata. */
-export function createUsageCollector(includeOutput = false) {
+export function createUsageCollector(includeOutput = false, includeResults = false) {
   const selected = new Set(["usage", "id", "status", "model"]);
   if (includeOutput) selected.add("output");
+  if (includeResults) selected.add("results");
   let depth = 0,
     inString = false,
     escaped = false,
@@ -529,7 +546,10 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
       response.headers.get("x-request-id") || response.headers.get("apim-request-id");
     const reader = response.body.getReader(),
       decoder = new TextDecoder(),
-      collector = createUsageCollector(prepared.contract.meter === "responses_search");
+      collector = createUsageCollector(
+        prepared.contract.meter === "responses_search",
+        prepared.contract.meter === "moderation_requests",
+      );
     const streaming = response.headers.get("content-type")?.includes("text/event-stream");
     let pending = "",
       overflow = false;

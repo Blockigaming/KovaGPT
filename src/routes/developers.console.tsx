@@ -53,6 +53,7 @@ const CSV_FIELDS = [
   "image_input_tokens",
   "output_tokens",
   "web_search_calls",
+  "moderation_requests",
   "final_customer_charge",
   "maximum_reserved_charge",
   "currency",
@@ -77,6 +78,7 @@ function downloadUsageCsv(rows: Row[], filename: string) {
 type ConsoleData = {
   enabled: boolean;
   workspaceV2?: boolean;
+  moderationEnabled?: boolean;
   consumerCreditSharing?: boolean;
   accounts: Row[];
   projects: Row[];
@@ -1218,7 +1220,9 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                 </div>
                 <fieldset>
                   <legend>New key capabilities</legend>
-                  {["chat", "streaming", "image_generation", "embeddings", "files"].map((scope) => (
+                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation"]
+                    .filter((scope) => scope !== "moderation" || data?.moderationEnabled)
+                    .map((scope) => (
                     <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
                       <input
                         type="checkbox"
@@ -1451,7 +1455,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                   className="block min-h-11 w-full min-w-0 rounded-full border border-input bg-background px-4 text-base md:text-sm"
                 >
                   <option value="">All services</option>
-                  {["chat", "streaming", "image_generation", "embeddings", "files"].map((item) => (
+                  {["chat", "streaming", "image_generation", "embeddings", "files", "moderation"].map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>

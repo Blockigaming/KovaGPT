@@ -11,6 +11,7 @@ export const DEVELOPER_SCOPES = Object.freeze([
   "streaming",
   "image_generation",
   "embeddings",
+  "moderation",
   "files",
 ]);
 export function developerUuid(value) {
@@ -64,7 +65,9 @@ export function parseDeveloperInput(kind, input) {
         ? ["prompt", "n", "size", "quality"]
         : kind === "embeddings"
           ? ["input", "dimensions"]
-          : fail("developer_operation_invalid");
+          : kind === "moderations"
+            ? ["input"]
+            : fail("developer_operation_invalid");
   if (Object.keys(input).some((key) => ![...common, ...fields].includes(key)))
     fail("developer_field_invalid");
   if (
@@ -110,6 +113,9 @@ export function parseDeveloperInput(kind, input) {
     body.size = input.size;
     body.quality = input.quality;
     capability = "image_generation";
+  } else if (kind === "moderations") {
+    body.input = text(input.input, 8000);
+    capability = "moderation";
   } else {
     body.input = Array.isArray(input.input)
       ? input.input.map((value) => text(value, 8000))

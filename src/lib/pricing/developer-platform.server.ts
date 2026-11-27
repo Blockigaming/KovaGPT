@@ -11,6 +11,7 @@ import { requireVerifiedUser } from "@/lib/api-auth.server";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import {
   developerResponses,
+  developerModerations,
   embeddings,
   imageGenerations,
   getAiProviderConfig,
@@ -79,6 +80,11 @@ export function developerFailure(error: unknown) {
               ? 429
               : 503,
   );
+}
+function developerModerationEnabled() {
+  if (runtimeEnv("KOVA_DEVELOPER_MODERATION_ENABLED") !== "true") return false;
+  const config = getAiProviderConfig("moderation");
+  return config.configured && config.capabilities.includes("moderation");
 }
 export function developerEnabled() {
   return (
@@ -180,6 +186,11 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   const version = await currentPricing(identity);
   const providerConfig = getAiProviderConfig(parsed.capability);
   const provider = providerConfig.provider;
+  if (
+    parsed.capability === "moderation" &&
+    (!developerModerationEnabled() || provider !== "openai")
+  )
+    throw new Error("developer_moderation_unavailable");
   if (
     parsed.body.max_tool_calls !== undefined &&
     (runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true" ||
@@ -299,7 +310,9 @@ export async function executeDeveloper(
           ? developerResponses
           : kind === "images"
             ? imageGenerations
-            : embeddings;
+            : kind === "moderations"
+              ? developerModerations
+              : embeddings;
       return call(parsed.body, { signal });
     },
   );
@@ -333,6 +346,7 @@ const publicUsage = (row: Record<string, unknown>) => {
     image_input_tokens: dimension("image_input_tokens"),
     output_tokens: dimension("output_tokens"),
     web_search_calls: dimension("web_search_calls"),
+    moderation_requests: dimension("moderation_requests"),
   };
 };
 async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {
@@ -388,6 +402,7 @@ export async function handleDeveloperApi(request: Request, operation: string) {
             .filter(
               (entry: { capability: string; provider: string }) =>
                 identity.capabilities.includes(entry.capability) &&
+                (entry.capability !== "moderation" || developerModerationEnabled()) &&
                 entry.provider ===
                   getAiProviderConfig(entry.capability as ProviderCapability).provider,
             )
@@ -512,6 +527,7 @@ export async function handleDeveloperConsole(request: Request) {
         return developerJson({
           enabled: developerEnabled(),
           workspaceV2,
+          moderationEnabled: developerModerationEnabled(),
           consumerCreditSharing,
           accounts: [],
           projects: [],
@@ -656,6 +672,7 @@ export async function handleDeveloperConsole(request: Request) {
       return developerJson({
         enabled: developerEnabled(),
         workspaceV2,
+        moderationEnabled: developerModerationEnabled(),
         consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,
@@ -750,7 +767,8 @@ export async function handleDeveloperConsole(request: Request) {
           !Array.isArray(body.scopes) ||
           !body.scopes.length ||
           body.scopes.length > DEVELOPER_SCOPES.length ||
-          body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value)))
+          body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value))) ||
+          (body.scopes.includes("moderation") && !developerModerationEnabled())
         )
           throw new Error("developer_key_invalid");
         const keyId = crypto.randomUUID();

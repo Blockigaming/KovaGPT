@@ -34,6 +34,7 @@ export type ProviderCapability =
   | "reasoning"
   | "tool_calls"
   | "web_search"
+  | "moderation"
   | "embeddings"
   | "image_generation"
   | "vision"
@@ -168,6 +169,13 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 }
 
 function providerTarget(capability?: ProviderCapability): ProviderTarget {
+  if (capability === "moderation") {
+    return {
+      provider: "openai",
+      baseUrl: OPENAI_API_BASE_URL,
+      auth: env("OPENAI_API_KEY") ? "openai_api_key" : "missing",
+    };
+  }
   // Explicit capability cutovers; embedding routing remains independent.
   const imageCapability = capability === "image_generation";
   const embeddingCapability = capability === "embeddings";
@@ -288,7 +296,7 @@ function parseTimeout(value: string | undefined): number {
 
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
-  const allowed = new Set<ProviderCapability>(DEFAULT_CAPABILITIES.concat("web_search"));
+  const allowed = new Set<ProviderCapability>(DEFAULT_CAPABILITIES.concat("web_search", "moderation"));
   const configured = value
     .split(",")
     .map((item) => item.trim())
@@ -1065,4 +1073,8 @@ export async function embeddings(body: JsonObject, init?: RequestInit): Promise<
   return bufferSuccessfulProviderResponse(
     await providerFetch("/embeddings", "embeddings", body, init),
   );
+}
+
+export async function developerModerations(body: JsonObject, init?: RequestInit): Promise<Response> {
+  return providerFetch("/moderations", "moderation", body, init);
 }
