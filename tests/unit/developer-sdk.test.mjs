@@ -258,3 +258,22 @@ test("SDK moderation uses the same exact signed quote and budget boundary", asyn
   assert.equal(f.calls[1].headers["Idempotency-Key"], options.idempotencyKey);
   assert.match(f.calls[1].headers["X-Kova-Quote"], /^e30\./);
 });
+
+test("image edit SDK requires an inline source and uses the quoted images contract", async () => {
+  const f = fixture();
+  const body = {
+    model: "kova-image",
+    prompt: "edit",
+    size: "1024x1024",
+    quality: "medium",
+    image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+  };
+  await assert.rejects(
+    f.client.images.edit({ ...body, image: undefined }, options),
+    /image_required/,
+  );
+  await f.client.images.edit(body, options);
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "images", input: body });
+  assert.deepEqual(JSON.parse(f.calls[1].body), body);
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/images");
+});

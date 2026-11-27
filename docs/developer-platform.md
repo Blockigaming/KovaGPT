@@ -63,3 +63,9 @@ Reference: https://developers.openai.com/api/reference/resources/moderations/met
 ## Filtered model discovery and SDK parity
 
 `GET /api/v1/models?id=<public-model>` returns the same catalog envelope as the list endpoint but contains only the matching alias's capability entries visible to the authenticating key. An unknown or out-of-scope alias returns the same 404. Invalid, duplicate and unknown query parameters are rejected. The JavaScript SDK now exposes this selector, the read-only usage list/detail operations, and quoted text moderation, with TypeScript declarations for reasoning and bounded hosted-search requests. These additions do not activate any provider or publish the private SDK package.
+
+## Bounded source-image editing (disabled pending qualification)
+
+`POST /api/v1/images` and the matching quote operation accept an optional `image` field containing one canonical inline PNG data URL, at most 32 KiB and 512 × 512. The prompt, output size, quality and count retain the existing generation bounds. With this field the server dispatches the existing multipart image-edit provider adapter; without it the generation contract is unchanged. Remote URLs, masks, provider-owned IDs and additional source images are rejected.
+
+Image editing requires the image-generation scope, `KOVA_DEVELOPER_IMAGE_EDITS_ENABLED=true`, an enabled image adapter and an approved OpenAI image-token contract with a positive reviewed `maximumImageEditInputTokens` no greater than its reserved image-input token ceiling. The actual multipart bytes are reconstructed into the canonical quote fingerprint before reservation and dispatch; a changed image cannot reuse the signed quote. Image input token receipts are required for settlement. The model catalog and Playground expose the source control only for an eligible contract. The JavaScript SDK offers `images.edit`. No provider pricing, payment or live activation is implied.

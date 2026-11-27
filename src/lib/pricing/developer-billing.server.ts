@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { pricingRegistryIds } from "./pricing-administration.mjs";
 import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
+import { bindDeveloperImageInput } from "./developer-image-edit-policy.mjs";
 import {
   prepareDeveloperQuote,
   runMeteredProvider,
@@ -123,13 +124,32 @@ export async function recoverDeveloperBilling(): Promise<number> {
 }
 
 export async function meterProviderRequest(
-  input: MeterRequest & { send: () => Promise<Response>; signal?: AbortSignal },
+  input: MeterRequest & {
+    send: () => Promise<Response>;
+    signal?: AbortSignal;
+    imageInputs?: {
+      image: { bytes: Uint8Array; contentType: string };
+      mask?: { bytes: Uint8Array; contentType: string };
+    };
+  },
 ): Promise<Response> {
   const current = context.getStore();
   // Consumer plan accounting remains owned by acquire/finalizeGeneration.
   if (!current) return input.send();
   if (runtimeEnv("KOVA_DEVELOPER_BILLING_ENABLED") !== "true")
     throw new Error("developer_billing_disabled");
+  if (input.imageInputs) {
+    if (
+      runtimeEnv("KOVA_DEVELOPER_IMAGE_EDITS_ENABLED") !== "true" ||
+      runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") === "false" ||
+      input.provider !== "openai" ||
+      input.capability !== "image_generation"
+    )
+      throw new Error("developer_image_edits_unavailable");
+    input = { ...input, body: bindDeveloperImageInput(input.body, input.imageInputs) };
+  } else if (input.body.image !== undefined || input.body.mask !== undefined) {
+    throw new Error("developer_image_invalid");
+  }
   if (
     input.body.max_tool_calls !== undefined &&
     runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true"

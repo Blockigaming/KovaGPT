@@ -536,3 +536,45 @@ test("moderation settles one validated response without inventing token usage", 
   await (await runMeteredProvider(unknown.options)).json();
   assert.equal(unknown.calls[0].outcome, "uncertain");
 });
+
+test("image editing reserves reviewed image token bounds without treating base64 as prompt tokens", () => {
+  const f = fixture();
+  const c = f.config.version.public_price_configuration.contracts[0];
+  Object.assign(c, {
+    provider: "openai",
+    capability: "image_generation",
+    meter: "image_tokens",
+    maximumUsage: { input_tokens: 120, image_input_tokens: 2000, output_tokens: 3000 },
+    maximumImageEditInputTokens: 2000,
+    maximumImages: 1,
+    allowedSizes: ["1024x1024"],
+    allowedQualities: ["medium"],
+  });
+  f.config.registry = ["input_tokens", "image_input_tokens", "output_tokens"].map((dimension) => ({
+    ...f.config.registry[0],
+    provider: "openai",
+    billing_dimension: dimension,
+  }));
+  f.request = {
+    provider: "openai",
+    capability: "image_generation",
+    body: {
+      model: c.upstreamModel,
+      prompt: "edit",
+      n: 1,
+      size: "1024x1024",
+      quality: "medium",
+      image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+    },
+  };
+  const quote = () => prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  assert.equal(quote().imageEdit, true);
+  assert.equal(quote().options.usage.dimensions.image_input_tokens, 2000);
+  delete c.maximumImageEditInputTokens;
+  assert.throws(quote, /image_edit_contract_invalid/);
+  c.maximumImageEditInputTokens = 2001;
+  assert.throws(quote, /image_edit_contract_invalid/);
+  c.maximumImageEditInputTokens = 2000;
+  f.request.body.image = "https://example.invalid/image.png";
+  assert.throws(quote, /image_edit_contract_invalid/);
+});

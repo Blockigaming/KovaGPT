@@ -63,6 +63,7 @@ export interface DeveloperModel {
   reasoning_efforts: string[];
   web_search: boolean;
   inline_image_input: boolean;
+  image_edits: boolean;
 }
 export interface DeveloperUsage {
   id: string;
@@ -116,7 +117,10 @@ export class KovaGPT {
     timeoutMs?: number;
   });
   readonly responses: { create(input: ResponsesInput, options: Budget): Promise<Response> };
-  readonly images: { generate(input: ImagesInput, options: Budget): Promise<Response> };
+  readonly images: {
+    generate(input: ImagesInput, options: Budget): Promise<Response>;
+    edit(input: ImagesInput & { image: string }, options: Budget): Promise<Response>;
+  };
   readonly embeddings: { create(input: EmbeddingsInput, options: Budget): Promise<Response> };
   readonly moderations: { create(input: ModerationsInput, options: Budget): Promise<Response> };
   readonly usage: {
@@ -140,17 +144,17 @@ export class KovaGPT {
   }>;
   quote(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | EmbeddingsInput | ModerationsInput,
+    input: ResponsesInput | ImagesInput | (ImagesInput & { image: string }) | EmbeddingsInput | ModerationsInput,
     options?: { signal?: AbortSignal },
   ): Promise<Quote>;
   execute(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | EmbeddingsInput | ModerationsInput,
+    input: ResponsesInput | ImagesInput | (ImagesInput & { image: string }) | EmbeddingsInput | ModerationsInput,
     options: Budget & { quote: Quote },
   ): Promise<Response>;
   run(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | EmbeddingsInput | ModerationsInput,
+    input: ResponsesInput | ImagesInput | (ImagesInput & { image: string }) | EmbeddingsInput | ModerationsInput,
     options: Budget,
   ): Promise<Response>;
 }

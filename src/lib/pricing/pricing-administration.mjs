@@ -180,6 +180,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "allowedQualities",
         "allowedReasoningEfforts",
         "maximumInlineImageTokens",
+        "maximumImageEditInputTokens",
         "maximumWebSearchInputTokens",
         "searchContentAccounting",
       ]) ||

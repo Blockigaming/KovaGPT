@@ -2,6 +2,7 @@ import {
   developerResponseInput,
   developerResponseFeatures,
 } from "./developer-responses-policy.mjs";
+import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = (code) => {
   throw new Error(code);
@@ -62,7 +63,7 @@ export function parseDeveloperInput(kind, input) {
           "text",
         ]
       : kind === "images"
-        ? ["prompt", "n", "size", "quality"]
+        ? ["prompt", "n", "size", "quality", "image"]
         : kind === "embeddings"
           ? ["input", "dimensions"]
           : kind === "moderations"
@@ -112,6 +113,7 @@ export function parseDeveloperInput(kind, input) {
     if (!["low", "medium", "high"].includes(input.quality)) fail("developer_quality_invalid");
     body.size = input.size;
     body.quality = input.quality;
+    if (input.image !== undefined) body.image = developerImageEditValue(input.image);
     capability = "image_generation";
   } else if (kind === "moderations") {
     body.input = text(input.input, 8000);

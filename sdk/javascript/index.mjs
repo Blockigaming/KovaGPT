@@ -113,6 +113,11 @@ export class KovaGPT {
     });
     this.images = Object.freeze({
       generate: (input, options) => this.run("images", input, options),
+      edit: (input, options) => {
+        if (typeof input?.image !== "string" || !input.image.startsWith("data:image/png;base64,"))
+          return Promise.reject(new KovaError("image_required"));
+        return this.run("images", input, options);
+      },
     });
     this.embeddings = Object.freeze({
       create: (input, options) => this.run("embeddings", input, options),

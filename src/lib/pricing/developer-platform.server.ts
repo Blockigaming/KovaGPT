@@ -14,6 +14,7 @@ import {
   developerModerations,
   embeddings,
   imageGenerations,
+  imageEdits,
   getAiProviderConfig,
   providerModelId,
   type ProviderCapability,
@@ -24,6 +25,7 @@ import { pricingRegistryIds } from "./pricing-administration.mjs";
 import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
 import { summarizeDeveloperUsage } from "./developer-usage-summary.mjs";
 import { developerFileReferences } from "./developer-file-policy.mjs";
+import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
 import { loadDeveloperFileContent } from "./developer-file-content.server";
 import {
   DEVELOPER_SCOPES,
@@ -187,6 +189,13 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   const providerConfig = getAiProviderConfig(parsed.capability);
   const provider = providerConfig.provider;
   if (
+    parsed.body.image !== undefined &&
+    (runtimeEnv("KOVA_DEVELOPER_IMAGE_EDITS_ENABLED") !== "true" ||
+      runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") === "false" ||
+      provider !== "openai")
+  )
+    throw new Error("developer_image_edits_unavailable");
+  if (
     parsed.capability === "moderation" &&
     (!developerModerationEnabled() || provider !== "openai")
   )
@@ -305,6 +314,14 @@ export async function executeDeveloper(
       fileBindings: parsed.fileBindings,
     },
     () => {
+      if (kind === "images" && parsed.body.image !== undefined) {
+        const { image, ...body } = parsed.body;
+        return imageEdits(
+          body,
+          { image: { bytes: developerImageEditBytes(image), contentType: "image/png" } },
+          { signal },
+        );
+      }
       const call =
         kind === "responses"
           ? developerResponses
@@ -438,6 +455,7 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             capability: string;
             allowedReasoningEfforts?: string[];
             maximumInlineImageTokens?: number;
+            maximumImageEditInputTokens?: number;
             meter?: string;
             provider: string;
           }) => ({
@@ -452,6 +470,13 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             inline_image_input:
               Number.isSafeInteger(entry.maximumInlineImageTokens) &&
               Number(entry.maximumInlineImageTokens) > 0,
+            image_edits:
+              entry.capability === "image_generation" &&
+              entry.provider === "openai" &&
+              Number.isSafeInteger(entry.maximumImageEditInputTokens) &&
+              Number(entry.maximumImageEditInputTokens) > 0 &&
+              runtimeEnv("KOVA_DEVELOPER_IMAGE_EDITS_ENABLED") === "true" &&
+              runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") !== "false",
           }),
         )
     : [];

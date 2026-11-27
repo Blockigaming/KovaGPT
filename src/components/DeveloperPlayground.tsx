@@ -11,6 +11,7 @@ type Model = {
   capability: string;
   reasoningEfforts: string[];
   inlineImageInput: boolean;
+  imageEdits: boolean;
 };
 type Quote = {
   quoteToken: string;
@@ -159,6 +160,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                     id: row.id,
                     capability: row.capability,
                     inlineImageInput: row.inline_image_input === true,
+                    imageEdits: row.image_edits === true,
                     reasoningEfforts: Array.isArray(row.reasoning_efforts)
                       ? row.reasoning_efforts.filter(
                           (effort): effort is string =>
@@ -182,17 +184,20 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const efforts = selectedModel?.reasoningEfforts ?? [];
   const textOperation = operation === "responses" || operation === "streaming";
   const acceptsImage = textOperation && selectedModel?.inlineImageInput === true;
+  const acceptsEdit = operation === "images" && selectedModel?.imageEdits === true;
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
       const extra = textOperation ? parseDeveloperPlaygroundOptions(advanced) : {};
       let responseInput: string | Record<string, unknown>[] = prompt;
-      if (acceptsImage && imageFile) {
+      let sourceImage: string | undefined;
+      if ((acceptsImage || acceptsEdit) && imageFile) {
         if (imageFile.type !== "image/png" || imageFile.size < 1 || imageFile.size > 32768)
           throw new Error("Select a PNG image of up to 32 KiB.");
         const bytes = new Uint8Array(await imageFile.arrayBuffer());
         const dataUrl = "data:image/png;base64," + btoa(String.fromCharCode(...bytes));
-        responseInput = [
+        if (acceptsEdit) sourceImage = dataUrl;
+        else responseInput = [
           {
             role: "user",
             content: [
@@ -212,7 +217,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             ...(effort && efforts.includes(effort) ? { reasoning: { effort } } : {}),
           }
         : operation === "images"
-          ? { model, prompt, size, quality, n: 1 }
+          ? { model, prompt, size, quality, n: 1, ...(sourceImage ? { image: sourceImage } : {}) }
           : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
@@ -384,7 +389,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             >
               <option value="responses">Text responses</option>
               <option value="streaming">Streaming responses</option>
-              <option value="images">Image generation</option>
+              <option value="images">Images</option>
               <option value="embeddings">Embeddings</option>
               <option value="moderations">Moderation</option>
             </select>
@@ -467,9 +472,12 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               </p>
             </details>
           )}
-          {acceptsImage && (
+          {(acceptsImage || acceptsEdit) && (
             <label className="block min-w-0 space-y-1 text-sm">
-              <span>Image (optional, PNG up to 32 KiB and 512 × 512)</span>
+              <span>
+                {acceptsEdit ? "Source image for editing" : "Image input"} (optional, PNG up to 32 KiB
+                and 512 × 512)
+              </span>
               <Input
                 ref={imageInput}
                 type="file"

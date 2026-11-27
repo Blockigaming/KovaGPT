@@ -658,6 +658,7 @@ async function providerFetch(
       provider: target.provider,
       capability,
       body: requestBody,
+      ...(images ? { imageInputs: images } : {}),
       signal: deadline.signal,
       send: () =>
         fetchWithDeadline(

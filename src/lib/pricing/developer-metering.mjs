@@ -1,5 +1,6 @@
 import { quoteRequest, reconcileCharge, PricingUnavailableError } from "./cost-plus.mjs";
 import { developerInlineImage } from "./developer-responses-policy.mjs";
+import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
 import { developerSearchOptions } from "./developer-search-policy.mjs";
 import { validModerationRequest, validModerationResult } from "./developer-moderation-policy.mjs";
 
@@ -41,6 +42,26 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     );
   if (!contract || !dimensionsByMeter[contract.meter] || !object(contract.maximumUsage))
     fail("billing_contract_missing");
+  const imageEdit = request.body.image !== undefined;
+  const editTokens = contract.maximumImageEditInputTokens;
+  if (
+    request.body.mask !== undefined ||
+    (editTokens !== undefined &&
+      (contract.meter !== "image_tokens" ||
+        request.provider !== "openai" ||
+        !integer(editTokens) ||
+        editTokens < 1 ||
+        editTokens > contract.maximumUsage.image_input_tokens)) ||
+    (imageEdit && !editTokens)
+  )
+    fail("billing_image_edit_contract_invalid");
+  if (imageEdit) {
+    try {
+      developerImageEditValue(request.body.image);
+    } catch {
+      fail("billing_image_edit_contract_invalid");
+    }
+  }
   const dimensions = dimensionsByMeter[contract.meter];
   const moderationMeter = contract.meter === "moderation_requests";
   const searchMeter = contract.meter === "responses_search";
@@ -65,10 +86,11 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       ))
   )
     fail("billing_model_identity_missing");
+  const textBody = { ...request.body };
+  if (imageEdit) delete textBody.image;
   if (
     !moderationMeter &&
-    new TextEncoder().encode(JSON.stringify(request.body)).byteLength >
-      contract.maximumUsage.input_tokens
+    new TextEncoder().encode(JSON.stringify(textBody)).byteLength > contract.maximumUsage.input_tokens
   )
     fail("billing_input_bound_exceeded");
   if (
@@ -292,6 +314,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     quote: { ...quote, acceptedPricing: { ...options, at: at.toISOString() } },
     options,
     contract,
+    imageEdit,
   };
 }
 
@@ -602,6 +625,7 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
         prepared.contract.meter === "responses_search" &&
         prepared.options.usage.dimensions.web_search_calls > 0;
       if (requestedSearch && actual?.dimensions.web_search_calls === 0) actual = null;
+      if (prepared.imageEdit && actual?.dimensions.image_input_tokens === 0) actual = null;
       if (actual) await finalize("settled", settleDeveloperQuote(prepared, actual));
       else await finalize("uncertain");
     };
