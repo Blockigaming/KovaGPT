@@ -19,7 +19,7 @@ create table public.developer_batch_items_v1 (
   batch_id uuid not null,
   id uuid not null,
   ordinal integer not null check(ordinal between 1 and 8),
-  operation_kind text not null default 'chat/completions' check(operation_kind in ('chat/completions','agent-turns')),
+  operation_kind text not null default 'chat/completions' check(operation_kind in ('chat/completions','agent-turns','responses','moderations','embeddings','decisions')),
   run_at timestamptz,
   input jsonb not null check(jsonb_typeof(input)='object' and octet_length(input::text)<=16384),
   authorization text not null check(length(authorization) between 1 and 2048),
@@ -122,7 +122,7 @@ begin
       if coalesce(j->>'id','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
         or coalesce(j->>'maximum_ticks','') !~ '^[1-9][0-9]{0,14}$'
         or jsonb_typeof(j->'maximum_ticks') is distinct from 'number'
-        or coalesce(j->>'operation_kind','chat/completions') not in ('chat/completions','agent-turns')
+        or coalesce(j->>'operation_kind','chat/completions') not in ('chat/completions','agent-turns','responses','moderations','embeddings','decisions')
         or coalesce(j->>'request_group','') !~ '^[a-f0-9]{64}$'
         or length(coalesce(j->>'authorization','')) not between 1 and 2048
         or jsonb_typeof(j->'input') is distinct from 'object'

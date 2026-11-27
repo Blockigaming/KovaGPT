@@ -49,3 +49,7 @@ Use `verify_webhook_signature(secret=secret, event_id=event_id, timestamp=timest
 ### Multipart file upload
 
 The same `POST /api/v1/files` route also accepts `multipart/form-data` containing exactly one `file` part. Send the scoped bearer key and a stable `Idempotency-Key` header. Supported UTF-8 text formats are TXT, Markdown, CSV and JSON, with the corresponding MIME type and a maximum of 32 KiB of file content. The multipart envelope is limited to 64 KiB. The existing file activation flag, project ownership, storage quotas and retention still apply. This is a single-request upload, not resumable chunk assembly.
+
+### Batch and scheduled invocations
+
+Batch items can explicitly select `chat/completions`, `agent-turns`, `responses`, `moderations`, `embeddings` or `decisions`. Each item needs a quote for its exact operation and input. Direct Responses items are non-streaming text requests with at most 2,048 output tokens and no hosted tools or file references. Embedding items require an explicit dimension of 1–1,024 and at most two inputs to bound stored results. Batch and automation access still requires the chat scope as well as the relevant operation scope, approved pricing, runtime activation and replay of the staged schema. Image and interactive tool operations are not batch-supported.

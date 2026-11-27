@@ -51,7 +51,12 @@ import {
   parseDeveloperAgentTurn,
 } from "./developer-agent-policy.mjs";
 import { expandDeveloperSkills, parseDeveloperSkillRequest } from "./developer-skill-policy.mjs";
-import { batchChargeTicks, developerBatchRequestKey } from "./developer-batch-policy.mjs";
+import {
+  batchChargeTicks,
+  developerBatchCapability,
+  developerBatchRequestKey,
+  type BatchOperation,
+} from "./developer-batch-policy.mjs";
 import {
   loadDeveloperFileContent,
   readDeveloperFileRecords,
@@ -693,7 +698,7 @@ export async function executeDeveloper(
 }
 
 type BatchAuthorization = {
-  operation: "chat/completions" | "agent-turns";
+  operation: BatchOperation;
   agentBinding: unknown;
   skillBinding: string | null;
   runAt: number | null;
@@ -712,7 +717,7 @@ export async function authorizeDeveloperBatchItem(
   batch: string,
   item: {
     id: string;
-    operation: "chat/completions" | "agent-turns";
+    operation: BatchOperation;
     input: Record<string, unknown>;
     quote_token: string;
     run_at?: string;
@@ -724,9 +729,10 @@ export async function authorizeDeveloperBatchItem(
   const parsed = await preparePublicRequest(identity, item.operation, item.input);
   checkDeveloperQuote(quote, item.operation, parsed);
   if (
-    parsed.body.stream !== false ||
-    parsed.capability !== "chat" ||
-    Number(parsed.body.max_output_tokens) > 2048 ||
+    parsed.capability !== developerBatchCapability(item.operation) ||
+    (parsed.capability === "chat" &&
+      (parsed.body.stream !== false || Number(parsed.body.max_output_tokens) > 2048)) ||
+    parsed.fileBindings.length !== 0 ||
     currency !== parsed.version.currency ||
     !Number.isSafeInteger(expiresAt) ||
     expiresAt <= Date.now() ||
@@ -788,8 +794,8 @@ export async function executeAuthorizedBatchItem(
   const authorization = JSON.parse(
     Buffer.from(payload, "base64url").toString("utf8"),
   ) as BatchAuthorization;
+  developerBatchCapability(operation);
   if (
-    !["chat/completions", "agent-turns"].includes(operation) ||
     authorization.operation !== operation ||
     authorization.batch !== batch ||
     authorization.item !== item ||

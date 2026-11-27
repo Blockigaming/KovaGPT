@@ -4,6 +4,7 @@ import {
   assertBatchBudget,
   batchBudgetTicks,
   batchChargeTicks,
+  developerBatchCapability,
   developerBatchRequestKey,
   parseDeveloperBatchRequest,
 } from "../../src/lib/pricing/developer-batch-policy.mjs";
@@ -132,5 +133,58 @@ test("mixed agent batches preserve explicit operation, definition and skill vers
         items: [{ ...invocation, input: { ...invocation.input, version: 0 } }],
       }),
     /agent_invalid/,
+  );
+});
+
+test("batch items accept bounded Responses, moderation, embeddings and decisions", () => {
+  const direct = [
+    ["responses", { model: "kova-fast", input: "Hello", max_output_tokens: 20 }, "chat"],
+    ["moderations", { model: "kova-moderation", input: "Hello" }, "moderation"],
+    ["embeddings", { model: "kova-embedding", input: ["A", "B"], dimensions: 128 }, "embeddings"],
+    [
+      "decisions",
+      {
+        model: "kova-decisions",
+        input: "The result is positive.",
+        questions: [{ type: "predicate", name: "positive", instructions: "Is it positive?" }],
+      },
+      "decisions",
+    ],
+  ];
+  for (const [operation, input, capability] of direct) {
+    const invocation = { ...request.items[0], operation, input };
+    const result = parse("POST", "", { ...request, items: [invocation] });
+    assert.equal(developerBatchCapability(operation), capability);
+    assert.deepEqual(result.input.items[0], invocation);
+  }
+  for (const operation of ["browser", "images", "constructor", "__proto__"])
+    assert.throws(() => developerBatchCapability(operation), /batch_invalid/);
+});
+
+test("batch direct operations reject streaming, hosted tools and unbounded vector outputs", () => {
+  const response = { model: "kova-fast", input: "Hello", max_output_tokens: 20 };
+  const vector = { model: "kova-embedding", input: "A", dimensions: 128 };
+  const submit = (operation, input) =>
+    parse("POST", "", {
+      ...request,
+      items: [{ ...request.items[0], operation, input }],
+    });
+  for (const patch of [
+    { stream: true },
+    { max_output_tokens: 2049 },
+    { file_ids: [id] },
+    { tools: [] },
+    { input: [{ role: "user", content: "Hello" }] },
+  ])
+    assert.throws(() => submit("responses", { ...response, ...patch }), /batch_invalid/);
+  for (const patch of [
+    { dimensions: 1025 },
+    { dimensions: undefined },
+    { input: ["A", "B", "C"] },
+  ])
+    assert.throws(() => submit("embeddings", { ...vector, ...patch }), /batch_invalid/);
+  assert.throws(
+    () => submit("moderations", { model: "kova-moderation", input: "A", project_id: id }),
+    /batch_invalid/,
   );
 });

@@ -1,6 +1,13 @@
+export type BatchOperation =
+  | "chat/completions"
+  | "agent-turns"
+  | "responses"
+  | "moderations"
+  | "embeddings"
+  | "decisions";
 export type BatchItem = {
   id: string;
-  operation: "chat/completions" | "agent-turns";
+  operation: BatchOperation;
   input: Record<string, unknown>;
   quote_token: string;
   run_at?: string;
@@ -20,6 +27,9 @@ export function parseDeveloperBatchRequest(
   resourceKind?: "batch" | "automation",
   now?: number,
 ): BatchRequest;
+export function developerBatchCapability(
+  operation: unknown,
+): "chat" | "moderation" | "embeddings" | "decisions";
 export function batchChargeTicks(value: unknown): number;
 export function batchBudgetTicks(value: unknown): number;
 export function assertBatchBudget(maximumTicks: number, itemTicks: number[]): void;

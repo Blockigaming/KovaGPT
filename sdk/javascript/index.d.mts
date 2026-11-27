@@ -119,6 +119,16 @@ export type BatchInvocation = {
       };
     }
   | { operation: "agent-turns"; input: AgentTurnInput }
+  | {
+      operation: "responses";
+      input: Pick<ResponsesInput, "model" | "max_output_tokens" | "instructions" | "reasoning"> & {
+        input: string;
+        stream?: false;
+      };
+    }
+  | { operation: "moderations"; input: ModerationsInput }
+  | { operation: "embeddings"; input: EmbeddingsInput & { dimensions: number } }
+  | { operation: "decisions"; input: DecisionInput }
 );
 export interface AgentDefinition {
   name: string;

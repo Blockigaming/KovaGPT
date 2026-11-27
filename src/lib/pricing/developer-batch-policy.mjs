@@ -1,4 +1,5 @@
 import { parseDeveloperAgentTurn } from "./developer-agent-policy.mjs";
+import { parseDeveloperInput } from "./developer-platform-policy.mjs";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = () => {
@@ -40,6 +41,46 @@ export function batchBudgetTicks(value) {
   if (ticks < rounded || rounded < 1) fail();
   return rounded;
 }
+const batchCapabilities = Object.freeze({
+  "chat/completions": "chat",
+  "agent-turns": "chat",
+  responses: "chat",
+  moderations: "moderation",
+  embeddings: "embeddings",
+  decisions: "decisions",
+});
+export function developerBatchCapability(operation) {
+  if (typeof operation !== "string" || !Object.hasOwn(batchCapabilities, operation)) fail();
+  return batchCapabilities[operation];
+}
+function directInput(operation, value) {
+  if (operation === "responses") {
+    exact(value, ["model", "input", "max_output_tokens"], ["instructions", "stream", "reasoning"]);
+    if (
+      typeof value.input !== "string" ||
+      value.max_output_tokens > 2048 ||
+      (value.stream !== undefined && value.stream !== false)
+    )
+      fail();
+  } else if (operation === "embeddings") {
+    exact(value, ["model", "input", "dimensions"]);
+    if (
+      !Number.isSafeInteger(value.dimensions) ||
+      value.dimensions < 1 ||
+      value.dimensions > 1024 ||
+      (Array.isArray(value.input) && value.input.length > 2)
+    )
+      fail();
+  } else if (operation === "moderations") {
+    exact(value, ["model", "input"]);
+  } else if (operation === "decisions") {
+    exact(value, ["model", "input", "questions"]);
+  } else fail();
+  const parsed = parseDeveloperInput(operation, value);
+  if (parsed.capability !== developerBatchCapability(operation)) fail();
+  return value;
+}
+
 function chatInput(value) {
   exact(value, ["model", "messages", "max_completion_tokens"], ["stream", "reasoning_effort"]);
   if (
@@ -106,7 +147,7 @@ export function parseDeveloperBatchRequest(
     const items = body.items.map((item) => {
       exact(item, ["id", "input", "quote_token", ...(scheduled ? ["run_at"] : [])], ["operation"]);
       const operation = item.operation ?? "chat/completions";
-      if (!["chat/completions", "agent-turns"].includes(operation)) fail();
+      developerBatchCapability(operation);
       if (
         typeof item.quote_token !== "string" ||
         item.quote_token.length > 2048 ||
@@ -125,7 +166,11 @@ export function parseDeveloperBatchRequest(
           fail();
       }
       const input =
-        operation === "agent-turns" ? parseDeveloperAgentTurn(item.input) : chatInput(item.input);
+        operation === "agent-turns"
+          ? parseDeveloperAgentTurn(item.input)
+          : operation === "chat/completions"
+            ? chatInput(item.input)
+            : directInput(operation, item.input);
       if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 12288) fail();
       return {
         id: id(item.id),
