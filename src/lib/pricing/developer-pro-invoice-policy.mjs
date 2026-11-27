@@ -1,6 +1,6 @@
 export function normalizeDeveloperProInvoice(event, environment) {
-  if (environment !== "live" || event?.livemode !== true || event.type !== "invoice.paid")
-    return null;
+  if (environment !== "live" || event?.livemode !== true) return null;
+  if (event.type !== "invoice.paid") return null;
   const invoice = event.data?.object;
   const id = (value, prefix) => {
     const candidate = typeof value === "string" ? value : value?.id;

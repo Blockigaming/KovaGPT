@@ -67,8 +67,9 @@ test("nonpaid, truncated, prorated and mismatched invoices fail closed", () => {
     (event) => (event.data.object.amount_paid = 0),
     (event) => (event.data.object.lines.has_more = true),
     (event) => (event.data.object.lines.data[0].parent.subscription_item_details.proration = true),
-    (event) =>
-      (event.data.object.lines.data[0].parent.subscription_item_details.subscription = "sub_other"),
+    (event) => {
+      event.data.object.lines.data[0].parent.subscription_item_details.subscription = "sub_other";
+    },
     (event) => (event.data.object.lines.data[0].period.end = start + 60 * 86400),
     (event) => (event.data.object.status_transitions.paid_at = start + 200),
     (event) => event.data.object.lines.data.push(event.data.object.lines.data[0]),

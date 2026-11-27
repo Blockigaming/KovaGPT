@@ -216,9 +216,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
-      const result = record(
-        await request("quotes", controller, JSON.stringify({ operation: apiOperation, input })),
-      );
+      const quoteBody = JSON.stringify({ operation: apiOperation, input });
+      const result = record(await request("quotes", controller, quoteBody));
       if (
         typeof result.quoteToken !== "string" ||
         typeof result.currency !== "string" ||
@@ -258,10 +257,12 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         "Idempotency-Key": accepted.requestKey,
       };
       if (accepted.operation === "streaming") {
-        const response = await fetchRequest("streaming", controller, accepted.requestBody, headers);
+        const body = accepted.requestBody;
+        const response = await fetchRequest("streaming", controller, body, headers);
         const isStream = response.headers.get("content-type")?.includes("text/event-stream");
-        if (!response.body || !isStream)
+        if (!response.body || !isStream) {
           throw new Error("Expected a response stream. Check Logs before retrying.");
+        }
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8", { fatal: true });
         const parser = createDeveloperPlaygroundStream();
@@ -444,9 +445,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           )}
           {textOperation && (
             <details className="min-w-0 space-y-2">
-              <summary className="cursor-pointer text-sm font-medium">
-                Advanced request options
-              </summary>
+              <summary className="cursor-pointer text-sm">Advanced request options</summary>
               <label className="block space-y-1 text-sm">
                 <span>Additional Responses JSON</span>
                 <Textarea
@@ -463,8 +462,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 />
               </label>
               <p className="text-xs text-muted-foreground">
-                Set instructions, structured output, function definitions or project file IDs.
-                Functions are returned for your client to execute, not run by this playground.
+                Set instructions, schemas, functions and file IDs. Your client runs functions.
               </p>
             </details>
           )}
