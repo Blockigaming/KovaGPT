@@ -199,6 +199,7 @@ import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/l
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
 import { Route as ApiV1AgentTurnsRouteImport } from './routes/api/v1/agent-turns'
 import { Route as ApiV1AgentsRouteImport } from './routes/api/v1/agents'
+import { Route as ApiV1AutomationsRouteImport } from './routes/api/v1/automations'
 import { Route as ApiV1BatchesRouteImport } from './routes/api/v1/batches'
 import { Route as ApiV1ConversationsRouteImport } from './routes/api/v1/conversations'
 import { Route as ApiV1DecisionsRouteImport } from './routes/api/v1/decisions'
@@ -1224,6 +1225,11 @@ const ApiV1AgentsRoute = ApiV1AgentsRouteImport.update({
   path: '/api/v1/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1AutomationsRoute = ApiV1AutomationsRouteImport.update({
+  id: '/api/v1/automations',
+  path: '/api/v1/automations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1BatchesRoute = ApiV1BatchesRouteImport.update({
   id: '/api/v1/batches',
   path: '/api/v1/batches',
@@ -1691,6 +1697,7 @@ export interface FileRoutesByFullPath {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
@@ -1935,6 +1942,7 @@ export interface FileRoutesByTo {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
@@ -2180,6 +2188,7 @@ export interface FileRoutesById {
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
   '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
   '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
@@ -2426,6 +2435,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/automations'
     | '/api/v1/batches'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
@@ -2670,6 +2680,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/automations'
     | '/api/v1/batches'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
@@ -2914,6 +2925,7 @@ export interface FileRouteTypes {
     | '/api/tasks/event-sources'
     | '/api/v1/agent-turns'
     | '/api/v1/agents'
+    | '/api/v1/automations'
     | '/api/v1/batches'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
@@ -3149,6 +3161,7 @@ export interface RootRouteChildren {
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
   ApiV1AgentTurnsRoute: typeof ApiV1AgentTurnsRoute
   ApiV1AgentsRoute: typeof ApiV1AgentsRoute
+  ApiV1AutomationsRoute: typeof ApiV1AutomationsRoute
   ApiV1BatchesRoute: typeof ApiV1BatchesRoute
   ApiV1ConversationsRoute: typeof ApiV1ConversationsRoute
   ApiV1DecisionsRoute: typeof ApiV1DecisionsRoute
@@ -4533,6 +4546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/automations': {
+      id: '/api/v1/automations'
+      path: '/api/v1/automations'
+      fullPath: '/api/v1/automations'
+      preLoaderRoute: typeof ApiV1AutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/batches': {
       id: '/api/v1/batches'
       path: '/api/v1/batches'
@@ -5204,6 +5224,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
   ApiV1AgentTurnsRoute: ApiV1AgentTurnsRoute,
   ApiV1AgentsRoute: ApiV1AgentsRoute,
+  ApiV1AutomationsRoute: ApiV1AutomationsRoute,
   ApiV1BatchesRoute: ApiV1BatchesRoute,
   ApiV1ConversationsRoute: ApiV1ConversationsRoute,
   ApiV1DecisionsRoute: ApiV1DecisionsRoute,

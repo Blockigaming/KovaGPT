@@ -229,6 +229,35 @@ export class KovaGPT {
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;
   };
+  readonly automations: {
+    create(
+      input: {
+        id: string;
+        currency: string;
+        maximum_charge: number;
+        items: {
+          id: string;
+          input: Omit<ChatCompletionInput, "max_tokens" | "max_completion_tokens" | "stream"> & {
+            max_completion_tokens: number;
+            stream?: false;
+          };
+          quote_token: string;
+          run_at: string;
+        }[];
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    cancel(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    pause(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    resume(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieveItem(
+      id: string,
+      item: string,
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+  };
   readonly conversations: {
     create(
       input: { id: string; title: string },

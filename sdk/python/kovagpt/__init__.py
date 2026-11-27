@@ -428,6 +428,43 @@ class Client:
         _require(item_id is not None, "batch_id_invalid")
         return self._request(self._batch_path(batch_id, item_id), method="GET").json(262144)
 
+    @staticmethod
+    def _automation_path(automation_id, item_id=None):
+        path = "automations?id=" + _identifier(automation_id, _UUID, "automation_id_invalid")
+        if item_id is not None:
+            path += "&item_id=" + _identifier(item_id, _UUID, "automation_id_invalid")
+        return path
+
+    def automation_create(self, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("automations", method="POST",
+                             body=_json_body({**data, "operation": "create"})).json(65536)
+
+    def automation_cancel(self, automation_id):
+        automation_id = _identifier(automation_id, _UUID, "automation_id_invalid")
+        return self._request("automations", method="POST",
+                             body=_json_body({"operation": "cancel", "id": automation_id})).json(65536)
+
+    def automation_list(self):
+        return self._get("automations")
+
+    def automation_retrieve(self, automation_id):
+        return self._request(self._automation_path(automation_id), method="GET").json(131072)
+
+    def automation_item(self, automation_id, item_id):
+        _require(item_id is not None, "automation_id_invalid")
+        return self._request(self._automation_path(automation_id, item_id), method="GET").json(262144)
+
+    def automation_pause(self, automation_id):
+        automation_id = _identifier(automation_id, _UUID, "automation_id_invalid")
+        return self._request("automations", method="POST",
+                             body=_json_body({"operation": "pause", "id": automation_id})).json(65536)
+
+    def automation_resume(self, automation_id):
+        automation_id = _identifier(automation_id, _UUID, "automation_id_invalid")
+        return self._request("automations", method="POST",
+                             body=_json_body({"operation": "resume", "id": automation_id})).json(65536)
+
     def quote(self, operation, data):
         _require(isinstance(operation, str) and operation in _OPERATIONS, "operation_invalid")
         snapshot = _json_body(data)

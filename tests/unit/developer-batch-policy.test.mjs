@@ -67,3 +67,40 @@ test("list, individual output and cancellation reject ambiguous paths", () => {
   assert.throws(() => parse("GET", "id=" + id + "&id=" + item), /batch_invalid/);
   assert.throws(() => parse("DELETE", "id=" + id), /batch_invalid/);
 });
+
+test("scheduled automation requires ordered future UTC invocations and explicit controls", () => {
+  const now = Date.parse("2026-11-26T00:00:00.000Z");
+  const scheduled = {
+    ...request,
+    items: [{ ...request.items[0], run_at: "2026-11-26T01:00:00.000Z" }],
+  };
+  const automation = (body) =>
+    parseDeveloperBatchRequest("POST", new URLSearchParams(), body, "automation", now);
+  assert.equal(automation(scheduled).input.items[0].run_at, scheduled.items[0].run_at);
+  assert.equal(automation({ operation: "pause", id }).operation, "pause");
+  assert.equal(automation({ operation: "resume", id }).operation, "resume");
+  assert.throws(() => parse("POST", "", scheduled), /batch_invalid/);
+  assert.throws(() => automation(request), /batch_invalid/);
+  for (const run_at of [
+    "2026-11-26T00:00:00.000Z",
+    "2026-11-27T00:00:00.000Z",
+    "2026-11-26T01:00:00+00:00",
+    "invalid",
+  ])
+    assert.throws(
+      () => automation({ ...scheduled, items: [{ ...scheduled.items[0], run_at }] }),
+      /batch_invalid/,
+    );
+  assert.throws(
+    () =>
+      automation({
+        ...scheduled,
+        items: [
+          scheduled.items[0],
+          { ...scheduled.items[0], id, run_at: "2026-11-26T00:30:00.000Z" },
+        ],
+      }),
+    /batch_invalid/,
+  );
+  assert.throws(() => parse("POST", "", { operation: "pause", id }), /batch_invalid/);
+});

@@ -71,14 +71,25 @@ function chatInput(value) {
   if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 12288) fail();
   return input;
 }
-export function parseDeveloperBatchRequest(method, params, body) {
+export function parseDeveloperBatchRequest(
+  method,
+  params,
+  body,
+  resourceKind = "batch",
+  now = Date.now(),
+) {
+  if (!["batch", "automation"].includes(resourceKind) || !Number.isSafeInteger(now)) fail();
+  const scheduled = resourceKind === "automation";
   for (const key of params.keys())
     if (!["id", "item_id"].includes(key) || params.getAll(key).length !== 1) fail();
   if (method === "POST") {
     if ([...params.keys()].length) fail();
-    if (body?.operation === "cancel") {
+    if (
+      body?.operation === "cancel" ||
+      (scheduled && ["pause", "resume"].includes(body?.operation))
+    ) {
       exact(body, ["operation", "id"]);
-      return { operation: "cancel", input: { id: id(body.id) } };
+      return { operation: body.operation, input: { id: id(body.id) } };
     }
     exact(body, ["operation", "id", "currency", "maximum_charge", "items"]);
     if (
@@ -91,16 +102,34 @@ export function parseDeveloperBatchRequest(method, params, body) {
     )
       fail();
     const items = body.items.map((item) => {
-      exact(item, ["id", "input", "quote_token"]);
+      exact(item, ["id", "input", "quote_token", ...(scheduled ? ["run_at"] : [])]);
       if (
         typeof item.quote_token !== "string" ||
         item.quote_token.length > 2048 ||
         !/^[A-Za-z0-9_-]+\.[a-f0-9]{64}$/.test(item.quote_token)
       )
         fail();
-      return { id: id(item.id), input: chatInput(item.input), quote_token: item.quote_token };
+      if (scheduled) {
+        if (typeof item.run_at !== "string") fail();
+        const runAt = Date.parse(item.run_at);
+        if (
+          !Number.isSafeInteger(runAt) ||
+          new Date(runAt).toISOString() !== item.run_at ||
+          runAt < now + 60000 ||
+          runAt > now + 23 * 3600000
+        )
+          fail();
+      }
+      return {
+        id: id(item.id),
+        input: chatInput(item.input),
+        quote_token: item.quote_token,
+        ...(scheduled ? { run_at: item.run_at } : {}),
+      };
     });
     if (new Set(items.map((item) => item.id)).size !== items.length) fail();
+    if (scheduled && items.some((item, index) => index > 0 && item.run_at <= items[index - 1].run_at))
+      fail();
     if (new TextEncoder().encode(JSON.stringify(items)).byteLength > 60000) fail();
     return {
       operation: "create",

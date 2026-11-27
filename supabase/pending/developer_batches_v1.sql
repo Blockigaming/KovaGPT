@@ -5,6 +5,8 @@ create table public.developer_batches_v1 (
   owner_id uuid not null references auth.users(id) on delete cascade,
   api_key_id uuid not null references public.developer_billing_keys(id) on delete cascade,
   currency text not null check(currency ~ '^[A-Z]{3}$'),
+  resource_kind text not null default 'batch' check(resource_kind in ('batch','automation')),
+  paused_at timestamptz,
   maximum_ticks bigint not null check(maximum_ticks between 1 and 100000000000000),
   request_digest text not null check(request_digest ~ '^[a-f0-9]{64}$'),
   created_at timestamptz not null default clock_timestamp(),
@@ -17,6 +19,7 @@ create table public.developer_batch_items_v1 (
   batch_id uuid not null,
   id uuid not null,
   ordinal integer not null check(ordinal between 1 and 8),
+  run_at timestamptz,
   input jsonb not null check(jsonb_typeof(input)='object' and octet_length(input::text)<=16384),
   authorization text not null check(length(authorization) between 1 and 2048),
   maximum_ticks bigint not null check(maximum_ticks between 1 and 100000000000000),
@@ -69,6 +72,9 @@ declare
   budget bigint;
   total bigint:=0;
   deadline timestamptz;
+  scheduled_at timestamptz;
+  previous_at timestamptz;
+  kind text;
   result jsonb;
 begin
   if p_owner is null then raise exception 'developer_scope_required'; end if;
@@ -77,15 +83,17 @@ begin
     then raise exception 'developer_scope_required' using errcode='42501'; end if;
   if jsonb_typeof(p_input) is distinct from 'object' or octet_length(p_input::text)>90000
     then raise exception 'developer_batch_invalid'; end if;
+  kind:=coalesce(p_input->>'resource_kind','batch');
+  if kind not in ('batch','automation') then raise exception 'developer_batch_invalid'; end if;
   if p_operation='list' then
     select coalesce(jsonb_agg(to_jsonb(t)-'owner_id'-'request_digest' order by t.created_at desc,t.id),'[]'::jsonb) into result
-      from (select * from public.developer_batches_v1 where owner_id=p_owner and project_id=p_project and api_key_id=p_key order by created_at desc,id limit 20) t;
+      from (select * from public.developer_batches_v1 where owner_id=p_owner and project_id=p_project and api_key_id=p_key and resource_kind=kind order by created_at desc,id limit 20) t;
     return jsonb_build_object('object','list','data',result);
   end if;
   if coalesce(p_input->>'id','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     then raise exception 'developer_batch_invalid'; end if;
   batch:=(p_input->>'id')::uuid;
-  select * into b from public.developer_batches_v1 where owner_id=p_owner and project_id=p_project and api_key_id=p_key and id=batch for update;
+  select * into b from public.developer_batches_v1 where owner_id=p_owner and project_id=p_project and api_key_id=p_key and id=batch and resource_kind=kind for update;
   if p_operation='create' then
     if b.id is not null then
       if b.request_digest<>p_input->>'request_digest' then raise exception 'developer_batch_conflict'; end if;
@@ -107,8 +115,8 @@ begin
     deadline:=(p_input->>'expires_at')::timestamptz;
     if budget>100000000000000 or deadline is null or deadline<=now() or deadline>now()+interval '24 hours'
       then raise exception 'developer_batch_invalid'; end if;
-    insert into public.developer_batches_v1(project_id,id,owner_id,api_key_id,currency,maximum_ticks,request_digest,expires_at)
-      values(p_project,batch,p_owner,p_key,p_input->>'currency',budget,p_input->>'request_digest',deadline) returning * into b;
+    insert into public.developer_batches_v1(project_id,id,owner_id,api_key_id,currency,maximum_ticks,request_digest,expires_at,resource_kind)
+      values(p_project,batch,p_owner,p_key,p_input->>'currency',budget,p_input->>'request_digest',deadline,kind) returning * into b;
     for j in select value from jsonb_array_elements(p_input->'items') loop
       if coalesce(j->>'id','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
         or coalesce(j->>'maximum_ticks','') !~ '^[1-9][0-9]{0,14}$'
@@ -120,8 +128,17 @@ begin
       then raise exception 'developer_batch_invalid'; end if;
       n:=n+1; total:=total+(j->>'maximum_ticks')::bigint;
       if total>budget then raise exception 'developer_batch_budget_invalid'; end if;
-      insert into public.developer_batch_items_v1(project_id,batch_id,id,ordinal,input,authorization,maximum_ticks,request_group)
-        values(p_project,batch,(j->>'id')::uuid,n,j->'input',j->>'authorization',(j->>'maximum_ticks')::bigint,j->>'request_group');
+      scheduled_at:=null;
+      if kind='automation' then
+        if jsonb_typeof(j->'run_at') is distinct from 'string' then raise exception 'developer_batch_invalid'; end if;
+        scheduled_at:=(j->>'run_at')::timestamptz;
+        if scheduled_at is null or scheduled_at<=now() or scheduled_at>=deadline
+          or (previous_at is not null and scheduled_at<=previous_at)
+        then raise exception 'developer_batch_invalid'; end if;
+        previous_at:=scheduled_at;
+      elsif j ? 'run_at' then raise exception 'developer_batch_invalid'; end if;
+      insert into public.developer_batch_items_v1(project_id,batch_id,id,ordinal,input,authorization,maximum_ticks,request_group,run_at)
+        values(p_project,batch,(j->>'id')::uuid,n,j->'input',j->>'authorization',(j->>'maximum_ticks')::bigint,j->>'request_group',scheduled_at);
     end loop;
     return jsonb_build_object('object','batch')||(to_jsonb(b)-'owner_id'-'request_digest');
   elsif b.id is null then raise exception 'developer_batch_not_found';
@@ -131,9 +148,14 @@ begin
     update public.developer_batch_items_v1 set state='canceled',finished_at=clock_timestamp()
       where project_id=p_project and batch_id=batch and state='queued';
     return jsonb_build_object('id',batch,'canceled_at',b.canceled_at);
+  elsif p_operation in ('pause','resume') then
+    if kind<>'automation' or b.canceled_at is not null or b.expires_at<=now() then raise exception 'developer_batch_conflict'; end if;
+    update public.developer_batches_v1 set paused_at=case when p_operation='pause' then coalesce(paused_at,clock_timestamp()) else null end
+      where project_id=p_project and id=batch returning * into b;
+    return jsonb_build_object('id',batch,'paused_at',b.paused_at);
   elsif p_operation='get' then
     select coalesce(jsonb_agg(to_jsonb(t) order by t.ordinal),'[]'::jsonb) into result from (
-      select i.id,i.ordinal,i.state,i.maximum_ticks,i.finished_at,r.id as request_id,r.settlement_state,r.final_customer_charge
+      select i.id,i.ordinal,i.state,i.maximum_ticks,i.run_at,i.finished_at,r.id as request_id,r.settlement_state,r.final_customer_charge
       from public.developer_batch_items_v1 i left join public.developer_api_requests r
         on r.api_key_id=b.api_key_id and r.project_id=b.project_id and r.request_group=i.request_group
       where i.project_id=p_project and i.batch_id=batch
@@ -153,7 +175,7 @@ end $$;
 revoke all on function public.manage_developer_batches_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated;
 grant execute on function public.manage_developer_batches_v1(uuid,uuid,uuid,text,jsonb) to service_role;
 
-create function public.claim_developer_batch_v1()
+create function public.claim_developer_batch_v1(p_allow_automations boolean default false)
 returns jsonb language plpgsql security invoker set search_path='' as $$
 declare b public.developer_batches_v1%rowtype; item public.developer_batch_items_v1%rowtype;
 begin
@@ -171,21 +193,22 @@ begin
   delete from public.developer_batches_v1 j where (j.project_id,j.id) in (
     select project_id,id from public.developer_batches_v1 where expires_at<now()-interval '7 days' order by expires_at limit 20);
   select * into b from public.developer_batches_v1 j
-    where j.canceled_at is null and j.expires_at>now()
+    where j.canceled_at is null and j.paused_at is null and j.expires_at>now()
+      and (j.resource_kind='batch' or p_allow_automations is true)
       and public.developer_batch_key_active_v1(j.owner_id,j.project_id,j.api_key_id)
-      and exists(select 1 from public.developer_batch_items_v1 x where x.project_id=j.project_id and x.batch_id=j.id and x.state='queued')
+      and exists(select 1 from public.developer_batch_items_v1 x where x.project_id=j.project_id and x.batch_id=j.id and x.state='queued' and (x.run_at is null or x.run_at<=now()))
       and not exists(select 1 from public.developer_batch_items_v1 x where x.project_id=j.project_id and x.batch_id=j.id and x.state='running')
     order by j.created_at,j.id limit 1 for update of j skip locked;
   if not found then return null; end if;
   select * into item from public.developer_batch_items_v1
-    where project_id=b.project_id and batch_id=b.id and state='queued' order by ordinal limit 1 for update;
+    where project_id=b.project_id and batch_id=b.id and state='queued' and (run_at is null or run_at<=now()) order by ordinal limit 1 for update;
   if not found then return null; end if;
   update public.developer_batch_items_v1 set state='running',lease_token=gen_random_uuid(),lease_expires_at=clock_timestamp()+interval '180 seconds'
     where project_id=b.project_id and batch_id=b.id and id=item.id returning * into item;
   return jsonb_build_object('owner_id',b.owner_id,'api_key_id',b.api_key_id,'currency',b.currency,'item',to_jsonb(item));
 end $$;
-revoke all on function public.claim_developer_batch_v1() from public,anon,authenticated;
-grant execute on function public.claim_developer_batch_v1() to service_role;
+revoke all on function public.claim_developer_batch_v1(boolean) from public,anon,authenticated;
+grant execute on function public.claim_developer_batch_v1(boolean) to service_role;
 
 create function public.finish_developer_batch_v1(p_project uuid,p_batch uuid,p_item uuid,p_lease uuid,p_output jsonb)
 returns boolean language plpgsql security invoker set search_path='' as $$
@@ -210,8 +233,8 @@ revoke all on function public.finish_developer_batch_v1(uuid,uuid,uuid,uuid,json
 grant execute on function public.finish_developer_batch_v1(uuid,uuid,uuid,uuid,jsonb) to service_role;
 
 create view public.developer_batch_export_records_v1 with(security_invoker=true) as
-  select b.owner_id,b.project_id,b.id as batch_id,b.api_key_id,b.currency,b.maximum_ticks,b.created_at,b.expires_at,b.canceled_at,
-    i.id as item_id,i.input,i.output,i.state,i.finished_at
+  select b.owner_id,b.project_id,b.id as batch_id,b.api_key_id,b.currency,b.maximum_ticks,b.created_at,b.expires_at,b.canceled_at,b.resource_kind,b.paused_at,
+    i.id as item_id,i.run_at,i.input,i.output,i.state,i.finished_at
   from public.developer_batches_v1 b join public.developer_batch_items_v1 i on i.project_id=b.project_id and i.batch_id=b.id;
 revoke all on public.developer_batch_export_records_v1 from public,anon,authenticated;
 grant select on public.developer_batch_export_records_v1 to service_role;

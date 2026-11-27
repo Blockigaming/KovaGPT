@@ -46,14 +46,21 @@ async function resource(
   }
   return result.data;
 }
-export async function handleDeveloperBatches(request: Request) {
+function automationsEnabled() {
+  return batchEnabled() && runtimeEnv("KOVA_DEVELOPER_AUTOMATIONS_ENABLED") === "true";
+}
+export async function handleDeveloperBatches(
+  request: Request,
+  resourceKind: "batch" | "automation" = "batch",
+) {
   try {
     const identity = await authenticateDeveloper(request);
     if (!identity.capabilities.includes("chat")) throw new Error("developer_scope_required");
-    if (!batchEnabled()) throw new Error("developer_batch_unavailable");
+    if (!batchEnabled() || (resourceKind === "automation" && !automationsEnabled()))
+      throw new Error("developer_batch_unavailable");
     const rate = await consumeApplicationRateLimit({
       identity: `developer:${identity.id}`,
-      action: "developer_batches",
+      action: resourceKind === "automation" ? "developer_automations" : "developer_batches",
       limit: 10,
       windowSeconds: 60,
     });
@@ -69,13 +76,21 @@ export async function handleDeveloperBatches(request: Request) {
       request.method === "POST"
         ? await readBoundedJsonObject(request, 65536, request.signal)
         : undefined,
+      resourceKind,
     );
     if (parsed.operation !== "create")
       return developerJson(
-        await resource(identity, parsed.operation, parsed.input, request.signal),
+        await resource(
+          identity,
+          parsed.operation,
+          { ...parsed.input, resource_kind: resourceKind },
+          request.signal,
+        ),
       );
     const { id, currency, maximum_ticks, items } = parsed.input;
-    const request_digest = createHash("sha256").update(JSON.stringify(parsed.input)).digest("hex");
+    const request_digest = createHash("sha256")
+      .update(JSON.stringify({ resourceKind, ...parsed.input }))
+      .digest("hex");
     const expiresAt = Date.now() + 86400000;
     // No provider work here: each quote is verified against the current canonical contract.
     const authorized = await Promise.all(
@@ -91,6 +106,7 @@ export async function handleDeveloperBatches(request: Request) {
         "create",
         {
           id,
+          resource_kind: resourceKind,
           currency,
           maximum_ticks,
           request_digest,
@@ -117,6 +133,7 @@ type Claim = {
     input: Record<string, unknown>;
     authorization: string;
     maximum_ticks: number;
+    run_at: string | null;
     lease_token: string;
   };
 };
@@ -149,7 +166,9 @@ async function readResult(response: Response) {
 export async function processDeveloperBatch() {
   if (!batchEnabled()) return 0;
   const db = developerDatabase();
-  const claimed = await db.rpc("claim_developer_batch_v1").abortSignal(AbortSignal.timeout(5000));
+  const claimed = await db
+    .rpc("claim_developer_batch_v1", { p_allow_automations: automationsEnabled() })
+    .abortSignal(AbortSignal.timeout(5000));
   if (claimed.error) throw new Error("developer_batch_unavailable");
   if (!claimed.data) return 0;
   const claim = claimed.data as Claim;
@@ -198,6 +217,7 @@ export async function processDeveloperBatch() {
         item.authorization,
         claim.currency,
         Number(item.maximum_ticks),
+        item.run_at,
         signal,
       ),
     );

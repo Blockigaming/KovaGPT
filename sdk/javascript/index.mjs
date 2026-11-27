@@ -320,6 +320,33 @@ export class KovaGPT {
         return smallJson(await this.#request(batchPath(id, item), { signal }), 262144);
       },
     });
+    const automationPath = (id, item) => {
+      const valid = (value) =>
+        typeof value === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+      if (!valid(id) || (item !== undefined && !valid(item))) fail("batch_id_invalid");
+      return "automations?id=" + id + (item === undefined ? "" : "&item_id=" + item);
+    };
+    const automationPost = async (operation, input, { signal } = {}) =>
+      smallJson(
+        await this.#request("automations", {
+          input: boundedInput({ ...boundedInput(input), operation }),
+          signal,
+        }),
+      );
+    this.automations = Object.freeze({
+      create: (input, options) => automationPost("create", input, options),
+      cancel: (id, options) => automationPost("cancel", { id }, options),
+      pause: (id, options) => automationPost("pause", { id }, options),
+      resume: (id, options) => automationPost("resume", { id }, options),
+      list: async ({ signal } = {}) => smallJson(await this.#request("automations", { signal })),
+      retrieve: async (id, { signal } = {}) =>
+        smallJson(await this.#request(automationPath(id), { signal }), 131072),
+      retrieveItem: async (id, item, { signal } = {}) => {
+        if (item === undefined) fail("batch_id_invalid");
+        return smallJson(await this.#request(automationPath(id, item), { signal }), 262144);
+      },
+    });
     this.conversations = Object.freeze({
       create: (input, options) => conversationPost("create", input, options),
       append: (input, options) => conversationPost("append", input, options),

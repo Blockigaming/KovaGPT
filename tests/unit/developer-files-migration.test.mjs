@@ -783,3 +783,67 @@ test("batch leases, aggregate maximums, cancellation and isolation", async () =>
     await f.db.close();
   }
 });
+
+test("scheduled automations are separately scoped and respect due time and pause", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_batches_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input) =>
+      (
+        await f.db.query("select manage_developer_batches_v1($1,$2,$3,$4,$5) result", [
+          owner,
+          key,
+          f.account.projectId,
+          operation,
+          { ...input, resource_kind: "automation" },
+        ])
+      ).rows[0].result;
+    const batch = id(101),
+      item = id(102);
+    await run("create", {
+      id: batch,
+      currency: "USD",
+      maximum_ticks: 100,
+      request_digest: "a".repeat(64),
+      expires_at: new Date(Date.now() + 3600000).toISOString(),
+      items: [
+        {
+          id: item,
+          input: { model: "kova-fast" },
+          authorization: "test-authorization",
+          maximum_ticks: 100,
+          request_group: "b".repeat(64),
+          run_at: new Date(Date.now() + 600000).toISOString(),
+        },
+      ],
+    });
+    const claim = async (enabled) =>
+      (await f.db.query("select claim_developer_batch_v1($1) result", [enabled])).rows[0].result;
+    assert.equal(await claim(true), null);
+    await assert.rejects(
+      f.db.query("select manage_developer_batches_v1($1,$2,$3,'get',$4)", [
+        owner,
+        key,
+        f.account.projectId,
+        { id: batch },
+      ]),
+      /batch_not_found/,
+    );
+    assert.ok((await run("pause", { id: batch })).paused_at);
+    await f.db.query(
+      "update developer_batch_items_v1 set run_at=now()-interval '1 second' where id=$1",
+      [item],
+    );
+    assert.equal(await claim(true), null);
+    assert.equal((await run("resume", { id: batch })).paused_at, null);
+    assert.equal(await claim(false), null);
+    const due = await claim(true);
+    assert.equal(due.item.id, item);
+    await run("cancel", { id: batch });
+    assert.equal(await claim(true), null);
+  } finally {
+    await f.db.close();
+  }
+});

@@ -605,6 +605,7 @@ export async function executeDeveloper(
 }
 
 type BatchAuthorization = {
+  runAt: number | null;
   batch: string;
   item: string;
   key: string;
@@ -618,7 +619,7 @@ type BatchAuthorization = {
 export async function authorizeDeveloperBatchItem(
   identity: DeveloperIdentity,
   batch: string,
-  item: { id: string; input: Record<string, unknown>; quote_token: string },
+  item: { id: string; input: Record<string, unknown>; quote_token: string; run_at?: string },
   currency: string,
   expiresAt: number,
 ) {
@@ -634,7 +635,11 @@ export async function authorizeDeveloperBatchItem(
     expiresAt > Date.now() + 86400000
   )
     throw new Error("developer_batch_invalid");
+  const runAt = item.run_at === undefined ? null : Date.parse(item.run_at);
+  if (runAt !== null && (!Number.isSafeInteger(runAt) || runAt <= Date.now() || runAt >= expiresAt))
+    throw new Error("developer_batch_invalid");
   const authorization: BatchAuthorization = {
+    runAt,
     batch,
     item: item.id,
     key: identity.id,
@@ -651,6 +656,7 @@ export async function authorizeDeveloperBatchItem(
     input: item.input,
     authorization: payload + "." + digest("batch-authorization-v1", payload),
     maximum_ticks: batchChargeTicks(quote.maximumCharge),
+    ...(item.run_at === undefined ? {} : { run_at: item.run_at }),
     request_group: createHash("sha256")
       .update(developerBatchRequestKey(batch, item.id))
       .digest("hex"),
@@ -664,6 +670,7 @@ export async function executeAuthorizedBatchItem(
   token: string,
   currency: string,
   maximumTicks: number,
+  runAt: string | null,
   signal?: AbortSignal,
 ) {
   if (typeof token !== "string" || token.length > 2048) throw new Error("developer_batch_invalid");
@@ -684,6 +691,8 @@ export async function executeAuthorizedBatchItem(
     authorization.key !== identity.id ||
     authorization.project !== identity.project_id ||
     authorization.currency !== currency ||
+    (authorization.runAt ?? null) !== (runAt === null ? null : Date.parse(runAt)) ||
+    (runAt !== null && Date.parse(runAt) > Date.now()) ||
     batchChargeTicks(authorization.maximumCharge) !== maximumTicks ||
     !Number.isSafeInteger(authorization.expiresAt) ||
     authorization.expiresAt <= Date.now() ||
