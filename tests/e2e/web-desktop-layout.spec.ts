@@ -47,7 +47,13 @@ for (const device of ["iPhone 13", "Pixel 7", "iPad Mini landscape"] as const) {
         input.boundingBox(),
       ]);
       expect(greetingBox!.y).toBeLessThan(inputBox!.y);
-      expect(inputBox!.y).toBeLessThan(descriptor.viewport.height * 0.7);
+      if (descriptor.viewport.width < 768) {
+        // Phone web matches the app's phone home: greeting centred, composer docked low.
+        expect(inputBox!.y).toBeGreaterThan(descriptor.viewport.height * 0.7);
+        expect(inputBox!.y + inputBox!.height).toBeLessThanOrEqual(descriptor.viewport.height);
+      } else {
+        expect(inputBox!.y).toBeLessThan(descriptor.viewport.height * 0.7);
+      }
 
       const desktopShell = descriptor.viewport.width >= 1024;
       if (desktopShell) {

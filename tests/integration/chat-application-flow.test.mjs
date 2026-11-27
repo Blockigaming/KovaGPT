@@ -2,7 +2,7 @@ import {
   chatBrowserDestination,
   CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
 } from "../../src/lib/chat-browser-policy.mjs";
-import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { browserAddressReply, chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
 import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -792,6 +792,7 @@ function composer(f) {
         withResponsePresentation,
         chatResponseError,
         cloudBrowserErrorKind,
+        browserAddressReply,
         consumeChatSse,
         completedChatReply,
         chatRequestHeaders,

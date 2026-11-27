@@ -2543,9 +2543,8 @@ export function ChatInput({
                 setSlashIndex(0);
                 updateComposerText(event.target.value, event.target.selectionStart);
               }}
-              onKeyDown={activeVoiceMode === "voice" ? undefined : handleKey}
+              onKeyDown={handleKey}
               disabled={disabled}
-              readOnly={activeVoiceMode === "voice"}
               onCompositionStart={() => {
                 composingRef.current = true;
               }}
@@ -2856,7 +2855,7 @@ export function ChatInput({
                 )}
                 {activeVoiceMode === "voice" && <span>Stop</span>}
               </button>
-              {activeVoiceMode === "voice" ? null : isStreaming ? (
+              {isStreaming && activeVoiceMode !== "voice" ? (
                 <button
                   type="button"
                   onPointerDown={(event) => {

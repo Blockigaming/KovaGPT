@@ -47,7 +47,21 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  getLiveBrowserActivity,
+  subscribeToLiveBrowserActivity,
+} from "@/lib/message-activity-list.mjs";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { ResponseSpeechButton } from "./ResponseSpeechButton";
 import { useLayout } from "@/hooks/use-mobile";
@@ -93,6 +107,13 @@ import {
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 
+const browserTools = new Set(["browser_interact", "browser_open_request"]);
+
+const ResponseBrowserCard = lazy(() =>
+  import("./ResponseBrowserCard").then(({ ResponseBrowserCard }) => ({
+    default: ResponseBrowserCard,
+  })),
+);
 const MemorySourcesDialog = lazy(() =>
   import("./MemorySourcesDialog").then(({ MemorySourcesDialog }) => ({
     default: MemorySourcesDialog,
@@ -219,6 +240,15 @@ function ChatMessageInner({
     };
   }, [principal, message.id, message.content]);
   const isUser = message.role === "user";
+  const live = useSyncExternalStore(
+    subscribeToLiveBrowserActivity,
+    getLiveBrowserActivity,
+    () => null,
+  );
+  const browserForChat = live?.principal === userKey && live?.conversationId === chatId;
+  const hasLiveBrowser = Boolean(userKey && browserForChat && live?.messageId === message.id);
+  const hasBrowserRequest = message.activities?.some((row) => browserTools.has(row.tool));
+  const hasBrowserActivity = hasLiveBrowser || hasBrowserRequest;
   const imageAttachments = isUser
     ? message.attachments?.filter((attachment) => attachment.kind === "image")
     : undefined;
@@ -536,7 +566,7 @@ function ChatMessageInner({
     () => (isUser || hasWidget ? null : segmentReply(message.content, message.activities)),
     [hasWidget, isUser, message.activities, message.content],
   );
-  const [expandSteps, setExpandSteps] = useState(false);
+  const [expandSteps, setExpandSteps] = useState(true);
   // Validated kova-interactive blocks render as native controls; everything else
   // (including malformed or still-streaming blocks) stays ordinary markdown.
   const submitInteractive = onFollowUp ?? undefined;
@@ -571,6 +601,7 @@ function ChatMessageInner({
       <ResponseMarkdown
         key={k}
         onOpenFile={onOpenResult ? openFile : undefined}
+        fileInterrupted={!streaming}
         sources={message.sources}
         onSourceClick={openSource}
         onSaveImage={saveResponseImage}
@@ -1074,6 +1105,17 @@ function ChatMessageInner({
                 message.content &&
                 replySegments?.at(-1)?.kind !== "group" && <span className="cursor-blink" />}
             </div>
+            {isSignedIn && principalResolved && userKey && hasBrowserActivity && (
+              <Suspense fallback={null}>
+                <ResponseBrowserCard
+                  key={`${userKey}:${message.id}`}
+                  activities={message.activities}
+                  ownerId={userKey}
+                  chatId={chatId}
+                  messageId={message.id}
+                />
+              </Suspense>
+            )}
             {!streaming && message.generationStatus === "stopped" && (
               <div
                 className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"

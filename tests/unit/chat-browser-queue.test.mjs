@@ -46,16 +46,36 @@ test("browser activity carries a 15-minute idle expiry without changing legacy m
   );
 });
 
-async function queueDatabase(t) {
+async function queueDatabase(t, fixedQuotaClock = false) {
   const db = new PGlite();
   await t.after(() => db.close());
   await db.exec("create role service_role bypassrls; create role anon; create role authenticated;");
+  if (fixedQuotaClock) {
+    // The quota test must not depend on how many minutes remain before UTC midnight.
+    // Shift the isolated quota clock to noon yesterday; elapsed time still advances.
+    await db.exec(`
+      create table public.test_quota_clock_offset (delta interval not null);
+      insert into public.test_quota_clock_offset
+        select ((clock_timestamp() at time zone 'UTC')::date - 1 + time '12:00')
+          at time zone 'UTC' - clock_timestamp();
+      create function public.test_quota_clock() returns timestamptz
+        language sql volatile as
+          'select clock_timestamp() + delta from public.test_quota_clock_offset';
+      grant select on public.test_quota_clock_offset to service_role;
+    `);
+  }
   for (const migration of [
     "20261118150000_kova_browserbase_priority_queue.sql",
     "20261119131500_kova_chat_browser_daily_time.sql",
   ]) {
+    const sql = await readFile(
+      new URL(`../../supabase/migrations/${migration}`, import.meta.url),
+      "utf8",
+    );
     await db.exec(
-      await readFile(new URL(`../../supabase/migrations/${migration}`, import.meta.url), "utf8"),
+      fixedQuotaClock && migration.includes("daily_time")
+        ? sql.replaceAll("clock_timestamp()", "public.test_quota_clock()")
+        : sql,
     );
   }
   await db.exec("set role service_role");
@@ -125,21 +145,21 @@ test("only the first eligible waiter can claim its own slot, in tier then arriva
 });
 
 test("reserves and settles UTC daily time for Free and Plus and leaves Pro uncapped", async (t) => {
-  const db = await queueDatabase(t);
+  const db = await queueDatabase(t, true);
   await db.exec("set time zone 'America/Los_Angeles'");
   const { claim, release } = queueClient(db);
   const [free, plus, pro] = Array.from({ length: 3 }, browserRequest);
   const used = async ({ owner }) =>
     (
       await db.query(
-        "select reserved_ms from public.browserbase_daily_usage where owner_id=$1 and usage_day=(clock_timestamp() at time zone 'UTC')::date",
+        "select reserved_ms from public.browserbase_daily_usage where owner_id=$1 and usage_day=(public.test_quota_clock() at time zone 'UTC')::date",
         [owner],
       )
     ).rows[0]?.reserved_ms;
   const seed = ({ owner }, milliseconds, daysAgo = 0) =>
     db.query(
       `insert into public.browserbase_daily_usage (owner_id,usage_day,reserved_ms)
-     values ($1,(clock_timestamp() at time zone 'UTC')::date - $3::int,$2)
+     values ($1,(public.test_quota_clock() at time zone 'UTC')::date - $3::int,$2)
      on conflict (owner_id,usage_day) do update set reserved_ms=excluded.reserved_ms`,
       [owner, milliseconds, daysAgo],
     );
@@ -161,7 +181,8 @@ test("reserves and settles UTC daily time for Free and Plus and leaves Pro uncap
   await seed(plus, 3_580_000);
   const admission = await claim(plus, "plus");
   assert.equal(admission.status, "admitted");
-  assert.ok(Date.parse(admission.deadline) > Date.now());
+  const { rows } = await db.query("select public.test_quota_clock() as now");
+  assert.ok(Date.parse(admission.deadline) > Date.parse(rows[0].now));
   assert.equal(await used(plus), 3_600_000);
   await release(plus);
   assert.equal(await used(plus), 3_580_000);

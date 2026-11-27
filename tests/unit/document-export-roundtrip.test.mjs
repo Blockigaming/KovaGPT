@@ -6,12 +6,26 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { extractOfficeDocument, readOfficeXml } from "../../src/lib/document-extraction/office.mjs";
 import { zipSync, strToU8 } from "fflate";
 import { load, fonts } from "../helpers/document-writers.mjs";
-const { createDocumentPdf } = load("src/lib/writing-export/pdf.ts");
+const { createBlankLetterPdf, createDocumentPdf } = load("src/lib/writing-export/pdf.ts");
 const { createDocumentDocx } = load("src/lib/writing-export/docx.ts");
 const { createDocumentXlsx } = load("src/lib/writing-export/xlsx.ts");
 const { createDocumentPptx } = load("src/lib/writing-export/pptx.ts");
 const { parseDocumentBlocks } = load("src/lib/writing-export/common.ts");
 const parser = new XMLParser({ ignoreAttributes: false, parseTagValue: false });
+
+test("blank generated PDF is exactly one empty US Letter page", async () => {
+  const bytes = await createBlankLetterPdf();
+  const task = getDocument({ data: bytes, disableFontFace: true });
+  const document = await task.promise;
+  try {
+    assert.equal(document.numPages, 1);
+    const page = await document.getPage(1);
+    assert.deepEqual(page.view, [0, 0, 612, 792]);
+    assert.equal((await page.getTextContent()).items.length, 0);
+  } finally {
+    await task.destroy();
+  }
+});
 
 test("PDF paginates long Unicode text without clipping it below the page or replacing characters", async () => {
   const source = Array.from(

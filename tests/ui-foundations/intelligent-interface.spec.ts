@@ -23,6 +23,7 @@ for (const width of [320, 768, 1440]) {
     for (const [index, choice] of choices.entries()) {
       const letter = String.fromCharCode(65 + index);
       await expect(choice).toHaveAttribute("data-choice-letter", letter);
+      await expect(choice).toHaveCSS("border-top-width", "0px");
       const circle = choice.locator("[data-choice-circle]");
       await expect(circle).toHaveText(letter);
       const circleBounds = (await circle.boundingBox())!;

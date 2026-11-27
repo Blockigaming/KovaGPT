@@ -26,7 +26,7 @@ const STATUS_TEXT: Record<Activity["status"], string> = {
   done: "Completed",
 };
 
-/** Settled histories longer than this collapse into one summary line. */
+/** Settled histories longer than this support collapsing into one summary line. */
 const COLLAPSE_AFTER = 5;
 
 export function formatActivityDuration(ms: number) {
@@ -174,11 +174,11 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
     </ol>
   );
   if (live || rows.length <= COLLAPSE_AFTER) return list;
-  // A long finished history collapses to one line that still names any problems.
+  // A long finished history can collapse to one line that still names any problems.
   const failed = rows.filter((row) => row.status === "failed" || row.status === "partial").length;
   const total = rows.reduce((sum, row) => sum + (row.durationMs ?? 0), 0);
   return (
-    <details className="kova-activity-group">
+    <details className="kova-activity-group" open>
       <summary className="kova-activity-group-summary">
         {rows.length} steps
         {total > 0 ? ` · ${formatActivityDuration(total)}` : ""}

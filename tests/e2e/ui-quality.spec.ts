@@ -108,12 +108,13 @@ test("empty workspace remains contained and composer focus is deliberate", async
         modeOnOwnRow:
           getComputedStyle(element.querySelector(".spec400-composer-toolbar")!).display === "grid",
         coarse: matchMedia("(width < 1024px) and (any-pointer: coarse)").matches,
-        // The compact phone frame belongs to the native app shell only.
+        // The compact phone frame applies in the native app shell and on phone-width web.
         phone:
-          document.documentElement.dataset.kovaSurface === "app" &&
-          matchMedia(
-            "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
-          ).matches,
+          document.documentElement.dataset.kovaSurface === "app"
+            ? matchMedia(
+                "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+              ).matches
+            : matchMedia("(width < 768px)").matches,
         attach: bounds('[aria-label="Attach"]'),
         send: bounds('[aria-label="Send message"]'),
       };

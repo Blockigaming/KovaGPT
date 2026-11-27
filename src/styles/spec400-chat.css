@@ -578,7 +578,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 600;
 }
 .spec400-recent-work {
@@ -801,6 +801,16 @@
   padding-inline: calc(max(var(--chat-gutter), var(--safe-left)) - 4px)
     calc(max(var(--chat-gutter), var(--safe-right)) - 4px);
 }
+.spec400-conversation-pane:has(> .kova-conversation-scroll) .spec400-composer-dock {
+  --composer-overlap: 16px;
+  z-index: 3;
+  margin-block-start: calc(-1 * var(--composer-overlap));
+  background: linear-gradient(
+    to bottom,
+    transparent 0 var(--composer-overlap),
+    var(--assistant-canvas, var(--background)) var(--composer-overlap)
+  );
+}
 .spec400-composer-dock > .spec400-chat-input {
   max-width: none;
   overflow-y: auto;
@@ -814,6 +824,9 @@
   margin-inline: auto;
 }
 @media (max-height: 500px) {
+  .spec400-conversation-pane:has(> .kova-conversation-scroll) .spec400-composer-dock {
+    --composer-overlap: 0px;
+  }
   /* Oversized scroll insets can place a focused answer control behind the
      surrounding chrome when the transcript has only a short visible strip. */
   .kova-assistant .kova-conversation-scroll {
@@ -1382,6 +1395,9 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   padding-block: 16px 8px;
 }
 
+.kova-assistant[data-keyboard-open="true"] .spec400-conversation-pane .spec400-composer-dock {
+  --composer-overlap: 0px;
+}
 .kova-assistant[data-keyboard-open="true"] .spec400-composer-dock {
   display: flex;
   min-height: 0;

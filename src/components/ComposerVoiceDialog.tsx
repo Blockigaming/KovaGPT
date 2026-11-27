@@ -1332,7 +1332,9 @@ export function ComposerVoiceDialog({
         <span
           role="status"
           className={
-            !error && (phase === "recording" || phase === "speaking") ? "sr-only" : undefined
+            !error && (startingVoice || phase === "recording" || phase === "speaking")
+              ? "sr-only"
+              : undefined
           }
         >
           {liveStatus}
