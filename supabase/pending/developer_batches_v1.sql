@@ -243,14 +243,14 @@ grant execute on function public.claim_developer_batch_v1(boolean,boolean) to se
 
 -- Revalidate the claim immediately before dispatch; never revive an expired lease.
 create function public.validate_developer_batch_claim_v1(p_project uuid,p_batch uuid,p_item uuid,p_lease uuid)
-returns boolean language sql volatile security invoker set search_path='' as $
+returns boolean language sql volatile security invoker set search_path='' as $$
   select exists(select 1 from public.developer_batch_items_v1 i
     join public.developer_batches_v1 b on b.project_id=i.project_id and b.id=i.batch_id
     where i.project_id=p_project and i.batch_id=p_batch and i.id=p_item
       and i.state='running' and i.lease_token=p_lease and i.lease_expires_at>clock_timestamp()
       and b.canceled_at is null and b.expires_at>clock_timestamp()
       and public.developer_batch_key_active_v1(b.owner_id,b.project_id,b.api_key_id))
-$;
+$$;
 revoke all on function public.validate_developer_batch_claim_v1(uuid,uuid,uuid,uuid) from public,anon,authenticated;
 grant execute on function public.validate_developer_batch_claim_v1(uuid,uuid,uuid,uuid) to service_role;
 

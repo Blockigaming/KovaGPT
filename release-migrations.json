@@ -4949,7 +4949,7 @@
       "order": 238,
       "filename": "20261127205033_developer_webhooks_v1.sql",
       "timestamp": "20261127205033",
-      "sha256": "e10d2243af268a8fb3dd8ab4b9a8034ffbda4be96ca82c582818072261eb6a87",
+      "sha256": "6c5bc91124b9efe955aee3a48297b1972caba927734e25da12023487ac64281d",
       "tables": ["developer_webhook_endpoints_v1", "developer_webhook_deliveries_v1"],
       "functions": [
         "developer_webhook_key_active_v1",
@@ -4974,7 +4974,7 @@
       "order": 239,
       "filename": "20261127205035_developer_batches_v1.sql",
       "timestamp": "20261127205035",
-      "sha256": "3d267c384bb985d12143fb59edfca0af61d65579eca85875e898af27323b688e",
+      "sha256": "1b0ed2c96cea4ac0228096437ae3663d7996e9b91dd655be789e226b53036e6f",
       "tables": ["developer_batches_v1", "developer_batch_items_v1"],
       "functions": [
         "developer_batch_key_active_v1",

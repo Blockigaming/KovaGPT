@@ -32,8 +32,9 @@ test("developer migration sources are canonical, ordered and included in the rel
     previous = file.slice(0, 14);
     const sql = await readFile(new URL(file, canonical), "utf8");
     assert.equal(sql, await readFile(new URL(name, pending), "utf8"), name);
-    assert.equal((sql.match(/\$\$/g) ?? []).length % 2, 0, `${name}: unpaired SQL delimiter`);
-    assert.doesNotMatch(sql, /^end \$;$/m);
+    const functions = (sql.match(/^create (?:or replace )?function /gm) ?? []).length;
+    assert.equal((sql.match(/\$\$/g) ?? []).length, functions * 2, name);
+    assert.doesNotMatch(sql, /(?:\bas \$\s*$|^(?:end )?\$;\s*$)/m);
     assert.equal(
       manifest.migrations.find((entry) => entry.filename === file)?.sha256,
       createHash("sha256").update(sql).digest("hex"),

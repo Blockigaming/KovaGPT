@@ -209,14 +209,14 @@ grant execute on function public.claim_developer_webhooks_v1(integer) to service
 
 -- Recheck the destination and signing generation after DNS resolution, before sending.
 create function public.validate_developer_webhook_claim_v1(p_project uuid,p_endpoint uuid,p_event uuid,p_lease uuid,p_generation integer,p_nonce uuid,p_url text)
-returns boolean language sql volatile security invoker set search_path='' as $
+returns boolean language sql volatile security invoker set search_path='' as $$
   select exists(select 1 from public.developer_webhook_deliveries_v1 d
     join public.developer_webhook_endpoints_v1 e on e.project_id=d.project_id and e.id=d.endpoint_id
     where d.project_id=p_project and d.endpoint_id=p_endpoint and d.id=p_event
       and d.status='leased' and d.lease_token=p_lease and d.lease_expires_at>clock_timestamp()
       and e.generation=p_generation and e.secret_nonce=p_nonce and e.url=p_url
       and public.developer_webhook_key_active_v1(e.owner_id,e.project_id,e.api_key_id))
-$;
+$$;
 revoke all on function public.validate_developer_webhook_claim_v1(uuid,uuid,uuid,uuid,integer,uuid,text) from public,anon,authenticated;
 grant execute on function public.validate_developer_webhook_claim_v1(uuid,uuid,uuid,uuid,integer,uuid,text) to service_role;
 
