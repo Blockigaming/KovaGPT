@@ -168,7 +168,7 @@ export function CloudBrowserSettings({ ownerId }: { ownerId: string }) {
           <label className="text-sm">
             Rule
             <select
-              className="block rounded-md border bg-background p-2"
+              className="kova-cloud-browser-rule-select block min-w-[7rem] rounded-md border bg-background py-2 pl-3 pr-9"
               value={access}
               disabled={!loaded || busy}
               onChange={(event) => setAccess(event.target.value as "ask" | "block")}

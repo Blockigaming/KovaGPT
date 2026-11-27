@@ -20,7 +20,7 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.locator(".kova-settings-navigation-heading h2")).toBeFocused();
       await expect(page.getByPlaceholder("Search settings")).not.toBeFocused();
       const tabs = navigation.getByRole("tab");
-      await expect(tabs).toHaveCount(22);
+      await expect(tabs).toHaveCount(21);
       for (const tab of await tabs.all()) {
         const box = (await tab.boundingBox())!;
         expect(box.height).toBeGreaterThanOrEqual(48);

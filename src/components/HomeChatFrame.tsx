@@ -22,7 +22,7 @@ export function ContinueWorking({
           .map((conversation) => (
             <li key={conversation.id}>
               <button type="button" onClick={() => onSelect(conversation.id)}>
-                <strong>{conversation.title}</strong>
+                <strong title={conversation.title}>{conversation.title}</strong>
                 <time dateTime={new Date(conversation.updatedAt).toISOString()}>
                   Updated{" "}
                   {new Date(conversation.updatedAt).toLocaleDateString(undefined, {

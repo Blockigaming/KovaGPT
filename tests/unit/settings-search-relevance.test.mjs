@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { settingsSearchMatches } from "../../src/lib/settings-search.mjs";
+import { settingsSearchMatches, settingsSearchParts, settingsSearchHint } from "../../src/lib/settings-search.mjs";
 
 test("verification resolves Security even though the section label is different", () => {
   assert.equal(
@@ -24,4 +24,12 @@ test("unrelated searches do not indiscriminately select every category", () => {
     settingsSearchMatches({ v: "security", label: "Security and login" }, "iPad design"),
     false,
   );
+});
+
+test("literal settings search highlights preserve original text and match case-insensitively", () => {
+  assert.deepEqual(settingsSearchParts("Privacy choices", "pri"), [
+    { text: "Pri", match: true }, { text: "vacy choices", match: false },
+  ]);
+  assert.deepEqual(settingsSearchParts("Security", "missing"), [{ text: "Security", match: false }]);
+  assert.equal(settingsSearchHint({ v: "data", label: "Data controls" }, "pri", "Manage your privacy."), "Manage your privacy.");
 });
