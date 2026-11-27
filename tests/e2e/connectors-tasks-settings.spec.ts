@@ -40,16 +40,23 @@ test("dark workspace dims behind Search chats and Settings and clears on close",
   await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  const phonePalette = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
+  const background = phonePalette ? "rgb(17, 17, 17)" : "rgb(25, 25, 25)";
+  const themeColor = phonePalette ? "#111111" : "#191919";
   const canvas = page.locator(".kova-chat-main");
-  await expect(canvas).toHaveCSS("background-color", "rgb(25, 25, 25)");
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#191919");
+  await expect(canvas).toHaveCSS("background-color", background);
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", themeColor);
 
   await page.keyboard.press("Control+k");
   const search = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
   await expect(search).toHaveCSS("background-color", "rgba(0, 0, 0, 0.52)");
   await page.keyboard.press("Escape");
   await expect(search).toHaveCount(0);
-  await expect(canvas).toHaveCSS("background-color", "rgb(25, 25, 25)");
+  await expect(canvas).toHaveCSS("background-color", background);
 
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
@@ -59,5 +66,5 @@ test("dark workspace dims behind Search chats and Settings and clears on close",
   await expect(overlay).toHaveCSS("background-color", "rgba(0, 0, 0, 0.52)");
   await settings.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(overlay).toHaveCount(0);
-  await expect(canvas).toHaveCSS("background-color", "rgb(25, 25, 25)");
+  await expect(canvas).toHaveCSS("background-color", background);
 });

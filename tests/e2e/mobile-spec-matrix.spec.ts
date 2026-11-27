@@ -398,7 +398,7 @@ test("phone controls clear the safe areas as the available height changes", asyn
     screenWidth: 844,
     height: 600,
   });
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#121212");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#191919");
   await session.send("Emulation.setDeviceMetricsOverride", { ...screen, height: 844 });
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#111111");
   await expect(composer).toHaveValue("A draft that should stay in place");

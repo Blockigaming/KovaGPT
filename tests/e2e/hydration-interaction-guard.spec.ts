@@ -87,7 +87,7 @@ for (const { mode, system, dark } of themeCases) {
         : "rgb(25, 25, 25)"
       : "rgb(255, 255, 255)";
     const foreground = dark ? "rgb(255, 255, 255)" : phone ? "rgb(17, 17, 17)" : "rgb(13, 13, 13)";
-    const themeColor = dark ? (phone ? "#111111" : "#121212") : "#ffffff";
+    const themeColor = dark ? (phone ? "#111111" : "#191919") : "#ffffff";
     const browserChrome = page.locator('meta[name="theme-color"]');
     const hydrationErrors: string[] = [];
     const captureHydrationError = (message: string) => {
