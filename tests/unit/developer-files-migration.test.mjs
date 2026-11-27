@@ -531,3 +531,58 @@ test("skill versions are private, immutable and project scoped", async () => {
     await f.db.close();
   }
 });
+
+test("outgoing webhook registration, stable test events, lease retry and rotation remain key scoped", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_webhooks_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input, user = owner) =>
+      (
+        await f.db.query("select manage_developer_webhooks_v1($1,$2,$3,$4,$5) result", [
+          user, key, f.account.projectId, operation, input,
+        ])
+      ).rows[0].result;
+    const endpoint = id(81), event = id(82);
+    const create = { id: endpoint, url: "https://hooks.example.com/kova", events: ["request.settled"] };
+    const first = await run("create", create);
+    assert.equal(first.generation, 1);
+    assert.equal((await run("create", create)).secret_nonce, first.secret_nonce);
+    assert.equal((await run("get", { id: endpoint })).secret_nonce, undefined);
+    await assert.rejects(run("get", { id: endpoint }, other), /scope_required/);
+    await assert.rejects(run("create", { ...create, url: "https://hooks.example.com/other" }), /webhook_conflict/);
+    assert.equal((await run("rotate", { id: endpoint, expected_generation: 1 })).generation, 2);
+    assert.equal((await run("rotate", { id: endpoint, expected_generation: 1 })).generation, 2);
+    await run("test", { id: endpoint, event_id: event });
+    await run("test", { id: endpoint, event_id: event });
+    const claim = async () => (await f.db.query("select claim_developer_webhooks_v1(3) result")).rows[0].result;
+    const claimed = await claim();
+    assert.equal(claimed.length, 1);
+    assert.equal(claimed[0].event.id, event);
+    assert.equal(claimed[0].event.type, "webhook.test");
+    assert.equal(claimed[0].endpoint.generation, 2);
+    assert.deepEqual(await claim(), []);
+    const finish = async (lease, status) =>
+      (await f.db.query("select finish_developer_webhook_v1($1,$2,$3,$4,$5) result", [
+        f.account.projectId, endpoint, event, lease, status,
+      ])).rows[0].result;
+    assert.equal(await finish(id(99), 200), false);
+    assert.equal(await finish(claimed[0].lease_token, 503), true);
+    assert.equal((await run("deliveries", { id: endpoint })).data[0].status, "pending");
+    assert.deepEqual(await claim(), []);
+    await f.db.query("update developer_webhook_deliveries_v1 set next_attempt_at=now()-interval '1 second' where id=$1", [event]);
+    const retry = await claim();
+    assert.equal(retry[0].event.id, event);
+    assert.notEqual(retry[0].lease_token, claimed[0].lease_token);
+    assert.equal(await finish(retry[0].lease_token, 204), true);
+    assert.equal((await run("deliveries", { id: endpoint })).data[0].status, "delivered");
+    assert.deepEqual(await claim(), []);
+    for (const role of ["anon","authenticated"])
+      assert.equal((await f.db.query("select has_table_privilege($1,'developer_webhook_endpoints_v1','select') allowed", [role])).rows[0].allowed, false);
+    await run("delete", { id: endpoint });
+    assert.equal((await f.db.query("select count(*)::int n from developer_webhook_deliveries_v1")).rows[0].n, 0);
+  } finally {
+    await f.db.close();
+  }
+});

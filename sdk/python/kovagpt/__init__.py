@@ -371,6 +371,36 @@ class Client:
     def skill_delete(self, skill_id):
         return self._request(self._skill_path(skill_id), method="DELETE").json(65536)
 
+    @staticmethod
+    def _webhook_path(endpoint_id, deliveries=False):
+        return "webhooks?id=" + _identifier(endpoint_id, _UUID, "webhook_id_invalid") + ("&deliveries=true" if deliveries else "")
+
+    def _webhook_post(self, operation, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("webhooks", method="POST",
+                             body=_json_body({**data, "operation": operation}, 8192)).json(65536)
+
+    def webhook_create(self, data):
+        return self._webhook_post("create", data)
+
+    def webhook_rotate(self, data):
+        return self._webhook_post("rotate", data)
+
+    def webhook_test(self, data):
+        return self._webhook_post("test", data)
+
+    def webhook_list(self):
+        return self._get("webhooks")
+
+    def webhook_retrieve(self, endpoint_id):
+        return self._get(self._webhook_path(endpoint_id))
+
+    def webhook_deliveries(self, endpoint_id):
+        return self._get(self._webhook_path(endpoint_id, True))
+
+    def webhook_delete(self, endpoint_id):
+        return self._request(self._webhook_path(endpoint_id), method="DELETE").json(65536)
+
     def quote(self, operation, data):
         _require(isinstance(operation, str) and operation in _OPERATIONS, "operation_invalid")
         snapshot = _json_body(data)

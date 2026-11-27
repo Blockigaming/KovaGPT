@@ -15,6 +15,7 @@ const names = [
   "developer_conversations_v1",
   "developer_agents_v1",
   "developer_skills_v1",
+  "developer_webhooks_v1",
 ];
 for (const name of names) {
   const source = await readFile(resolve(root, "supabase/pending", name + ".sql"), "utf8");

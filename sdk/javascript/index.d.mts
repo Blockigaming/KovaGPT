@@ -185,6 +185,15 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   };
+  readonly webhooks: {
+    create(input: { id: string; url: string; events: ("request.settled" | "request.rejected")[] }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    rotate(input: { id: string; expected_generation: number }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    test(input: { id: string; event_id: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    deliveries(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+  };
   readonly conversations: {
     create(input: { id: string; title: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     append(

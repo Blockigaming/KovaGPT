@@ -1391,7 +1391,7 @@ const developerPages = [
       ),
       section(
         "Do not assume delivery",
-        "No outgoing developer webhook registration endpoint, event catalog, or delivery SLA is offered here. Use the documented response and console behavior for the current API.",
+        "A staged outgoing webhook endpoint and durable delivery queue support key-scoped request.settled and request.rejected events, test events and signing-secret rotation. Activation requires reviewed migration replay, worker qualification and operator-approved HTTPS destinations. No live delivery or SLA is asserted.",
       ),
     ],
     [

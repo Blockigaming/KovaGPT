@@ -255,6 +255,33 @@ export class KovaGPT {
       delete: async (id, { signal } = {}) =>
         smallJson(await this.#request(skillPath(id), { method: "DELETE", signal })),
     });
+    const webhookPath = (id, deliveries = false) => {
+      if (
+        typeof id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+      )
+        fail("webhook_id_invalid");
+      return "webhooks?id=" + id + (deliveries ? "&deliveries=true" : "");
+    };
+    const webhookPost = async (operation, input, { signal } = {}) =>
+      smallJson(
+        await this.#request("webhooks", {
+          input: boundedInput({ ...boundedInput(input), operation }, 8192),
+          signal,
+        }),
+      );
+    this.webhooks = Object.freeze({
+      create: (input, options) => webhookPost("create", input, options),
+      rotate: (input, options) => webhookPost("rotate", input, options),
+      test: (input, options) => webhookPost("test", input, options),
+      list: async ({ signal } = {}) => smallJson(await this.#request("webhooks", { signal })),
+      retrieve: async (id, { signal } = {}) =>
+        smallJson(await this.#request(webhookPath(id), { signal })),
+      deliveries: async (id, { signal } = {}) =>
+        smallJson(await this.#request(webhookPath(id, true), { signal })),
+      delete: async (id, { signal } = {}) =>
+        smallJson(await this.#request(webhookPath(id), { method: "DELETE", signal })),
+    });
     this.conversations = Object.freeze({
       create: (input, options) => conversationPost("create", input, options),
       append: (input, options) => conversationPost("append", input, options),
