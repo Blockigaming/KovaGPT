@@ -5,7 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { createDeveloperPlaygroundStream } from "@/lib/pricing/developer-playground-stream.mjs";
 import { parseDeveloperPlaygroundOptions } from "@/lib/pricing/developer-playground-options.mjs";
 
-type Operation = "responses" | "streaming" | "images" | "embeddings" | "moderations" | "search";
+type Operation =
+  | "responses"
+  | "streaming"
+  | "images"
+  | "embeddings"
+  | "moderations"
+  | "search"
+  | "audio/transcriptions";
 type Model = {
   id: string;
   capability: string;
@@ -30,6 +37,7 @@ const capability: Record<Operation, string> = {
   images: "image_generation",
   embeddings: "embeddings",
   moderations: "moderation",
+  "audio/transcriptions": "audio_transcription",
   search: "chat",
 };
 
@@ -60,8 +68,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [maxSearchCalls, setMaxSearchCalls] = useState("1");
   const [effort, setEffort] = useState("");
   const [advanced, setAdvanced] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const imageInput = useRef<HTMLInputElement>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const mediaInput = useRef<HTMLInputElement>(null);
   const [size, setSize] = useState("1024x1024");
   const [quality, setQuality] = useState("medium");
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -155,8 +163,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       setModels([]);
       setEffort("");
       setAdvanced("");
-      setImageFile(null);
-      if (imageInput.current) imageInput.current.value = "";
+      setMediaFile(null);
+      if (mediaInput.current) mediaInput.current.value = "";
       const result = record(await request("models", controller));
       const catalog = Array.isArray(result.data)
         ? result.data.flatMap((entry): Model[] => {
@@ -193,16 +201,18 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const textOperation = operation === "responses" || operation === "streaming";
   const acceptsImage = textOperation && selectedModel?.inlineImageInput === true;
   const acceptsEdit = operation === "images" && selectedModel?.imageEdits === true;
+  const acceptsAudio = operation === "audio/transcriptions";
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
       const extra = textOperation ? parseDeveloperPlaygroundOptions(advanced) : {};
       let responseInput: string | Record<string, unknown>[] = prompt;
       let sourceImage: string | undefined;
-      if ((acceptsImage || acceptsEdit) && imageFile) {
-        if (imageFile.type !== "image/png" || imageFile.size < 1 || imageFile.size > 32768)
+      let sourceAudio: string | undefined;
+      if ((acceptsImage || acceptsEdit) && mediaFile) {
+        if (mediaFile.type !== "image/png" || mediaFile.size < 1 || mediaFile.size > 32768)
           throw new Error("Select a PNG image of up to 32 KiB.");
-        const bytes = new Uint8Array(await imageFile.arrayBuffer());
+        const bytes = new Uint8Array(await mediaFile.arrayBuffer());
         const dataUrl = "data:image/png;base64," + btoa(String.fromCharCode(...bytes));
         if (acceptsEdit) sourceImage = dataUrl;
         else
@@ -215,6 +225,16 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               ],
             },
           ];
+      }
+      if (acceptsAudio) {
+        if (!mediaFile || mediaFile.size < 3244 || mediaFile.size > 640044)
+          throw new Error("Select a WAV recording of 0.1–20 seconds (16 kHz mono PCM).");
+        const bytes = new Uint8Array(await mediaFile.arrayBuffer());
+        // Chunking avoids argument-count limits for larger audio recordings.
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 16384)
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + 16384));
+        sourceAudio = "data:audio/wav;base64," + btoa(binary);
       }
       const input = textOperation
         ? {
@@ -234,7 +254,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 max_output_tokens: Number(maxOutput),
                 max_tool_calls: Number(maxSearchCalls),
               }
-            : { model, input: prompt };
+            : acceptsAudio
+              ? { model, audio: sourceAudio }
+              : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
@@ -341,7 +363,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Playground</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Test approved text, image and embedding models with your scoped API key. Every paid run
+          Test approved text, image, audio and embedding models with your scoped API key. Every paid run
           requires a fresh signed quote and explicit confirmation.
         </p>
       </header>
@@ -366,8 +388,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setModel("");
                 setEffort("");
                 setAdvanced("");
-                setImageFile(null);
-                if (imageInput.current) imageInput.current.value = "";
+                setMediaFile(null);
+                if (mediaInput.current) mediaInput.current.value = "";
                 setDispatched(false);
                 resetQuote();
               }}
@@ -397,8 +419,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setModel(models.find((item) => eligibleModel(item, next))?.id ?? "");
                 setEffort("");
                 setAdvanced("");
-                setImageFile(null);
-                if (imageInput.current) imageInput.current.value = "";
+                setMediaFile(null);
+                if (mediaInput.current) mediaInput.current.value = "";
                 setDispatched(false);
                 resetQuote();
               }}
@@ -409,6 +431,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="embeddings">Embeddings</option>
               <option value="moderations">Moderation</option>
               <option value="search">Web search</option>
+              <option value="audio/transcriptions">Audio transcription</option>
             </select>
           </label>
           <label className="block space-y-1 text-sm">
@@ -421,8 +444,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setModel(event.target.value);
                 setEffort("");
                 setAdvanced("");
-                setImageFile(null);
-                if (imageInput.current) imageInput.current.value = "";
+                setMediaFile(null);
+                if (mediaInput.current) mediaInput.current.value = "";
                 setDispatched(false);
                 resetQuote();
               }}
@@ -435,26 +458,47 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               ))}
             </select>
           </label>
-          <label className="block space-y-1 text-sm">
-            <span>
-              {operation === "images"
-                ? "Image prompt"
-                : operation === "search"
-                  ? "Search query"
-                  : "Input"}
-            </span>
-            <Textarea
-              rows={6}
-              className="w-full min-w-0 resize-y"
-              disabled={busy}
-              value={prompt}
-              onChange={(event) => {
-                setPrompt(event.target.value);
-                setDispatched(false);
-                resetQuote();
-              }}
-            />
-          </label>
+          {!acceptsAudio && (
+            <label className="block space-y-1 text-sm">
+              <span>
+                {operation === "images"
+                  ? "Image prompt"
+                  : operation === "search"
+                    ? "Search query"
+                    : "Input"}
+              </span>
+              <Textarea
+                rows={6}
+                className="w-full min-w-0 resize-y"
+                disabled={busy}
+                value={prompt}
+                onChange={(event) => {
+                  setPrompt(event.target.value);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              />
+            </label>
+          )}
+          {acceptsAudio && (
+            <label className="block min-w-0 space-y-1 text-sm">
+              <span>WAV recording (16 kHz mono PCM, 0.1–20 seconds)</span>
+              <Input
+                ref={mediaInput}
+                type="file"
+                accept=".wav,audio/wav,audio/x-wav"
+                disabled={busy}
+                onChange={(event) => {
+                  setMediaFile(event.target.files?.[0] ?? null);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Only submit recordings you have permission to transcribe.
+              </p>
+            </label>
+          )}
           {(textOperation || operation === "search") && (
             <label className="block space-y-1 text-sm">
               <span>Maximum output tokens</span>
@@ -524,12 +568,12 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 KiB and 512 × 512)
               </span>
               <Input
-                ref={imageInput}
+                ref={mediaInput}
                 type="file"
                 accept="image/png"
                 disabled={busy}
                 onChange={(event) => {
-                  setImageFile(event.target.files?.[0] ?? null);
+                  setMediaFile(event.target.files?.[0] ?? null);
                   setDispatched(false);
                   resetQuote();
                 }}
@@ -598,7 +642,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           )}
           <div className="flex flex-wrap gap-2">
             <Button
-              disabled={!enabled || busy || !model || !prompt.trim() || dispatched}
+              disabled={
+                !enabled || busy || !model || (acceptsAudio ? !mediaFile : !prompt.trim()) || dispatched
+              }
               onClick={() => void getQuote()}
             >
               Get price quote

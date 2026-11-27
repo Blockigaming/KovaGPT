@@ -54,6 +54,7 @@ const CSV_FIELDS = [
   "output_tokens",
   "web_search_calls",
   "moderation_requests",
+  "transcription_seconds",
   "final_customer_charge",
   "maximum_reserved_charge",
   "currency",
@@ -1694,6 +1695,14 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         requests
                       </p>
                     )}
+                    {(currentSummary.data.measuredTranscriptionRequests ?? 0) > 0 && (
+                      <p className="text-sm tabular-nums">
+                        {currentSummary.data.transcriptionSeconds.toLocaleString(undefined, {
+                          maximumFractionDigits: 3,
+                        })}{" "}
+                        seconds of transcription
+                      </p>
+                    )}
                     {(["days", "models", "services", "statuses"] as const).map((group) => {
                       const rows = currentSummary.data[group];
                       const max = Math.max(1, ...rows.map((row) => row.requests));
@@ -1731,6 +1740,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                                     ` · ${row.webSearchCalls.toLocaleString()} search calls`}
                                   {(row.measuredModerationRequests ?? 0) > 0 &&
                                     ` · ${row.moderationRequests.toLocaleString()} moderations`}
+                                  {(row.measuredTranscriptionRequests ?? 0) > 0 &&
+                                    ` · ${row.transcriptionSeconds.toLocaleString(undefined, { maximumFractionDigits: 3 })} transcription seconds`}
                                   {row.charges.length
                                     ? ` · ${row.charges.map((charge) => `${charge.amount} ${charge.currency} minor units`).join(" · ")}`
                                     : ""}

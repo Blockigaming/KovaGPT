@@ -77,3 +77,16 @@ test("moderation requests remain a separate usage dimension, not a token count",
   assert.equal(summary.moderationRequests, 1);
   assert.equal(summary.services[0].moderationRequests, 1);
 });
+
+test("audio duration is aggregated separately from tokens and missing receipts", () => {
+  const summary = summarizeDeveloperUsage([
+    { ...row, capability: "audio_transcription", authoritative_usage: { transcription_seconds: 1.25 } },
+    { ...row, capability: "audio_transcription", authoritative_usage: { transcription_seconds: 2.5 } },
+    { ...row, capability: "audio_transcription", authoritative_usage: { transcription_seconds: -1 } },
+    { ...row, capability: "audio_transcription" },
+  ]);
+  assert.equal(summary.measuredRequests, 0);
+  assert.equal(summary.measuredTranscriptionRequests, 2);
+  assert.equal(summary.transcriptionSeconds, 3.75);
+  assert.equal(summary.services[0].transcriptionSeconds, 3.75);
+});

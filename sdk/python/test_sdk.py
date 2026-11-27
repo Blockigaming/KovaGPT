@@ -200,6 +200,19 @@ class SDKTests(unittest.TestCase):
             self.client.conversation_item(ID, "../files")
         self.assertEqual(len(self.calls), 4)
 
+    def test_audio_transcription_quotes_and_dispatches_large_bounded_body(self):
+        self.responses.extend([FakeResponse(quote()), FakeResponse({"text": "hello"})])
+        data = {"model": "transcribe", "audio": "data:audio/wav;base64," + "A" * 80000}
+        response = self.client.transcriptions(data, **BUDGET)
+        self.assertEqual(response.json(65536)["text"], "hello")
+        self.assertEqual(json.loads(self.calls[0][2]), {"operation": "audio/transcriptions", "input": data})
+        self.assertEqual(self.calls[1][1], "/api/v1/audio/transcriptions")
+        self.assertEqual(json.loads(self.calls[1][2]), data)
+        self.assertEqual(self.calls[1][3]["Idempotency-Key"], "stable")
+        with self.assertRaises(KovaError):
+            self.client.responses({"model": "fast", "input": data["audio"]}, **BUDGET)
+        self.assertEqual(len(self.calls), 2)
+
     def test_invalid_origin_and_unsafe_key(self):
         for url in ("http://kovagpt.com", "https://x:y@kovagpt.com", "https://kovagpt.com/path"):
             with self.assertRaisesRegex(KovaError, "origin_invalid"):

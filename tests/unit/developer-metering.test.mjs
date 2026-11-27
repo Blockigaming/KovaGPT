@@ -668,3 +668,65 @@ test("browser snapshots require an approved fixed session price and a valid rece
   request.body.session_seconds = 61;
   assert.throws(() => prepareDeveloperQuote(config, request, new Date("2026-09-05")));
 });
+
+test("transcription reserves approved duration and settles only from a valid provider receipt", async () => {
+  const { config, request } = fixture();
+  const contract = config.version.public_price_configuration.contracts[0];
+  contract.provider = request.provider = "openai";
+  contract.upstreamModel = "gpt-transcribe";
+  contract.expectedResponseModels = ["gpt-transcribe"];
+  contract.capability = request.capability = "audio_transcription";
+  contract.meter = "transcription_duration";
+  contract.maximumUsage = { transcription_seconds: 20 };
+  contract.maximumRequestBytes = 1048576;
+  config.registry = [
+    {
+      ...config.registry[0],
+      provider: "openai",
+      upstream_model: "gpt-transcribe",
+      billing_dimension: "transcription_seconds",
+      unit_quantity: 60,
+      unit_price: 1,
+    },
+  ];
+  const wave = Buffer.alloc(32044);
+  wave.write("RIFF");
+  wave.writeUInt32LE(wave.length - 8, 4);
+  wave.write("WAVEfmt ", 8);
+  wave.writeUInt32LE(16, 16);
+  wave.writeUInt16LE(1, 20);
+  wave.writeUInt16LE(1, 22);
+  wave.writeUInt32LE(16000, 24);
+  wave.writeUInt32LE(32000, 28);
+  wave.writeUInt16LE(2, 32);
+  wave.writeUInt16LE(16, 34);
+  wave.write("data", 36);
+  wave.writeUInt32LE(32000, 40);
+  request.body = {
+    model: "gpt-transcribe",
+    response_format: "json",
+    audio: "data:audio/wav;base64," + wave.toString("base64"),
+  };
+  const at = new Date("2026-09-05");
+  const quote = prepareDeveloperQuote(config, request, at);
+  assert.equal(quote.options.usage.dimensions.transcription_seconds, 20);
+  const receipt = {
+    id: "req_audio_test",
+    model: "gpt-transcribe",
+    status: "completed",
+    text: "Example transcript",
+    usage: { type: "duration", seconds: 1 },
+  };
+  assert.deepEqual(authoritativeUsage(receipt, "transcription_duration").dimensions, {
+    transcription_seconds: 1,
+  });
+  const h = harness({ prepared: quote, send: async () => Response.json(receipt) });
+  await (await runMeteredProvider(h.options)).json();
+  assert.equal(h.calls[0].outcome, "settled");
+  assert.deepEqual(h.calls[0].result.usage, { transcription_seconds: 1 });
+  const bad = { ...receipt, usage: { type: "tokens", seconds: 1 } };
+  assert.equal(authoritativeUsage(bad, "transcription_duration"), null);
+  assert.throws(() => prepareDeveloperQuote({ ...config, registry: [] }, request, at));
+  contract.maximumUsage.transcription_seconds = 21;
+  assert.throws(() => prepareDeveloperQuote(config, request, at));
+});

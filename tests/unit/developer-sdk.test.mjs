@@ -395,3 +395,16 @@ test("webhook verification authenticates the original bytes and rejects replay a
     assert.equal(verifyWebhookSignature({ ...input, ...patch }), false);
   assert.equal(verifyWebhookSignature(null), false);
 });
+
+test("transcription uses a dedicated quote and bounded larger audio request", async () => {
+  const f = fixture();
+  const input = { model: "transcribe", audio: "data:audio/wav;base64," + "A".repeat(80000) };
+  await (await f.client.audio.transcriptions.create(input, options)).json();
+  assert.equal(f.calls.length, 2);
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "audio/transcriptions", input });
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/audio/transcriptions");
+  assert.deepEqual(JSON.parse(f.calls[1].body), input);
+  assert.equal(f.calls[1].headers["Idempotency-Key"], "stable-request");
+  await assert.rejects(f.client.responses.create({ ...input, input: input.audio }, options));
+  assert.equal(f.calls.length, 2);
+});

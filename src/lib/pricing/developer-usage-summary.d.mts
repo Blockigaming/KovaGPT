@@ -5,6 +5,8 @@ export type DeveloperUsageTotals = {
   webSearchCalls: number;
   measuredModerationRequests: number;
   moderationRequests: number;
+  measuredTranscriptionRequests: number;
+  transcriptionSeconds: number;
   tokens: Record<
     "input_tokens" | "cached_input_tokens" | "image_input_tokens" | "output_tokens",
     number
