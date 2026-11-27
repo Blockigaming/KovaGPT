@@ -87,7 +87,7 @@ async function loadWorker(admin) {
   );
   source = source.replace(
     'import { runtimeEnv } from "@/lib/runtime-env.server";',
-    'const runtimeEnv = () => undefined;',
+    "const runtimeEnv = () => undefined;",
   );
   source = source.replaceAll(/"(?:@\/lib\/|\.\/)([^"\n]+)"/gu, (_, path) =>
     JSON.stringify(new URL(`../../src/lib/${path}`, import.meta.url).href),
