@@ -6,7 +6,8 @@ export type Operation =
   | "search"
   | "chat/completions"
   | "decisions"
-  | "agent-turns";
+  | "agent-turns"
+  | "analysis";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -85,7 +86,13 @@ export type OperationInput =
   | SearchInput
   | ChatCompletionInput
   | DecisionInput
-  | AgentTurnInput;
+  | AgentTurnInput
+  | AnalysisInput;
+export interface AnalysisInput {
+  model: string;
+  input: string;
+  max_output_tokens: number;
+}
 export interface AgentDefinition {
   name: string;
   model: string;
@@ -152,6 +159,7 @@ export class KovaError extends Error {
 }
 export class KovaGPT {
   readonly decisions: { create(input: DecisionInput, options: Budget): Promise<Response> };
+  readonly analysis: { create(input: AnalysisInput, options: Budget): Promise<Response> };
   readonly agents: {
     create(
       input: { id: string; definition: AgentDefinition },

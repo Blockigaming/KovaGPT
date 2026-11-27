@@ -13,6 +13,6 @@ export function parseDeveloperInput(
   input: unknown,
 ): {
   body: Record<string, unknown>;
-  capability: "chat" | "streaming" | "image_generation" | "embeddings" | "moderation" | "decisions";
+  capability: "chat" | "streaming" | "image_generation" | "embeddings" | "moderation" | "decisions" | "file_analysis";
   publicModel: string;
 };

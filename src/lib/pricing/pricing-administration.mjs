@@ -1,4 +1,5 @@
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
+import { developerAnalysisFields } from "./developer-analysis-policy.mjs";
 
 const fail = (code) => {
   throw new Error(`pricing_admin_${code}`);
@@ -16,6 +17,7 @@ const keys = (v, allowed) => object(v) && Object.keys(v).every((key) => allowed.
 const meters = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
+  responses_analysis: ["input_tokens", "cached_input_tokens", "output_tokens", "container_1g_sessions"],
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
@@ -183,6 +185,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "maximumInlineImageTokens",
         "maximumImageEditInputTokens",
         "maximumWebSearchInputTokens",
+        "maximumAnalysisInputTokens",
         "searchContentAccounting",
       ]) ||
       !["azure_openai", "openai"].includes(c.provider) ||
@@ -210,6 +213,8 @@ export function validatePricingProposal(raw, now = Date.now()) {
       fail("image_bounds_invalid");
     const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "responses_analysis")
+      Object.assign(body, developerAnalysisFields({ input: "test", max_output_tokens: 1 }));
     if (c.meter === "responses_search")
       Object.assign(body, {
         tools: [{ type: "web_search", search_context_size: "low" }],

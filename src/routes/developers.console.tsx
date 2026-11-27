@@ -80,6 +80,7 @@ type ConsoleData = {
   workspaceV2?: boolean;
   moderationEnabled?: boolean;
   decisionsEnabled?: boolean;
+  analysisEnabled?: boolean;
   consumerCreditSharing?: boolean;
   accounts: Row[];
   projects: Row[];
@@ -1229,11 +1230,13 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "files",
                     "moderation",
                     "decisions",
+                    "file_analysis",
                   ]
                     .filter(
                       (scope) =>
                         (scope !== "moderation" || data?.moderationEnabled) &&
-                        (scope !== "decisions" || data?.decisionsEnabled),
+                        (scope !== "decisions" || data?.decisionsEnabled) &&
+                        (scope !== "file_analysis" || data?.analysisEnabled),
                     )
                     .map((scope) => (
                       <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
@@ -1476,6 +1479,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "files",
                     "moderation",
                     "decisions",
+                    "file_analysis",
                   ].map((item) => (
                     <option key={item} value={item}>
                       {item}

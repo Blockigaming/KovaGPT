@@ -11,6 +11,8 @@ import { requireVerifiedUser } from "@/lib/api-auth.server";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import {
   developerResponses,
+  developerAnalysis,
+  deleteDeveloperAnalysisContainer,
   developerModerations,
   developerDecisions,
   embeddings,
@@ -30,6 +32,7 @@ import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
 import { readDeveloperDecisionResponse } from "./developer-decisions-policy.mjs";
+import { readDeveloperAnalysisResponse } from "./developer-analysis-policy.mjs";
 import {
   expandDeveloperAgentTurn,
   parseDeveloperAgentRequest,
@@ -131,6 +134,13 @@ function developerDecisionsEnabled() {
     return false;
   const config = getAiProviderConfig("decisions");
   return config.configured && config.capabilities?.includes("decisions") === true;
+}
+function developerAnalysisEnabled() {
+  if (runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_ANALYSIS_ENABLED") !== "true") return false;
+  const config = getAiProviderConfig("file_analysis");
+  return config.configured && config.provider === "openai" &&
+    config.capabilities?.includes("file_analysis") === true;
 }
 export function developerEnabled() {
   return (
@@ -402,7 +412,10 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     throw new Error("developer_moderation_unavailable");
   if (parsed.capability === "decisions" && (!developerDecisionsEnabled() || provider !== "openai"))
     throw new Error("developer_decision_unavailable");
+  if (parsed.capability === "file_analysis" && !developerAnalysisEnabled())
+    throw new Error("developer_analysis_unavailable");
   if (
+    parsed.capability !== "file_analysis" &&
     parsed.body.max_tool_calls !== undefined &&
     (runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true" ||
       provider !== "openai" ||
@@ -562,6 +575,7 @@ export async function executeDeveloper(
           { signal },
         );
       }
+      if (kind === "analysis") return developerAnalysis(parsed.body, { signal });
       const call =
         parsed.operation === "responses"
           ? developerResponses
@@ -579,6 +593,9 @@ export async function executeDeveloper(
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
   }
+  if (kind === "analysis")
+    return developerJson(await readDeveloperAnalysisResponse(response,
+      parsed.prepared.contract.expectedResponseModels, parsed.publicModel, deleteDeveloperAnalysisContainer));
   if (kind === "decisions")
     return developerJson(
       await readDeveloperDecisionResponse(
@@ -738,6 +755,7 @@ const publicUsage = (row: Record<string, unknown>) => {
     output_tokens: dimension("output_tokens"),
     web_search_calls: dimension("web_search_calls"),
     moderation_requests: dimension("moderation_requests"),
+    container_1g_sessions: dimension("container_1g_sessions"),
   };
 };
 export async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {
@@ -820,6 +838,7 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             identity.capabilities.includes(entry.capability) &&
             (entry.capability !== "moderation" || developerModerationEnabled()) &&
             (entry.capability !== "decisions" || developerDecisionsEnabled()) &&
+            (entry.capability !== "file_analysis" || developerAnalysisEnabled()) &&
             entry.provider === getAiProviderConfig(entry.capability as ProviderCapability).provider,
         )
         .map(
@@ -985,6 +1004,7 @@ export async function handleDeveloperConsole(request: Request) {
           workspaceV2,
           moderationEnabled: developerModerationEnabled(),
           decisionsEnabled: developerDecisionsEnabled(),
+          analysisEnabled: developerAnalysisEnabled(),
           consumerCreditSharing,
           accounts: [],
           projects: [],
@@ -1131,6 +1151,7 @@ export async function handleDeveloperConsole(request: Request) {
         workspaceV2,
         moderationEnabled: developerModerationEnabled(),
         decisionsEnabled: developerDecisionsEnabled(),
+          analysisEnabled: developerAnalysisEnabled(),
         consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,
@@ -1227,7 +1248,8 @@ export async function handleDeveloperConsole(request: Request) {
           body.scopes.length > DEVELOPER_SCOPES.length ||
           body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value))) ||
           (body.scopes.includes("moderation") && !developerModerationEnabled()) ||
-          (body.scopes.includes("decisions") && !developerDecisionsEnabled())
+          (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
+          (body.scopes.includes("file_analysis") && !developerAnalysisEnabled())
         )
           throw new Error("developer_key_invalid");
         const keyId = crypto.randomUUID();

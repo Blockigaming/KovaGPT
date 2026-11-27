@@ -7,6 +7,7 @@ const operations = new Set([
   "chat/completions",
   "decisions",
   "agent-turns",
+  "analysis",
 ]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
@@ -126,6 +127,9 @@ export class KovaGPT {
       }),
     });
     this.search = (input, options) => this.run("search", input, options);
+    this.analysis = Object.freeze({
+      create: (input, options) => this.run("analysis", input, options),
+    });
     this.decisions = Object.freeze({
       create: (input, options) => this.run("decisions", input, options),
     });

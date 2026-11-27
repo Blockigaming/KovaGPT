@@ -155,6 +155,7 @@ export async function meterProviderRequest(
     throw new Error("developer_image_invalid");
   }
   if (
+    input.capability !== "file_analysis" &&
     input.body.max_tool_calls !== undefined &&
     runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true"
   )
@@ -166,6 +167,9 @@ export async function meterProviderRequest(
     throw new Error("developer_moderation_unavailable");
   if (input.capability === "decisions" && runtimeEnv("KOVA_DEVELOPER_DECISIONS_ENABLED") !== "true")
     throw new Error("developer_decision_unavailable");
+  if (input.capability === "file_analysis" &&
+    (input.provider !== "openai" || runtimeEnv("KOVA_DEVELOPER_ANALYSIS_ENABLED") !== "true"))
+    throw new Error("developer_analysis_unavailable");
   const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
   const call = current.nextCall++;
   if (call >= 16) throw new Error("developer_call_limit");

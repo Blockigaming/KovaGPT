@@ -7,6 +7,7 @@ import {
   validDeveloperDecisionRequest,
   developerDecisionUsage,
 } from "./developer-decisions-policy.mjs";
+import { analysisContainerReceipt, validDeveloperAnalysisRequest } from "./developer-analysis-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -18,6 +19,7 @@ const integer = (value) => finite(value, 1e7) && Number.isSafeInteger(value);
 const dimensionsByMeter = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
+  responses_analysis: ["input_tokens", "cached_input_tokens", "output_tokens", "container_1g_sessions"],
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
@@ -71,7 +73,8 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   const moderationMeter = contract.meter === "moderation_requests";
   const decisionsMeter = contract.meter === "decisions_tokens";
   const searchMeter = contract.meter === "responses_search";
-  const responsesMeter = searchMeter || contract.meter === "responses_tokens";
+  const analysisMeter = contract.meter === "responses_analysis";
+  const responsesMeter = searchMeter || analysisMeter || contract.meter === "responses_tokens";
   if (
     Object.keys(contract.maximumUsage).sort().join() !== [...dimensions].sort().join() ||
     dimensions.some((key) => !integer(contract.maximumUsage[key])) ||
@@ -129,9 +132,22 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       (request.provider !== "openai" || !validDeveloperDecisionRequest(request.body)))
   )
     fail("billing_decision_contract_invalid");
+  if (
+    analysisMeter !== (request.capability === "file_analysis") ||
+    (analysisMeter &&
+      (request.provider !== "openai" ||
+        contract.maximumUsage.container_1g_sessions !== 1 ||
+        !integer(contract.maximumAnalysisInputTokens) ||
+        contract.maximumAnalysisInputTokens < 1 ||
+        new TextEncoder().encode(JSON.stringify(request.body)).byteLength +
+          contract.maximumAnalysisInputTokens > contract.maximumUsage.input_tokens ||
+        !validDeveloperAnalysisRequest(request.body))) ||
+    (!analysisMeter && contract.maximumAnalysisInputTokens !== undefined)
+  )
+    fail("billing_analysis_contract_invalid");
   let search;
   try {
-    search = developerSearchOptions(request.body);
+    search = analysisMeter ? null : developerSearchOptions(request.body);
   } catch {
     fail("billing_dimensions_unsupported");
   }
@@ -217,7 +233,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     const encodedInput = JSON.stringify(request.body.input);
     const imageMarkers = encodedInput?.match(/"type"\s*:\s*"input_image"/g)?.length ?? 0;
     if (
-      (!search && request.body.tools?.some((tool) => tool.type !== "function")) ||
+      (!search && !analysisMeter && request.body.tools?.some((tool) => tool.type !== "function")) ||
       /"type"\s*:\s*"(?:input_file|input_audio)"/.test(encodedInput) ||
       imageMarkers !== images.length ||
       images.length > 1
@@ -340,7 +356,7 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   if (meter !== "moderation_requests" && !object(response.usage)) return null;
   const usage = response.usage;
   let dimensions;
-  if (meter === "responses_tokens" || meter === "responses_search") {
+  if (["responses_tokens", "responses_search", "responses_analysis"].includes(meter)) {
     if (!["completed", "incomplete"].includes(response.status)) return null;
     const cached = usage.input_tokens_details?.cached_tokens;
     if (
@@ -353,6 +369,10 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
       cached_input_tokens: cached,
       output_tokens: usage.output_tokens,
     };
+    if (meter === "responses_analysis") {
+      if (!analysisContainerReceipt(response.output)) return null;
+      dimensions.container_1g_sessions = 1;
+    }
     if (meter === "responses_search") {
       if (!Array.isArray(response.output) || response.output.length > 256) return null;
       const ids = new Set();
@@ -588,7 +608,7 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
     const reader = response.body.getReader(),
       decoder = new TextDecoder(),
       collector = createUsageCollector(
-        prepared.contract.meter === "responses_search",
+        ["responses_search", "responses_analysis"].includes(prepared.contract.meter),
         prepared.contract.meter === "moderation_requests",
       );
     const streaming = response.headers.get("content-type")?.includes("text/event-stream");

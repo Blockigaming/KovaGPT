@@ -739,6 +739,25 @@ export async function developerResponses(body: JsonObject, init?: RequestInit): 
   return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
 }
 
+export async function developerAnalysis(body: JsonObject, init?: RequestInit): Promise<Response> {
+  if (providerTarget("file_analysis").provider !== "openai")
+    throw new Error("developer_analysis_unavailable");
+  return providerFetch("/responses", "file_analysis", body, init);
+}
+export async function deleteDeveloperAnalysisContainer(container: string): Promise<void> {
+  if (!/^cntr_[A-Za-z0-9_-]{1,180}$/.test(container))
+    throw new Error("developer_analysis_invalid");
+  try {
+    const { createOpenAiServiceClient } = await import("./openai-services.server.mjs");
+    await createOpenAiServiceClient(env("OPENAI_API_KEY")).containers.delete(container, {
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    console.error("[developer-analysis] container cleanup unconfirmed", { container });
+    throw new Error("developer_analysis_cleanup_unavailable");
+  }
+}
+
 export async function chatCompletions(
   body: JsonObject,
   init?: RequestInit,
