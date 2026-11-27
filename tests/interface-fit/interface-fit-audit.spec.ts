@@ -307,7 +307,7 @@ if (scope === "public") {
           : route;
         await page.goto(url, { waitUntil: "domcontentloaded" });
         await waitForKovaHydration(page);
-        if (destination !== route) {
+        if (url !== route) {
           await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();
         }
         await expectContained(page, route);

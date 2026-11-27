@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { chooseSettingsSection, revealSidebar } from "./current-ui";
+import { revealSidebar } from "./current-ui";
 
 test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop-1440x900");
@@ -112,8 +112,6 @@ test("desktop Settings width is editable and closing returns focus to the origin
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
   await expect(page).toHaveURL(previousUrl);
   const settings = page.locator('.kova-settings-dialog[role="dialog"]');
-  // Settings opens on its first section; the width control lives in Appearance.
-  await chooseSettingsSection(page, "Appearance");
   const navigation = settings.getByRole("complementary", { name: "Settings navigation" });
   await expect(navigation.getByRole("tab", { name: "General", exact: true })).toHaveAttribute(
     "aria-selected",
