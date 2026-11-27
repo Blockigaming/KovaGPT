@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, Copy } from "lucide-react";
+import "./marketing-showcase.css";
 
 const examples = {
   cURL: [
