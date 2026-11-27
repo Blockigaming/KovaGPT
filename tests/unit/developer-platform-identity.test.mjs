@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
+import { DEVELOPER_SCOPES } from "../../src/lib/pricing/developer-platform-policy.mjs";
 const id = (n) => `${String(n).padStart(8, "0")}-1111-4111-8111-111111111111`;
 const owner = id(1),
   other = id(2),
@@ -446,6 +447,49 @@ test("staged v2 auto-provisioning is repeatable, adopts existing accounts and cr
     await assert.rejects(
       db.query("select * from developer_credit_sharing_preferences"),
       /permission denied/,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("v2 key issuance accepts every supported scope and rejects malformed scopes and banned owners", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const a = await account(db);
+    await manage(db, "issue_key", keyInput(a, { scopes: DEVELOPER_SCOPES }));
+    assert.deepEqual(
+      (await db.query("select capabilities from developer_billing_keys where id=$1", [key]))
+        .rows[0].capabilities,
+      DEVELOPER_SCOPES,
+    );
+    for (const scopes of [[null], ["chat", "chat"], [["chat"]], { scope: "chat" }])
+      await assert.rejects(
+        manage(db, "issue_key", keyInput(a, { scopes, keyId: id(7), rotateKeyId: key })),
+        /key_invalid/,
+      );
+    assert.equal(
+      (await db.query("select enabled from developer_billing_keys where id=$1", [key])).rows[0]
+        .enabled,
+      true,
+    );
+    await db.exec("reset role");
+    await db.query("insert into banned_users values($1)", [owner]);
+    await db.exec("set role service_role");
+    await assert.rejects(
+      manage(db, "issue_key", keyInput(a, { keyId: id(7) })),
+      /owner_unavailable/,
+    );
+    await assert.rejects(
+      manage(db, "set_limits", { accountId: a.accountId, scope: "key", scopeId: key, limits }),
+      /owner_unavailable/,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int n from developer_billing_keys")).rows[0].n,
+      1,
     );
   } finally {
     await db.close();

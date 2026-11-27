@@ -96,7 +96,8 @@ returns jsonb language plpgsql security invoker set search_path='' as $$
 declare a uuid; o uuid; p uuid; k uuid; l jsonb; scope text; scope_id uuid; currency text; expires timestamptz;
 begin
   perform pg_advisory_xact_lock(hashtextextended(p_owner::text,20260903204500));
-  if not kova_private.auth_user_exists(p_owner) or exists(select 1 from public.account_deletion_fences where user_id=p_owner) then
+  if not kova_private.auth_user_exists(p_owner) or exists(select 1 from public.account_deletion_fences where user_id=p_owner)
+    or exists(select 1 from public.banned_users where user_id=p_owner) then
     raise exception 'developer_owner_unavailable' using errcode='42501';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('developer_billing',0));
@@ -124,8 +125,10 @@ begin
       or p_input->>'digest' is null or p_input->>'digest' !~ '^[a-f0-9]{64}$'
       or length(coalesce(p_input->>'suffix',''))<>6 or length(coalesce(p_input->>'name','')) not between 1 and 80
       or expires is null or expires<=now() or expires>now()+interval '90 days'
-      or jsonb_typeof(p_input->'scopes') is distinct from 'array' or jsonb_array_length(p_input->'scopes') not between 1 and 10
-      or exists(select 1 from jsonb_array_elements_text(p_input->'scopes') s where s not in ('chat','streaming','image_generation','embeddings','files','moderation','decisions','file_analysis','computer_use','cloud_browser','audio_transcription')) then raise exception 'developer_key_invalid';end if;
+      or jsonb_typeof(p_input->'scopes') is distinct from 'array' then raise exception 'developer_key_invalid';end if;
+    if jsonb_array_length(p_input->'scopes') not between 1 and 11
+      or (select count(distinct s) from jsonb_array_elements_text(p_input->'scopes') s)<>jsonb_array_length(p_input->'scopes')
+      or exists(select 1 from jsonb_array_elements_text(p_input->'scopes') s where s is null or s not in ('chat','streaming','image_generation','embeddings','files','moderation','decisions','file_analysis','computer_use','cloud_browser','audio_transcription')) then raise exception 'developer_key_invalid';end if;
     if p_input->>'rotateKeyId' is not null then
       update public.developer_billing_keys set enabled=false,revoked_at=now() where id=(p_input->>'rotateKeyId')::uuid and account_id=a and revoked_at is null;
       if not found then raise exception 'developer_key_not_found';end if;

@@ -1440,7 +1440,10 @@ export async function handleDeveloperConsole(request: Request) {
           !Array.isArray(body.scopes) ||
           !body.scopes.length ||
           body.scopes.length > DEVELOPER_SCOPES.length ||
-          body.scopes.some((value) => !DEVELOPER_SCOPES.includes(String(value))) ||
+          body.scopes.some(
+            (value) => typeof value !== "string" || !DEVELOPER_SCOPES.includes(value),
+          ) ||
+          new Set(body.scopes).size !== body.scopes.length ||
           (body.scopes.includes("moderation") && !developerModerationEnabled()) ||
           (body.scopes.includes("audio_transcription") && !developerTranscriptionEnabled()) ||
           (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
