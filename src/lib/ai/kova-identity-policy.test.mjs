@@ -11,7 +11,10 @@ for (const [id, name] of Object.entries(KOVA_ASSISTANT_IDENTITY)) {
     assert.match(instruction, /do not introduce yourself on greetings or ordinary tasks/);
     assert.match(instruction, /assistant as developed and refined by Kova/);
     assert.match(instruction, /upstream provider names, internal model IDs/);
-    assert.match(instruction, /Never claim that Kova trained or fine-tuned foundation weights unless that is verified/);
+    assert.match(
+      instruction,
+      /Never claim that Kova trained or fine-tuned foundation weights unless that is verified/,
+    );
     assert.match(instruction, /answer accurately/);
     assert.match(instruction, /Never invent or conceal required attribution/);
   });
