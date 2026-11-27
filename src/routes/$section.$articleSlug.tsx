@@ -1,5 +1,6 @@
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
-import { PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
+import { PUBLICATIONS, PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
+import { MarketingNews, PublicationVisual } from "@/components/public/MarketingShowcase";
 import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 import { ReviewWorkspace } from "@/components/public/ReviewWorkspace";
@@ -122,12 +123,19 @@ function Article() {
       title={item.title}
       summary={item.description}
     >
-      {item.body.map((body: string, index: number) => (
-        <section key={body} className="rounded-2xl border bg-background p-6">
-          <h2 className="font-semibold">{index ? "What this means" : "Overview"}</h2>
-          <p className="mt-3 leading-7 text-muted-foreground">{body}</p>
-        </section>
-      ))}
+      <PublicationVisual item={item} />
+      <article className="col-span-full mx-auto w-full max-w-3xl space-y-6 py-6">
+        {item.body.map((body: string, index: number) => (
+          <section key={body}>
+            <h2 className="text-2xl font-semibold">{index ? "What this means" : "Overview"}</h2>
+            <p className="mt-3 text-lg leading-8 text-muted-foreground">{body}</p>
+          </section>
+        ))}
+      </article>
+      <MarketingNews
+        items={PUBLICATIONS.filter((entry) => entry.slug !== item.slug || entry.section !== item.section)}
+        heading="More from KovaGPT"
+      />
     </PublicPageView>
   );
 }

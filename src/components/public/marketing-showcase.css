@@ -1,0 +1,140 @@
+.kova-marketing-showcase,.kova-marketing-news,.kova-marketing-feature{width:100%;max-width:72rem;margin:0 auto;padding:clamp(1rem,4vw,3rem) 0;min-width:0}
+.kova-marketing-showcase>h2,.kova-marketing-news>h2{font-size:clamp(1.65rem,4vw,3rem);line-height:1.1;letter-spacing:-.04em;font-weight:600;margin:0 0 .75rem}
+.kova-marketing-showcase>p{color:var(--muted-foreground);margin-bottom:1.5rem}
+.kova-marketing-tabs{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem}
+.kova-marketing-tabs button,.kova-marketing-controls button{border:1px solid currentColor;border-radius:999px;padding:.5rem .85rem;font:inherit;font-size:.82rem;min-height:44px;cursor:pointer}
+.kova-marketing-tabs button[aria-pressed=true]{background:#171821;color:white;border-color:#171821}
+.dark .kova-marketing-tabs button[aria-pressed=true]{background:#f3f3f5;color:#171821;border-color:#f3f3f5}
+.kova-marketing-demo{margin:0;overflow:hidden;border:1px solid #383a4b;border-radius:1.25rem;background:radial-gradient(ellipse at top right,#292b48,#11121c 65%);color:#f4f4fa;text-align:left}
+.kova-marketing-demo-top,.kova-marketing-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;padding:1rem 1.25rem;color:#c0c1d3;font-size:.75rem}
+.kova-marketing-demo-top{border-bottom:1px solid #383a4b}
+.kova-marketing-stage{display:grid;gap:1.25rem;max-width:45rem;margin:auto;padding:clamp(1.25rem,5vw,4rem);min-height:18rem}
+.kova-marketing-prompt{justify-self:end;max-width:100%;padding:.9rem 1.15rem;border-radius:1.25rem 1.25rem .35rem 1.25rem;background:#33364d;line-height:1.5;overflow-wrap:anywhere}
+.kova-marketing-steps{display:grid;gap:.65rem;list-style:none;margin:0;padding:0}
+.kova-marketing-steps li{display:flex;align-items:center;gap:.85rem;border:1px solid #42455e;border-radius:.8rem;padding:.75rem .9rem;background:#202231;line-height:1.5;animation:kova-marketing-reveal .55s both}
+.kova-marketing-steps li span{color:#b9c5ff;font: .8rem ui-monospace,monospace}
+.kova-marketing-demo[data-playing=false] .kova-marketing-steps li,.kova-marketing-demo[data-playing=false] .kova-marketing-wave i{animation-play-state:paused}
+.kova-marketing-controls{border-top:1px solid #383a4b;justify-content:flex-end}
+.kova-marketing-controls>span{margin-right:auto}
+.kova-marketing-controls button{display:inline-flex;align-items:center;gap:.4rem;color:#e4e5f2;border-color:#555971}
+.kova-marketing-controls button:hover{background:#33364d}
+.kova-marketing-art{position:relative;isolation:isolate;min-height:9rem;overflow:hidden;border-radius:.8rem;background:linear-gradient(120deg,#22376d,#a18be9)}
+.kova-marketing-art i,.kova-marketing-cover-shape i{position:absolute;width:34%;aspect-ratio:1;border-radius:36%;transform:rotate(32deg);background:linear-gradient(145deg,#e0d5ff,#5265c2);left:20%;top:10%}
+.kova-marketing-art i:nth-child(2),.kova-marketing-cover-shape i:nth-child(2){left:43%;top:21%;background:linear-gradient(145deg,#9bd6ed,#344caa)}
+.kova-marketing-art i:nth-child(3),.kova-marketing-cover-shape i:nth-child(3){left:64%;top:35%;background:linear-gradient(145deg,#c1b2fa,#43327f)}
+.kova-marketing-wave{height:3rem;display:flex;justify-content:center;align-items:center;gap:.4rem}
+.kova-marketing-wave i{display:block;width:.35rem;border-radius:999px;background:#b9c5ff;animation:kova-marketing-wave .55s alternate 4}
+.kova-marketing-link{display:inline-flex;align-items:center;gap:.4rem;font-size:.9rem;font-weight:600;min-height:44px}
+.kova-marketing-news-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.kova-marketing-news-card{display:grid;gap:1rem;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:1.1rem;padding:1rem;min-width:0;text-decoration:none;color:inherit;transition:transform .2s ease}
+.kova-marketing-news-card:hover{transform:translateY(-3px)}
+.kova-marketing-news-card[data-featured=true]{grid-column:1/-1;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);align-items:center}
+.kova-marketing-news-card h3{font-size:clamp(1.15rem,2.4vw,1.8rem);line-height:1.2;font-weight:600;margin:.6rem 0}
+.kova-marketing-news-card p{line-height:1.6}
+.kova-marketing-meta{font-size:.75rem;opacity:.75;text-transform:capitalize}
+.kova-marketing-cover{position:relative;overflow:hidden;aspect-ratio:16/9;border-radius:.75rem;isolation:isolate;background:radial-gradient(ellipse at 75% 65%,#5658a1,#181a30 75%);color:white;min-width:0}
+.kova-marketing-cover[data-category=engineering]{background:radial-gradient(ellipse at 75% 65%,#386e80,#13252d 75%)}
+.kova-marketing-cover[data-category=safety-reports]{background:radial-gradient(ellipse at 75% 65%,#796443,#27211e 75%)}
+.kova-marketing-cover>span{position:absolute;z-index:2;top:1rem;left:1rem;font-size:.75rem;text-transform:capitalize}
+.kova-marketing-cover-shape{position:absolute;inset:15% 15% 0 0}
+.kova-marketing-showcase button:focus-visible,.kova-marketing-demo button:focus-visible,.kova-marketing-news a:focus-visible,.kova-marketing-link:focus-visible{outline:2px solid #7589f6;outline-offset:4px}
+@keyframes kova-marketing-reveal{from{opacity:.5;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kova-marketing-wave{from{transform:scaleY(.65)}to{transform:scaleY(1)}}
+@media(max-width:640px){.kova-marketing-news-grid,.kova-marketing-news-card[data-featured=true]{grid-template-columns:minmax(0,1fr)}.kova-marketing-demo-top,.kova-marketing-controls{padding:.8rem}.kova-marketing-controls>span{flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){.kova-marketing-demo *{animation:none!important}.kova-marketing-news-card{transition:none}.kova-marketing-news-card:hover{transform:none}}
+
+.kova-developer-example {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 1rem;
+  padding: clamp(.75rem, 2vw, 1.5rem);
+}
+.kova-developer-terminal {
+  border: 1px solid #383a4b;
+  border-radius: .8rem;
+  background: #11121c;
+  color: #e8eaf8;
+  min-width: 0;
+  overflow: hidden;
+}
+.kova-developer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  border-bottom: 1px solid #383a4b;
+  font-size: .85rem;
+}
+.kova-developer-toolbar button,
+.kova-marketing-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+.kova-developer-toolbar button {
+  min-height: 44px;
+  padding: 0 .5rem;
+}
+.kova-developer-terminal pre {
+  margin: 0;
+  padding: 1.25rem;
+  overflow-x: auto;
+  font: .875rem/1.8 ui-monospace, monospace;
+  text-align: left;
+}
+.kova-developer-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 1rem 0;
+}
+.kova-developer-flow article {
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  overflow-wrap: anywhere;
+}
+.kova-developer-flow span {
+  font-size: .75rem;
+  opacity: .7;
+}
+.kova-developer-flow h3 {
+  margin: .5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.kova-developer-flow p {
+  font-size: .85rem;
+}
+.kova-campaign-preview {
+  background: linear-gradient(125deg, #10111a, #34355e);
+  color: #fff;
+  border-radius: 1.25rem;
+  padding: clamp(1rem, 4vw, 2rem);
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  aspect-ratio: 16/9;
+}
+.kova-campaign-preview h3 {
+  font-size: clamp(1.5rem, 4vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: -.04em;
+}
+.kova-campaign-preview p,
+.kova-campaign-preview small {
+  color: #c0c4e9;
+}
+.kova-marketing-tabs button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+@media(max-width: 640px) {
+  .kova-developer-flow { grid-template-columns: minmax(0, 1fr); }
+  .kova-campaign-preview { aspect-ratio: auto; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .kova-campaign-preview * { animation: none !important; }
+}

@@ -1,5 +1,6 @@
 import { NovaLogo } from "@/components/NovaLogo";
 import { useState } from "react";
+import { MarketingNews, MarketingShowcase } from "./MarketingShowcase";
 import { PublicShell } from "@/components/public/PublicShell";
 import { PublicAction, PublicHero } from "@/components/public/PublicSections";
 import { Button } from "@/components/ui/button";
@@ -192,6 +193,10 @@ export function ProductOverview() {
           </div>
         </section>
 
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <MarketingShowcase compact />
+          <MarketingNews />
+        </div>
         <section className="public-plan-band" aria-labelledby="overview-plans-title">
           <div>
             <h2 id="overview-plans-title">A plan for the way you work.</h2>

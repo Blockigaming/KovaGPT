@@ -2,6 +2,7 @@ import { createFileRoute, notFound, Link, redirect } from "@tanstack/react-route
 import { PUBLICATIONS, PUBLICATION_SECTIONS } from "@/lib/publications";
 import { PublicPageView, PublicSite } from "@/components/public/PublicSite";
 import { ProductOverview } from "@/components/public/ProductOverview";
+import { MarketingNews } from "@/components/public/MarketingShowcase";
 import { isReservedPublicPath } from "@/lib/public-route-policy.mjs";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 import {
@@ -298,7 +299,7 @@ export const Route = createFileRoute("/$slug")({
       return {
         kind: "index" as const,
         section: params.slug,
-        items: PUBLICATIONS.filter((item) => item.section === params.slug),
+        items: PUBLICATIONS.filter((item) => params.slug === "news" || item.section === params.slug),
       };
     throw notFound();
   },
@@ -381,17 +382,7 @@ function Page() {
         summary={`Original KovaGPT ${label(data.section).toLowerCase()}, maintained as structured content.`}
       >
         {data.items.length ? (
-          data.items.map((item: import("@/lib/publications").Publication) => (
-            <Link
-              key={item.slug}
-              to={`/${item.section}/${item.slug}` as never}
-              className="rounded-2xl border bg-background p-6 hover:bg-muted"
-            >
-              <p className="text-xs text-muted-foreground">{item.publishedAt}</p>
-              <h2 className="mt-2 text-xl font-semibold">{item.title}</h2>
-              <p className="mt-3 text-muted-foreground">{item.description}</p>
-            </Link>
-          ))
+          <MarketingNews items={data.items} heading="All posts" />
         ) : (
           <div className="col-span-full rounded-2xl border border-dashed p-8 text-center">
             <h2 className="font-semibold">No published entries yet</h2>
