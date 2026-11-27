@@ -60,3 +60,7 @@ The same `POST /api/v1/files` route also accepts `multipart/form-data` containin
 ### Batch and scheduled invocations
 
 Batch items can explicitly select `chat/completions`, `agent-turns`, `responses`, `moderations`, `embeddings` or `decisions`. Each item needs a quote for its exact operation and input. Direct Responses items are non-streaming text requests with at most 2,048 output tokens and no hosted tools or file references. Embedding items require an explicit dimension of 1–1,024 and at most two inputs to bound stored results. Batch and automation access still requires the chat scope as well as the relevant operation scope, approved pricing, runtime activation and replay of the staged schema. Image and interactive tool operations are not batch-supported.
+
+### Use stored conversation history in Responses
+
+Supply `conversation: { id, revision }` and a new string `input` to Responses. Both quote preparation and execution read the authenticated project's current conversation snapshot; a changed revision or recreated conversation invalidates the quote. The quote expires no later than the stored conversation. This uses at most 99 stored text items and does not implicitly append the request or generated response. Use the explicit conversation append endpoint with stable item IDs and expected revisions to persist new messages. The conversation schema and runtime flags must be enabled.

@@ -52,6 +52,11 @@ import {
 } from "./developer-agent-policy.mjs";
 import { expandDeveloperSkills, parseDeveloperSkillRequest } from "./developer-skill-policy.mjs";
 import {
+  developerConversationReference,
+  expandDeveloperConversation,
+  type ConversationBinding,
+} from "./developer-conversation-policy.mjs";
+import {
   batchChargeTicks,
   developerBatchCapability,
   developerBatchRequestKey,
@@ -424,6 +429,42 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     }
     raw = expanded;
   }
+  let conversationBinding: ConversationBinding | null = null;
+  let conversationExpiresAt: number | null = null;
+  const conversation = developerConversationReference(kind, raw);
+  raw = conversation.body;
+  if (conversation.reference) {
+    if (!identity.capabilities.includes("chat") && !identity.capabilities.includes("streaming"))
+      throw new Error("developer_scope_required");
+    if (
+      runtimeEnv("KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY") !== "true" ||
+      runtimeEnv("KOVA_DEVELOPER_CONVERSATIONS_ENABLED") !== "true"
+    )
+      throw new Error("developer_conversation_unavailable");
+    const result = await identity.db
+      .rpc("manage_developer_conversations_v1", {
+        p_owner: identity.ownerId,
+        p_key: identity.id,
+        p_project: identity.project_id,
+        p_operation: "get",
+        p_input: { id: conversation.reference.id },
+      })
+      .abortSignal(AbortSignal.timeout(10000));
+    if (result.error || !result.data) {
+      if (result.error?.message === "developer_conversation_not_found")
+        throw new Error("developer_conversation_not_found");
+      throw new Error("developer_conversation_unavailable");
+    }
+    const expanded = expandDeveloperConversation(
+      conversation.reference,
+      conversation.body,
+      result.data,
+      identity.project_id,
+    );
+    raw = expanded.body;
+    conversationBinding = expanded.binding;
+    conversationExpiresAt = expanded.expiresAt;
+  }
   const normalized = normalizeDeveloperOperation(kind === "agent-turns" ? "responses" : kind, raw);
   const references = developerFileReferences(normalized.operation, normalized.input);
   const parsed = parseDeveloperInput(normalized.operation, references.body);
@@ -510,6 +551,8 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     operation: normalized.operation,
     agentBinding,
     skillBinding,
+    conversationBinding,
+    conversationExpiresAt,
     version,
     prepared,
     fingerprint,
@@ -526,8 +569,13 @@ export async function developerQuote(identity: DeveloperIdentity, kind: string, 
     operation: kind,
     agentBinding: value.agentBinding,
     skillBinding: value.skillBinding,
+    conversationBinding: value.conversationBinding,
     maximumCharge: Number(value.prepared.quote.maximumReservedCharge),
-    expiresAt: Math.min(Date.now() + 120000, value.fileExpiresAt ?? Infinity),
+    expiresAt: Math.min(
+      Date.now() + 120000,
+      value.fileExpiresAt ?? Infinity,
+      value.conversationExpiresAt ?? Infinity,
+    ),
   };
   const payload = Buffer.from(JSON.stringify(quote)).toString("base64url");
   return {
@@ -545,6 +593,7 @@ type PublicQuote = {
   operation: string;
   agentBinding?: unknown;
   skillBinding?: string | null;
+  conversationBinding?: ConversationBinding | null;
   maximumCharge: number;
   expiresAt: number;
 };
@@ -585,6 +634,8 @@ function checkDeveloperQuote(
     quote.operation !== kind ||
     JSON.stringify(quote.agentBinding ?? null) !== JSON.stringify(parsed.agentBinding) ||
     (quote.skillBinding ?? null) !== parsed.skillBinding ||
+    JSON.stringify(quote.conversationBinding ?? null) !==
+      JSON.stringify(parsed.conversationBinding) ||
     quote.version !== parsed.version.id ||
     quote.fingerprint !== parsed.fingerprint ||
     quote.maximumCharge < Number(parsed.prepared.quote.maximumReservedCharge)
@@ -733,6 +784,7 @@ export async function authorizeDeveloperBatchItem(
     (parsed.capability === "chat" &&
       (parsed.body.stream !== false || Number(parsed.body.max_output_tokens) > 2048)) ||
     parsed.fileBindings.length !== 0 ||
+    parsed.conversationBinding !== null ||
     currency !== parsed.version.currency ||
     !Number.isSafeInteger(expiresAt) ||
     expiresAt <= Date.now() ||

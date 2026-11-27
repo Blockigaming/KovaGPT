@@ -177,11 +177,7 @@ test("batch direct operations reject streaming, hosted tools and unbounded vecto
     { input: [{ role: "user", content: "Hello" }] },
   ])
     assert.throws(() => submit("responses", { ...response, ...patch }), /batch_invalid/);
-  for (const patch of [
-    { dimensions: 1025 },
-    { dimensions: undefined },
-    { input: ["A", "B", "C"] },
-  ])
+  for (const patch of [{ dimensions: 1025 }, { dimensions: undefined }, { input: ["A", "B", "C"] }])
     assert.throws(() => submit("embeddings", { ...vector, ...patch }), /batch_invalid/);
   assert.throws(
     () => submit("moderations", { model: "kova-moderation", input: "A", project_id: id }),

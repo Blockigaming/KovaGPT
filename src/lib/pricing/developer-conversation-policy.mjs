@@ -88,3 +88,48 @@ export function parseDeveloperConversationRequest(method, params, body) {
     ? { operation: "get", input: { id: id(conversation) } }
     : { operation: "get_item", input: { id: id(conversation), item_id: id(item) } };
 }
+
+// Stored history is read from the existing scoped conversation resource, never from client data.
+export function developerConversationReference(kind, input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) fail();
+  if (!Object.hasOwn(input, "conversation")) return { body: input, reference: null };
+  if (kind !== "responses") fail();
+  const { conversation, ...body } = input;
+  exact(conversation, ["id", "revision"]);
+  if (typeof body.input !== "string") fail();
+  text(body.input, 32000);
+  return {
+    body,
+    reference: { id: id(conversation.id), revision: revision(conversation.revision) },
+  };
+}
+export function expandDeveloperConversation(reference, body, saved, projectId, now = Date.now()) {
+  if (
+    saved?.id !== reference.id ||
+    saved.project_id !== projectId ||
+    saved.revision !== reference.revision ||
+    !Number.isFinite(Date.parse(saved.created_at)) ||
+    !Number.isFinite(Date.parse(saved.expires_at)) ||
+    Date.parse(saved.expires_at) <= now ||
+    !Array.isArray(saved.items) ||
+    saved.items.length > 99
+  )
+    throw new Error("developer_conversation_conflict");
+  const seen = new Set();
+  const messages = saved.items.map((item) => {
+    exact(item, ["id", "role", "content"]);
+    const itemId = id(item.id);
+    if (seen.has(itemId) || !roles.includes(item.role)) fail();
+    seen.add(itemId);
+    return { role: item.role, content: text(item.content, 8192) };
+  });
+  messages.push({ role: "user", content: text(body.input, 32000) });
+  const expanded = { ...body, input: messages };
+  if (new TextEncoder().encode(JSON.stringify(expanded)).byteLength > 65536)
+    throw new Error("developer_input_too_large");
+  return {
+    body: expanded,
+    binding: { id: reference.id, revision: reference.revision, createdAt: saved.created_at },
+    expiresAt: Date.parse(saved.expires_at),
+  };
+}

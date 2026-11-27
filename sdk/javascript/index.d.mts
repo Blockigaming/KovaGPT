@@ -31,6 +31,7 @@ export interface FunctionTool {
   strict: true;
 }
 export interface ResponsesInput {
+  conversation?: { id: string; revision: number };
   file_ids?: string[];
   model: string;
   input: string | Record<string, unknown>[];

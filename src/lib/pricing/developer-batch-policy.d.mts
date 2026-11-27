@@ -1,10 +1,5 @@
 export type BatchOperation =
-  | "chat/completions"
-  | "agent-turns"
-  | "responses"
-  | "moderations"
-  | "embeddings"
-  | "decisions";
+  "chat/completions" | "agent-turns" | "responses" | "moderations" | "embeddings" | "decisions";
 export type BatchItem = {
   id: string;
   operation: BatchOperation;
