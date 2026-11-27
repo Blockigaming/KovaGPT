@@ -11,6 +11,15 @@ const agent = { name: "", model: "", instructions: "", max_output_tokens: 256 };
 const skill = { name: "", description: "", instructions: "" };
 const item = get("Retrieve item", { id: "", item_id: "" });
 const cancel = post("Cancel queued items", "cancel", { id: "" });
+const responseInput = { model: "", input: "", max_output_tokens: 256 };
+const quoteResponse = {
+  label: "Get text Responses quote",
+  method: "POST",
+  operation: "responses",
+  fields: { input: responseInput },
+  path: "/api/v1/quotes",
+};
+const batchItem = { id: "", operation: "responses", input: responseInput, quote_token: "" };
 
 export const developerResourceSections = Object.freeze({
   agents: {
@@ -87,8 +96,20 @@ export const developerResourceSections = Object.freeze({
   batches: {
     label: "Batches",
     description:
-      "Inspect jobs and cancel remaining queued items. Submit new jobs through the SDK with signed quotes and a budget.",
-    actions: { list, detail, item, cancel },
+      "Submit bounded jobs using signed quotes and a budget, inspect results, and cancel queued items.",
+    actions: {
+      list,
+      detail,
+      item,
+      quote: quoteResponse,
+      create: post("Authorize batch", "create", {
+        id: "",
+        currency: "USD",
+        maximum_charge: 0,
+        items: [batchItem],
+      }),
+      cancel,
+    },
   },
   automations: {
     label: "Automations",
@@ -98,8 +119,33 @@ export const developerResourceSections = Object.freeze({
       list,
       detail,
       item,
+      quote: quoteResponse,
+      create: post("Authorize schedule", "create", {
+        id: "",
+        currency: "USD",
+        maximum_charge: 0,
+        items: [{ ...batchItem, run_at: "" }],
+      }),
       pause: post("Pause schedule", "pause", { id: "" }),
       resume: post("Resume schedule", "resume", { id: "" }),
+      cancel,
+    },
+  },
+  "response-jobs": {
+    label: "Background responses",
+    description:
+      "Quote and authorize one background text request, inspect its settled result, or cancel it while queued.",
+    actions: {
+      list,
+      detail,
+      quote: quoteResponse,
+      create: post("Authorize background response", "create", {
+        id: "",
+        currency: "USD",
+        maximum_charge: 0,
+        input: responseInput,
+        quote_token: "",
+      }),
       cancel,
     },
   },
@@ -133,6 +179,8 @@ export function resourceConsoleTemplate(section, action, randomId) {
   const { fields, operation } = descriptor(section, action);
   const value = JSON.parse(JSON.stringify(fields));
   if (operation === "create" && Object.hasOwn(value, "id")) value.id = randomId();
+  if (operation === "create" && Array.isArray(value.items))
+    for (const item of value.items) item.id = randomId();
   if (operation === "append") value.item.id = randomId();
   if (operation === "test") value.event_id = randomId();
   return JSON.stringify(value, null, 2);
@@ -167,7 +215,7 @@ export function resourceConsoleRequest(section, action, raw) {
     Object.keys(input).some((key) => !Object.hasOwn(config.fields, key))
   )
     throw new Error("Use exactly the fields in the request template.");
-  let path = "/api/v1/" + section;
+  let path = config.path ?? "/api/v1/" + section;
   if (config.method === "POST") {
     const body = JSON.stringify({ operation: config.operation, ...input });
     return { method: config.method, path, body };
@@ -189,6 +237,14 @@ export function resourceConsoleRequest(section, action, raw) {
 }
 
 export function resourceConsoleRequiresConfirmation(section, action) {
-  const { method, operation } = descriptor(section, action);
-  return method !== "GET" && operation !== "search";
+  const { method, operation, path } = descriptor(section, action);
+  return method !== "GET" && operation !== "search" && path !== "/api/v1/quotes";
+}
+
+export function resourceConsoleMaySpend(section, action) {
+  const { operation } = descriptor(section, action);
+  return (
+    (operation === "create" && ["batches", "automations", "response-jobs"].includes(section)) ||
+    (section === "automations" && operation === "resume")
+  );
 }

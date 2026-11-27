@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   developerResourceSections,
   resourceConsoleKey,
+  resourceConsoleMaySpend,
   resourceConsoleRequest,
   resourceConsoleRequiresConfirmation,
   resourceConsoleTemplate,
@@ -55,4 +56,27 @@ test("mutation templates preserve stable IDs and require explicit confirmation",
       JSON.stringify({ id, entries: "true", page: 20 }),
     ),
   );
+});
+
+test("job screens separate free quotes from explicit paid execution authorization", () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  for (const section of ["response-jobs", "batches", "automations"]) {
+    const quote = resourceConsoleTemplate(section, "quote", () => id);
+    const request = resourceConsoleRequest(section, "quote", quote);
+    assert.equal(request.path, "/api/v1/quotes");
+    assert.equal(JSON.parse(request.body).operation, "responses");
+    assert.equal(resourceConsoleRequiresConfirmation(section, "quote"), false);
+    assert.equal(resourceConsoleMaySpend(section, "quote"), false);
+    const draft = resourceConsoleTemplate(section, "create", () => id);
+    const input = JSON.parse(draft);
+    assert.equal(input.id, id);
+    assert.equal(input.maximum_charge, 0);
+    if (input.items) assert.equal(input.items[0].id, id);
+    assert.equal(resourceConsoleRequest(section, "create", draft).path, "/api/v1/" + section);
+    assert.equal(resourceConsoleRequiresConfirmation(section, "create"), true);
+    assert.equal(resourceConsoleMaySpend(section, "create"), true);
+  }
+  assert.equal(resourceConsoleMaySpend("automations", "resume"), true);
+  assert.equal(resourceConsoleMaySpend("response-jobs", "cancel"), false);
+  assert.equal(resourceConsoleMaySpend("agents", "create"), false);
 });

@@ -120,8 +120,13 @@ export function parseDeveloperBatchRequest(
   body,
   resourceKind = "batch",
   now = Date.now(),
+  replayLookup = false,
 ) {
-  if (!["batch", "automation", "response"].includes(resourceKind) || !Number.isSafeInteger(now))
+  if (
+    !["batch", "automation", "response"].includes(resourceKind) ||
+    !Number.isSafeInteger(now) ||
+    typeof replayLookup !== "boolean"
+  )
     fail();
   if (resourceKind === "response") {
     // A response job is one non-streaming, explicitly authorized text invocation.
@@ -175,8 +180,7 @@ export function parseDeveloperBatchRequest(
         if (
           !Number.isSafeInteger(runAt) ||
           new Date(runAt).toISOString() !== item.run_at ||
-          runAt < now + 60000 ||
-          runAt > now + 23 * 3600000
+          (!replayLookup && (runAt < now + 60000 || runAt > now + 23 * 3600000))
         )
           fail();
       }

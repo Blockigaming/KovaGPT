@@ -107,7 +107,19 @@ begin
     then raise exception 'developer_batch_invalid'; end if;
   batch:=(p_input->>'id')::uuid;
   select * into b from public.developer_batches_v1 where owner_id=p_owner and project_id=p_project and api_key_id=p_key and id=batch and resource_kind=kind for update;
-  if p_operation='create' then
+  if p_operation='replay' then
+    if coalesce(p_input->>'request_digest','') !~ '^[a-f0-9]{64}$'
+      then raise exception 'developer_batch_invalid'; end if;
+    if b.id is null then
+      if exists(select 1 from public.developer_batches_v1 where project_id=p_project and id=batch)
+        then raise exception 'developer_batch_not_found'; end if;
+      return jsonb_build_object('found',false);
+    end if;
+    if b.request_digest<>p_input->>'request_digest'
+      then raise exception 'developer_batch_conflict'; end if;
+    return jsonb_build_object('found',true,'batch',
+      jsonb_build_object('object','batch')||(to_jsonb(b)-'owner_id'-'request_digest'));
+  elsif p_operation='create' then
     if b.id is not null then
       if b.request_digest<>p_input->>'request_digest' then raise exception 'developer_batch_conflict'; end if;
       return jsonb_build_object('object','batch')||(to_jsonb(b)-'owner_id'-'request_digest');
@@ -242,7 +254,7 @@ begin
       and r.settlement_state='settled') into settled;
   update public.developer_batch_items_v1 set
     state=case when p_output is not null and settled then 'completed' else 'uncertain' end,
-    output=p_output,lease_token=null,lease_expires_at=null,finished_at=clock_timestamp()
+    output=case when settled then p_output else null end,lease_token=null,lease_expires_at=null,finished_at=clock_timestamp()
     where project_id=p_project and batch_id=p_batch and id=p_item;
   return found;
 end $$;

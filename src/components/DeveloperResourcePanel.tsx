@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   developerResourceSections,
   resourceConsoleKey,
+  resourceConsoleMaySpend,
   resourceConsoleRequest,
   resourceConsoleRequiresConfirmation,
   resourceConsoleTemplate,
@@ -64,6 +65,7 @@ export function DeveloperResourcePanel({
     keys.map((key) => key.id),
   );
   const requiresConfirmation = resourceConsoleRequiresConfirmation(section, action);
+  const maySpend = resourceConsoleMaySpend(section, action);
 
   useEffect(() => {
     mounted.current = true;
@@ -232,6 +234,12 @@ export function DeveloperResourcePanel({
               />
             </label>
           )}
+          {maySpend && action === "create" && (
+            <p className="text-xs text-muted-foreground">
+              Get a quote for each exact input first. Supply the signed quote token and a positive
+              maximum charge in the matching currency. The server rejects expired or changed quotes.
+            </p>
+          )}
           {requiresConfirmation && (
             <label className="flex min-h-11 items-start gap-2 text-sm">
               <input
@@ -240,7 +248,11 @@ export function DeveloperResourcePanel({
                 disabled={busy || !enabled}
                 onChange={(event) => setConfirmed(event.target.checked)}
               />
-              <span>Confirm {config.actions[action].label.toLowerCase()} for this project.</span>
+              <span>
+                {maySpend
+                  ? "Authorize paid execution for this project within the submitted budget."
+                  : "Confirm " + config.actions[action].label.toLowerCase() + " for this project."}
+              </span>
             </label>
           )}
           <div className="flex flex-wrap gap-2">

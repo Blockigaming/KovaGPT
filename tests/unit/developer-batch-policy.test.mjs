@@ -234,3 +234,34 @@ test("response job results never return unverified output, inputs or execution c
   assert.throws(() => developerResponseJobView({ ...value, settlement_state: "uncertain" }, id));
   assert.throws(() => developerResponseJobView({ ...value, batch_id: item }, id));
 });
+
+test("replay lookup accepts an elapsed schedule but new submissions still reject it", () => {
+  const now = Date.parse("2026-11-26T00:00:00.000Z");
+  const body = {
+    ...request,
+    items: [{ ...request.items[0], run_at: "2026-11-26T01:00:00.000Z" }],
+  };
+  const params = new URLSearchParams();
+  const original = parseDeveloperBatchRequest("POST", params, body, "automation", now);
+  const later = now + 7200000;
+  assert.throws(
+    () => parseDeveloperBatchRequest("POST", params, body, "automation", later),
+    /batch_invalid/,
+  );
+  assert.deepEqual(
+    parseDeveloperBatchRequest("POST", params, body, "automation", later, true),
+    original,
+  );
+  assert.throws(
+    () =>
+      parseDeveloperBatchRequest(
+        "POST",
+        params,
+        { ...body, items: [{ ...body.items[0], run_at: "invalid" }] },
+        "automation",
+        later,
+        true,
+      ),
+    /batch_invalid/,
+  );
+});

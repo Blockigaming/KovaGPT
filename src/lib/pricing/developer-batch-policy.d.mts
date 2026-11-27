@@ -21,6 +21,7 @@ export function parseDeveloperBatchRequest(
   body?: unknown,
   resourceKind?: "batch" | "automation" | "response",
   now?: number,
+  replayLookup?: boolean,
 ): BatchRequest;
 export function developerBatchCapability(
   operation: unknown,

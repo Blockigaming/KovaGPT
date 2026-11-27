@@ -81,13 +81,18 @@ export async function handleDeveloperBatches(
       request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
     )
       throw new Error("developer_json_required");
-    const parsed = parseDeveloperBatchRequest(
-      request.method,
-      new URL(request.url).searchParams,
+    const params = new URL(request.url).searchParams;
+    const body =
       request.method === "POST"
         ? await readBoundedJsonObject(request, 65536, request.signal)
-        : undefined,
+        : undefined;
+    const parsed = parseDeveloperBatchRequest(
+      request.method,
+      params,
+      body,
       resourceKind,
+      Date.now(),
+      true,
     );
     const responseJob = async (id: string) =>
       developerResponseJobView(
@@ -123,6 +128,22 @@ export async function handleDeveloperBatches(
     const request_digest = createHash("sha256")
       .update(JSON.stringify({ resourceKind, ...parsed.input }))
       .digest("hex");
+    // Check an exact existing submission under the same database ownership lock.
+    // This lookup cannot create a job or authorize another execution.
+    const replay = await resource(
+      identity,
+      "replay",
+      { id, resource_kind: resourceKind, request_digest },
+      request.signal,
+    );
+    if (replay?.found === true) {
+      if (!replay.batch || replay.batch.id !== id)
+        throw new Error("developer_batch_unavailable");
+      return developerJson(resourceKind === "response" ? await responseJob(id) : replay.batch);
+    }
+    if (replay?.found !== false) throw new Error("developer_batch_unavailable");
+    // Only an absent submission can reach new scheduling and quote validation.
+    parseDeveloperBatchRequest(request.method, params, body, resourceKind);
     const expiresAt = Date.now() + 86400000;
     // No provider work here: each quote is verified against the current canonical contract.
     const authorized = await Promise.all(

@@ -3,6 +3,7 @@ export type ResourceAction = {
   method: "GET" | "POST" | "DELETE";
   fields: Record<string, unknown>;
   operation?: string;
+  path?: "/api/v1/quotes";
 };
 export type ResourceSection = {
   label: string;
@@ -10,7 +11,14 @@ export type ResourceSection = {
   actions: Record<string, ResourceAction>;
 };
 export type DeveloperResourceSection =
-  "agents" | "skills" | "conversations" | "vector-stores" | "batches" | "automations" | "webhooks";
+  | "agents"
+  | "skills"
+  | "conversations"
+  | "vector-stores"
+  | "batches"
+  | "automations"
+  | "response-jobs"
+  | "webhooks";
 export const developerResourceSections: Readonly<Record<DeveloperResourceSection, ResourceSection>>;
 export function resourceConsoleTemplate(
   section: string,
@@ -24,3 +32,4 @@ export function resourceConsoleRequest(
   raw: string,
 ): { method: "GET" | "POST" | "DELETE"; path: string; body?: string };
 export function resourceConsoleRequiresConfirmation(section: string, action: string): boolean;
+export function resourceConsoleMaySpend(section: string, action: string): boolean;
