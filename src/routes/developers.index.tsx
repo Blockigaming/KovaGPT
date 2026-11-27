@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicPageView } from "@/components/public/PublicSite";
+import { DeveloperMarketing } from "@/components/public/DeveloperMarketing";
 
 export const Route = createFileRoute("/developers/")({
   component: DevelopersOverview,
@@ -23,6 +24,7 @@ function DevelopersOverview() {
       title="Build with KovaGPT"
       summary="Prepare scoped API keys, spending limits, and integrations in the developer console. Paid execution requires an enabled, funded account and current pricing."
     >
+      <DeveloperMarketing />
       <article className="rounded-2xl border border-border bg-background p-6">
         <h2 className="text-xl font-semibold">Current status</h2>
         <p className="mt-3 leading-7 text-muted-foreground">
