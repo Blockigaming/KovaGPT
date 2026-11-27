@@ -3239,7 +3239,9 @@ function KovaGPT() {
 
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={<div aria-hidden="true" className="kova-desktop-topbar hidden lg:block" />}
+      >
         <DesktopChatToolbar
           sidebarOpen={sidebarOpen}
           isSignedIn={isSignedIn}
