@@ -1,3 +1,16 @@
+import { createAckCache } from "../../src/lib/voice/acknowledgments.mjs";
+import { createBargeInDetector } from "../../src/lib/voice/barge-in.mjs";
+import {
+  createStreamingVoicePlayback,
+  parseVoiceSegment,
+  predictedDelay,
+} from "../../src/lib/voice/streaming-playback.mjs";
+import { createVoiceLatencyTracker } from "../../src/lib/voice/voice-latency.mjs";
+import {
+  createWebAudioSegmentSink,
+  primeVoiceAudio,
+  supportsStreamingMp3,
+} from "../../src/lib/voice/webaudio-sink.mjs";
 import * as voicePcm from "../../src/lib/voice-pcm.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -310,6 +323,19 @@ function fixture(initial = {}, options = {}) {
       safeBrowserStorage: (area) => principalStorage.safeBrowserStorage(area, fakeWindow),
     },
     "@/lib/voice/speech-pause.mjs": { createVoiceSilenceGate },
+    "@/lib/voice/acknowledgments.mjs": { createAckCache },
+    "@/lib/voice/barge-in.mjs": { createBargeInDetector },
+    "@/lib/voice/streaming-playback.mjs": {
+      createStreamingVoicePlayback,
+      parseVoiceSegment,
+      predictedDelay,
+    },
+    "@/lib/voice/voice-latency.mjs": { createVoiceLatencyTracker },
+    "@/lib/voice/webaudio-sink.mjs": {
+      createWebAudioSegmentSink,
+      primeVoiceAudio,
+      supportsStreamingMp3,
+    },
     "@/lib/voice-pcm.mjs": voicePcm,
     "@/lib/kova-native": {
       KOVA_NATIVE_AUDIO_INTERRUPTION: "kova-native-audio-interruption",

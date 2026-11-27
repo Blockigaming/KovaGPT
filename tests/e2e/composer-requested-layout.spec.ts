@@ -98,7 +98,6 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(input).toHaveAttribute("placeholder", "Work with KovaGPT");
   const composer = page.locator(".spec400-composer");
-  const box = (await composer.boundingBox())!;
   const inset = await composer.evaluate((surface) => {
     const input = surface.querySelector("textarea")!;
     const text = input.getBoundingClientRect();
@@ -146,8 +145,14 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   ].entries())
     await expect(buttons.nth(index)).toContainText(name);
   await expect(menu).toHaveCSS("border-top-width", "0px");
+  // Compare the open menu with its live anchor, not the pre-transition composer.
   await expect
-    .poll(async () => Math.abs((await menu.boundingBox())!.width - box.width))
+    .poll(async () => {
+      const menuBox = await menu.boundingBox();
+      const composerBox = await composer.boundingBox();
+      if (!menuBox || !composerBox) return Infinity;
+      return Math.abs(menuBox.width - composerBox.width);
+    })
     .toBeLessThan(3);
   await page.screenshot({ path: info.outputPath("requested-menu.png"), animations: "disabled" });
 });

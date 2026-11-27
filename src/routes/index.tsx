@@ -2,7 +2,7 @@ import { observeElementWidth } from "@/lib/observe-element-width";
 import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
-import type { CSSProperties } from "react";
+import type { ComponentType, CSSProperties } from "react";
 import { ActiveChatTranscript } from "@/lib/preload-conversation-view";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
@@ -29,7 +29,7 @@ import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversati
 import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
-import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
+import type { ComposerVoiceTurn, VoiceTurnEvents } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
@@ -92,74 +92,60 @@ import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 import { type Settings, DEFAULT_SETTINGS, settingsTabForSection } from "@/lib/settings-types";
 import { saveStoredSettings } from "@/lib/settings-storage";
 
-const FreeOfferButton = lazy(() =>
-  import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function named<K extends string, M extends Record<K, ComponentType<any>>>(
+  load: () => Promise<M>,
+  key: K,
+) {
+  return lazy(() => load().then((m) => ({ default: m[key] })));
+}
+
+const FreeOfferButton = named(() => import("@/components/FreeOfferButton"), "FreeOfferButton");
+const ConversationHeaderActions = named(
+  () => import("@/components/ConversationHeaderActions"),
+  "ConversationHeaderActions",
 );
-const ConversationHeaderActions = lazy(() =>
-  import("@/components/ConversationHeaderActions").then((module) => ({
-    default: module.ConversationHeaderActions,
-  })),
+const CommandPalette = named(() => import("@/components/CommandPalette"), "CommandPalette");
+const QuotaRejectedDraftPreview = named(
+  () => import("@/components/QuotaRejectedDraftPreview"),
+  "QuotaRejectedDraftPreview",
 );
-const CommandPalette = lazy(() =>
-  import("@/components/CommandPalette").then((module) => ({ default: module.CommandPalette })),
-);
-const QuotaRejectedDraftPreview = lazy(() =>
-  import("@/components/QuotaRejectedDraftPreview").then((module) => ({
-    default: module.QuotaRejectedDraftPreview,
-  })),
-);
-const WorkspacePaneDivider = lazy(() =>
-  import("@/components/WorkspacePaneDivider").then((m) => ({ default: m.WorkspacePaneDivider })),
+const WorkspacePaneDivider = named(
+  () => import("@/components/WorkspacePaneDivider"),
+  "WorkspacePaneDivider",
 );
 const DesktopChatToolbar = lazy(() => import("@/components/DesktopChatToolbar"));
 const NextChatPromptPanel = lazy(() => import("@/components/NextChatPromptPanel"));
 const ChatRequestStatus = lazy(() => import("@/components/ChatRequestStatus"));
-const WorkspaceResultContent = lazy(() =>
-  import("@/components/WorkspaceResultContent").then((module) => ({
-    default: module.WorkspaceResultContent,
-  })),
+const WorkspaceResultContent = named(
+  () => import("@/components/WorkspaceResultContent"),
+  "WorkspaceResultContent",
 );
-const SignUpPrompt = lazy(() =>
-  import("@/components/SignUpPrompt").then((module) => ({ default: module.SignUpPrompt })),
-);
-const ReviewedMemoryDialog = lazy(() =>
-  import("@/components/ReviewedMemoryDialog").then((module) => ({
-    default: module.ReviewedMemoryDialog,
-  })),
+const SignUpPrompt = named(() => import("@/components/SignUpPrompt"), "SignUpPrompt");
+const ReviewedMemoryDialog = named(
+  () => import("@/components/ReviewedMemoryDialog"),
+  "ReviewedMemoryDialog",
 );
 
-const ChatWorkspaceControls = lazy(() =>
-  import("@/components/ChatWorkspaceControls").then((module) => ({
-    default: module.ChatWorkspaceControls,
-  })),
+const ChatWorkspaceControls = named(
+  () => import("@/components/ChatWorkspaceControls"),
+  "ChatWorkspaceControls",
 );
-const SettingsDialog = lazy(() =>
-  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
+const SettingsDialog = named(() => import("@/components/SettingsDialog"), "SettingsDialog");
+const OnboardingDialog = named(() => import("@/components/OnboardingDialog"), "OnboardingDialog");
+const LimitReachedNotice = named(
+  () => import("@/components/LimitReachedNotice"),
+  "LimitReachedNotice",
 );
-const OnboardingDialog = lazy(() =>
-  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
-);
-const LimitReachedNotice = lazy(() =>
-  import("@/components/LimitReachedNotice").then((m) => ({ default: m.LimitReachedNotice })),
-);
-const ShareChatDialog = lazy(() =>
-  import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
-);
-const ChatWorkspaceDialog = lazy(() =>
-  import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
+const ShareChatDialog = named(() => import("@/components/ShareChatDialog"), "ShareChatDialog");
+const ChatWorkspaceDialog = named(
+  () => import("@/components/ChatWorkspaceDialog"),
+  "ChatWorkspaceDialog",
 );
 const loadTemporaryChatControls = () => import("@/components/TemporaryChatStartDialog");
-const TemporaryChatStartDialog = lazy(() =>
-  loadTemporaryChatControls().then((m) => ({
-    default: m.TemporaryChatStartDialog,
-  })),
-);
+const TemporaryChatStartDialog = named(loadTemporaryChatControls, "TemporaryChatStartDialog");
 
-const TemporaryChatBanner = lazy(() =>
-  loadTemporaryChatControls().then((m) => ({
-    default: m.TemporaryChatBanner,
-  })),
-);
+const TemporaryChatBanner = named(loadTemporaryChatControls, "TemporaryChatBanner");
 
 const focusedElement = () =>
   document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -1804,7 +1790,7 @@ function KovaGPT() {
       voiceRequest?: {
         signal: AbortSignal;
         onAssistant?: (chatId: string, messageId: string) => void;
-      },
+      } & VoiceTurnEvents,
       quickAnswer = false,
       requestWebSearch?: boolean,
       { preserveDraft = false } = {},
@@ -1927,7 +1913,6 @@ function KovaGPT() {
       };
 
       voiceRequest?.onAssistant?.(nextConvId, assistantMsg.id);
-
       // Keep the exact submitted draft in this request's mounted scope. Attachment
       // objects/payloads are retained by reference; they are never re-uploaded here.
       const rejectedDraft: NextPrompt = {
@@ -2228,6 +2213,7 @@ function KovaGPT() {
                 voiceModelReceipt: delta.receipt as string,
               }));
             }
+            voiceRequest?.onStream?.(delta);
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
               updateAssistantMessage((message) => ({
@@ -2701,6 +2687,7 @@ function KovaGPT() {
     text: string,
     signal: AbortSignal,
     realtime?: boolean,
+    events?: VoiceTurnEvents,
   ): Promise<ComposerVoiceTurn> => {
     const session = composerVoiceSessionRef.current;
     let requestEpoch: number | null = null;
@@ -2721,6 +2708,7 @@ function KovaGPT() {
       throw new Error("voice_turn_cancelled");
     const pending = send(text, [], null, 0, undefined, undefined, undefined, undefined, {
       signal,
+      ...events,
       onAssistant: (chatId, messageId) => {
         if (session?.ownerId)
           setVoiceReveal({ ownerId: session.ownerId, chatId, messageId, fraction: 0 });

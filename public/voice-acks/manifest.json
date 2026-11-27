@@ -1,0 +1,44 @@
+{
+  "jessica": {
+    "check": {
+      "bytes": 20105,
+      "durationMs": 1257
+    },
+    "think": {
+      "bytes": 31807,
+      "durationMs": 1988
+    },
+    "moment": {
+      "bytes": 24284,
+      "durationMs": 1518
+    }
+  },
+  "jarnathan": {
+    "check": {
+      "bytes": 28046,
+      "durationMs": 1753
+    },
+    "think": {
+      "bytes": 31807,
+      "durationMs": 1988
+    },
+    "moment": {
+      "bytes": 23030,
+      "durationMs": 1439
+    }
+  },
+  "lauren": {
+    "check": {
+      "bytes": 25538,
+      "durationMs": 1596
+    },
+    "think": {
+      "bytes": 34315,
+      "durationMs": 2145
+    },
+    "moment": {
+      "bytes": 24284,
+      "durationMs": 1518
+    }
+  }
+}

@@ -31,3 +31,21 @@ export function verifyVoiceModelReceipt(
   receipt: unknown,
   identity: VoiceModelIdentity,
 ): OpenAiVoiceModel | null;
+
+export function issueVoiceSegmentReceipt(
+  policy: VoiceModelPolicy,
+  segment: {
+    ownerId: string;
+    chatId: string;
+    messageId: string;
+    index: number;
+    text: string;
+    provider: string;
+    modelId: string;
+  },
+): string | null;
+export function verifyVoiceSegmentReceipt(
+  policy: VoiceModelPolicy,
+  receipt: unknown,
+  segment: { ownerId: string; chatId: string; messageId: string; index: number; text: string },
+): OpenAiVoiceModel | null;

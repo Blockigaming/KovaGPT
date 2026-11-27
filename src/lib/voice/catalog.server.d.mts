@@ -1,5 +1,6 @@
 export type TtsModelId = "eleven_flash_v2_5" | "eleven_multilingual_v2" | "eleven_v4";
 export const TTS_MODEL_IDS: readonly TtsModelId[];
+export const STREAM_TTS_MODEL_IDS: readonly string[];
 export type VoiceCatalogEntry = {
   id: string;
   label: string;

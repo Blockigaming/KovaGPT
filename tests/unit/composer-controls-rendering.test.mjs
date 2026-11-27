@@ -1,3 +1,4 @@
+import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as kovaNative from "../../src/lib/kova-native.ts";
@@ -41,6 +42,7 @@ const closedSurfaces = {
   "@/lib/chat-image-actions": {},
   "@/components/LinkPreviewChip": { LinkPreviewChip: empty },
   "@/lib/link-preview.mjs": linkPreview,
+  "@/lib/voice/webaudio-sink.mjs": webAudioSink,
   "@/components/OpenDesktopAppButton": {
     OpenDesktopAppButton: () =>
       React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),
