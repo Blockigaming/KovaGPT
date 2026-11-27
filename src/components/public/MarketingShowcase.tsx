@@ -21,8 +21,8 @@ const demos: Record<string, Demo> = {
   connections: { label: "Connections", prompt: "Find the document I need for this task.", steps: ["Choose an available connection", "Review permissions", "Select relevant information"] },
   research: { label: "Research", prompt: "Compare the evidence for these two approaches.", steps: ["Collect relevant material", "Identify gaps in evidence", "Summarize with sources"] },
   code: { label: "Code", prompt: "Help me understand why this function fails.", steps: ["Inspect the input", "Suggest a focused fix", "Review the tests"] },
-  "temporary-chat": { label: "Temporary chat", prompt: "Start a separate conversation.", steps: ["Review temporary chat controls", "Ask a question", "Check the retention policy"] },
-  sharing: { label: "Sharing", prompt: "Prepare a conversation to share.", steps: ["Review the conversation", "Check sharing permissions", "Choose what to share"] },
+  "temporary-chats": { label: "Temporary chat", prompt: "Start a separate conversation.", steps: ["Review temporary chat controls", "Ask a question", "Check the retention policy"] },
+  "shared-chats": { label: "Sharing", prompt: "Prepare a conversation to share.", steps: ["Review the conversation", "Check sharing permissions", "Choose what to share"] },
   personalization: { label: "Personalization", prompt: "Make my responses easier to scan.", steps: ["Review preferences", "Choose a response style", "Check the result"] },
   security: { label: "Security", prompt: "Review my account controls.", steps: ["Review account settings", "Check data permissions", "Use the available security controls"] },
   mobile: { label: "Mobile", prompt: "Continue my work on the go.", steps: ["Open the mobile web experience", "Choose a conversation", "Continue your work"] },
@@ -61,7 +61,7 @@ export function FeatureMarketing({ path, title, sections }: { path: string; titl
   return <div className="kova-marketing-feature"><MarketingDemo key={path} demo={demo} /></div>;
 }
 
-const featuredFeatures = ["chat", "search", "reasoning", "images", "files", "projects", "voice", "agents", "cloud-browser", "scheduled-tasks", "connections", "research", "code"] as const;
+const featuredFeatures = ["chat", "search", "reasoning", "images", "files", "projects", "voice", "agents", "cloud-browser", "scheduled-tasks", "connections", "research", "code", "memory", "library", "temporary-chats", "shared-chats", "personalization", "security", "mobile"] as const;
 export function MarketingShowcase({ compact = false }: { compact?: boolean }) {
   const [active, setActive] = useState<string>("chat");
   const items = compact ? featuredFeatures.slice(0, 6) : featuredFeatures;
