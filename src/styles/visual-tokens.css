@@ -165,7 +165,7 @@
   --kova-icon-stroke: 1.75;
 }
 .dark {
-  --kova-overlay-shadow: 0 20px 64px #00000066, 0 0 0 1px #ffffff05;
+  --kova-overlay-shadow: 0 20px 64px #00000066;
   --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
   --surface-app: var(--background);
