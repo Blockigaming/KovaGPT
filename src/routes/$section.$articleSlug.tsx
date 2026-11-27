@@ -1,5 +1,6 @@
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
+import { PublicationVisual } from "@/components/public/MarketingShowcase";
 import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 import { ReviewWorkspace } from "@/components/public/ReviewWorkspace";
@@ -122,6 +123,7 @@ function Article() {
       title={item.title}
       summary={item.description}
     >
+      <PublicationVisual item={item} />
       {item.body.map((body: string, index: number) => (
         <section key={body} className="rounded-2xl border bg-background p-6">
           <h2 className="font-semibold">{index ? "What this means" : "Overview"}</h2>
