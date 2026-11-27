@@ -117,12 +117,21 @@ test("profile menu stays inside the sidebar and customization controls fit", asy
   await page.goto("/");
   await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
+  // Hydration does not guarantee that the responsive sidebar preference and
+  // authenticated shell are ready. Branch on settled navigation state, not
+  // transient CSS visibility during the initial layout transition.
+  await expect(page.locator(".kova-assistant")).toHaveAttribute("data-sidebar-ready", "true");
   const sidebar = page.locator("#kova-primary-navigation");
-  if (!(await sidebar.isVisible()))
-    await page
+  await expect(sidebar).toHaveAttribute("data-state", /^(open|closed)$/);
+  if ((await sidebar.getAttribute("data-state")) === "closed") {
+    const opener = page
       .getByRole("button", { name: /^(Open menu|Expand sidebar|Open sidebar)$/ })
-      .first()
-      .click();
+      .first();
+    await expect(opener).toBeVisible();
+    await opener.click();
+  }
+  await expect(sidebar).toHaveAttribute("data-state", "open");
+  await expect(sidebar).toBeVisible();
   const account = sidebar.getByRole("button", { name: "Account menu" });
   await expect(account).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await account.click();
