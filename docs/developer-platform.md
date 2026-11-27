@@ -20,7 +20,7 @@ Verification covers SQL ownership and privilege boundaries without service-role 
 
 ## Key-scoped usage retrieval
 
-`GET /api/v1/usage?limit=25&offset=0` returns recent request records for the authenticated API key only, with sanitized token dimensions and customer charges in currency minor units. It uses the normal key authentication and rate limits and does not call a provider or create a charge. Limit is 1–100, offset is 0–10000; other parameters are rejected. The response contains `data`, `has_more`, and `next_offset`; the live list may change between reads. Organization-wide usage remains available only through the verified owner console.
+`GET /api/v1/usage?limit=25&offset=0` returns recent request records for the authenticated API key only, with sanitized token dimensions and customer charges in currency minor units. It uses the normal key authentication and rate limits and does not call a provider or create a charge. Limit is 1–100, offset is 0–10000; other parameters are rejected. The response contains `data`, `has_more`, and `next_offset`; the live list may change between reads. Organization-wide usage remains available only through the verified owner console. `GET /api/v1/usage?id=<request-uuid>` returns one sanitized usage record for the authenticating key, or the same 404 for missing and inaccessible requests. The `id` selector cannot be combined with pagination. This read-only operation does not call a provider or reserve credits.
 
 ## Model-specific reasoning effort
 

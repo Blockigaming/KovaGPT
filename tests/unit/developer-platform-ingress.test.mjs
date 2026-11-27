@@ -634,3 +634,46 @@ test("file quotes cap expiry and bind expanded immutable bytes through the last-
     { id, digest: createHash("sha256").update(content).digest("hex") },
   ]);
 });
+
+test("key usage detail is isolated by account, project, key and request id", async () => {
+  const f = await fixture();
+  const identity = { ...f.identity, project_id: "project-a" };
+  const id = (n) => `11111111-1111-4111-8111-00000000000${n}`;
+  const row = {
+    id: id(1),
+    account_id: identity.account_id,
+    project_id: identity.project_id,
+    api_key_id: identity.id,
+    settlement_state: "settled",
+    authoritative_usage: { input_tokens: 12, internal: "hidden" },
+  };
+  f.state.rows.developer_api_requests = [
+    row,
+    { ...row, id: id(2), account_id: "other" },
+    { ...row, id: id(3), project_id: "other" },
+    { ...row, id: id(4), api_key_id: "other" },
+  ];
+  const read = (query) =>
+    f.module.developerKeyUsage(identity, new Request(`https://kovagpt.com/api/v1/usage?${query}`));
+  const response = await read(`id=${id(1)}`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const detail = await response.json();
+  assert.equal(detail.object, "usage");
+  assert.equal(detail.data.id, id(1));
+  assert.equal(detail.data.input_tokens, 12);
+  assert.equal(detail.data.authoritative_usage, undefined);
+  assert.equal(detail.data.internal, undefined);
+  for (const n of [2, 3, 4, 5]) {
+    const missing = await read(`id=${id(n)}`);
+    assert.equal(missing.status, 404);
+    assert.equal((await missing.json()).error.code, "developer_request_not_found");
+  }
+  for (const query of ["id=bad", `id=${id(1)}&limit=1`, `id=${id(1)}&id=${id(2)}`]) {
+    await assert.rejects(() => read(query), /developer_(id|input)_invalid/);
+  }
+  const list = await (await read("limit=25&offset=0")).json();
+  assert.deepEqual(list.data.map((entry) => entry.id), [id(1)]);
+  assert.equal(f.state.calls.length, 0);
+  assert.equal(f.state.contexts.length, 0);
+});

@@ -349,9 +349,9 @@ const publicUsage = (row: Record<string, unknown>) => {
     moderation_requests: dimension("moderation_requests"),
   };
 };
-async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {
+export async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {
   const params = new URL(request.url).searchParams;
-  const allowed = new Set(["limit", "offset"]);
+  const allowed = new Set(["limit", "offset", "id"]);
   for (const key of params.keys()) {
     if (!allowed.has(key) || params.getAll(key).length !== 1)
       throw new Error("developer_input_invalid");
@@ -364,18 +364,36 @@ async function developerKeyUsage(identity: DeveloperIdentity, request: Request) 
     if (parsed < minimum || parsed > maximum) throw new Error("developer_input_invalid");
     return parsed;
   };
+  const id = params.has("id") ? developerUuid(params.get("id")) : null;
+  if (id && (params.has("limit") || params.has("offset")))
+    throw new Error("developer_input_invalid");
   const limit = number("limit", 25, 1, 100);
   const offset = number("offset", 0, 0, 10000);
   // A bearer key may inspect only its own activity, never sibling keys or
   // organization-wide billing records. The owner console is a separate boundary.
-  const result = await identity.db
+  const query = identity.db
     .from("developer_api_requests")
     .select(
       "id,public_model,capability,currency,settlement_state,maximum_reserved_charge,final_customer_charge,created_at,settled_at,authoritative_usage",
     )
     .eq("account_id", identity.account_id)
     .eq("project_id", identity.project_id)
-    .eq("api_key_id", identity.id)
+    .eq("api_key_id", identity.id);
+  if (id) {
+    const result = await query.eq("id", id).range(0, 0).abortSignal(AbortSignal.timeout(10000));
+    if (result.error || !result.data) throw new Error("developer_storage_unavailable");
+    if (result.data.length !== 1)
+      return developerJson(
+        { error: { code: "developer_request_not_found", message: "developer request not found" } },
+        404,
+      );
+    return developerJson({
+      object: "usage",
+      data: publicUsage(result.data[0]),
+      amount_unit: "currency_minor_unit",
+    });
+  }
+  const result = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(offset, offset + limit)
