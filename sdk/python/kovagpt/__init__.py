@@ -461,6 +461,22 @@ class Client:
         _require(item_id is not None, "batch_id_invalid")
         return self._request(self._batch_path(batch_id, item_id), method="GET").json(262144)
 
+    def research_create(self, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("research-runs", method="POST", paid=True,
+                             body=_json_body({**data, "operation": "create"})).json(524288)
+
+    def research_cancel(self, run_id):
+        run_id = _identifier(run_id, _UUID, "research_id_invalid")
+        return self._request("research-runs", method="POST",
+                             body=_json_body({"operation": "cancel", "id": run_id})).json(524288)
+
+    def research_list(self):
+        return self._get("research-runs")
+
+    def research_retrieve(self, run_id):
+        return self._request("research-runs?id=" + _identifier(run_id, _UUID, "research_id_invalid")).json(524288)
+
     def response_job_create(self, data):
         snapshot = json.loads(_json_body(data, 16384))
         _identifier(snapshot.get("id"), _UUID, "response_job_id_invalid")

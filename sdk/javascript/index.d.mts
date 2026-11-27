@@ -287,6 +287,20 @@ export class KovaGPT {
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;
   };
+  readonly researchRuns: {
+    create(
+      input: {
+        id: string;
+        currency: string;
+        maximum_charge: number;
+        items: Extract<BatchInvocation, { operation: "search" }>[];
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    cancel(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+  };
   readonly responseJobs: {
     create(
       input: {

@@ -17,6 +17,7 @@ import {
 import {
   assertBatchBudget,
   developerResponseJobView,
+  developerResearchRunView,
   parseDeveloperBatchRequest,
 } from "./developer-batch-policy.mjs";
 
@@ -56,9 +57,12 @@ function automationsEnabled() {
 function responseJobsEnabled() {
   return batchEnabled() && runtimeEnv("KOVA_DEVELOPER_BACKGROUND_RESPONSES_ENABLED") === "true";
 }
+function researchEnabled() {
+  return batchEnabled() && runtimeEnv("KOVA_DEVELOPER_RESEARCH_ENABLED") === "true";
+}
 export async function handleDeveloperBatches(
   request: Request,
-  resourceKind: "batch" | "automation" | "response" = "batch",
+  resourceKind: "batch" | "automation" | "response" | "research" = "batch",
 ) {
   try {
     const identity = await authenticateDeveloper(request);
@@ -66,7 +70,8 @@ export async function handleDeveloperBatches(
     if (
       !batchEnabled() ||
       (resourceKind === "automation" && !automationsEnabled()) ||
-      (resourceKind === "response" && !responseJobsEnabled())
+      (resourceKind === "response" && !responseJobsEnabled()) ||
+      (resourceKind === "research" && !researchEnabled())
     )
       throw new Error("developer_batch_unavailable");
     const rate = await consumeApplicationRateLimit({
@@ -104,6 +109,22 @@ export async function handleDeveloperBatches(
         ),
         id,
       );
+    const researchRun = async (id: string) =>
+      developerResearchRunView(
+        await resource(identity, "get", { id, resource_kind: "research" }, request.signal),
+        id,
+      );
+    if (resourceKind === "research" && parsed.operation === "get")
+      return developerJson(await researchRun(parsed.input.id));
+    if (resourceKind === "research" && parsed.operation === "cancel") {
+      await resource(
+        identity,
+        "cancel",
+        { ...parsed.input, resource_kind: resourceKind },
+        request.signal,
+      );
+      return developerJson(await researchRun(parsed.input.id));
+    }
     if (resourceKind === "response" && parsed.operation === "get")
       return developerJson(await responseJob(parsed.input.id));
     if (resourceKind === "response" && parsed.operation === "cancel") {
@@ -138,7 +159,13 @@ export async function handleDeveloperBatches(
     );
     if (replay?.found === true) {
       if (!replay.batch || replay.batch.id !== id) throw new Error("developer_batch_unavailable");
-      return developerJson(resourceKind === "response" ? await responseJob(id) : replay.batch);
+      return developerJson(
+        resourceKind === "response"
+          ? await responseJob(id)
+          : resourceKind === "research"
+            ? await researchRun(id)
+            : replay.batch,
+      );
     }
     if (replay?.found !== false) throw new Error("developer_batch_unavailable");
     // Only an absent submission can reach new scheduling and quote validation.
@@ -166,7 +193,14 @@ export async function handleDeveloperBatches(
       },
       request.signal,
     );
-    return developerJson(resourceKind === "response" ? await responseJob(id) : created, 202);
+    return developerJson(
+      resourceKind === "response"
+        ? await responseJob(id)
+        : resourceKind === "research"
+          ? await researchRun(id)
+          : created,
+      202,
+    );
   } catch (error) {
     return developerFailure(error);
   }
@@ -221,6 +255,7 @@ export async function processDeveloperBatch() {
     .rpc("claim_developer_batch_v1", {
       p_allow_automations: automationsEnabled(),
       p_allow_responses: responseJobsEnabled(),
+      p_allow_research: researchEnabled(),
     })
     .abortSignal(AbortSignal.timeout(5000));
   if (claimed.error) throw new Error("developer_batch_unavailable");

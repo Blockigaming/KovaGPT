@@ -26,7 +26,7 @@ export function parseDeveloperBatchRequest(
   method: string,
   params: URLSearchParams,
   body?: unknown,
-  resourceKind?: "batch" | "automation" | "response",
+  resourceKind?: "batch" | "automation" | "response" | "research",
   now?: number,
   replayLookup?: boolean,
 ): BatchRequest;
@@ -50,3 +50,8 @@ export function developerResponseJobView(
   settlement_state: unknown;
   final_customer_charge: unknown;
 };
+
+export function developerResearchRunView(
+  value: unknown,
+  expectedId: string,
+): Record<string, unknown>;

@@ -7,6 +7,7 @@ import {
   developerBatchCapability,
   developerBatchRequestKey,
   developerResponseJobView,
+  developerResearchRunView,
   parseDeveloperBatchRequest,
 } from "../../src/lib/pricing/developer-batch-policy.mjs";
 
@@ -331,4 +332,95 @@ test("background Responses preserve strict schemas and client-owned function rou
     { conversation: { id, revision: 1 } },
   ])
     assert.throws(() => parseJob({ ...input, ...patch }));
+});
+
+test("research requires two to four exact separately authorized search inputs", () => {
+  const search = {
+    id: item,
+    operation: "search",
+    quote_token: request.items[0].quote_token,
+    input: { model: "kova-fast", query: "Evidence", max_output_tokens: 256, max_tool_calls: 1 },
+  };
+  const items = [search, { ...search, id }];
+  const parse = (body) =>
+    parseDeveloperBatchRequest("POST", new URLSearchParams(), body, "research");
+  assert.equal(parse({ ...request, items }).input.items.length, 2);
+  for (const bad of [
+    [search],
+    [...items, ...items, search],
+    [search, request.items[0]],
+    [search, search],
+  ])
+    assert.throws(() => parse({ ...request, items: bad }), /batch_invalid/);
+  assert.throws(
+    () =>
+      parseDeveloperBatchRequest(
+        "GET",
+        new URLSearchParams({ id, item_id: item }),
+        undefined,
+        "research",
+      ),
+    /batch_invalid/,
+  );
+});
+
+test("research exposes only settled findings, real URL annotations and accurate partial states", () => {
+  const output = {
+    status: "completed",
+    output: [
+      {
+        type: "message",
+        role: "assistant",
+        content: [
+          {
+            type: "output_text",
+            text: "Finding",
+            annotations: [
+              { type: "url_citation", url: "https://example.com/report", title: "Report" },
+              { type: "url_citation", url: "https://example.com/report", title: "Duplicate" },
+              { type: "url_citation", url: "javascript:alert(1)" },
+              { type: "url_citation", url: "https://secret@example.com/" },
+              { type: "other", url: "https://not-evidence.example/" },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const completed = {
+    id: item,
+    query: "Evidence",
+    operation_kind: "search",
+    state: "completed",
+    settlement_state: "settled",
+    output,
+    authorization: "secret",
+  };
+  const queued = { ...completed, id, state: "queued", settlement_state: null };
+  const view = (items) => developerResearchRunView({ id, resource_kind: "research", items }, id);
+  const running = view([completed, queued]);
+  assert.equal(running.status, "running");
+  assert.equal(running.items[0].text, "Finding");
+  assert.deepEqual(running.items[0].citations, [
+    { url: "https://example.com/report", title: "Report" },
+  ]);
+  assert.equal(running.items[0].authorization, undefined);
+  assert.equal(running.items[1].text, null);
+  assert.deepEqual(running.items[1].citations, []);
+  assert.equal(view([completed, { ...queued, state: "canceled" }]).status, "partial");
+  assert.equal(view([completed, { ...completed, id }]).status, "completed");
+  assert.equal(
+    view([
+      { ...completed, settlement_state: "uncertain" },
+      { ...queued, state: "canceled" },
+    ]).status,
+    "uncertain",
+  );
+  assert.equal(
+    view([
+      { ...queued, state: "canceled" },
+      { ...queued, id: item, state: "canceled" },
+    ]).status,
+    "canceled",
+  );
 });

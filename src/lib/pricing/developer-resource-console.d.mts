@@ -18,6 +18,7 @@ export type DeveloperResourceSection =
   | "batches"
   | "automations"
   | "response-jobs"
+  | "research-runs"
   | "webhooks";
 export const developerResourceSections: Readonly<Record<DeveloperResourceSection, ResourceSection>>;
 export function resourceConsoleTemplate(

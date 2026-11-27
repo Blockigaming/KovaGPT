@@ -367,6 +367,22 @@ export class KovaGPT {
         fail("response_job_id_invalid");
       return id;
     };
+    const researchPost = async (operation, input, { signal } = {}) => {
+      const generation = operation === "create";
+      const response = await this.#request("research-runs", {
+        input: boundedInput({ ...boundedInput(input), operation }),
+        generation,
+        signal,
+      });
+      return generation ? jobResult(response, 524288) : smallJson(response, 524288);
+    };
+    this.researchRuns = Object.freeze({
+      create: (input, options) => researchPost("create", input, options),
+      cancel: (id, options) => researchPost("cancel", { id: responseJobId(id) }, options),
+      list: async ({ signal } = {}) => smallJson(await this.#request("research-runs", { signal })),
+      retrieve: async (id, { signal } = {}) =>
+        smallJson(await this.#request("research-runs?id=" + responseJobId(id), { signal }), 524288),
+    });
     this.responseJobs = Object.freeze({
       create: async (input, { signal } = {}) => {
         const snapshot = boundedInput(input, 16384);

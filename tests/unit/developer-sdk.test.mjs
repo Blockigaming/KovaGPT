@@ -514,3 +514,19 @@ test("vector batch SDK sends one scoped atomic resource mutation", async () => {
   assert.equal(f.calls.length, 1);
   assert.deepEqual(JSON.parse(f.calls[0].body), { ...data, operation: "upsert_batch" });
 });
+
+test("research runs use a separate scoped API and stable job identifiers", async () => {
+  const id = "55555555-5555-4555-8555-555555555555";
+  const f = fixture(() => Response.json({ id, status: "queued" }));
+  const job = { id, currency: "USD", maximum_charge: 1, items: [] };
+  await f.client.researchRuns.create(job);
+  await f.client.researchRuns.list();
+  await f.client.researchRuns.retrieve(id);
+  await f.client.researchRuns.cancel(id);
+  assert.equal(f.calls[0].url, "https://kovagpt.com/api/v1/research-runs");
+  assert.deepEqual(JSON.parse(f.calls[0].body), { ...job, operation: "create" });
+  assert.equal(f.calls[2].url, "https://kovagpt.com/api/v1/research-runs?id=" + id);
+  assert.deepEqual(JSON.parse(f.calls[3].body), { operation: "cancel", id });
+  await assert.rejects(f.client.researchRuns.retrieve("../keys"), /response_job_id_invalid/);
+  assert.equal(f.calls.length, 4);
+});

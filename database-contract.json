@@ -2424,7 +2424,7 @@
     "execute on function public.claim_browserbase_slot(uuid, uuid, text, integer) to service_role",
     "execute on function public.claim_browserbase_slot_with_quota(uuid, uuid, text, integer) to service_role",
     "execute on function public.claim_chat_context_summaries(integer) to service_role",
-    "execute on function public.claim_developer_batch_v1(boolean,boolean) to service_role",
+    "execute on function public.claim_developer_batch_v1(boolean,boolean,boolean) to service_role",
     "execute on function public.claim_developer_webhooks_v1(integer) to service_role",
     "execute on function public.claim_due_scheduled_tasks(text, integer, integer)\n  to service_role",
     "execute on function public.claim_due_scheduled_tasks(text,integer,integer) to service_role",
@@ -3173,7 +3173,7 @@
     "all on function public.claim_browserbase_slot(uuid, uuid, text, integer) from public, anon, authenticated",
     "all on function public.claim_browserbase_slot_with_quota(uuid, uuid, text, integer) from public, anon, authenticated",
     "all on function public.claim_chat_context_summaries(integer) from public,anon,authenticated",
-    "all on function public.claim_developer_batch_v1(boolean,boolean) from public,anon,authenticated",
+    "all on function public.claim_developer_batch_v1(boolean,boolean,boolean) from public,anon,authenticated",
     "all on function public.claim_developer_webhooks_v1(integer) from public,anon,authenticated",
     "all on function public.claim_due_scheduled_tasks(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.claim_due_scheduled_tasks(text,integer,integer) from public,anon,authenticated",
@@ -4261,5 +4261,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "ef5013f58b401ebe4be90d1c8fcb99b53a0274939abf7caaba5822e5c44db68b"
+  "sha256": "904ef6b53ec66a6b972e5f8d51fbdf41adb92d31be4ba8062f412d01de7250a8"
 }

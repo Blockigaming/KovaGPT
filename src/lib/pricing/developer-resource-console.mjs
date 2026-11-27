@@ -207,6 +207,36 @@ export const developerResourceSections = Object.freeze({
       cancel,
     },
   },
+  "research-runs": {
+    label: "Research runs",
+    description:
+      "Authorize two to four explicitly quoted searches; retrieve settled findings and source citations. Draft each query separately and combine the exact quoted inputs before authorizing the total budget.",
+    actions: {
+      list,
+      detail,
+      quoteSearch: queueQuotes.quoteSearch,
+      create: post("Authorize research run", "create", {
+        id: "",
+        currency: "USD",
+        maximum_charge: 0,
+        items: [
+          {
+            id: "",
+            operation: "search",
+            input: queueQuotes.quoteSearch.fields.input,
+            quote_token: "",
+          },
+          {
+            id: "",
+            operation: "search",
+            input: queueQuotes.quoteSearch.fields.input,
+            quote_token: "",
+          },
+        ],
+      }),
+      cancel,
+    },
+  },
   "response-jobs": {
     label: "Background responses",
     description:
@@ -320,7 +350,8 @@ export function resourceConsoleRequiresConfirmation(section, action) {
 export function resourceConsoleMaySpend(section, action) {
   const { operation } = descriptor(section, action);
   return (
-    (operation === "create" && ["batches", "automations", "response-jobs"].includes(section)) ||
+    (operation === "create" &&
+      ["batches", "automations", "response-jobs", "research-runs"].includes(section)) ||
     (section === "automations" && operation === "resume")
   );
 }
@@ -329,7 +360,7 @@ export function resourceConsoleMaySpend(section, action) {
 export function resourceConsoleJobDraft(section, action, raw, result, randomId, now = Date.now()) {
   const request = resourceConsoleRequest(section, action, raw);
   if (
-    !["batches", "automations", "response-jobs"].includes(section) ||
+    !["batches", "automations", "response-jobs", "research-runs"].includes(section) ||
     request.path !== "/api/v1/quotes" ||
     !result ||
     typeof result.quoteToken !== "string" ||

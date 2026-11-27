@@ -665,6 +665,7 @@ const PUBLIC_REVIEW_PATHS = Object.freeze([
       "batches",
       "automations",
       "response-jobs",
+      "research-runs",
       "usage",
       "javascript",
       "python",

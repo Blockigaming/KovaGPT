@@ -194,6 +194,14 @@ export const DEVELOPER_ENDPOINTS = [
     "Finite schedules expire after 24 hours. Resume may execute overdue authorized work; require explicit approval. Indefinite recurrence and external actions are not supported by this resource.",
   ),
   endpoint(
+    "research-runs",
+    "Research runs",
+    "research-runs",
+    "GET POST",
+    "Create with the batch envelope and two to four search items, each with its own exact quote. GET id or list; POST cancel with id.",
+    "The worker executes bounded, metered searches and returns settled findings with provider URL annotations. This is explicit multi-query evidence collection, not autonomous planning or synthesis.",
+  ),
+  endpoint(
     "response-jobs",
     "Background responses",
     "response-jobs",

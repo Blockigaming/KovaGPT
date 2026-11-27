@@ -305,3 +305,72 @@ test("webhook claims bind active credentials, endpoint generation, destination a
     await f.db.close();
   }
 });
+
+test("research dispatch is independently gated, project scoped, cancellable and only returns settled output", async () => {
+  const f = await fixture();
+  try {
+    const input = {
+      model: "kova-fast",
+      query: "Evidence",
+      max_output_tokens: 256,
+      max_tool_calls: 1,
+    };
+    const first = { ...create().items[0], operation_kind: "search", input };
+    const second = { ...first, id: id(12), request_group: "c".repeat(64) };
+    const request = {
+      ...create(),
+      resource_kind: "research",
+      maximum_ticks: 2000,
+      items: [first, second],
+    };
+    const ref = { id: job, resource_kind: "research" };
+    await assert.rejects(f.manage("create", { ...request, items: [first] }), /batch_invalid/);
+    await assert.rejects(
+      f.manage("create", {
+        ...request,
+        items: [first, { ...second, operation_kind: "responses" }],
+      }),
+      /batch_invalid/,
+    );
+    await f.manage("create", request);
+    assert.equal(await f.claim(), null);
+    const claim = (await f.db.query("select claim_developer_batch_v1(false,false,true) result"))
+      .rows[0].result;
+    assert.equal(claim.item.id, job);
+    const before = await f.manage("get", ref);
+    assert.equal(before.items[0].output, null);
+    assert.equal(before.items[0].authorization, undefined);
+    await assert.rejects(
+      f.manage("get", ref, other, foreignKey, foreignProject),
+      /batch_not_found/,
+    );
+    await assert.rejects(f.manage("get_item", { ...ref, item_id: job }), /batch_invalid/);
+    await f.db.exec("reset role");
+    await f.db.query(
+      "insert into developer_api_requests(id,api_key_id,project_id,request_group,settlement_state,final_customer_charge,created_at) values($1,$2,$3,$4,'settled',1,now())",
+      [id(10), key, project, group],
+    );
+    await f.db.exec("set role service_role");
+    const output = { status: "completed", output: [] };
+    const finish = await f.db.query("select finish_developer_batch_v1($1,$2,$3,$4,$5) ok", [
+      project,
+      job,
+      job,
+      claim.item.lease_token,
+      output,
+    ]);
+    assert.equal(finish.rows[0].ok, true);
+    await f.manage("cancel", ref);
+    const result = await f.manage("get", ref);
+    assert.deepEqual(result.items[0].output, output);
+    assert.equal(result.items[0].settlement_state, "settled");
+    assert.equal(result.items[1].state, "canceled");
+    assert.equal(result.items[1].output, null);
+    assert.equal(
+      (await f.db.query("select claim_developer_batch_v1(false,false,true) result")).rows[0].result,
+      null,
+    );
+  } finally {
+    await f.db.close();
+  }
+});

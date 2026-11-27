@@ -184,17 +184,17 @@ _READS = (
     "vector_list", "vector_retrieve", "vector_entries", "vector_entry", "agent_list",
     "agent_retrieve", "skill_list", "skill_retrieve", "webhook_list", "webhook_retrieve",
     "webhook_deliveries", "batch_list", "batch_retrieve", "batch_item", "response_job_list",
-    "response_job_retrieve", "automation_list", "automation_retrieve", "automation_item",
+    "response_job_retrieve", "research_list", "research_retrieve", "automation_list", "automation_retrieve", "automation_item",
 )
 _MUTATIONS = (
     "file_delete", "file_upload", "file_upload_multipart", "conversation_create",
     "conversation_append", "conversation_remove", "conversation_delete", "vector_create",
     "vector_upsert", "vector_upsert_batch", "vector_delete", "agent_create", "agent_update", "agent_delete",
     "skill_create", "skill_update", "skill_delete", "webhook_create", "webhook_rotate",
-    "webhook_test", "webhook_delete", "batch_cancel", "response_job_cancel",
+    "webhook_test", "webhook_delete", "batch_cancel", "response_job_cancel", "research_cancel",
     "automation_cancel", "automation_pause",
 )
-_PAID_MUTATIONS = ("batch_create", "response_job_create", "automation_create", "automation_resume")
+_PAID_MUTATIONS = ("batch_create", "response_job_create", "research_create", "automation_create", "automation_resume")
 _INFERENCE = {
     "responses": "responses", "chat_completions": "chat/completions", "search": "search",
     "images": "images", "embeddings": "embeddings", "agent_turn": "agent-turns",

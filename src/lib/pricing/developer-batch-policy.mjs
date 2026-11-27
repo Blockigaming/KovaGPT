@@ -164,7 +164,7 @@ export function parseDeveloperBatchRequest(
   replayLookup = false,
 ) {
   if (
-    !["batch", "automation", "response"].includes(resourceKind) ||
+    !["batch", "automation", "response", "research"].includes(resourceKind) ||
     !Number.isSafeInteger(now) ||
     typeof replayLookup !== "boolean"
   )
@@ -181,6 +181,7 @@ export function parseDeveloperBatchRequest(
       };
     }
   }
+  if (resourceKind === "research" && params.has("item_id")) fail();
   const scheduled = resourceKind === "automation";
   for (const key of params.keys())
     if (!["id", "item_id"].includes(key) || params.getAll(key).length !== 1) fail();
@@ -201,7 +202,8 @@ export function parseDeveloperBatchRequest(
       !/^[A-Z]{3}$/.test(body.currency) ||
       !Array.isArray(body.items) ||
       body.items.length < 1 ||
-      body.items.length > 8
+      body.items.length > 8 ||
+      (resourceKind === "research" && (body.items.length < 2 || body.items.length > 4))
     )
       fail();
     const items = body.items.map((item) => {
@@ -209,6 +211,7 @@ export function parseDeveloperBatchRequest(
       const operation = item.operation ?? "chat/completions";
       developerBatchCapability(operation);
       if (resourceKind === "response" && operation !== "responses") fail();
+      if (resourceKind === "research" && operation !== "search") fail();
       if (
         typeof item.quote_token !== "string" ||
         item.quote_token.length > 2048 ||
@@ -312,5 +315,107 @@ export function developerResponseJobView(value, expectedId) {
     request_id: value.request_id ?? null,
     settlement_state: value.settlement_state ?? null,
     final_customer_charge: value.final_customer_charge ?? null,
+  };
+}
+
+// Project only settled search results; annotations are provider evidence, not a verification of their claims.
+export function developerResearchRunView(value, expectedId) {
+  if (
+    !value ||
+    value.id !== expectedId ||
+    value.resource_kind !== "research" ||
+    !Array.isArray(value.items) ||
+    value.items.length < 2 ||
+    value.items.length > 4
+  )
+    throw new Error("developer_batch_unavailable");
+  const items = value.items.map((item) => {
+    if (
+      item.operation_kind !== "search" ||
+      typeof item.query !== "string" ||
+      !["queued", "running", "completed", "uncertain", "canceled"].includes(item.state)
+    )
+      throw new Error("developer_batch_unavailable");
+    const settled = item.state === "completed" && item.settlement_state === "settled";
+    const output = settled ? item.output : null;
+    const status = output?.status;
+    const texts = [],
+      citations = new Map();
+    if (["completed", "incomplete"].includes(status) && Array.isArray(output.output)) {
+      for (const message of output.output) {
+        if (
+          message?.type !== "message" ||
+          message.role !== "assistant" ||
+          !Array.isArray(message.content)
+        )
+          continue;
+        for (const part of message.content) {
+          if (part?.type !== "output_text" || typeof part.text !== "string") continue;
+          texts.push(part.text);
+          for (const annotation of Array.isArray(part.annotations) ? part.annotations : []) {
+            if (
+              annotation?.type !== "url_citation" ||
+              typeof annotation.url !== "string" ||
+              annotation.url.length > 4096
+            )
+              continue;
+            try {
+              const url = new URL(annotation.url);
+              if (
+                !["http:", "https:"].includes(url.protocol) ||
+                url.username ||
+                url.password ||
+                citations.size >= 64
+              )
+                continue;
+              if (!citations.has(url.href))
+                citations.set(url.href, {
+                  url: url.href,
+                  title:
+                    typeof annotation.title === "string" ? annotation.title.slice(0, 512) : null,
+                });
+            } catch {
+              /* Invalid provider annotations are not sources. */
+            }
+          }
+        }
+      }
+    }
+    const text = texts.join("\n");
+    return {
+      id: item.id,
+      query: item.query,
+      status: item.state,
+      result_status: settled ? (text ? status : "unavailable") : null,
+      text: text || null,
+      citations: [...citations.values()],
+      request_id: item.request_id ?? null,
+      settlement_state: item.settlement_state ?? null,
+      final_customer_charge: item.final_customer_charge ?? null,
+    };
+  });
+  const pending = items.some((item) => item.status === "queued" || item.status === "running");
+  const all = items.every(
+    (item) => item.result_status === "completed" && item.citations.length > 0,
+  );
+  const status = pending
+    ? items.every((item) => item.status === "queued")
+      ? "queued"
+      : "running"
+    : all
+      ? "completed"
+      : items.every((item) => item.status === "canceled")
+        ? "canceled"
+        : items.some((item) => item.text)
+          ? "partial"
+          : "uncertain";
+  return {
+    object: "research.run",
+    id: expectedId,
+    status,
+    currency: value.currency,
+    created_at: value.created_at,
+    expires_at: value.expires_at,
+    items,
   };
 }

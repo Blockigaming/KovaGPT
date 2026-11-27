@@ -131,3 +131,26 @@ test("each supported queue operation can prepare an exact quote-bound draft with
   }
   assert.throws(() => resourceConsoleJobDraft("batches", "list", "{}", result, () => id, now));
 });
+
+test("research console quotes a search and drafts a two-query run without authorizing spending", () => {
+  const now = 1795780800000;
+  const section = "research-runs";
+  const input = resourceConsoleTemplate(section, "quoteSearch", () => id);
+  const result = {
+    quoteToken: "payload." + "a".repeat(64),
+    currency: "USD",
+    maximumCharge: 1,
+    expiresAt: now + 60000,
+  };
+  const draft = JSON.parse(
+    resourceConsoleJobDraft(section, "quoteSearch", input, result, () => id, now),
+  );
+  assert.equal(draft.items.length, 2);
+  assert.equal(draft.items[0].quote_token, result.quoteToken);
+  assert.deepEqual(draft.items[0].input, JSON.parse(input).input);
+  assert.equal(draft.items[1].quote_token, "");
+  assert.equal(draft.maximum_charge, 0);
+  assert.equal(resourceConsoleRequiresConfirmation(section, "create"), true);
+  assert.equal(resourceConsoleMaySpend(section, "create"), true);
+  assert.equal(resourceConsoleMaySpend(section, "quoteSearch"), false);
+});

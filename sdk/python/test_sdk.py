@@ -222,6 +222,20 @@ class SDKTests(unittest.TestCase):
             self.client.responses({"model": "fast", "input": data["audio"]}, **BUDGET)
         self.assertEqual(len(self.calls), 2)
 
+    def test_research_runs_use_scoped_routes(self):
+        job = {"id": ID, "currency": "USD", "maximum_charge": 1, "items": []}
+        self.responses.extend(FakeResponse({"id": ID}) for _ in range(4))
+        self.client.research_create(job)
+        self.client.research_list()
+        self.client.research_retrieve(ID)
+        self.client.research_cancel(ID)
+        self.assertEqual(json.loads(self.calls[0][2]), {**job, "operation": "create"})
+        self.assertEqual(self.calls[2][1], "/api/v1/research-runs?id=" + ID)
+        self.assertEqual(json.loads(self.calls[3][2]), {"operation": "cancel", "id": ID})
+        with self.assertRaisesRegex(KovaError, "research_id_invalid"):
+            self.client.research_retrieve("../keys")
+        self.assertEqual(len(self.calls), 4)
+
     def test_response_jobs_use_stable_ids_and_explicit_quotes(self):
         self.responses.extend(FakeResponse({"id": ID, "status": "queued"}) for _ in range(4))
         job = {"id": ID, "currency": "USD", "maximum_charge": 10, "quote_token": quote()["quoteToken"], "input": DATA}
