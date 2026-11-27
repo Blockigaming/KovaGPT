@@ -931,7 +931,8 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             (entry.capability !== "computer_use" || developerComputerEnabled()) &&
             (entry.capability === "cloud_browser"
               ? developerBrowserEnabled() && entry.provider === "browserbase"
-              : entry.provider === getAiProviderConfig(entry.capability as ProviderCapability).provider),
+              : entry.provider ===
+                getAiProviderConfig(entry.capability as ProviderCapability).provider),
         )
         .map(
           (entry: {

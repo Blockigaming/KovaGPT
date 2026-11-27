@@ -35,7 +35,10 @@ export function developerBrowserEnabled() {
   }
 }
 
-export async function assertDeveloperBrowserAuthority(identity: DeveloperIdentity, destination: URL) {
+export async function assertDeveloperBrowserAuthority(
+  identity: DeveloperIdentity,
+  destination: URL,
+) {
   if (!developerBrowserEnabled() || !allowedOrigins().includes(destination.origin))
     throw new Error("developer_browser_scope_required");
   const db = identity.db;
@@ -191,8 +194,7 @@ export async function runDeveloperBrowser(
     const text = await page.locator("body").innerText({ timeout: 2500 });
     const title = (await page.title()).slice(0, 180);
     const image = await page.screenshot({ type: "jpeg", quality: 55, timeout: 3500 });
-    if (!text.trim() || image.length > 256 * 1024)
-      throw new Error("developer_browser_unavailable");
+    if (!text.trim() || image.length > 256 * 1024) throw new Error("developer_browser_unavailable");
     await check();
     return Response.json({
       id: remoteId,
