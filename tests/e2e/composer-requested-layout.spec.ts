@@ -148,8 +148,10 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   // Compare the open menu with its live anchor, not the pre-transition composer.
   await expect
     .poll(async () => {
-      const [menuBox, composerBox] = await Promise.all([menu.boundingBox(), composer.boundingBox()]);
-      return menuBox && composerBox ? Math.abs(menuBox.width - composerBox.width) : Infinity;
+      const menuBox = await menu.boundingBox();
+      const composerBox = await composer.boundingBox();
+      if (!menuBox || !composerBox) return Infinity;
+      return Math.abs(menuBox.width - composerBox.width);
     })
     .toBeLessThan(3);
   await page.screenshot({ path: info.outputPath("requested-menu.png"), animations: "disabled" });
