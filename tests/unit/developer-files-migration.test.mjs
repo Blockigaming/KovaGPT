@@ -586,3 +586,50 @@ test("outgoing webhook registration, stable test events, lease retry and rotatio
     await f.db.close();
   }
 });
+
+test("batch leases, aggregate maximums, cancellation and isolation", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_batches_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input, user = owner) =>
+      (await f.db.query("select manage_developer_batches_v1($1,$2,$3,$4,$5) result", [
+        user, key, f.account.projectId, operation, input,
+      ])).rows[0].result;
+    const batch = id(91), first = id(92), second = id(93);
+    const item = (id, n) => ({
+      id, input: { model: "kova-fast", messages: [{ role: "user", content: "hello" }], max_completion_tokens: 100 },
+      authorization: "test-authorization", maximum_ticks: 100, request_group: n.repeat(64),
+    });
+    const input = {
+      id: batch, currency: "USD", maximum_ticks: 200, request_digest: "a".repeat(64),
+      expires_at: new Date(Date.now() + 3600000).toISOString(), items: [item(first, "b"), item(second, "c")],
+    };
+    await assert.rejects(run("create", { ...input, maximum_ticks: 199 }), /batch_budget_invalid/);
+    assert.equal((await run("create", input)).id, batch);
+    assert.equal((await run("create", input)).id, batch);
+    await assert.rejects(run("create", { ...input, request_digest: "d".repeat(64) }), /batch_conflict/);
+    await assert.rejects(run("get", { id: batch }, other), /scope_required/);
+    const claim = async () => (await f.db.query("select claim_developer_batch_v1() result")).rows[0].result;
+    const claimed = await claim();
+    assert.equal(claimed.item.id, first);
+    assert.equal(await claim(), null);
+    await run("cancel", { id: batch });
+    const state = await run("get", { id: batch });
+    assert.deepEqual(state.items.map((item) => item.state), ["running", "canceled"]);
+    assert.equal((await run("get_item", { id: batch, item_id: first })).authorization, undefined);
+    const finish = async (lease) => (await f.db.query("select finish_developer_batch_v1($1,$2,$3,$4,$5) result", [
+      f.account.projectId, batch, first, lease, null,
+    ])).rows[0].result;
+    assert.equal(await finish(id(99)), false);
+    assert.equal(await finish(claimed.item.lease_token), true);
+    assert.equal((await run("get_item", { id: batch, item_id: first })).state, "uncertain");
+    assert.equal(await claim(), null);
+    for (const role of ["anon","authenticated"])
+      assert.equal((await f.db.query("select has_table_privilege($1,'developer_batch_items_v1','select') allowed", [role])).rows[0].allowed, false);
+    assert.equal((await f.db.query("select count(*)::int n from developer_batch_export_records_v1")).rows[0].n, 2);
+  } finally {
+    await f.db.close();
+  }
+});

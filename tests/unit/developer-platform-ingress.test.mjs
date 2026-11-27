@@ -158,7 +158,8 @@ async function fixture(options = {}) {
       path === "./developer-file-search-policy.mjs" ||
       path === "./developer-decisions-policy.mjs" ||
       path === "./developer-agent-policy.mjs" ||
-      path === "./developer-skill-policy.mjs"
+      path === "./developer-skill-policy.mjs" ||
+      path === "./developer-batch-policy.mjs"
     )
       return full.replace(
         JSON.stringify(path),

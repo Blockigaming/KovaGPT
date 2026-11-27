@@ -401,6 +401,33 @@ class Client:
     def webhook_delete(self, endpoint_id):
         return self._request(self._webhook_path(endpoint_id), method="DELETE").json(65536)
 
+    @staticmethod
+    def _batch_path(batch_id, item_id=None):
+        path = "batches?id=" + _identifier(batch_id, _UUID, "batch_id_invalid")
+        if item_id is not None:
+            path += "&item_id=" + _identifier(item_id, _UUID, "batch_id_invalid")
+        return path
+
+    def batch_create(self, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("batches", method="POST",
+                             body=_json_body({**data, "operation": "create"})).json(65536)
+
+    def batch_cancel(self, batch_id):
+        batch_id = _identifier(batch_id, _UUID, "batch_id_invalid")
+        return self._request("batches", method="POST",
+                             body=_json_body({"operation": "cancel", "id": batch_id})).json(65536)
+
+    def batch_list(self):
+        return self._get("batches")
+
+    def batch_retrieve(self, batch_id):
+        return self._request(self._batch_path(batch_id), method="GET").json(131072)
+
+    def batch_item(self, batch_id, item_id):
+        _require(item_id is not None, "batch_id_invalid")
+        return self._request(self._batch_path(batch_id, item_id), method="GET").json(262144)
+
     def quote(self, operation, data):
         _require(isinstance(operation, str) and operation in _OPERATIONS, "operation_invalid")
         snapshot = _json_body(data)

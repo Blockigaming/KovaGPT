@@ -3,6 +3,7 @@ import { timingSafeEqualText } from "@/lib/http-security.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { recoverDeveloperBilling } from "@/lib/pricing/developer-billing.server";
 import { deliverDeveloperWebhooks } from "@/lib/pricing/developer-webhooks.server";
+import { processDeveloperBatch } from "@/lib/pricing/developer-batches.server";
 export const Route = createFileRoute("/api/internal/developer-billing")({
   server: {
     handlers: {
@@ -24,9 +25,12 @@ export const Route = createFileRoute("/api/internal/developer-billing")({
         try {
           const recovered = await recoverDeveloperBilling();
           // A webhook destination must not make billing maintenance fail.
-          const webhookAttempts = await deliverDeveloperWebhooks().catch(() => null);
+          const [webhookAttempts, batchAttempts] = await Promise.all([
+            deliverDeveloperWebhooks().catch(() => null),
+            processDeveloperBatch().catch(() => null),
+          ]);
           return Response.json(
-            { recovered, webhookAttempts },
+            { recovered, webhookAttempts, batchAttempts },
             { headers: { "Cache-Control": "no-store" } },
           );
         } catch {

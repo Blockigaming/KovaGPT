@@ -36,6 +36,7 @@ import {
   parseDeveloperAgentTurn,
 } from "./developer-agent-policy.mjs";
 import { expandDeveloperSkills, parseDeveloperSkillRequest } from "./developer-skill-policy.mjs";
+import { batchChargeTicks, developerBatchRequestKey } from "./developer-batch-policy.mjs";
 import { loadDeveloperFileContent, readDeveloperFileRecords } from "./developer-file-content.server";
 import {
   parseDeveloperFileSearch,
@@ -194,7 +195,7 @@ export async function authenticateDeveloper(request: Request) {
   await assertLockdownAllows(db, user.id, "agent");
   return { ...result.data, ownerId: user.id, db };
 }
-type DeveloperIdentity = Awaited<ReturnType<typeof authenticateDeveloper>>;
+export type DeveloperIdentity = Omit<Awaited<ReturnType<typeof authenticateDeveloper>>, "secret_digest">;
 async function currentPricing(identity: DeveloperIdentity) {
   const account = await identity.db
     .from("developer_credit_accounts")
@@ -466,15 +467,17 @@ export async function developerQuote(identity: DeveloperIdentity, kind: string, 
     expiresAt: quote.expiresAt,
   };
 }
-export async function executeDeveloper(
-  identity: DeveloperIdentity,
-  kind: string,
-  input: unknown,
-  requestKey: string,
-  quoteToken: string | null,
-  signal?: AbortSignal,
-) {
-  developerRequestKey(requestKey);
+type PublicQuote = {
+  key: string;
+  version: string;
+  fingerprint: string;
+  operation: string;
+  agentBinding?: unknown;
+  skillBinding?: string | null;
+  maximumCharge: number;
+  expiresAt: number;
+};
+function readDeveloperQuote(identity: DeveloperIdentity, quoteToken: string | null): PublicQuote {
   if (!quoteToken || quoteToken.length > 2048) throw new Error("developer_quote_required");
   const [payload, signature, extra] = quoteToken.split(".");
   if (extra !== undefined || !payload || !signature || !equal(signature, digest("quote", payload)))
@@ -492,7 +495,21 @@ export async function executeDeveloper(
     quote.expiresAt > Date.now() + 120000
   )
     throw new Error("developer_quote_expired");
-  const parsed = await preparePublicRequest(identity, kind, input);
+  if (
+    typeof quote.version !== "string" ||
+    typeof quote.fingerprint !== "string" ||
+    !/^[a-f0-9]{64}$/.test(quote.fingerprint) ||
+    !Number.isFinite(quote.maximumCharge) ||
+    quote.maximumCharge <= 0
+  )
+    throw new Error("developer_quote_invalid");
+  return quote;
+}
+function checkDeveloperQuote(
+  quote: PublicQuote,
+  kind: string,
+  parsed: Awaited<ReturnType<typeof preparePublicRequest>>,
+) {
   if (
     quote.operation !== kind ||
     JSON.stringify(quote.agentBinding ?? null) !== JSON.stringify(parsed.agentBinding) ||
@@ -502,6 +519,19 @@ export async function executeDeveloper(
     quote.maximumCharge < Number(parsed.prepared.quote.maximumReservedCharge)
   )
     throw new Error("developer_quote_changed");
+}
+export async function executeDeveloper(
+  identity: DeveloperIdentity,
+  kind: string,
+  input: unknown,
+  requestKey: string,
+  quoteToken: string | null,
+  signal?: AbortSignal,
+) {
+  developerRequestKey(requestKey);
+  const quote = readDeveloperQuote(identity, quoteToken);
+  const parsed = await preparePublicRequest(identity, kind, input);
+  checkDeveloperQuote(quote, kind, parsed);
   const response = await withDeveloperBilling(
     {
       keyId: identity.id,
@@ -559,6 +589,106 @@ export async function executeDeveloper(
     },
   });
 }
+
+type BatchAuthorization = {
+  batch: string;
+  item: string;
+  key: string;
+  project: string;
+  currency: string;
+  version: string;
+  fingerprint: string;
+  maximumCharge: number;
+  expiresAt: number;
+};
+export async function authorizeDeveloperBatchItem(
+  identity: DeveloperIdentity,
+  batch: string,
+  item: { id: string; input: Record<string, unknown>; quote_token: string },
+  currency: string,
+  expiresAt: number,
+) {
+  const quote = readDeveloperQuote(identity, item.quote_token);
+  const parsed = await preparePublicRequest(identity, "chat/completions", item.input);
+  checkDeveloperQuote(quote, "chat/completions", parsed);
+  if (
+    parsed.body.stream !== false ||
+    parsed.capability !== "chat" ||
+    currency !== parsed.version.currency ||
+    !Number.isSafeInteger(expiresAt) ||
+    expiresAt <= Date.now() ||
+    expiresAt > Date.now() + 86400000
+  )
+    throw new Error("developer_batch_invalid");
+  const authorization: BatchAuthorization = {
+    batch,
+    item: item.id,
+    key: identity.id,
+    project: identity.project_id,
+    currency,
+    version: quote.version,
+    fingerprint: quote.fingerprint,
+    maximumCharge: quote.maximumCharge,
+    expiresAt,
+  };
+  const payload = Buffer.from(JSON.stringify(authorization)).toString("base64url");
+  return {
+    id: item.id,
+    input: item.input,
+    authorization: payload + "." + digest("batch-authorization-v1", payload),
+    maximum_ticks: batchChargeTicks(quote.maximumCharge),
+    request_group: createHash("sha256").update(developerBatchRequestKey(batch, item.id)).digest("hex"),
+  };
+}
+export async function executeAuthorizedBatchItem(
+  identity: DeveloperIdentity,
+  batch: string,
+  item: string,
+  input: Record<string, unknown>,
+  token: string,
+  currency: string,
+  maximumTicks: number,
+  signal?: AbortSignal,
+) {
+  if (typeof token !== "string" || token.length > 2048)
+    throw new Error("developer_batch_invalid");
+  const [payload, signature, extra] = token.split(".");
+  if (extra !== undefined || !payload || !signature || !equal(signature, digest("batch-authorization-v1", payload)))
+    throw new Error("developer_batch_invalid");
+  const authorization = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as BatchAuthorization;
+  if (
+    authorization.batch !== batch ||
+    authorization.item !== item ||
+    authorization.key !== identity.id ||
+    authorization.project !== identity.project_id ||
+    authorization.currency !== currency ||
+    batchChargeTicks(authorization.maximumCharge) !== maximumTicks ||
+    !Number.isSafeInteger(authorization.expiresAt) ||
+    authorization.expiresAt <= Date.now() ||
+    authorization.expiresAt > Date.now() + 86400000
+  )
+    throw new Error("developer_batch_invalid");
+  const quote: PublicQuote = {
+    key: identity.id,
+    version: authorization.version,
+    fingerprint: authorization.fingerprint,
+    operation: "chat/completions",
+    agentBinding: null,
+    skillBinding: null,
+    maximumCharge: authorization.maximumCharge,
+    expiresAt: Math.min(Date.now() + 120000, authorization.expiresAt),
+  };
+  const signed = Buffer.from(JSON.stringify(quote)).toString("base64url");
+  return executeDeveloper(
+    identity,
+    "chat/completions",
+    input,
+    developerBatchRequestKey(batch, item),
+    signed + "." + digest("quote", signed),
+    signal,
+  );
+}
+
 const publicUsage = (row: Record<string, unknown>) => {
   const { authoritative_usage, ...rest } = row;
   const usage =
