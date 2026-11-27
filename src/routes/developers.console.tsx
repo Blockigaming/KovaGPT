@@ -221,7 +221,9 @@ function DeveloperWorkspace({
             className="flex max-h-[70dvh] flex-col gap-1 overflow-y-auto overscroll-contain md:sticky md:top-36 md:max-h-[calc(100dvh-10rem)] lg:top-20 lg:max-h-[calc(100dvh-6rem)]"
           >
             {navigation.map((group) => {
-              const items = group.items.filter((item) => authenticated || item.anchor === "overview");
+              const items = group.items.filter(
+                (item) => authenticated || item.anchor === "overview",
+              );
               if (items.length === 0) return null;
               return (
                 <div key={group.label} className="mb-3 flex min-w-0 flex-col gap-0.5">
@@ -621,67 +623,71 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
       authenticated
       section={section}
       context={
-      <section
-        aria-label="Account and project selection"
-        className="mx-auto grid w-full min-w-0 max-w-[560px] grid-cols-2 gap-2 sm:gap-3"
-      >
-        <div className="min-w-0">
-          <label className="sr-only" htmlFor="developer-console-account">Account</label>
-          <Select
-            disabled={busy || !data}
-            value={account || "__none__"}
-            onValueChange={(value) => {
-              setAccount(value === "__none__" ? "" : value);
-              setRenameId("");
-              setProjectName("");
-              projectCreateId.current = null;
-              setProject("");
-              setSecret("");
-              clearUsageFilters();
-            }}
-          >
-            <SelectTrigger id="developer-console-account" className="bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Select account</SelectItem>
-              {data?.accounts.map((row) => (
-                <SelectItem key={String(row.account_id)} value={String(row.account_id)}>
-                  {row.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="min-w-0">
-          <label className="sr-only" htmlFor="developer-console-project">Project</label>
-          <Select
-            disabled={busy || !account}
-            value={project || "__none__"}
-            onValueChange={(value) => {
-              setProject(value === "__none__" ? "" : value);
-              setSecret("");
-              setRenameId("");
-              setProjectName("");
-              projectCreateId.current = null;
-            }}
-          >
-            <SelectTrigger id="developer-console-project" className="bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Select project</SelectItem>
-              {data?.projects
-                .filter((row) => row.account_id === account)
-                .map((row) => (
-                  <SelectItem key={String(row.id)} value={String(row.id)}>
+        <section
+          aria-label="Account and project selection"
+          className="mx-auto grid w-full min-w-0 max-w-[560px] grid-cols-2 gap-2 sm:gap-3"
+        >
+          <div className="min-w-0">
+            <label className="sr-only" htmlFor="developer-console-account">
+              Account
+            </label>
+            <Select
+              disabled={busy || !data}
+              value={account || "__none__"}
+              onValueChange={(value) => {
+                setAccount(value === "__none__" ? "" : value);
+                setRenameId("");
+                setProjectName("");
+                projectCreateId.current = null;
+                setProject("");
+                setSecret("");
+                clearUsageFilters();
+              }}
+            >
+              <SelectTrigger id="developer-console-account" className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Select account</SelectItem>
+                {data?.accounts.map((row) => (
+                  <SelectItem key={String(row.account_id)} value={String(row.account_id)}>
                     {row.name}
                   </SelectItem>
                 ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </section>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0">
+            <label className="sr-only" htmlFor="developer-console-project">
+              Project
+            </label>
+            <Select
+              disabled={busy || !account}
+              value={project || "__none__"}
+              onValueChange={(value) => {
+                setProject(value === "__none__" ? "" : value);
+                setSecret("");
+                setRenameId("");
+                setProjectName("");
+                projectCreateId.current = null;
+              }}
+            >
+              <SelectTrigger id="developer-console-project" className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Select project</SelectItem>
+                {data?.projects
+                  .filter((row) => row.account_id === account)
+                  .map((row) => (
+                    <SelectItem key={String(row.id)} value={String(row.id)}>
+                      {row.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
       }
     >
       <section id="overview" hidden={section !== "overview"} className="scroll-mt-20 space-y-6">
@@ -717,7 +723,10 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               ["Requests in current view", usageReady ? visibleUsage.length : undefined],
             ] as const
           ).map(([label, value]) => (
-            <div key={label} className="min-w-0 rounded-[var(--kova-radius-card)] border border-border bg-background p-4">
+            <div
+              key={label}
+              className="min-w-0 rounded-[var(--kova-radius-card)] border border-border bg-background p-4"
+            >
               <p className="text-sm text-muted-foreground">{label}</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{value ?? "—"}</p>
             </div>
@@ -1151,8 +1160,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               </summary>
               <div className="mt-5 space-y-5">
                 <p>
-                  Enter spending limits in the account currency’s minor units. Organization, project,
-                  and key limits all apply.
+                  Enter spending limits in the account currency’s minor units. Organization,
+                  project, and key limits all apply.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
@@ -1170,7 +1179,9 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         min="0.00000001"
                         step="any"
                         value={String(value)}
-                        onChange={(event) => (setter as (value: string) => void)(event.target.value)}
+                        onChange={(event) =>
+                          (setter as (value: string) => void)(event.target.value)
+                        }
                       />
                     </label>
                   ))}
@@ -1672,7 +1683,9 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">Requests on this page</p>
-                  <p className="text-2xl font-semibold tracking-tight sm:text-[28px]">{usageReady ? visibleUsage.length : "—"}</p>
+                  <p className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+                    {usageReady ? visibleUsage.length : "—"}
+                  </p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">
