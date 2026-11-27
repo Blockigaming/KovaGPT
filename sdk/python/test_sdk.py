@@ -4,7 +4,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from kovagpt import Client, KovaError, response_events, chat_completion_events
+from kovagpt import Client, KovaError, response_events, chat_completion_events, verify_webhook_signature
 
 KEY = "kova_11111111-1111-4111-8111-111111111111_" + "a" * 43
 ID = "55555555-5555-4555-8555-555555555555"
@@ -24,6 +24,34 @@ class FakeResponse(io.BytesIO):
 
     def getheader(self, name, default=None):
         return self.content_type if name == "Content-Type" else default
+
+
+class WebhookVerificationTests(unittest.TestCase):
+    def test_original_bytes_and_tampering(self):
+        data = {
+            "secret": "whsec_" + "a" * 43,
+            "event_id": "11111111-1111-4111-8111-111111111111",
+            "timestamp": "1795651200",
+            "body": '{"message":"café"}',
+            "signature": "v1=c9b338ec00ca9cbe82fba49f1a10e098931f373563745588c85a976b43c63478",
+            "now": 1795651200,
+        }
+        self.assertTrue(verify_webhook_signature(**data))
+        self.assertTrue(verify_webhook_signature(**{**data, "body": data["body"].encode()}))
+        self.assertTrue(verify_webhook_signature(**{**data, "timestamp": 1795651200}))
+        for change in (
+            {"body": data["body"] + " "},
+            {"body": b"x" * 65537},
+            {"timestamp": "01795651200"},
+            {"timestamp": "1795651201"},
+            {"timestamp": "1795651200, 1795651200"},
+            {"now": data["now"] + 301},
+            {"now": data["now"] - 301},
+            {"event_id": "22222222-2222-4222-8222-222222222222"},
+            {"secret": "whsec_" + "b" * 43},
+            {"signature": "v1=" + "0" * 64},
+        ):
+            self.assertFalse(verify_webhook_signature(**{**data, **change}))
 
 
 class SDKTests(unittest.TestCase):

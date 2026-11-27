@@ -1,5 +1,7 @@
 """Server-side KovaGPT v1 client. No implicit retries or provider execution."""
 
+import hashlib
+import hmac
 import http.client
 import json
 import math
@@ -7,7 +9,7 @@ import re
 import time
 from urllib.parse import urlsplit
 
-__all__ = ["Client", "KovaError", "APIResponse", "response_events", "chat_completion_events"]
+__all__ = ["Client", "KovaError", "APIResponse", "response_events", "chat_completion_events", "verify_webhook_signature"]
 _OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions", "decisions", "agent-turns", "analysis", "computer-use", "browser"))
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", re.I)
 _MODEL = re.compile(r"[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*")
@@ -531,3 +533,29 @@ class Client:
 
     def moderations(self, data, **budget):
         return self.run("moderations", data, **budget)
+
+def verify_webhook_signature(*, secret, event_id, timestamp, body, signature, now=None):
+    """Verify a raw webhook payload before parsing or processing the event."""
+    if now is None:
+        now = int(time.time())
+    if not (
+        isinstance(secret, str) and re.fullmatch(r"whsec_[A-Za-z0-9_-]{43}", secret)
+        and isinstance(event_id, str) and _UUID.fullmatch(event_id)
+        and isinstance(signature, str) and re.fullmatch(r"v1=[a-f0-9]{64}", signature)
+        and type(now) is int and abs(now) <= 9007199254740991
+    ):
+        return False
+    if isinstance(timestamp, str) and re.fullmatch(r"[1-9][0-9]{0,15}", timestamp):
+        timestamp = int(timestamp)
+    if type(timestamp) is not int or not 1 <= timestamp <= 9007199254740991 or abs(now - timestamp) > 300:
+        return False
+    try:
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        if not isinstance(body, bytes) or len(body) > 65536:
+            return False
+        prefix = f"{event_id.lower()}.{timestamp}.".encode("ascii")
+        digest = hmac.new(secret.encode("ascii"), prefix + body, hashlib.sha256).hexdigest()
+        return hmac.compare_digest("v1=" + digest, signature)
+    except (TypeError, UnicodeError, ValueError):
+        return False

@@ -5,6 +5,7 @@ import {
   KovaError,
   responseEvents,
   chatCompletionEvents,
+  verifyWebhookSignature,
 } from "../../sdk/javascript/index.mjs";
 const apiKey = `kova_11111111-1111-4111-8111-111111111111_${"a".repeat(43)}`;
 const input = { model: "kova-fast", input: "hello", max_output_tokens: 100 };
@@ -365,4 +366,32 @@ test("conversation SDK keeps explicit revisions and validates item paths before 
   assert.ok(f.calls.every((call) => !call.headers["X-Kova-Quote"]));
   await assert.rejects(f.client.conversations.retrieveItem(id), /conversation_id_invalid/);
   assert.equal(f.calls.length, 4);
+});
+
+test("webhook verification authenticates the original bytes and rejects replay and tampering", () => {
+  const input = {
+    secret: "whsec_" + "a".repeat(43),
+    eventId: "11111111-1111-4111-8111-111111111111",
+    timestamp: "1795651200",
+    body: '{"message":"café"}',
+    signature: "v1=c9b338ec00ca9cbe82fba49f1a10e098931f373563745588c85a976b43c63478",
+    now: 1795651200,
+  };
+  assert.equal(verifyWebhookSignature(input), true);
+  assert.equal(verifyWebhookSignature({ ...input, body: Buffer.from(input.body) }), true);
+  assert.equal(verifyWebhookSignature({ ...input, timestamp: 1795651200 }), true);
+  for (const patch of [
+    { body: input.body + " " },
+    { body: "x".repeat(65537) },
+    { timestamp: "01795651200" },
+    { timestamp: "1795651201" },
+    { timestamp: "1795651200, 1795651200" },
+    { now: input.now + 301 },
+    { now: input.now - 301 },
+    { eventId: "22222222-2222-4222-8222-222222222222" },
+    { secret: "whsec_" + "b".repeat(43) },
+    { signature: "v1=" + "0".repeat(64) },
+  ])
+    assert.equal(verifyWebhookSignature({ ...input, ...patch }), false);
+  assert.equal(verifyWebhookSignature(null), false);
 });

@@ -41,3 +41,7 @@ The HTTPS transport verifies certificates, does not follow redirects, and applie
 For a bounded text-only Chat Completions request use `client.chat_completions(data, **budget)`. The `client.search(data, **budget)` alias uses the gated native search meter and returns the Responses envelope, including native source annotations. The same quote and retry rules apply. Use `chat_completion_events` for Chat Completions SSE and `response_events` for native Responses SSE.
 
 Use `file_search`, `vector_create`, `vector_upsert`, `vector_search`, `vector_list`, `vector_retrieve`, `vector_entries`, `vector_entry` and `vector_delete` for scoped resource operations. Vector creation requires a stable idempotency key, and vectors are supplied by the caller. No implicit inference occurs. Runtime activation and vector migration replay are required.
+
+## Verify webhook deliveries
+
+Use `verify_webhook_signature(secret=secret, event_id=event_id, timestamp=timestamp, body=raw_body, signature=signature)` with your endpoint's signing secret, the original HTTP body (bytes or UTF-8 string), and the `X-Kova-Webhook-Id`, `X-Kova-Webhook-Timestamp` and `X-Kova-Webhook-Signature` headers. Reject false results before parsing JSON. The helper checks the HMAC and five-minute timestamp window. Persist processed event IDs atomically to prevent duplicate side effects; legitimate delivery retries are possible within the window. Never reserialize JSON before verification.

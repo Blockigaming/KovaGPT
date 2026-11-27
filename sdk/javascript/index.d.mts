@@ -449,3 +449,12 @@ export function chatCompletionEvents(
   response: Response,
   options?: { maximumEventBytes?: number },
 ): AsyncGenerator<Record<string, unknown>>;
+
+export function verifyWebhookSignature(value: {
+  secret: string;
+  eventId: string;
+  timestamp: number | string;
+  body: string | Uint8Array;
+  signature: string;
+  now?: number;
+}): boolean;

@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 const operations = new Set([
   "responses",
   "images",
@@ -614,4 +616,39 @@ export function responseEvents(response, options) {
 
 export function chatCompletionEvents(response, options) {
   return streamEvents(response, options, true);
+}
+
+/** Verify the original webhook payload before parsing or handling the event. */
+export function verifyWebhookSignature(value) {
+  try {
+    const { secret, eventId, timestamp, body, signature, now = Math.floor(Date.now() / 1000) } =
+      value;
+    if (
+      typeof secret !== "string" ||
+      !/^whsec_[A-Za-z0-9_-]{43}$/.test(secret) ||
+      typeof eventId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(eventId) ||
+      (typeof timestamp !== "number" &&
+        (typeof timestamp !== "string" || !/^[1-9][0-9]{0,15}$/.test(timestamp))) ||
+      !Number.isSafeInteger(now) ||
+      typeof signature !== "string" ||
+      !/^v1=[a-f0-9]{64}$/.test(signature) ||
+      (typeof body !== "string" && !(body instanceof Uint8Array))
+    )
+      return false;
+    const seconds = Number(timestamp);
+    if (!Number.isSafeInteger(seconds) || seconds < 1 || Math.abs(now - seconds) > 300)
+      return false;
+    const bytes = typeof body === "string" ? Buffer.from(body, "utf8") : body;
+    if (bytes.byteLength > 65536) return false;
+    const expected =
+      "v1=" +
+      createHmac("sha256", secret)
+        .update(eventId.toLowerCase() + "." + seconds + ".")
+        .update(bytes)
+        .digest("hex");
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  } catch {
+    return false;
+  }
 }
