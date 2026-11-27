@@ -36,7 +36,8 @@ async function fixture() {
       create table developer_billing_keys(id uuid primary key,account_id uuid,project_id uuid,
         enabled boolean,revoked_at timestamptz,expires_at timestamptz,capabilities text[]);
       create table developer_api_requests(id uuid primary key,api_key_id uuid,project_id uuid,
-        request_group text,settlement_state text,final_customer_charge numeric,created_at timestamptz);
+        request_group text,settlement_state text,final_customer_charge numeric,created_at timestamptz,
+        public_model text,capability text,currency text,settled_at timestamptz);
       grant select on account_deletion_fences,banned_users,user_preferences,developer_credit_accounts,
         developer_account_owners,developer_projects,developer_billing_keys,developer_api_requests to service_role;
       insert into auth.users values('${owner}'),('${other}');
@@ -145,7 +146,7 @@ test("claimed response output is completed only with a matching settled accounti
     assert.equal(await f.claim(), null);
     await f.db.exec("reset role");
     await f.db.query(
-      "insert into developer_api_requests values($1,$2,$3,$4,'settled',1,now())",
+      "insert into developer_api_requests(id,api_key_id,project_id,request_group,settlement_state,final_customer_charge,created_at) values($1,$2,$3,$4,'settled',1,now())",
       [id(10), key, project, group],
     );
     await f.db.exec("set role service_role");
@@ -211,8 +212,8 @@ test("expired and canceled batch claims cannot authorize dispatch or overwrite r
     const claim = await f.claim();
     const args = [project, job, job, claim.item.lease_token];
     const validate = async () =>
-      (await f.db.query("select validate_developer_batch_claim_v1($1,$2,$3,$4) ok", args))
-        .rows[0].ok;
+      (await f.db.query("select validate_developer_batch_claim_v1($1,$2,$3,$4) ok", args)).rows[0]
+        .ok;
     assert.equal(await validate(), true);
     await f.manage("cancel", { id: job, resource_kind: "response" });
     assert.equal(await validate(), false);
