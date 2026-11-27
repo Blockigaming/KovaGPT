@@ -33,3 +33,11 @@ export function resourceConsoleRequest(
 ): { method: "GET" | "POST" | "DELETE"; path: string; body?: string };
 export function resourceConsoleRequiresConfirmation(section: string, action: string): boolean;
 export function resourceConsoleMaySpend(section: string, action: string): boolean;
+export function resourceConsoleJobDraft(
+  section: string,
+  action: string,
+  raw: string,
+  result: unknown,
+  randomId: () => string,
+  now?: number,
+): string;

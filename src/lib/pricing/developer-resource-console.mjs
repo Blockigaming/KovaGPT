@@ -19,6 +19,41 @@ const quoteResponse = {
   fields: { input: responseInput },
   path: "/api/v1/quotes",
 };
+const quoteOperation = (label, operation, input) => ({
+  label,
+  method: "POST",
+  operation,
+  fields: { input },
+  path: "/api/v1/quotes",
+});
+const queueQuotes = {
+  quote: quoteResponse,
+  quoteChat: quoteOperation("Get chat completion quote", "chat/completions", {
+    model: "",
+    messages: [{ role: "user", content: "" }],
+    max_completion_tokens: 256,
+    stream: false,
+  }),
+  quoteAgent: quoteOperation("Get agent turn quote", "agent-turns", {
+    agent_id: "",
+    version: 1,
+    input: "",
+  }),
+  quoteModeration: quoteOperation("Get moderation quote", "moderations", {
+    model: "",
+    input: "",
+  }),
+  quoteEmbedding: quoteOperation("Get embedding quote", "embeddings", {
+    model: "",
+    input: "",
+    dimensions: 256,
+  }),
+  quoteDecision: quoteOperation("Get Decisions quote", "decisions", {
+    model: "",
+    input: "",
+    questions: [{ type: "predicate", name: "matches", instructions: "" }],
+  }),
+};
 const batchItem = { id: "", operation: "responses", input: responseInput, quote_token: "" };
 
 export const developerResourceSections = Object.freeze({
@@ -101,7 +136,7 @@ export const developerResourceSections = Object.freeze({
       list,
       detail,
       item,
-      quote: quoteResponse,
+      ...queueQuotes,
       create: post("Authorize batch", "create", {
         id: "",
         currency: "USD",
@@ -119,7 +154,7 @@ export const developerResourceSections = Object.freeze({
       list,
       detail,
       item,
-      quote: quoteResponse,
+      ...queueQuotes,
       create: post("Authorize schedule", "create", {
         id: "",
         currency: "USD",
@@ -247,4 +282,35 @@ export function resourceConsoleMaySpend(section, action) {
     (operation === "create" && ["batches", "automations", "response-jobs"].includes(section)) ||
     (section === "automations" && operation === "resume")
   );
+}
+
+// Preserve the exact quoted input. Drafting never authorizes a charge or a schedule.
+export function resourceConsoleJobDraft(section, action, raw, result, randomId, now = Date.now()) {
+  const request = resourceConsoleRequest(section, action, raw);
+  if (
+    !["batches", "automations", "response-jobs"].includes(section) ||
+    request.path !== "/api/v1/quotes" ||
+    !result ||
+    typeof result.quoteToken !== "string" ||
+    result.quoteToken.length > 2048 ||
+    !/^[A-Za-z0-9_-]+\.[a-f0-9]{64}$/.test(result.quoteToken) ||
+    typeof result.currency !== "string" ||
+    !/^[A-Z]{3}$/.test(result.currency) ||
+    !Number.isFinite(result.maximumCharge) ||
+    result.maximumCharge <= 0 ||
+    !Number.isSafeInteger(result.expiresAt) ||
+    result.expiresAt <= now ||
+    result.expiresAt > now + 120000
+  )
+    throw new Error("Get a valid, unexpired quote before drafting a job.");
+  const { operation, input } = JSON.parse(request.body);
+  const draft = JSON.parse(resourceConsoleTemplate(section, "create", randomId));
+  draft.currency = result.currency;
+  if (section === "response-jobs") {
+    draft.input = input;
+    draft.quote_token = result.quoteToken;
+  } else {
+    Object.assign(draft.items[0], { operation, input, quote_token: result.quoteToken });
+  }
+  return JSON.stringify(draft, null, 2);
 }

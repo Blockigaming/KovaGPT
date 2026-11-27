@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   developerResourceSections,
+  resourceConsoleJobDraft,
   resourceConsoleKey,
   resourceConsoleMaySpend,
   resourceConsoleRequest,
@@ -79,4 +80,47 @@ test("job screens separate free quotes from explicit paid execution authorizatio
   assert.equal(resourceConsoleMaySpend("automations", "resume"), true);
   assert.equal(resourceConsoleMaySpend("response-jobs", "cancel"), false);
   assert.equal(resourceConsoleMaySpend("agents", "create"), false);
+});
+
+test("each supported queue operation can prepare an exact quote-bound draft without spending", () => {
+  const now = 1795780800000;
+  const result = {
+    quoteToken: "payload." + "a".repeat(64),
+    currency: "EUR",
+    maximumCharge: 1.25,
+    expiresAt: now + 60000,
+  };
+  const operations = {
+    quote: "responses",
+    quoteChat: "chat/completions",
+    quoteAgent: "agent-turns",
+    quoteModeration: "moderations",
+    quoteEmbedding: "embeddings",
+    quoteDecision: "decisions",
+  };
+  for (const section of ["batches", "automations", "response-jobs"]) {
+    for (const [action, operation] of Object.entries(operations)) {
+      if (section === "response-jobs" && action !== "quote") {
+        assert.throws(() => resourceConsoleTemplate(section, action, () => id));
+        continue;
+      }
+      const raw = resourceConsoleTemplate(section, action, () => id);
+      const quote = resourceConsoleRequest(section, action, raw);
+      assert.equal(JSON.parse(quote.body).operation, operation);
+      assert.equal(resourceConsoleRequiresConfirmation(section, action), false);
+      assert.equal(resourceConsoleMaySpend(section, action), false);
+      const draft = JSON.parse(resourceConsoleJobDraft(section, action, raw, result, () => id, now));
+      assert.equal(draft.maximum_charge, 0);
+      assert.equal(draft.currency, "EUR");
+      const item = draft.items?.[0] ?? draft;
+      assert.deepEqual(item.input, JSON.parse(raw).input);
+      assert.equal(item.quote_token, result.quoteToken);
+      if (draft.items) assert.equal(item.operation, operation);
+      if (section === "automations") assert.equal(item.run_at, "");
+      assert.throws(() =>
+        resourceConsoleJobDraft(section, action, raw, { ...result, expiresAt: now }, () => id, now),
+      );
+    }
+  }
+  assert.throws(() => resourceConsoleJobDraft("batches", "list", "{}", result, () => id, now));
 });

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   developerResourceSections,
+  resourceConsoleJobDraft,
   resourceConsoleKey,
   resourceConsoleMaySpend,
   resourceConsoleRequest,
@@ -149,6 +150,21 @@ export function DeveloperResourcePanel({
       if (mounted.current) setBusy(false);
     }
   };
+  const prepareJob = () => {
+    try {
+      const draft = resourceConsoleJobDraft(section, action, input, result, () =>
+        crypto.randomUUID(),
+      );
+      setAction("create");
+      setInput(draft);
+      setConfirmed(false);
+      setResult(null);
+      setError("");
+      retry.current = null;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not prepare the job.");
+    }
+  };
   const data = record(result).data;
   const rows = Array.isArray(data) ? data.map(record) : null;
   const signingSecret = record(result).signing_secret;
@@ -290,6 +306,17 @@ export function DeveloperResourcePanel({
             <p role="status" className="text-sm text-muted-foreground">
               Request in progress…
             </p>
+          )}
+          {config.actions[action].path === "/api/v1/quotes" && result !== null && (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <p className="text-sm">
+                Prepare a job using this exact quote. You still need to enter and approve the
+                spending limit before submission.
+              </p>
+              <Button variant="outline" disabled={busy || !enabled || !token} onClick={prepareJob}>
+                Prepare job from quote
+              </Button>
+            </div>
           )}
           {typeof signingSecret === "string" && (
             <div className="space-y-2 rounded-lg border border-border p-3">
