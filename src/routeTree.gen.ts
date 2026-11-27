@@ -207,6 +207,7 @@ import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
 import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
 import { Route as ApiV1SearchRouteImport } from './routes/api/v1/search'
 import { Route as ApiV1UsageRouteImport } from './routes/api/v1/usage'
+import { Route as ApiV1VectorStoresRouteImport } from './routes/api/v1/vector-stores'
 import { Route as ApiWorkBrowserRouteImport } from './routes/api/work/browser'
 import { Route as ApiWorkExecutionRouteImport } from './routes/api/work/execution'
 import { Route as ApiWorkOutputRouteImport } from './routes/api/work/output'
@@ -1256,6 +1257,11 @@ const ApiV1UsageRoute = ApiV1UsageRouteImport.update({
   path: '/api/v1/usage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1VectorStoresRoute = ApiV1VectorStoresRouteImport.update({
+  id: '/api/v1/vector-stores',
+  path: '/api/v1/vector-stores',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWorkBrowserRoute = ApiWorkBrowserRouteImport.update({
   id: '/api/work/browser',
   path: '/api/work/browser',
@@ -1651,6 +1657,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
+  '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -1887,6 +1894,7 @@ export interface FileRoutesByTo {
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
+  '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -2124,6 +2132,7 @@ export interface FileRoutesById {
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
+  '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -2362,6 +2371,7 @@ export interface FileRouteTypes {
     | '/api/v1/responses'
     | '/api/v1/search'
     | '/api/v1/usage'
+    | '/api/v1/vector-stores'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2598,6 +2608,7 @@ export interface FileRouteTypes {
     | '/api/v1/responses'
     | '/api/v1/search'
     | '/api/v1/usage'
+    | '/api/v1/vector-stores'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2834,6 +2845,7 @@ export interface FileRouteTypes {
     | '/api/v1/responses'
     | '/api/v1/search'
     | '/api/v1/usage'
+    | '/api/v1/vector-stores'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -3061,6 +3073,7 @@ export interface RootRouteChildren {
   ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
   ApiV1SearchRoute: typeof ApiV1SearchRoute
   ApiV1UsageRoute: typeof ApiV1UsageRoute
+  ApiV1VectorStoresRoute: typeof ApiV1VectorStoresRoute
   ApiWorkBrowserRoute: typeof ApiWorkBrowserRoute
   ApiWorkExecutionRoute: typeof ApiWorkExecutionRoute
   ApiWorkOutputRoute: typeof ApiWorkOutputRoute
@@ -4485,6 +4498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1UsageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/vector-stores': {
+      id: '/api/v1/vector-stores'
+      path: '/api/v1/vector-stores'
+      fullPath: '/api/v1/vector-stores'
+      preLoaderRoute: typeof ApiV1VectorStoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/work/browser': {
       id: '/api/work/browser'
       path: '/api/work/browser'
@@ -5052,6 +5072,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1ResponsesRoute: ApiV1ResponsesRoute,
   ApiV1SearchRoute: ApiV1SearchRoute,
   ApiV1UsageRoute: ApiV1UsageRoute,
+  ApiV1VectorStoresRoute: ApiV1VectorStoresRoute,
   ApiWorkBrowserRoute: ApiWorkBrowserRoute,
   ApiWorkExecutionRoute: ApiWorkExecutionRoute,
   ApiWorkOutputRoute: ApiWorkOutputRoute,

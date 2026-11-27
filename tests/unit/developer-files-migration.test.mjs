@@ -304,3 +304,75 @@ test("last-mile file dispatch rejects revoked scope, deleted file and changed di
     await f.db.close();
   }
 });
+
+test("vector stores persist cosine retrieval, enforce scopes and erase linked file entries", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_vector_stores_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    await f.db.query(
+      "update developer_billing_keys set capabilities=array['chat','files','embeddings'] where id=$1",
+      [key],
+    );
+    const run = async (operation, input, identity = [owner, key, f.account.projectId]) =>
+      (
+        await f.db.query("select manage_developer_vector_stores_v1($1,$2,$3,$4,$5) result", [
+          ...identity,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
+    const input = { name: "Docs", model: "kova-embedding", dimensions: 3, request_digest: "c".repeat(64) };
+    const store = await run("create", input);
+    assert.equal((await run("create", input)).id, store.id);
+    await assert.rejects(run("create", { ...input, name: "Other" }), /vector_conflict/);
+    const linked = await f.file("create", upload("relevant document"));
+    const base = { store_id: store.id, model: input.model };
+    await run("upsert", {
+      ...base,
+      entry_id: "relevant",
+      vector: [2, 0, 0],
+      text: "relevant document",
+      file_id: linked.id,
+    });
+    await run("upsert", {
+      ...base,
+      entry_id: "different",
+      vector: [0, 1, 0],
+      text: "other text",
+    });
+    const search = await run("search", { ...base, vector: [1, 0, 0], limit: 2 });
+    assert.equal(search.search_type, "cosine");
+    assert.deepEqual(search.data.map((row) => row.entry_id), ["relevant", "different"]);
+    assert.equal(search.data[0].score, 1);
+    assert.equal(search.data[1].score, 0);
+    const entry = await run("get_entry", { store_id: store.id, entry_id: "relevant" });
+    assert.deepEqual(entry.embedding, [1, 0, 0]);
+    await assert.rejects(run("search", { ...base, vector: [1, 0], limit: 2 }), /vector_invalid/);
+    await assert.rejects(
+      run("search", { ...base, model: "different", vector: [1, 0, 0], limit: 2 }),
+      /vector_invalid/,
+    );
+    await assert.rejects(
+      run("get", { store_id: store.id }, [other, key, f.account.projectId]),
+      /scope_required/,
+    );
+    await f.file("delete", { id: linked.id });
+    assert.deepEqual(
+      (await run("search", { ...base, vector: [1, 0, 0], limit: 2 })).data.map((row) => row.entry_id),
+      ["different"],
+    );
+    for (const role of ["anon", "authenticated"])
+      assert.equal(
+        (await f.db.query("select has_table_privilege($1,'developer_vector_entries_v1','select') allowed", [role])).rows[0].allowed,
+        false,
+      );
+    await f.db.query("update developer_billing_keys set capabilities=array['files'] where id=$1", [key]);
+    await assert.rejects(run("get", { store_id: store.id }), /scope_required/);
+    await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
+    assert.equal((await f.db.query("select count(*)::int n from developer_vector_stores_v1")).rows[0].n, 0);
+  } finally {
+    await f.db.close();
+  }
+});
