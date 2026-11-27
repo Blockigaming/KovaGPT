@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { PhonePageOutline } from "./PhonePageOutline";
 import { PublicShell } from "./PublicShell";
 import { FeatureMarketing, MarketingNews, MarketingShowcase } from "./MarketingShowcase";
+import { CampaignMedia } from "./CampaignMedia";
+import { DeveloperMarketing } from "./DeveloperMarketing";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
 
 export function websitePageHead(item: WebsitePage) {
@@ -58,7 +60,12 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
         {item.review && <p className="public-availability">{item.review}</p>}
         {item.path === "/features" && <MarketingShowcase />}
         {item.path === "/company/news" && <MarketingNews />}
-        {(item.path.startsWith("/features/") || item.path === "/developers/quickstart" || item.path === "/developers/docs") && (
+        {item.path === "/company/press" && <CampaignMedia />}
+        {(item.path === "/developers/quickstart" || item.path === "/developers/docs") && (
+          <DeveloperMarketing />
+        )}
+        {(item.path.startsWith("/features/") ||
+          (item.path.startsWith("/connections/") && !item.review)) && (
           <FeatureMarketing path={item.path} title={item.title} sections={item.sections} />
         )}
         <PhonePageOutline sections={item.sections} />
