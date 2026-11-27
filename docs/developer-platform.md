@@ -33,3 +33,7 @@ A Responses user message may contain one inline PNG image of up to 32 KiB and 51
 ## Streaming in the Playground
 
 Select Streaming responses to use the approved streaming-capability model list. The Playground requests a Responses quote with `stream: true`, sends the identical signed request after explicit confirmation, and renders only public output-text and refusal deltas. Failed, incomplete or truncated streams are distinguished from successful completion; cancellation never implies a refund or confirmed settlement. Consult Logs before retrying. The UI does not expose encrypted reasoning or internal event payloads.
+
+## Advanced Playground options
+
+Responses and streaming requests support additional JSON for instructions, strict structured outputs, client-owned function definitions, tool selection and project file IDs. The controls do not permit overriding the model, input, stream mode, token bound, reasoning effort or storage settings. All options participate in the same signed quote and server-side validation. Files exposes the project file ID for this purpose. The Playground does not execute client-defined functions itself.

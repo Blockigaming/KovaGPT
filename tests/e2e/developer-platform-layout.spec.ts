@@ -214,7 +214,7 @@ test("320px billing renders real wallet projection without overflow", async ({ p
   // The fixture supplies illustrative balances. No production allowance or payment is triggered.
 });
 
-test("playground streaming preserves the quote and renders the terminal response", async ({ page }) => {
+test("playground streaming preserves the quote and renders the response", async ({ page }) => {
   await coreFixture(page, "dark", "pro");
   let quotedInput: unknown;
   let executions = 0;
@@ -244,6 +244,8 @@ test("playground streaming preserves the quote and renders the terminal response
       const body = request.postDataJSON();
       expect(body.operation).toBe("responses");
       expect(body.input.stream).toBe(true);
+      expect(body.input.instructions).toBe("Use concise output");
+      expect(body.input.file_ids).toEqual(["11111111-1111-4111-8111-111111111111"]);
       quotedInput = body.input;
       return route.fulfill({
         json: {
@@ -279,6 +281,13 @@ test("playground streaming preserves the quote and renders the terminal response
   await page.getByLabel("Service", { exact: true }).selectOption("streaming");
   await expect(page.getByLabel("Model", { exact: true })).toHaveValue("stream-model");
   await page.getByLabel("Input", { exact: true }).fill("Hello");
+  await page.getByText("Advanced request options", { exact: true }).click();
+  await page.getByLabel("Additional Responses JSON").fill(
+    JSON.stringify({
+      instructions: "Use concise output",
+      file_ids: ["11111111-1111-4111-8111-111111111111"],
+    }),
+  );
   await page.getByRole("button", { name: "Get price quote" }).click();
   await expect(page.getByText("Maximum charge: 3 USD minor units")).toBeVisible();
   expect(executions).toBe(0);

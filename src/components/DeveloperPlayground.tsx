@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createDeveloperPlaygroundStream } from "@/lib/pricing/developer-playground-stream.mjs";
+import { parseDeveloperPlaygroundOptions } from "@/lib/pricing/developer-playground-options.mjs";
 
 type Operation = "responses" | "streaming" | "images" | "embeddings";
 type Model = {
@@ -49,6 +50,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
   const [effort, setEffort] = useState("");
+  const [advanced, setAdvanced] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const [size, setSize] = useState("1024x1024");
@@ -143,6 +145,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       setModel("");
       setModels([]);
       setEffort("");
+      setAdvanced("");
       setImageFile(null);
       if (imageInput.current) imageInput.current.value = "";
       const result = record(await request("models", controller));
@@ -181,6 +184,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
+      const extra = textOperation ? parseDeveloperPlaygroundOptions(advanced) : {};
       let responseInput: string | Record<string, unknown>[] = prompt;
       if (acceptsImage && imageFile) {
         if (imageFile.type !== "image/png" || imageFile.size < 1 || imageFile.size > 32768)
@@ -204,6 +208,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               input: responseInput,
               max_output_tokens: Number(maxOutput),
               stream: operation === "streaming",
+              ...extra,
               ...(effort && efforts.includes(effort) ? { reasoning: { effort } } : {}),
             }
           : operation === "images"
@@ -253,13 +258,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         "Idempotency-Key": accepted.requestKey,
       };
       if (accepted.operation === "streaming") {
-        const response = await fetchRequest(
-          accepted.operation,
-          controller,
-          accepted.requestBody,
-          headers,
-        );
-        if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream"))
+        const response = await fetchRequest("streaming", controller, accepted.requestBody, headers);
+        const isStream = response.headers.get("content-type")?.includes("text/event-stream");
+        if (!response.body || !isStream)
           throw new Error("Expected a response stream. Check Logs before retrying.");
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -342,6 +343,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setModels([]);
                 setModel("");
                 setEffort("");
+                setAdvanced("");
                 setImageFile(null);
                 if (imageInput.current) imageInput.current.value = "";
                 setDispatched(false);
@@ -372,6 +374,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 setOperation(next);
                 setModel(models.find((item) => item.capability === capability[next])?.id ?? "");
                 setEffort("");
+                setAdvanced("");
                 setImageFile(null);
                 if (imageInput.current) imageInput.current.value = "";
                 setDispatched(false);
@@ -393,6 +396,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               onChange={(event) => {
                 setModel(event.target.value);
                 setEffort("");
+                setAdvanced("");
                 setImageFile(null);
                 if (imageInput.current) imageInput.current.value = "";
                 setDispatched(false);
@@ -437,6 +441,32 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 }}
               />
             </label>
+          )}
+          {textOperation && (
+            <details className="min-w-0 space-y-2">
+              <summary className="cursor-pointer text-sm font-medium">
+                Advanced request options
+              </summary>
+              <label className="block space-y-1 text-sm">
+                <span>Additional Responses JSON</span>
+                <Textarea
+                  rows={5}
+                  className="w-full min-w-0 font-mono text-xs"
+                  value={advanced}
+                  disabled={busy}
+                  placeholder={'{"instructions":"Answer concisely"}'}
+                  onChange={(event) => {
+                    setAdvanced(event.target.value);
+                    setDispatched(false);
+                    resetQuote();
+                  }}
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Set instructions, structured output, function definitions or project file IDs.
+                Functions are returned for your client to execute, not run by this playground.
+              </p>
+            </details>
           )}
           {acceptsImage && (
             <label className="block min-w-0 space-y-1 text-sm">

@@ -207,6 +207,7 @@ export function DeveloperFilesPanel({
           >
             <div>
               <p>{file.filename}</p>
+              <p className="break-all text-xs text-muted-foreground">ID: {file.id}</p>
               <p className="text-xs text-muted-foreground">
                 {file.byte_size} bytes · Expires {new Date(file.expires_at).toLocaleDateString()}
               </p>
