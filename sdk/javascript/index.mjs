@@ -6,6 +6,7 @@ const operations = new Set([
   "search",
   "chat/completions",
   "decisions",
+  "agent-turns",
 ]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
@@ -199,6 +200,34 @@ export class KovaGPT {
         }),
         131072,
       );
+    const agentPath = (id, version) => {
+      if (
+        typeof id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+      )
+        fail("agent_id_invalid");
+      if (version !== undefined && (!Number.isSafeInteger(version) || version < 1 || version > 20))
+        fail("agent_version_invalid");
+      return "agents?id=" + id + (version === undefined ? "" : "&version=" + version);
+    };
+    const agentPost = async (operation, input, { signal } = {}) =>
+      smallJson(
+        await this.#request("agents", {
+          input: boundedInput({ ...boundedInput(input), operation }, 16384),
+          signal,
+        }),
+        65536,
+      );
+    this.agents = Object.freeze({
+      create: (input, options) => agentPost("create", input, options),
+      update: (input, options) => agentPost("update", input, options),
+      list: async ({ signal } = {}) => smallJson(await this.#request("agents", { signal })),
+      retrieve: async (id, { version, signal } = {}) =>
+        smallJson(await this.#request(agentPath(id, version), { signal })),
+      delete: async (id, { signal } = {}) =>
+        smallJson(await this.#request(agentPath(id), { method: "DELETE", signal })),
+      turn: (input, options) => this.run("agent-turns", input, options),
+    });
     this.conversations = Object.freeze({
       create: (input, options) => conversationPost("create", input, options),
       append: (input, options) => conversationPost("append", input, options),

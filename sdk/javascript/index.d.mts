@@ -5,7 +5,8 @@ export type Operation =
   | "moderations"
   | "search"
   | "chat/completions"
-  | "decisions";
+  | "decisions"
+  | "agent-turns";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -83,7 +84,19 @@ export type OperationInput =
   | ModerationsInput
   | SearchInput
   | ChatCompletionInput
-  | DecisionInput;
+  | DecisionInput
+  | AgentTurnInput;
+export interface AgentDefinition {
+  name: string;
+  model: string;
+  instructions: string;
+  max_output_tokens: number;
+}
+export interface AgentTurnInput {
+  agent_id: string;
+  version: number;
+  input: string;
+}
 export type DecisionQuestion = {
   name: string;
   instructions: string;
@@ -133,6 +146,23 @@ export class KovaError extends Error {
 }
 export class KovaGPT {
   readonly decisions: { create(input: DecisionInput, options: Budget): Promise<Response> };
+  readonly agents: {
+    create(
+      input: { id: string; definition: AgentDefinition },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    update(
+      input: { id: string; definition: AgentDefinition; expected_version: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(
+      id: string,
+      options?: { version?: number; signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    turn(input: AgentTurnInput, options: Budget): Promise<Response>;
+  };
   readonly conversations: {
     create(input: { id: string; title: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     append(

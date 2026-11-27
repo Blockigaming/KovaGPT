@@ -431,3 +431,61 @@ test("developer conversations serialize revisions, retain retry fences and erase
     await f.db.close();
   }
 });
+
+test("agent definitions preserve immutable revisions and owner boundaries", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_agents_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input, user = owner) =>
+      (
+        await f.db.query("select manage_developer_agents_v1($1,$2,$3,$4,$5) result", [
+          user, key, f.account.projectId, operation, input,
+        ])
+      ).rows[0].result;
+    const agent = id(61);
+    const definition = {
+      name: "Reviewer",
+      model: "kova-fast",
+      instructions: "Summarize evidence.",
+      max_output_tokens: 100,
+    };
+    const create = { id: agent, definition };
+    assert.equal((await run("create", create)).version, 1);
+    assert.equal((await run("create", create)).version, 1);
+    const update = {
+      id: agent,
+      expected_version: 1,
+      definition: { ...definition, instructions: "List evidence." },
+    };
+    assert.equal((await run("update", update)).version, 2);
+    assert.equal((await run("update", update)).version, 2);
+    await assert.rejects(
+      run("update", { ...update, definition: { ...definition, instructions: "Changed" } }),
+      /agent_conflict/,
+    );
+    assert.equal(
+      (await run("get", { id: agent, version: 1 })).definition.instructions,
+      definition.instructions,
+    );
+    assert.equal((await run("get", { id: agent })).version, 2);
+    assert.equal((await run("list", {})).data[0].definition, undefined);
+    await assert.rejects(run("get", { id: agent }, other), /scope_required/);
+    for (const role of ["anon", "authenticated"])
+      assert.equal(
+        (await f.db.query("select has_table_privilege($1,'developer_agent_versions_v1','select') allowed", [role])).rows[0].allowed,
+        false,
+      );
+    await run("delete", { id: agent });
+    await assert.rejects(run("get", { id: agent, version: 1 }), /agent_not_found/);
+    await run("create", create);
+    await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
+    assert.equal(
+      (await f.db.query("select count(*)::int n from developer_agent_versions_v1")).rows[0].n,
+      0,
+    );
+  } finally {
+    await f.db.close();
+  }
+});

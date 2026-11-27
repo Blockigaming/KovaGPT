@@ -351,6 +351,7 @@ async function collectDirectRecords(
   for (const [gate, table] of [
     ["KOVA_DEVELOPER_VECTOR_SCHEMA_READY", "developer_vector_export_records_v1"],
     ["KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY", "developer_conversation_export_records_v1"],
+    ["KOVA_DEVELOPER_AGENT_SCHEMA_READY", "developer_agent_export_records_v1"],
   ] as const) {
     if (runtimeEnv(gate) === "true")
       records[table] = await readAllWhere(budget, table, "owner_id", userId);

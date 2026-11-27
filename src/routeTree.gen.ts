@@ -197,6 +197,8 @@ import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/hel
 import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
+import { Route as ApiV1AgentTurnsRouteImport } from './routes/api/v1/agent-turns'
+import { Route as ApiV1AgentsRouteImport } from './routes/api/v1/agents'
 import { Route as ApiV1ConversationsRouteImport } from './routes/api/v1/conversations'
 import { Route as ApiV1DecisionsRouteImport } from './routes/api/v1/decisions'
 import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
@@ -1209,6 +1211,16 @@ const ApiTasksEventSourcesRoute = ApiTasksEventSourcesRouteImport.update({
   path: '/api/tasks/event-sources',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1AgentTurnsRoute = ApiV1AgentTurnsRouteImport.update({
+  id: '/api/v1/agent-turns',
+  path: '/api/v1/agent-turns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AgentsRoute = ApiV1AgentsRouteImport.update({
+  id: '/api/v1/agents',
+  path: '/api/v1/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1ConversationsRoute = ApiV1ConversationsRouteImport.update({
   id: '/api/v1/conversations',
   path: '/api/v1/conversations',
@@ -1659,6 +1671,8 @@ export interface FileRoutesByFullPath {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
+  '/api/v1/agents': typeof ApiV1AgentsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -1898,6 +1912,8 @@ export interface FileRoutesByTo {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
+  '/api/v1/agents': typeof ApiV1AgentsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -2138,6 +2154,8 @@ export interface FileRoutesById {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
+  '/api/v1/agents': typeof ApiV1AgentsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -2379,6 +2397,8 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/agent-turns'
+    | '/api/v1/agents'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -2618,6 +2638,8 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/agent-turns'
+    | '/api/v1/agents'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -2857,6 +2879,8 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/agent-turns'
+    | '/api/v1/agents'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -3087,6 +3111,8 @@ export interface RootRouteChildren {
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
+  ApiV1AgentTurnsRoute: typeof ApiV1AgentTurnsRoute
+  ApiV1AgentsRoute: typeof ApiV1AgentsRoute
   ApiV1ConversationsRoute: typeof ApiV1ConversationsRoute
   ApiV1DecisionsRoute: typeof ApiV1DecisionsRoute
   ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
@@ -4454,6 +4480,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTasksEventSourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/agent-turns': {
+      id: '/api/v1/agent-turns'
+      path: '/api/v1/agent-turns'
+      fullPath: '/api/v1/agent-turns'
+      preLoaderRoute: typeof ApiV1AgentTurnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/agents': {
+      id: '/api/v1/agents'
+      path: '/api/v1/agents'
+      fullPath: '/api/v1/agents'
+      preLoaderRoute: typeof ApiV1AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/conversations': {
       id: '/api/v1/conversations'
       path: '/api/v1/conversations'
@@ -5102,6 +5142,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
+  ApiV1AgentTurnsRoute: ApiV1AgentTurnsRoute,
+  ApiV1AgentsRoute: ApiV1AgentsRoute,
   ApiV1ConversationsRoute: ApiV1ConversationsRoute,
   ApiV1DecisionsRoute: ApiV1DecisionsRoute,
   ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,

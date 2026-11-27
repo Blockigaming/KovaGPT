@@ -30,6 +30,11 @@ import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
 import { readDeveloperDecisionResponse } from "./developer-decisions-policy.mjs";
+import {
+  expandDeveloperAgentTurn,
+  parseDeveloperAgentRequest,
+  parseDeveloperAgentTurn,
+} from "./developer-agent-policy.mjs";
 import { loadDeveloperFileContent, readDeveloperFileRecords } from "./developer-file-content.server";
 import {
   parseDeveloperFileSearch,
@@ -97,8 +102,10 @@ export function developerFailure(error: unknown) {
       ? 401
       : /scope|owner_required/.test(code)
         ? 403
-        : /conflict|quote_expired|quote_changed/.test(code)
-          ? 409
+        : /not_found/.test(code)
+          ? 404
+          : /conflict|quote_expired|quote_changed|quota_exceeded/.test(code)
+            ? 409
           : /invalid|required|too_large/.test(code)
             ? 400
             : /rate_limit/.test(code)
@@ -209,8 +216,81 @@ async function currentPricing(identity: DeveloperIdentity) {
   if (version.error || !version.data) throw new Error("developer_pricing_unavailable");
   return fundingAdjustedVersion(version.data, account.data);
 }
+function requireDeveloperAgents(identity: DeveloperIdentity) {
+  if (!identity.capabilities.includes("chat")) throw new Error("developer_scope_required");
+  if (
+    runtimeEnv("KOVA_DEVELOPER_AGENT_SCHEMA_READY") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_AGENTS_ENABLED") !== "true"
+  )
+    throw new Error("developer_agent_unavailable");
+}
+async function agentResource(
+  identity: DeveloperIdentity,
+  operation: string,
+  input: Record<string, unknown>,
+  signal?: AbortSignal,
+) {
+  requireDeveloperAgents(identity);
+  const result = await identity.db
+    .rpc("manage_developer_agents_v1", {
+      p_owner: identity.ownerId,
+      p_key: identity.id,
+      p_project: identity.project_id,
+      p_operation: operation,
+      p_input: input,
+    })
+    .abortSignal(
+      signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000),
+    );
+  if (result.error || !result.data) {
+    const known = result.error?.message?.match(
+      /^developer_(?:agent_not_found|agent_quota_exceeded|agent_conflict|agent_invalid|scope_required|owner_unavailable)$/,
+    )?.[0];
+    throw new Error(known ?? "developer_agent_unavailable");
+  }
+  return result.data;
+}
+export async function handleDeveloperAgentDefinitions(request: Request) {
+  try {
+    const identity = await authenticateDeveloper(request);
+    requireDeveloperAgents(identity);
+    const rate = await consumeApplicationRateLimit({
+      identity: `developer:${identity.id}`,
+      action: "developer_agent_definitions",
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rate.allowed) throw new Error("developer_rate_limit");
+    if (
+      request.method === "POST" &&
+      request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
+    )
+      throw new Error("developer_json_required");
+    const parsed = parseDeveloperAgentRequest(
+      request.method,
+      new URL(request.url).searchParams,
+      request.method === "POST"
+        ? await readBoundedJsonObject(request, 16384, request.signal)
+        : undefined,
+    );
+    const result = await agentResource(identity, parsed.operation, parsed.input, request.signal);
+    return developerJson(result, parsed.operation === "create" ? 201 : 200);
+  } catch (error) {
+    return developerFailure(error);
+  }
+}
 async function preparePublicRequest(identity: DeveloperIdentity, kind: string, raw: unknown) {
-  const normalized = normalizeDeveloperOperation(kind, raw);
+  let agentBinding: { id: string; version: number; createdAt: string } | null = null;
+  if (kind === "agent-turns") {
+    requireDeveloperAgents(identity);
+    const turn = parseDeveloperAgentTurn(raw);
+    const saved = await agentResource(identity, "get", { id: turn.agent_id, version: turn.version });
+    if (typeof saved.created_at !== "string" || !Number.isFinite(Date.parse(saved.created_at)))
+      throw new Error("developer_agent_unavailable");
+    agentBinding = { id: turn.agent_id, version: turn.version, createdAt: saved.created_at };
+    raw = expandDeveloperAgentTurn(turn, saved);
+  }
+  const normalized = normalizeDeveloperOperation(kind === "agent-turns" ? "responses" : kind, raw);
   const references = developerFileReferences(normalized.operation, normalized.input);
   const parsed = parseDeveloperInput(normalized.operation, references.body);
   if (!identity.capabilities.includes(parsed.capability))
@@ -281,6 +361,7 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   return {
     ...parsed,
     operation: normalized.operation,
+    agentBinding,
     version,
     prepared,
     fingerprint,
@@ -295,6 +376,7 @@ export async function developerQuote(identity: DeveloperIdentity, kind: string, 
     version: value.version.id,
     fingerprint: value.fingerprint,
     operation: kind,
+    agentBinding: value.agentBinding,
     maximumCharge: Number(value.prepared.quote.maximumReservedCharge),
     expiresAt: Math.min(Date.now() + 120000, value.fileExpiresAt ?? Infinity),
   };
@@ -336,6 +418,7 @@ export async function executeDeveloper(
   const parsed = await preparePublicRequest(identity, kind, input);
   if (
     quote.operation !== kind ||
+    JSON.stringify(quote.agentBinding ?? null) !== JSON.stringify(parsed.agentBinding) ||
     quote.version !== parsed.version.id ||
     quote.fingerprint !== parsed.fingerprint ||
     quote.maximumCharge < Number(parsed.prepared.quote.maximumReservedCharge)

@@ -8,7 +8,7 @@ import time
 from urllib.parse import urlsplit
 
 __all__ = ["Client", "KovaError", "APIResponse", "response_events", "chat_completion_events"]
-_OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions", "decisions"))
+_OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions", "decisions", "agent-turns"))
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", re.I)
 _MODEL = re.compile(r"[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*")
 _KEY = re.compile(r"kova_[0-9a-f-]{36}_[A-Za-z0-9_-]{43}")
@@ -311,6 +311,37 @@ class Client:
 
     def vector_delete(self, store_id, *, entry=None):
         return self._request(self._vector_path(store_id, entry), method="DELETE").json(65536)
+
+    @staticmethod
+    def _agent_path(agent_id, version=None):
+        path = "agents?id=" + _identifier(agent_id, _UUID, "agent_id_invalid")
+        if version is not None:
+            _require(type(version) is int and 1 <= version <= 20, "agent_version_invalid")
+            path += f"&version={version}"
+        return path
+
+    def _agent_post(self, operation, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("agents", method="POST",
+                             body=_json_body({**data, "operation": operation}, 16384)).json(65536)
+
+    def agent_create(self, data):
+        return self._agent_post("create", data)
+
+    def agent_update(self, data):
+        return self._agent_post("update", data)
+
+    def agent_list(self):
+        return self._get("agents")
+
+    def agent_retrieve(self, agent_id, *, version=None):
+        return self._get(self._agent_path(agent_id, version))
+
+    def agent_delete(self, agent_id):
+        return self._request(self._agent_path(agent_id), method="DELETE").json(65536)
+
+    def agent_turn(self, data, **budget):
+        return self.run("agent-turns", data, **budget)
 
     def quote(self, operation, data):
         _require(isinstance(operation, str) and operation in _OPERATIONS, "operation_invalid")
