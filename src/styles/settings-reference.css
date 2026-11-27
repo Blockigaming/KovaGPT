@@ -913,7 +913,9 @@
   height: 18px;
   margin-top: 2px;
 }
-.kova-settings-reference .kova-settings-search-result > span { min-width: 0; }
+.kova-settings-reference .kova-settings-search-result > span {
+  min-width: 0;
+}
 .kova-settings-reference .kova-settings-search-result small {
   display: block;
   font-size: 12px;
@@ -924,7 +926,9 @@
   color: #2879c8;
   background: none;
 }
-.dark .kova-settings-reference .kova-settings-search-result mark { color: #67b0ff; }
+.dark .kova-settings-reference .kova-settings-search-result mark {
+  color: #67b0ff;
+}
 .kova-settings-reference .kova-settings-content > .kova-settings-data-panel {
   gap: clamp(12px, 1.5vw, 18px);
 }

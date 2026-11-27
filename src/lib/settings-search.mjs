@@ -97,6 +97,14 @@ export function settingsSearchParts(value, query) {
 
 export function settingsSearchHint(item, query, description = "", topics = "") {
   if (settingsSearchParts(item.label, query).some((part) => part.match)) return description;
-  const candidates = [description, ...(item.keywords ?? []), ...topics.split(" "), ...(ALIASES[item.v] ?? "").split(" ")];
-  return candidates.find((candidate) => settingsSearchParts(candidate, query).some((part) => part.match)) || description;
+  const candidates = [
+    description,
+    ...(item.keywords ?? []),
+    ...topics.split(" "),
+    ...(ALIASES[item.v] ?? "").split(" "),
+  ];
+  return (
+    candidates.find((candidate) => settingsSearchParts(candidate, query).some((part) => part.match)) ||
+    description
+  );
 }

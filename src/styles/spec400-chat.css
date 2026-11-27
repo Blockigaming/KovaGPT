@@ -2119,7 +2119,9 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 
 /* Keep recent-work rows stable even when a title exceeds the available width. */
 @media (min-width: 1024px) {
-  .kova-desktop-recent-work.spec400-recent-work li { min-width: 0; }
+  .kova-desktop-recent-work.spec400-recent-work li {
+    min-width: 0;
+  }
   .kova-desktop-recent-work.spec400-recent-work button {
     display: grid;
     grid-template-columns: minmax(0, 1fr) max-content;
@@ -2136,5 +2138,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .kova-desktop-recent-work.spec400-recent-work time { white-space: nowrap; }
+  .kova-desktop-recent-work.spec400-recent-work time {
+    white-space: nowrap;
+  }
 }

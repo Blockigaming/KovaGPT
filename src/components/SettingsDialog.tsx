@@ -1481,20 +1481,43 @@ export function SettingsDialog({
                   />
                 </label>
                 {normalizedQuery && (
-                  <div id="kova-settings-search-results" className="kova-settings-search-results" role="group" aria-label="Matching settings">
-                    {hasSettingsMatches ? searchResults.map((item) => {
-                      const Icon = item.icon;
-                      const hint = settingsSearchHint(item, normalizedQuery, SETTINGS_DESCRIPTIONS[item.v], SETTINGS_SEARCH_TOPICS[item.v]);
-                      return (
-                        <button key={item.v} type="button" className="kova-settings-search-result" onClick={() => selectTab(item.v)}>
-                          <Icon aria-hidden="true" />
-                          <span>
-                            <span>{highlightedMatch(t(item.label))}</span>
-                            {hint && <small>{highlightedMatch(hint)}</small>}
-                          </span>
-                        </button>
-                      );
-                    }) : <p className="kova-settings-no-results" role="status">No settings found</p>}
+                  <div
+                    id="kova-settings-search-results"
+                    className="kova-settings-search-results"
+                    role="group"
+                    aria-label="Matching settings"
+                  >
+                    {hasSettingsMatches ? (
+                      searchResults.map((item) => {
+                        const Icon = item.icon;
+                        const hint = settingsSearchHint(
+                          item,
+                          normalizedQuery,
+                          SETTINGS_DESCRIPTIONS[item.v],
+                          SETTINGS_SEARCH_TOPICS[item.v],
+                        );
+                        return (
+                          <button
+                            key={item.v}
+                            type="button"
+                            className="kova-settings-search-result"
+                            aria-label={item.label}
+                            onPointerDown={(event) => event.preventDefault()}
+                            onClick={() => selectTab(item.v)}
+                          >
+                            <Icon aria-hidden="true" />
+                            <span>
+                              <span>{highlightedMatch(t(item.label))}</span>
+                              {hint && <small>{highlightedMatch(hint)}</small>}
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="kova-settings-no-results" role="status">
+                        No settings found
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1935,12 +1958,24 @@ export function SettingsDialog({
                           className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted/40 px-3 py-3"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="spec400-plugin-logo" data-logo={entry.connector.id} aria-hidden="true">
-                              {entry.brandAsset.src ? <img src={entry.brandAsset.src} alt="" /> : <Link2 />}
+                            <span
+                              className="spec400-plugin-logo"
+                              data-logo={entry.connector.id}
+                              aria-hidden="true"
+                            >
+                              {entry.brandAsset.src ? (
+                                <img src={entry.brandAsset.src} alt="" />
+                              ) : (
+                                <Link2 />
+                              )}
                             </span>
                             <div className="min-w-0">
-                              <div className="truncate text-sm font-medium">{entry.connector.label}</div>
-                              <div className="truncate text-xs text-muted-foreground">{entry.connector.category}</div>
+                              <div className="truncate text-sm font-medium">
+                                {entry.connector.label}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {entry.connector.category}
+                              </div>
                             </div>
                           </div>
                           <Button asChild variant="outline" className="shrink-0 rounded-full">
@@ -2395,7 +2430,11 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* DATA CONTROL */}
-              <TabsContent aria-labelledby={currentSectionHeadingId} value="data" className="kova-settings-data-panel">
+              <TabsContent
+                aria-labelledby={currentSectionHeadingId}
+                value="data"
+                className="kova-settings-data-panel"
+              >
                 <h3 className="text-sm font-semibold">Privacy and data</h3>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => selectTab("memory")}>

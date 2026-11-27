@@ -165,10 +165,12 @@ export async function chooseSettingsSection(page: Page, section: string) {
   });
   await expect(search.or(back).filter({ visible: true }).first()).toBeVisible();
   if (!(await search.isVisible())) await back.click();
-  // Search includes secondary destinations, so this exercises the actual
-  // grouped navigation without assuming that every section is top-level.
+  // Search results now overlay the unchanged sidebar. Choose the matching result.
   await search.fill(label);
-  await surface.getByRole("tab", { name: label, exact: true }).click();
+  await surface
+    .getByRole("group", { name: "Matching settings" })
+    .getByRole("button", { name: label, exact: true })
+    .click();
   await expect(surface.getByRole("tabpanel").first()).toBeVisible();
   return surface;
 }
