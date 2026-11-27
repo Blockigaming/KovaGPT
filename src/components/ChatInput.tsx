@@ -1,3 +1,4 @@
+import { observeElementWidth } from "@/lib/observe-element-width";
 import { ChatOutputTemplates } from "./ChatOutputTemplates";
 import { t } from "@/lib/localization";
 import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
@@ -801,25 +802,11 @@ export function ChatInput({
       el.style.overflowY = contentHeight > limit ? "auto" : "hidden";
     };
     resize();
-    let width = el.getBoundingClientRect().width;
-    let resizeFrame: number | null = null;
-    const observer = new ResizeObserver(() => {
-      if (resizeFrame !== null) return;
-      // WebKit can deliver nested layout notifications when a callback forces
-      // geometry. Defer both the width measurement and height writes.
-      resizeFrame = window.requestAnimationFrame(() => {
-        resizeFrame = null;
-        const nextWidth = el.getBoundingClientRect().width;
-        if (nextWidth === width) return;
-        resize();
-        width = el.getBoundingClientRect().width;
-      });
-    });
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
-    };
+    if (!value) return;
+    // The shell supplies the available width. The textarea itself changes size
+    // when we measure its content, and observing it can feed that change back.
+    const shell = el.closest<HTMLElement>(".spec400-composer");
+    if (shell) return observeElementWidth(shell, resize);
   }, [value, isLoaded, user?.id, isMobileLayout, surface]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
