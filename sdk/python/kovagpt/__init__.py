@@ -87,7 +87,8 @@ class APIResponse:
         _require(type(maximum_bytes) is int and 1 <= maximum_bytes <= 16 * 1024 * 1024, "limit_invalid")
         try:
             data = self._read(maximum_bytes + 1)
-            _require(len(data) <= maximum_bytes, "response_too_large")
+            if len(data) > maximum_bytes:
+                raise KovaError("response_too_large", self.status, self._paid)
             return json.loads(data.decode("utf-8"))
         except (UnicodeError, ValueError, RecursionError):
             raise KovaError("response_invalid", self.status, self._paid) from None
@@ -412,7 +413,7 @@ class Client:
 
     def batch_create(self, data):
         _require(isinstance(data, dict), "input_invalid")
-        return self._request("batches", method="POST",
+        return self._request("batches", method="POST", paid=True,
                              body=_json_body({**data, "operation": "create"})).json(65536)
 
     def batch_cancel(self, batch_id):
@@ -460,7 +461,7 @@ class Client:
 
     def automation_create(self, data):
         _require(isinstance(data, dict), "input_invalid")
-        return self._request("automations", method="POST",
+        return self._request("automations", method="POST", paid=True,
                              body=_json_body({**data, "operation": "create"})).json(65536)
 
     def automation_cancel(self, automation_id):
@@ -485,7 +486,7 @@ class Client:
 
     def automation_resume(self, automation_id):
         automation_id = _identifier(automation_id, _UUID, "automation_id_invalid")
-        return self._request("automations", method="POST",
+        return self._request("automations", method="POST", paid=True,
                              body=_json_body({"operation": "resume", "id": automation_id})).json(65536)
 
     def quote(self, operation, data):

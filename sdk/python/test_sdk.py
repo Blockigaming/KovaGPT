@@ -229,6 +229,27 @@ class SDKTests(unittest.TestCase):
             self.client.response_job_retrieve("../keys")
         self.assertEqual(len(self.calls), 4)
 
+    def test_paid_queue_operations_preserve_uncertainty_and_never_retry(self):
+        job = {"id": ID, "currency": "USD", "maximum_charge": 10, "items": []}
+        response_job = {"id": ID, "currency": "USD", "maximum_charge": 10,
+                        "quote_token": quote()["quoteToken"], "input": DATA}
+        for action in (lambda: self.client.batch_create(job),
+                       lambda: self.client.automation_create(job),
+                       lambda: self.client.automation_resume(ID),
+                       lambda: self.client.response_job_create(response_job)):
+            for response in (OSError("lost acknowledgement"), FakeResponse(b"invalid JSON", 202),
+                             FakeResponse(b"x" * 262145, 202), FakeResponse({}, 503)):
+                before = len(self.calls)
+                self.responses.append(response)
+                with self.assertRaises(KovaError) as raised:
+                    action()
+                self.assertTrue(raised.exception.request_may_have_started)
+                self.assertEqual(len(self.calls), before + 1)
+        self.responses.append(OSError("lost acknowledgement"))
+        with self.assertRaises(KovaError) as raised:
+            self.client.batch_cancel(ID)
+        self.assertFalse(raised.exception.request_may_have_started)
+
     def test_invalid_origin_and_unsafe_key(self):
         for url in ("http://kovagpt.com", "https://x:y@kovagpt.com", "https://kovagpt.com/path"):
             with self.assertRaisesRegex(KovaError, "origin_invalid"):

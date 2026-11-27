@@ -85,6 +85,20 @@ async function smallJson(response, maximumBytes = 65536) {
   }
 }
 
+// Job creation and resumption can authorize spending even when the acknowledgement
+// is lost. Preserve uncertainty for failures while consuming a successful response.
+async function jobResult(response, maximumBytes = 65536) {
+  try {
+    return await smallJson(response, maximumBytes);
+  } catch (error) {
+    throw new KovaError(
+      error instanceof KovaError ? error.code : "response_invalid",
+      response.status,
+      true,
+    );
+  }
+}
+
 /** Server-side SDK. It never performs implicit provider retries or executes model-suggested tools. */
 export class KovaGPT {
   #apiKey;
@@ -325,13 +339,15 @@ export class KovaGPT {
       if (!valid(id) || (item !== undefined && !valid(item))) fail("batch_id_invalid");
       return "batches?id=" + id + (item === undefined ? "" : "&item_id=" + item);
     };
-    const batchPost = async (operation, input, { signal } = {}) =>
-      smallJson(
-        await this.#request("batches", {
-          input: boundedInput({ ...boundedInput(input), operation }),
-          signal,
-        }),
-      );
+    const batchPost = async (operation, input, { signal } = {}) => {
+      const generation = operation === "create";
+      const response = await this.#request("batches", {
+        input: boundedInput({ ...boundedInput(input), operation }),
+        generation,
+        signal,
+      });
+      return generation ? jobResult(response) : smallJson(response);
+    };
     this.batches = Object.freeze({
       create: (input, options) => batchPost("create", input, options),
       cancel: (id, options) => batchPost("cancel", { id }, options),
@@ -365,7 +381,7 @@ export class KovaGPT {
           !/^[A-Za-z0-9_-]+\.[a-f0-9]{64}$/.test(snapshot.quote_token)
         )
           fail("budget_required");
-        return smallJson(
+        return jobResult(
           await this.#request("response-jobs", {
             input: { ...snapshot, operation: "create" },
             generation: true,
@@ -393,13 +409,15 @@ export class KovaGPT {
       if (!valid(id) || (item !== undefined && !valid(item))) fail("batch_id_invalid");
       return "automations?id=" + id + (item === undefined ? "" : "&item_id=" + item);
     };
-    const automationPost = async (operation, input, { signal } = {}) =>
-      smallJson(
-        await this.#request("automations", {
-          input: boundedInput({ ...boundedInput(input), operation }),
-          signal,
-        }),
-      );
+    const automationPost = async (operation, input, { signal } = {}) => {
+      const generation = operation === "create" || operation === "resume";
+      const response = await this.#request("automations", {
+        input: boundedInput({ ...boundedInput(input), operation }),
+        generation,
+        signal,
+      });
+      return generation ? jobResult(response) : smallJson(response);
+    };
     this.automations = Object.freeze({
       create: (input, options) => automationPost("create", input, options),
       cancel: (id, options) => automationPost("cancel", { id }, options),

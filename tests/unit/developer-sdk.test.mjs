@@ -434,3 +434,45 @@ test("response jobs use a stable ID, explicit quote and budget, and separate ret
   await assert.rejects(f.client.responseJobs.retrieve("../keys"), /response_job_id_invalid/);
   assert.equal(f.calls.length, 4);
 });
+
+test("paid queue operations preserve uncertainty after dispatch and never retry", async () => {
+  const id = "55555555-5555-4555-8555-555555555555";
+  const job = { id, currency: "USD", maximum_charge: 10, items: [] };
+  const responseJob = {
+    id,
+    currency: "USD",
+    maximum_charge: 10,
+    quote_token: quote().quoteToken,
+    input,
+  };
+  const actions = [
+    (client) => client.batches.create(job),
+    (client) => client.automations.create(job),
+    (client) => client.automations.resume(id),
+    (client) => client.responseJobs.create(responseJob),
+  ];
+  for (const action of actions) {
+    for (const handler of [
+      () => {
+        throw new Error("lost acknowledgement");
+      },
+      () => new Response("invalid JSON", { status: 202 }),
+      () => new Response("x".repeat(262145), { status: 202 }),
+      () => Response.json({}, { status: 503 }),
+    ]) {
+      const f = fixture(handler);
+      await assert.rejects(
+        action(f.client),
+        (error) => error instanceof KovaError && error.requestMayHaveStarted,
+      );
+      assert.equal(f.calls.length, 1);
+    }
+  }
+  const f = fixture(() => {
+    throw new Error("lost acknowledgement");
+  });
+  await assert.rejects(
+    f.client.batches.cancel(id),
+    (error) => error instanceof KovaError && !error.requestMayHaveStarted,
+  );
+});
