@@ -1,3 +1,4 @@
+import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
@@ -28,6 +29,7 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "@/lib/observe-element-width": { observeElementWidth() {} },
   "./ChatOutputTemplates": { ChatOutputTemplates: empty },
   "@/lib/chat-output-templates": {},
   "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
@@ -39,6 +41,7 @@ const closedSurfaces = {
   "@/lib/chat-image-actions": {},
   "@/components/LinkPreviewChip": { LinkPreviewChip: empty },
   "@/lib/link-preview.mjs": linkPreview,
+  "@/lib/voice/webaudio-sink.mjs": webAudioSink,
   "@/components/OpenDesktopAppButton": {
     OpenDesktopAppButton: () =>
       React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),
@@ -156,6 +159,8 @@ vm.runInNewContext(output, {
         "@/lib/limits",
         "@/lib/composer-keyboard.mjs",
         "sonner",
+        "@/lib/conversation-limits.mjs",
+        "@/lib/preload-conversation-view",
       ].includes(id)
     )
       return {};

@@ -26,7 +26,6 @@ import figmaLogo from "../assets/plugins/figma.svg";
 import gammaLogo from "../assets/plugins/gamma.png";
 import bigQueryLogo from "../assets/plugins/google-bigquery.svg";
 import granolaLogo from "../assets/plugins/granola.png";
-import hubspotLogo from "../assets/plugins/hubspot.svg";
 import hyperframesLogo from "../assets/plugins/hyperframes-heygen.png";
 import interactiveBrokersLogo from "../assets/plugins/interactive-brokers.png";
 import meltwaterLogo from "../assets/plugins/meltwater.png";
@@ -67,7 +66,6 @@ const pluginBrands: Readonly<Record<string, { src: string; accent: string }>> = 
   gamma: { src: gammaLogo, accent: "#3c63b3" },
   "google-bigquery": { src: bigQueryLogo, accent: "#669df6" },
   granola: { src: granolaLogo, accent: "#151515" },
-  hubspot: { src: hubspotLogo, accent: "#ff7a59" },
   "hyperframes-heygen": { src: hyperframesLogo, accent: "#30dfa0" },
   "interactive-brokers": { src: interactiveBrokersLogo, accent: "#e22222" },
   meltwater: { src: meltwaterLogo, accent: "#20c0c0" },

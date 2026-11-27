@@ -10,10 +10,26 @@ export type ComposerVoiceTurn = {
   voiceModelReceipt: string;
 };
 
+/** One signed, speakable piece of the reply, delivered while the model is still generating. */
+export type VoiceSegmentEvent = {
+  chatId: string;
+  messageId: string;
+  index: number;
+  text: string;
+  receipt: string;
+};
+
+/** Live signals from the chat stream used to start speech early and cover real delays. */
+export type VoiceTurnEvents = {
+  /** Every raw stream delta; validated and used by the lazily loaded voice module. */
+  onStream?: (delta: Record<string, unknown> | undefined) => void;
+};
+
 export type ComposerVoiceSubmit = (
   text: string,
   signal: AbortSignal,
   realtime?: boolean,
+  events?: VoiceTurnEvents,
 ) => Promise<ComposerVoiceTurn>;
 
 type PendingVoiceTurn = Omit<ComposerVoiceTurn, "contentSha256">;

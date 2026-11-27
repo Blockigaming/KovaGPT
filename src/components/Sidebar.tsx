@@ -1365,7 +1365,7 @@ export function Sidebar({
   const renderAccountMenu = (rail = false) => (
     <DropdownMenuContent
       side={rail ? "right" : "top"}
-      align="end"
+      align={rail ? "end" : "start"}
       className="kova-profile-menu"
       data-rail={rail}
     >

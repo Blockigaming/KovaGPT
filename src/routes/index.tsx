@@ -1,3 +1,4 @@
+import { observeElementWidth } from "@/lib/observe-element-width";
 import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
@@ -27,7 +28,7 @@ import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversati
 import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
-import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
+import type { ComposerVoiceTurn, VoiceTurnEvents } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
@@ -64,6 +65,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -200,6 +202,8 @@ import { toast } from "sonner";
 import { useTier } from "@/hooks/useTier";
 import {
   consumePrincipalHandoff,
+  contextPackHandoffPrompt,
+  workHandoffPrompt,
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   safeBrowserStorage,
@@ -211,7 +215,10 @@ type ChatRequestNotice = {
   kind: "session-expired";
   signedIn: boolean;
 };
-type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
+type AppChatContextHandoff =
+  | string
+  | { prompt: string; tool: "web_search" }
+  | { prompt: string; connector: { id: string; label: string } };
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { settings?: string } =>
@@ -755,37 +762,21 @@ function KovaGPT() {
   const resizeAttachmentPane = (next: number) =>
     setAttachmentPaneRatio(Math.max(0.3, Math.min(0.7, next)));
   const wideResult = workspaceWidth >= 1000;
-  const wideResultRef = useRef(wideResult);
-  wideResultRef.current = wideResult;
   const setLayoutRatio = (next: number) => {
     const usableWidth = Math.max(workspaceWidth - 12, 840);
     const minimum = 420 / usableWidth;
     setPaneRatio(Math.max(minimum, Math.min(1 - minimum, next)));
   };
-  useEffect(() => {
+  const needsWorkspaceWidth = Boolean(result);
+  useLayoutEffect(() => {
     const element = workspaceRef.current;
-    if (!element) return;
-    let resizeFrame: number | null = null;
-    let measuredWidth = element.clientWidth;
-    const observer = new ResizeObserver(() => {
-      if (resizeFrame !== null) return;
-      // Read geometry and update React outside ResizeObserver notification delivery.
-      resizeFrame = window.requestAnimationFrame(() => {
-        resizeFrame = null;
-        const width = element.clientWidth;
-        if (width === measuredWidth) return;
-        measuredWidth = width;
-        setWorkspaceWidth(width);
-      });
-    });
-    observer.observe(element);
-    setWorkspaceWidth(measuredWidth);
+    if (!element || !needsWorkspaceWidth) return;
+    setWorkspaceWidth(element.clientWidth);
+    return observeElementWidth(element, setWorkspaceWidth);
+  }, [needsWorkspaceWidth]);
+  useEffect(() => {
     const saved = Number(safeBrowserStorage("localStorage")?.getItem("kova-result-pane-ratio"));
     if (Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8) setPaneRatio(saved);
-    return () => {
-      observer.disconnect();
-      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
-    };
   }, []);
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem("kova-result-pane-ratio", String(paneRatio));
@@ -1143,20 +1134,8 @@ function KovaGPT() {
       name: string;
       items: { title: string; content: string }[];
     }>("kova-active-context-pack", (pack) => {
-      if (
-        typeof pack?.name !== "string" ||
-        !Array.isArray(pack.items) ||
-        !pack.items.every(
-          (item) => typeof item?.title === "string" && typeof item?.content === "string",
-        )
-      ) {
-        throw new Error();
-      }
-      const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
-      return () =>
-        setInput(
-          `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `,
-        );
+      const prompt = contextPackHandoffPrompt(pack);
+      return () => setInput(prompt);
     });
 
     for (const key of ["kova-work-context", "kova-work-draft"]) {
@@ -1166,29 +1145,32 @@ function KovaGPT() {
         steps?: { text: string; done?: boolean; approval?: boolean }[];
         plan?: string[];
       }>(key, (task) => {
-        const steps: { text: string; done?: boolean }[] | undefined =
-          task.steps ?? task.plan?.map((text) => ({ text }));
-        if (
-          typeof task?.objective !== "string" ||
-          typeof task.context !== "string" ||
-          !Array.isArray(steps) ||
-          !steps.every((step) => typeof step?.text === "string")
-        )
-          throw new Error();
-        return () =>
-          setInput(
-            `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
-          );
+        const prompt = workHandoffPrompt(task);
+        return () => setInput(prompt);
       });
     }
 
     consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
       if (typeof appContext === "string") return () => setInput(appContext);
-      if (typeof appContext?.prompt !== "string" || appContext.tool !== "web_search")
+      if (typeof appContext?.prompt !== "string") throw new Error();
+      if ("tool" in appContext && appContext.tool === "web_search") {
+        return () => {
+          setInput(appContext.prompt);
+          setSelectedTool("web_search");
+        };
+      }
+      if (
+        !("connector" in appContext) ||
+        typeof appContext.connector?.id !== "string" ||
+        !/^[a-z][a-z0-9-]{0,63}$/.test(appContext.connector.id) ||
+        typeof appContext.connector?.label !== "string"
+      )
         throw new Error();
       return () => {
+        setActiveId(null);
+        setSelectedTool(null);
+        setPluginSelection({ owner: userKey, chat: null, value: [appContext.connector] });
         setInput(appContext.prompt);
-        setSelectedTool("web_search");
       };
     });
 
@@ -1290,7 +1272,10 @@ function KovaGPT() {
     // preview but never another kind of result. Narrow layouts keep the tap-to-open card.
     const fileResult = latestFileResult(latest);
     if (fileResult) {
-      if (wideResultRef.current && (!resultRef.current || resultRef.current.file))
+      if (
+        (workspaceRef.current?.clientWidth ?? 0) >= 1000 &&
+        (!resultRef.current || resultRef.current.file)
+      )
         openResultRef.current(fileResult);
       return;
     }
@@ -1801,7 +1786,7 @@ function KovaGPT() {
       voiceRequest?: {
         signal: AbortSignal;
         onAssistant?: (chatId: string, messageId: string) => void;
-      },
+      } & VoiceTurnEvents,
       quickAnswer = false,
       requestWebSearch?: boolean,
       { preserveDraft = false } = {},
@@ -1924,7 +1909,6 @@ function KovaGPT() {
       };
 
       voiceRequest?.onAssistant?.(nextConvId, assistantMsg.id);
-
       // Keep the exact submitted draft in this request's mounted scope. Attachment
       // objects/payloads are retained by reference; they are never re-uploaded here.
       const rejectedDraft: NextPrompt = {
@@ -2225,6 +2209,7 @@ function KovaGPT() {
                 voiceModelReceipt: delta.receipt as string,
               }));
             }
+            voiceRequest?.onStream?.(delta);
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
               updateAssistantMessage((message) => ({
@@ -2698,6 +2683,7 @@ function KovaGPT() {
     text: string,
     signal: AbortSignal,
     realtime?: boolean,
+    events?: VoiceTurnEvents,
   ): Promise<ComposerVoiceTurn> => {
     const session = composerVoiceSessionRef.current;
     let requestEpoch: number | null = null;
@@ -2718,6 +2704,7 @@ function KovaGPT() {
       throw new Error("voice_turn_cancelled");
     const pending = send(text, [], null, 0, undefined, undefined, undefined, undefined, {
       signal,
+      ...events,
       onAssistant: (chatId, messageId) => {
         if (session?.ownerId)
           setVoiceReveal({ ownerId: session.ownerId, chatId, messageId, fraction: 0 });
@@ -3153,6 +3140,7 @@ function KovaGPT() {
       value={principalReady ? input : ""}
       onChange={setInput}
       onSubmit={submitComposer}
+      messageCount={isSignedIn ? (active?.messages.length ?? 0) : undefined}
       onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
       onStop={stop}
 
@@ -3239,7 +3227,9 @@ function KovaGPT() {
 
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={<div aria-hidden="true" className="kova-desktop-topbar hidden lg:block" />}
+      >
         <DesktopChatToolbar
           sidebarOpen={sidebarOpen}
           isSignedIn={isSignedIn}

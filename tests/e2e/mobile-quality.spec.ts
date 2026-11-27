@@ -41,11 +41,10 @@ test("navigation opens, contains its controls, and dismisses predictably", async
         return { x: glyph.x + glyph.width / 2, target: Math.min(width, height) };
       }),
     );
-    expect(centers).toHaveLength(3);
+    expect(centers).toHaveLength(2);
     expect(centers.every((button) => button.target >= 44)).toBe(true);
     // Each press target is centered on its icon, so neighbors sit a full target apart.
     expect(centers[1].x - centers[0].x).toBeGreaterThanOrEqual(44);
-    expect(centers[2].x - centers[1].x).toBeGreaterThanOrEqual(44);
   }
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation" });

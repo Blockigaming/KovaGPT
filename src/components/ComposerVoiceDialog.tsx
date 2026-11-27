@@ -27,6 +27,47 @@ import {
   stopActiveSpeechPlayback,
 } from "@/lib/speech-playback.mjs";
 import type { ComposerVoiceSubmit, ComposerVoiceTurn } from "@/lib/composer-voice-turn";
+import { createAckCache } from "@/lib/voice/acknowledgments.mjs";
+import { createBargeInDetector } from "@/lib/voice/barge-in.mjs";
+import {
+  createStreamingVoicePlayback,
+  parseVoiceSegment,
+  predictedDelay,
+} from "@/lib/voice/streaming-playback.mjs";
+import { createVoiceLatencyTracker } from "@/lib/voice/voice-latency.mjs";
+import {
+  createWebAudioSegmentSink,
+  primeVoiceAudio,
+  supportsStreamingMp3,
+} from "@/lib/voice/webaudio-sink.mjs";
+
+// In-memory only: no text, audio or identifiers. Read it from the console with
+// window.__kovaVoiceLatency.summary() to get p50/p95 on a real device.
+const ackCache = createAckCache();
+const latencyTracker = createVoiceLatencyTracker();
+if (typeof window !== "undefined")
+  (window as unknown as { __kovaVoiceLatency?: unknown }).__kovaVoiceLatency = {
+    summary: () => latencyTracker.summary(),
+    records: () => latencyTracker.records(),
+  };
+
+function speechErrorMessage(code: string | undefined) {
+  const messages: Record<string, string> = {
+    speech_message_not_synced:
+      "The reply is not available in saved history. Use chat to review it before trying Voice again.",
+    speech_not_eligible:
+      "This reply is not from a voice-enabled model. Your reply remains in chat.",
+    speech_text_too_long:
+      "This reply is too long to speak. Read it in chat, then start a new voice turn.",
+    speech_unauthorized: "Your voice session ended. Sign in again before starting Voice.",
+    speech_not_available: "Read aloud is not configured. Your reply remains in chat.",
+    speech_limit_reached: "Your Read aloud limit has been reached. Your reply remains in chat.",
+  };
+  return (
+    messages[code ?? ""] ??
+    "The reply could not be played. Your reply remains in chat. Start Voice again when you are ready."
+  );
+}
 
 // Leave room for codec finalization beneath the server's hard 60-second limit.
 const MAX_RECORDING_MS = 59_000;
@@ -80,6 +121,8 @@ export interface ComposerVoiceDialogProps {
   autoStartVoice?: boolean;
   onVoiceSubmit?: ComposerVoiceSubmit;
   onVoicePlaybackProgress?: (fraction: number | null) => void;
+  /** Selected chat reasoning mode; only predicts which acknowledgment may play. */
+  chatMode?: string;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   isStreaming: boolean;
@@ -148,6 +191,7 @@ export function ComposerVoiceDialog({
   isStreaming,
   conversationModelControl,
   onCloseAutoFocus,
+  chatMode,
 }: ComposerVoiceDialogProps) {
   const transcriptId = useId();
   const voiceGlow = useRef<HTMLDivElement>(null);
@@ -161,18 +205,28 @@ export function ComposerVoiceDialog({
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   useLayoutEffect(() => {
-    const glow = voiceGlow.current;
-    if (!glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (
+      typeof requestAnimationFrame === "undefined" ||
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    )
+      return;
     let smoothed = 0;
     let previous = performance.now();
     let frame: number;
     const animate = (now: number) => {
       const elapsed = Math.max(0, Math.min(64, now - previous));
       previous = now;
-      const target = glowTarget.current;
+      // Listening and speaking are driven by audio levels. While Kova is thinking,
+      // searching or connecting, a slow breath keeps the glow alive and calm.
+      const active = phaseRef.current;
+      const target =
+        active === "recording" || active === "speaking"
+          ? glowTarget.current
+          : Math.max(glowTarget.current, 0.2 + 0.08 * Math.sin(now / 700));
       const response = target > smoothed ? 85 : 250;
       smoothed += (target - smoothed) * (1 - Math.exp(-elapsed / response));
-      glow.style.setProperty("--voice-level", smoothed.toFixed(3));
+      // The glow mounts and unmounts across phases; always use the live element.
+      voiceGlow.current?.style.setProperty("--voice-level", smoothed.toFixed(3));
       frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
@@ -216,6 +270,7 @@ export function ComposerVoiceDialog({
     onVoiceSubmit,
     onVoicePlaybackProgress,
     onOpenChange,
+    chatMode,
   });
   current.current = {
     open,
@@ -229,6 +284,7 @@ export function ComposerVoiceDialog({
     onVoiceSubmit,
     onVoicePlaybackProgress,
     onOpenChange,
+    chatMode,
   };
   const streamingBlocked = mode !== "voice" && isStreaming;
   const mounted = useRef(false);
@@ -258,7 +314,11 @@ export function ComposerVoiceDialog({
   const selectedVoice = useRef("");
   const defaultVoice = useRef("");
   const voiceSessionActive = useRef(false);
-  const voicePlayback = useRef<ReturnType<typeof createSpeechPlayback> | null>(null);
+  const voicePlayback = useRef<{ stop(): void } | null>(null);
+  const bargeIn = useRef<{ stop(): void } | null>(null);
+  const bargeInGeneration = useRef(0);
+  const playbackLevel = useRef(0);
+  const playbackLevelSeen = useRef(false);
   const resumeRecording = useRef<((continuing?: boolean) => Promise<void>) | null>(null);
   const billingAfterClose = useRef<{
     userId: string;
@@ -304,6 +364,9 @@ export function ComposerVoiceDialog({
     if (current.current.mode === "voice") current.current.onVoicePlaybackProgress?.(null);
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
+    bargeInGeneration.current += 1;
+    bargeIn.current?.stop();
+    bargeIn.current = null;
     activePlayback?.stop();
     request.current?.abort();
     configRequest.current?.abort();
@@ -564,6 +627,146 @@ export function ComposerVoiceDialog({
     requestDeadline.current = null;
   };
 
+  const stopBargeInMonitor = () => {
+    bargeInGeneration.current += 1;
+    bargeIn.current?.stop();
+    bargeIn.current = null;
+  };
+
+  // Lets the user simply talk over Kova. Compares the microphone against Kova's own
+  // playback level so speaker echo does not interrupt; needs sustained speech.
+  const startBargeInMonitor = (
+    scope: OperationScope,
+    playback: ReturnType<typeof createStreamingVoicePlayback>,
+  ) => {
+    stopBargeInMonitor();
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof AudioContext === "undefined"
+    )
+      return;
+    const generation = bargeInGeneration.current;
+    void navigator.mediaDevices
+      .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } })
+      .then((micStream) => {
+        if (
+          bargeInGeneration.current !== generation ||
+          !isCurrent(scope) ||
+          voicePlayback.current !== playback
+        ) {
+          stopTracks(micStream);
+          return;
+        }
+        const context = new AudioContext();
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 512;
+        context.createMediaStreamSource(micStream).connect(analyser);
+        const samples = new Float32Array(analyser.fftSize);
+        // Without a playback level reading, echo cannot be told from speech: be stricter.
+        const detector = createBargeInDetector({
+          floor: playbackLevelSeen.current ? 0.035 : 0.08,
+        });
+        detector.reset(performance.now());
+        const interval = setInterval(() => {
+          analyser.getFloatTimeDomainData(samples);
+          let energy = 0;
+          for (const value of samples) energy += value * value;
+          const mic = Math.sqrt(energy / samples.length);
+          if (
+            !detector.feed({ mic, playback: playbackLevel.current, now: performance.now() }) ||
+            voicePlayback.current !== playback ||
+            !isCurrent(scope)
+          )
+            return;
+          stopBargeInMonitor();
+          voicePlayback.current = null;
+          current.current.onVoicePlaybackProgress?.(null);
+          playback.interrupt();
+          updatePhase("idle");
+          void resumeRecording.current?.(true);
+        }, 40);
+        bargeIn.current = {
+          stop() {
+            clearInterval(interval);
+            stopTracks(micStream);
+            void context.close().catch(() => undefined);
+          },
+        };
+      })
+      .catch(() => undefined);
+  };
+
+  // Starts speaking as soon as the first signed segment arrives, in parallel with
+  // generation. The exact model, reasoning effort and limits are decided by the chat
+  // request and server; nothing here selects or downgrades them.
+  const startStreamingSpeech = (scope: OperationScope) => {
+    let words = 0;
+    const playback = createStreamingVoicePlayback({
+      ownerId: scope.userId,
+      voiceId: scope.voiceId,
+      fetchImpl: authFetch,
+      ackCache,
+      tracker: latencyTracker,
+      // MediaSource streams MP3 where available; otherwise (iPhone) segments are
+      // decoded and scheduled with Web Audio on a context unlocked by the tap.
+      createSink: (options) =>
+        (supportsStreamingMp3() ? createBrowserSpeechSink : createWebAudioSegmentSink)({
+          ...options,
+          onLevel: (level: number) => {
+            playbackLevelSeen.current = true;
+            playbackLevel.current = level;
+            updateGlow(level);
+          },
+          onProgress: (elapsed, duration) => {
+            if (!isCurrent(scope) || voicePlayback.current !== playback) return;
+            const total =
+              Number.isFinite(duration) && duration > 0
+                ? duration
+                : Math.max(words / 2.7, elapsed + 0.5);
+            current.current.onVoicePlaybackProgress?.(Math.min(0.99, (elapsed + 0.18) / total));
+          },
+        }),
+      onState: (state, code) => {
+        if (!isCurrent(scope) || voicePlayback.current !== playback) return;
+        if (state === "playing") {
+          updatePhase("speaking");
+          startBargeInMonitor(scope, playback);
+        } else if (state === "error") {
+          stopBargeInMonitor();
+          failOperation(speechErrorMessage(code));
+        }
+      },
+      onEnded: () => {
+        if (!isCurrent(scope) || voicePlayback.current !== playback || !voiceSessionActive.current)
+          return;
+        stopBargeInMonitor();
+        current.current.onVoicePlaybackProgress?.(null);
+        voicePlayback.current = null;
+        updatePhase("idle");
+        // Natural end of a spoken reply: listen again automatically.
+        void resumeRecording.current?.(true);
+      },
+    });
+    voicePlayback.current = playback;
+    playback.begin();
+    // Hint only: a reasoning mode predicts a delay. Never changes model or effort.
+    const predicted = predictedDelay(current.current.chatMode);
+    if (predicted) playback.delay(predicted);
+    return {
+      playback,
+      events: {
+        onStream: (delta: Record<string, unknown> | undefined) => {
+          const segment = parseVoiceSegment(delta);
+          if (segment) {
+            words += segment.text.trim().split(/\s+/u).length;
+            playback.segment(segment);
+          } else if (delta?.kind === "activity" && delta.label) playback.delay("search");
+        },
+      },
+    };
+  };
+
   const submitVoiceTurn = async (scope: OperationScope, text: string, realtime = false) => {
     const submit = current.current.onVoiceSubmit;
     if (!isCurrent(scope) || !voiceSessionActive.current || !submit) return;
@@ -571,13 +774,20 @@ export function ComposerVoiceDialog({
     setVoiceLog((log) => [...log.slice(-49), { speaker: "You", text, at: Date.now() }]);
     const controller = beginRequest(120_000);
     let abortListener: (() => void) | undefined;
+    let streaming: ReturnType<typeof startStreamingSpeech> | null = null;
+    let handedOff = false;
     try {
       const aborted = new Promise<never>((_resolve, reject) => {
         abortListener = () => reject(new Error("voice_turn_cancelled"));
         controller.signal.addEventListener("abort", abortListener, { once: true });
         if (controller.signal.aborted) abortListener();
       });
-      const reply = await Promise.race([submit(text, controller.signal, realtime), aborted]);
+      // Live (hands-free) turns speak while the reply is still being generated.
+      if (realtime && scope.userId) streaming = startStreamingSpeech(scope);
+      const reply = await Promise.race([
+        submit(text, controller.signal, realtime, streaming?.events),
+        aborted,
+      ]);
       if (!isCurrent(scope) || controller.signal.aborted || !voiceSessionActive.current) return;
       if (
         !reply ||
@@ -600,6 +810,13 @@ export function ComposerVoiceDialog({
         ...log.slice(-49),
         { speaker: "Kova", text: reply.content, at: Date.now() },
       ]);
+      if (streaming?.playback.finish()) {
+        // Speech is already playing from the streamed segments; its callbacks
+        // finish the turn and resume listening. No second synthesis happens.
+        handedOff = true;
+        return;
+      }
+      streaming = null;
       updatePhase("synthesizing");
       let ended = false;
       let started = false;
@@ -643,22 +860,7 @@ export function ComposerVoiceDialog({
           if (state === "loading") started = true;
           if (state === "playing") updatePhase("speaking");
           if (state === "error") {
-            const messages: Record<string, string> = {
-              speech_message_not_synced:
-                "The reply is not available in saved history. Use chat to review it before trying Voice again.",
-              speech_not_eligible:
-                "This reply is not from a voice-enabled model. Your reply remains in chat.",
-              speech_text_too_long:
-                "This reply is too long to speak. Read it in chat, then start a new voice turn.",
-              speech_unauthorized: "Your voice session ended. Sign in again before starting Voice.",
-              speech_not_available: "Read aloud is not configured. Your reply remains in chat.",
-              speech_limit_reached:
-                "Your Read aloud limit has been reached. Your reply remains in chat.",
-            };
-            failOperation(
-              messages[code ?? ""] ??
-                "The reply could not be played. Your reply remains in chat. Start Voice again when you are ready.",
-            );
+            failOperation(speechErrorMessage(code));
           } else if (state === "idle" && started && !ended) {
             // The shared player emits idle immediately before an error. Let
             // its error notification run before treating an external Stop as
@@ -764,6 +966,11 @@ export function ComposerVoiceDialog({
     } finally {
       if (abortListener) controller.signal.removeEventListener("abort", abortListener);
       finishRequest(controller);
+      if (!handedOff && streaming) {
+        if (voicePlayback.current === streaming.playback) voicePlayback.current = null;
+        stopBargeInMonitor();
+        streaming.playback.stop();
+      }
     }
   };
 
@@ -869,6 +1076,7 @@ export function ComposerVoiceDialog({
   };
 
   const startRecording = async (continuing = false) => {
+    if (!continuing) primeVoiceAudio();
     if (!userId || !capabilities?.configured || !capabilities.stt || phaseRef.current !== "idle")
       return;
     if (
@@ -1321,7 +1529,9 @@ export function ComposerVoiceDialog({
                 : "Voice is unavailable right now.");
     return (
       <div id="kova-inline-voice" className="kova-inline-voice" data-phase={phase}>
-        {(phase === "recording" || phase === "speaking") && (
+        {/* One continuous glow for the whole active session: connecting, listening,
+            thinking, searching and speaking. Hidden only when paused or on error. */}
+        {!error && (startingVoice || phase !== "idle") && (
           <div
             ref={voiceGlow}
             style={glowStyle}
@@ -1329,14 +1539,8 @@ export function ComposerVoiceDialog({
             aria-hidden="true"
           />
         )}
-        <span
-          role="status"
-          className={
-            !error && (startingVoice || phase === "recording" || phase === "speaking")
-              ? "sr-only"
-              : undefined
-          }
-        >
+        {/* Status stays announced to assistive technology; only errors are visible. */}
+        <span role="status" aria-live="polite" className={error ? undefined : "sr-only"}>
           {liveStatus}
         </span>
         {ready && phase === "recording" && !realtimeListening && (
@@ -1351,9 +1555,17 @@ export function ComposerVoiceDialog({
             <ArrowUp aria-hidden="true" />
           </Button>
         )}
-        {ready && !busy && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => void startRecording()}>
-            Resume
+        {/* Discreet recovery only when Voice is paused; no visible text label. */}
+        {ready && !busy && phase === "idle" && !startingVoice && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Resume Voice"
+            title="Resume Voice"
+            onClick={() => void startRecording()}
+          >
+            <Mic aria-hidden="true" />
           </Button>
         )}
         {!checking && !capabilities && error && (

@@ -1,3 +1,4 @@
+import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import assert from "node:assert/strict";
@@ -151,6 +152,7 @@ function fixture(
     "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
     "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
+    "@/lib/voice/webaudio-sink.mjs": webAudioSink,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "@/lib/consumer-model-selection.mjs": { CONSUMER_MODELS: [] },
@@ -179,6 +181,7 @@ function fixture(
     "@/lib/modes": { DAILY_UPLOAD_LIMIT_BY_TIER: { free: 10 } },
     "@/lib/composer-keyboard.mjs": {},
     "@/lib/dialog-return-focus": { restoreDialogFocus() {} },
+    "@/lib/observe-element-width": { observeElementWidth() {} },
     "@/lib/composer-paste": { prepareComposerPaste: (plain) => plain },
     sonner: { toast: { error() {}, message() {} } },
     "@/hooks/use-library-attachment-auto-save": {
@@ -205,6 +208,8 @@ function fixture(
     modules[`@/components/${name}`] = { [name]: name };
   modules["@/components/HomeAutocompleteHost"] = { default: () => null };
   modules["@/components/ComposerPluginList"].useComposerPluginConnections = () => ({});
+  modules["@/lib/conversation-limits.mjs"] = {};
+  modules["@/lib/preload-conversation-view"] = {};
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
     ["popover", ["Popover", "PopoverContent", "PopoverTrigger", "PopoverAnchor"]],

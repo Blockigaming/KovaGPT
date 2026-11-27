@@ -121,3 +121,6 @@ export function purgeUnscopedPrivateBrowserStorage(
     sessionStorage?: StorageLike | null;
   },
 ): PrincipalStorageCleanupResult;
+
+export function contextPackHandoffPrompt(pack: unknown): string;
+export function workHandoffPrompt(task: unknown): string;

@@ -1,3 +1,4 @@
+import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import assert from "node:assert/strict";
@@ -125,6 +126,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
     "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
+    "@/lib/voice/webaudio-sink.mjs": webAudioSink,
     react,
     "lucide-react": {},
     "@/lib/consumer-model-selection.mjs": { CONSUMER_MODELS: [] },
@@ -150,6 +152,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     "@/lib/modes": { DAILY_UPLOAD_LIMIT_BY_TIER: { free: 2 } },
     "@/lib/composer-keyboard.mjs": {},
     "@/lib/dialog-return-focus": { restoreDialogFocus() {} },
+    "@/lib/observe-element-width": { observeElementWidth() {} },
     "@/lib/composer-paste": { prepareComposerPaste: (plain) => plain },
     "@/lib/document-extraction/pdf-metadata.mjs": pdfMetadata,
     "@/lib/document-extraction/client": {
@@ -187,6 +190,8 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     modules[`@/components/${name}`] = { [name]: name };
   modules["@/components/HomeAutocompleteHost"] = { default: () => null };
   modules["@/components/ComposerPluginList"].useComposerPluginConnections = () => ({});
+  modules["@/lib/conversation-limits.mjs"] = {};
+  modules["@/lib/preload-conversation-view"] = {};
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
     ["popover", ["Popover", "PopoverContent", "PopoverTrigger", "PopoverAnchor"]],

@@ -286,7 +286,7 @@ export function createTranscriptReadingAnchorController(
       knownTop > maximum &&
       (layoutChanged() || compensationFrame !== null)
     ) {
-      compensate();
+      queueCompensation();
       return;
     }
     knownTop = element.scrollTop;
@@ -358,7 +358,7 @@ export function createTranscriptReadingAnchorController(
         if (Math.abs(element.scrollTop - knownTop) > EPSILON && !layoutChanged()) {
           queueCapture();
         } else {
-          compensate();
+          queueCompensation();
         }
       })
     : null;
@@ -369,7 +369,7 @@ export function createTranscriptReadingAnchorController(
     element.addEventListener(type, onIntent, { passive: true });
   for (const type of ["touchend", "touchcancel", "pointerup", "pointercancel"])
     window?.addEventListener(type, onGestureEnd, { passive: true });
-  window?.addEventListener("resize", compensate);
+  window?.addEventListener("resize", queueCompensation);
   return {
     capture() {
       // Keep the same character across successive reflows. Recapturing a new
@@ -404,7 +404,7 @@ export function createTranscriptReadingAnchorController(
         element.removeEventListener(type, onIntent);
       for (const type of ["touchend", "touchcancel", "pointerup", "pointercancel"])
         window?.removeEventListener(type, onGestureEnd);
-      window?.removeEventListener("resize", compensate);
+      window?.removeEventListener("resize", queueCompensation);
       element.style.overflowAnchor = previousOverflowAnchor;
     },
   };
