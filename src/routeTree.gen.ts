@@ -204,6 +204,7 @@ import { Route as ApiV1ModelsRouteImport } from './routes/api/v1/models'
 import { Route as ApiV1ModerationsRouteImport } from './routes/api/v1/moderations'
 import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
 import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
+import { Route as ApiV1SearchRouteImport } from './routes/api/v1/search'
 import { Route as ApiV1UsageRouteImport } from './routes/api/v1/usage'
 import { Route as ApiWorkBrowserRouteImport } from './routes/api/work/browser'
 import { Route as ApiWorkExecutionRouteImport } from './routes/api/work/execution'
@@ -232,6 +233,7 @@ import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
+import { Route as ApiV1ChatCompletionsRouteImport } from './routes/api/v1/chat/completions'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as ApiAuthMfaRecoveryRegenerateRouteImport } from './routes/api/auth/mfa/recovery/regenerate'
 import { Route as ApiAuthPasskeysLoginOptionsRouteImport } from './routes/api/auth/passkeys/login/options'
@@ -1238,6 +1240,11 @@ const ApiV1ResponsesRoute = ApiV1ResponsesRouteImport.update({
   path: '/api/v1/responses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1SearchRoute = ApiV1SearchRouteImport.update({
+  id: '/api/v1/search',
+  path: '/api/v1/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1UsageRoute = ApiV1UsageRouteImport.update({
   id: '/api/v1/usage',
   path: '/api/v1/usage',
@@ -1383,6 +1390,11 @@ const ApiPublicPaymentsWebhookRoute =
 const ApiTasksEventsProviderRoute = ApiTasksEventsProviderRouteImport.update({
   id: '/api/tasks/events/$provider',
   path: '/api/tasks/events/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ChatCompletionsRoute = ApiV1ChatCompletionsRouteImport.update({
+  id: '/api/v1/chat/completions',
+  path: '/api/v1/chat/completions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsProjectIdChatChatIdRoute =
@@ -1630,6 +1642,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/moderations': typeof ApiV1ModerationsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
@@ -1657,6 +1670,7 @@ export interface FileRoutesByFullPath {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
@@ -1863,6 +1877,7 @@ export interface FileRoutesByTo {
   '/api/v1/moderations': typeof ApiV1ModerationsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
@@ -1890,6 +1905,7 @@ export interface FileRoutesByTo {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/auth/passkeys': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
@@ -2097,6 +2113,7 @@ export interface FileRoutesById {
   '/api/v1/moderations': typeof ApiV1ModerationsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
@@ -2124,6 +2141,7 @@ export interface FileRoutesById {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
@@ -2332,6 +2350,7 @@ export interface FileRouteTypes {
     | '/api/v1/moderations'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/search'
     | '/api/v1/usage'
     | '/api/work/browser'
     | '/api/work/execution'
@@ -2359,6 +2378,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
     | '/api/auth/passkeys/'
     | '/api/auth/mfa/recovery/regenerate'
@@ -2565,6 +2585,7 @@ export interface FileRouteTypes {
     | '/api/v1/moderations'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/search'
     | '/api/v1/usage'
     | '/api/work/browser'
     | '/api/work/execution'
@@ -2592,6 +2613,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
     | '/api/auth/passkeys'
     | '/api/auth/mfa/recovery/regenerate'
@@ -2798,6 +2820,7 @@ export interface FileRouteTypes {
     | '/api/v1/moderations'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/search'
     | '/api/v1/usage'
     | '/api/work/browser'
     | '/api/work/execution'
@@ -2825,6 +2848,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
     | '/api/auth/passkeys/'
     | '/api/auth/mfa/recovery/regenerate'
@@ -3022,6 +3046,7 @@ export interface RootRouteChildren {
   ApiV1ModerationsRoute: typeof ApiV1ModerationsRoute
   ApiV1QuotesRoute: typeof ApiV1QuotesRoute
   ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
+  ApiV1SearchRoute: typeof ApiV1SearchRoute
   ApiV1UsageRoute: typeof ApiV1UsageRoute
   ApiWorkBrowserRoute: typeof ApiWorkBrowserRoute
   ApiWorkExecutionRoute: typeof ApiWorkExecutionRoute
@@ -3048,6 +3073,7 @@ export interface RootRouteChildren {
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
+  ApiV1ChatCompletionsRoute: typeof ApiV1ChatCompletionsRoute
   ApiAuthPasskeysIndexRoute: typeof ApiAuthPasskeysIndexRoute
   ApiAuthMfaRecoveryRegenerateRoute: typeof ApiAuthMfaRecoveryRegenerateRoute
   ApiAuthPasskeysLoginOptionsRoute: typeof ApiAuthPasskeysLoginOptionsRoute
@@ -4425,6 +4451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ResponsesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/search': {
+      id: '/api/v1/search'
+      path: '/api/v1/search'
+      fullPath: '/api/v1/search'
+      preLoaderRoute: typeof ApiV1SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/usage': {
       id: '/api/v1/usage'
       path: '/api/v1/usage'
@@ -4619,6 +4652,13 @@ declare module '@tanstack/react-router' {
       path: '/api/tasks/events/$provider'
       fullPath: '/api/tasks/events/$provider'
       preLoaderRoute: typeof ApiTasksEventsProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/chat/completions': {
+      id: '/api/v1/chat/completions'
+      path: '/api/v1/chat/completions'
+      fullPath: '/api/v1/chat/completions'
+      preLoaderRoute: typeof ApiV1ChatCompletionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId/chat/$chatId': {
@@ -4989,6 +5029,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1ModerationsRoute: ApiV1ModerationsRoute,
   ApiV1QuotesRoute: ApiV1QuotesRoute,
   ApiV1ResponsesRoute: ApiV1ResponsesRoute,
+  ApiV1SearchRoute: ApiV1SearchRoute,
   ApiV1UsageRoute: ApiV1UsageRoute,
   ApiWorkBrowserRoute: ApiWorkBrowserRoute,
   ApiWorkExecutionRoute: ApiWorkExecutionRoute,
@@ -5016,6 +5057,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
+  ApiV1ChatCompletionsRoute: ApiV1ChatCompletionsRoute,
   ApiAuthPasskeysIndexRoute: ApiAuthPasskeysIndexRoute,
   ApiAuthMfaRecoveryRegenerateRoute: ApiAuthMfaRecoveryRegenerateRoute,
   ApiAuthPasskeysLoginOptionsRoute: ApiAuthPasskeysLoginOptionsRoute,

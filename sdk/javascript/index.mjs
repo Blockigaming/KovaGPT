@@ -1,4 +1,11 @@
-const operations = new Set(["responses", "images", "embeddings", "moderations"]);
+const operations = new Set([
+  "responses",
+  "images",
+  "embeddings",
+  "moderations",
+  "search",
+  "chat/completions",
+]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
     super(code);
@@ -111,6 +118,12 @@ export class KovaGPT {
     this.responses = Object.freeze({
       create: (input, options) => this.run("responses", input, options),
     });
+    this.chat = Object.freeze({
+      completions: Object.freeze({
+        create: (input, options) => this.run("chat/completions", input, options),
+      }),
+    });
+    this.search = (input, options) => this.run("search", input, options);
     this.images = Object.freeze({
       generate: (input, options) => this.run("images", input, options),
       edit: (input, options) => {

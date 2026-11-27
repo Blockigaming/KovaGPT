@@ -152,7 +152,9 @@ async function fixture(options = {}) {
       path === "./developer-funding-allowance.mjs" ||
       path === "./developer-file-policy.mjs" ||
       path === "./developer-usage-summary.mjs" ||
-      path === "./developer-image-edit-policy.mjs"
+      path === "./developer-image-edit-policy.mjs" ||
+      path === "./developer-api-aliases.mjs" ||
+      path === "./developer-chat-compat.mjs"
     )
       return full.replace(
         JSON.stringify(path),
@@ -701,4 +703,64 @@ test("model catalog detail returns only approved key-scoped aliases and rejects 
     await assert.rejects(() => read(query), /developer_(model|input)_invalid/);
   assert.equal(f.state.calls.length, 0);
   assert.equal(f.state.contexts.length, 0);
+});
+
+test("compatibility aliases use the canonical provider meter and cannot reuse a different API quote", async () => {
+  const f = await fixture();
+  const chat = {
+    model: f.input.model,
+    messages: [{ role: "user", content: "hello" }],
+    max_completion_tokens: 100,
+  };
+  const quote = await f.module.developerQuote(f.identity, "chat/completions", chat);
+  const native = { ...f.input, input: chat.messages };
+  await assert.rejects(
+    f.module.executeDeveloper(f.identity, "responses", native, "alias", quote.quoteToken),
+    /quote_changed/,
+  );
+  await assert.rejects(
+    f.module.executeDeveloper(
+      f.identity,
+      "chat/completions",
+      { ...chat, messages: [{ role: "user", content: "changed" }] },
+      "alias",
+      quote.quoteToken,
+    ),
+    /quote_changed/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  globalThis[slot].provider = async (body) => {
+    f.state.calls.push(body);
+    return Response.json({
+      id: "resp_fixture",
+      created_at: 1795651200,
+      model: "gpt-5.6-luna",
+      status: "completed",
+      output: [
+        { type: "message", role: "assistant", content: [{ type: "output_text", text: "Hi" }] },
+      ],
+      usage: { input_tokens: 10, output_tokens: 2, total_tokens: 12 },
+    });
+  };
+  const result = await f.module.executeDeveloper(
+    f.identity,
+    "chat/completions",
+    chat,
+    "alias",
+    quote.quoteToken,
+  );
+  assert.equal((await result.json()).model, f.input.model);
+  assert.equal(f.state.calls[0].store, false);
+  assert.deepEqual(f.state.calls[0].input, chat.messages);
+  assert.equal(f.state.contexts.length, 1);
+  await assert.rejects(
+    f.module.developerQuote(f.identity, "search", {
+      model: f.input.model,
+      query: "test",
+      max_output_tokens: 100,
+      max_tool_calls: 1,
+    }),
+    /web_search_unavailable/,
+  );
+  assert.equal(f.state.calls.length, 1);
 });

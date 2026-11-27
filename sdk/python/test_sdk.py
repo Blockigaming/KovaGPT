@@ -109,6 +109,17 @@ class SDKTests(unittest.TestCase):
             list(response_events(response))
         self.assertTrue(response.closed)
 
+    def test_search_and_chat_aliases_keep_signed_quotes(self):
+        for operation, method, body in [
+            ("search", self.client.search, {"model": "kova-search", "query": "hello", "max_output_tokens": 100, "max_tool_calls": 1}),
+            ("chat/completions", self.client.chat_completions, {"model": "kova-fast", "messages": [{"role": "user", "content": "hello"}], "max_completion_tokens": 100}),
+        ]:
+            self.responses.extend([FakeResponse(quote()), FakeResponse({"ok": True})])
+            self.assertEqual(method(body, **BUDGET).json(), {"ok": True})
+            self.assertEqual(json.loads(self.calls[-2][2]), {"operation": operation, "input": body})
+            self.assertEqual(self.calls[-1][1], "/api/v1/" + operation)
+            self.assertEqual(json.loads(self.calls[-1][2]), body)
+
     def test_invalid_origin_and_unsafe_key(self):
         for url in ("http://kovagpt.com", "https://x:y@kovagpt.com", "https://kovagpt.com/path"):
             with self.assertRaisesRegex(KovaError, "origin_invalid"):

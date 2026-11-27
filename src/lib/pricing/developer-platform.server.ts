@@ -26,6 +26,8 @@ import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
 import { summarizeDeveloperUsage } from "./developer-usage-summary.mjs";
 import { developerFileReferences } from "./developer-file-policy.mjs";
 import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
+import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
+import { developerChatCompletion } from "./developer-chat-compat.mjs";
 import { loadDeveloperFileContent } from "./developer-file-content.server";
 import {
   DEVELOPER_SCOPES,
@@ -179,8 +181,9 @@ async function currentPricing(identity: DeveloperIdentity) {
   return fundingAdjustedVersion(version.data, account.data);
 }
 async function preparePublicRequest(identity: DeveloperIdentity, kind: string, raw: unknown) {
-  const references = developerFileReferences(kind, raw);
-  const parsed = parseDeveloperInput(kind, references.body);
+  const normalized = normalizeDeveloperOperation(kind, raw);
+  const references = developerFileReferences(normalized.operation, normalized.input);
+  const parsed = parseDeveloperInput(normalized.operation, references.body);
   if (!identity.capabilities.includes(parsed.capability))
     throw new Error("developer_scope_required");
   const files = await loadDeveloperFileContent(identity, parsed.body, references.ids);
@@ -246,6 +249,7 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     .digest("hex");
   return {
     ...parsed,
+    operation: normalized.operation,
     version,
     prepared,
     fingerprint,
@@ -259,6 +263,7 @@ export async function developerQuote(identity: DeveloperIdentity, kind: string, 
     key: identity.id,
     version: value.version.id,
     fingerprint: value.fingerprint,
+    operation: kind,
     maximumCharge: Number(value.prepared.quote.maximumReservedCharge),
     expiresAt: Math.min(Date.now() + 120000, value.fileExpiresAt ?? Infinity),
   };
@@ -299,6 +304,7 @@ export async function executeDeveloper(
     throw new Error("developer_quote_expired");
   const parsed = await preparePublicRequest(identity, kind, input);
   if (
+    quote.operation !== kind ||
     quote.version !== parsed.version.id ||
     quote.fingerprint !== parsed.fingerprint ||
     quote.maximumCharge < Number(parsed.prepared.quote.maximumReservedCharge)
@@ -323,7 +329,7 @@ export async function executeDeveloper(
         );
       }
       const call =
-        kind === "responses"
+        parsed.operation === "responses"
           ? developerResponses
           : kind === "images"
             ? imageGenerations
@@ -337,6 +343,12 @@ export async function executeDeveloper(
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
   }
+  if (kind === "chat/completions")
+    return developerChatCompletion(response, {
+      publicModel: parsed.publicModel,
+      expectedModels: parsed.prepared.contract.expectedResponseModels,
+      stream: parsed.body.stream === true,
+    });
   return new Response(response.body, {
     status: response.status,
     headers: {

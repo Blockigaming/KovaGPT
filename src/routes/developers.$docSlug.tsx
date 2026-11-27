@@ -11,7 +11,7 @@ export const Route = createFileRoute("/developers/$docSlug")({
     if (!doc) throw notFound();
     return { kind: "legacy" as const, item: doc };
   },
-  component: UnavailableDeveloperDoc,
+  component: DeveloperDoc,
   head: ({ loaderData: doc }) =>
     doc?.kind === "website"
       ? websitePageHead(doc.item)
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/developers/$docSlug")({
         : {},
 });
 
-function UnavailableDeveloperDoc() {
+function DeveloperDoc() {
   const doc = Route.useLoaderData();
   if (doc.kind === "website") return <PublicWebsiteArticle item={doc.item} />;
   return (
@@ -105,9 +105,11 @@ function UnavailableDeveloperDoc() {
           approving a connection. OAuth grants confer no consumer Project or Library access.
         </p>
         <p>
-          Hosted tools, remote file inputs, multimodal Responses input, public file storage, and an
-          official SDK are not part of this version. Internal application endpoints remain outside
-          the versioned API contract.
+          The source supports bounded private text files, gated inline PNG vision and editing, gated
+          hosted web search, scoped usage reads, text moderation and a text-only Chat Completions
+          compatibility endpoint. The repository-local JavaScript and Python SDKs are not published
+          packages. Other hosted tools, remote file inputs and unrestricted multimodal storage are not
+          supported. Internal application endpoints remain outside the versioned API contract.
         </p>
       </section>
     </PublicPageView>

@@ -1,4 +1,10 @@
-export type Operation = "responses" | "images" | "embeddings" | "moderations";
+export type Operation =
+  | "responses"
+  | "images"
+  | "embeddings"
+  | "moderations"
+  | "search"
+  | "chat/completions";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -53,6 +59,29 @@ export interface EmbeddingsInput {
   input: string | string[];
   dimensions?: number;
 }
+export interface SearchInput {
+  model: string;
+  query: string;
+  max_output_tokens: number;
+  max_tool_calls: 1 | 2 | 3;
+}
+export type ChatCompletionInput = {
+  model: string;
+  messages: { role: "system" | "developer" | "user" | "assistant"; content: string }[];
+  stream?: boolean;
+  reasoning_effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+} & (
+  | { max_completion_tokens: number; max_tokens?: never }
+  | { max_tokens: number; max_completion_tokens?: never }
+);
+export type OperationInput =
+  | ResponsesInput
+  | ImagesInput
+  | (ImagesInput & { image: string })
+  | EmbeddingsInput
+  | ModerationsInput
+  | SearchInput
+  | ChatCompletionInput;
 export interface ModerationsInput {
   model: string;
   input: string;
@@ -117,6 +146,10 @@ export class KovaGPT {
     timeoutMs?: number;
   });
   readonly responses: { create(input: ResponsesInput, options: Budget): Promise<Response> };
+  readonly chat: {
+    completions: { create(input: ChatCompletionInput, options: Budget): Promise<Response> };
+  };
+  search(input: SearchInput, options: Budget): Promise<Response>;
   readonly images: {
     generate(input: ImagesInput, options: Budget): Promise<Response>;
     edit(input: ImagesInput & { image: string }, options: Budget): Promise<Response>;
@@ -144,17 +177,17 @@ export class KovaGPT {
   }>;
   quote(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | (ImagesInput & { image: string }) | EmbeddingsInput | ModerationsInput,
+    input: OperationInput,
     options?: { signal?: AbortSignal },
   ): Promise<Quote>;
   execute(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | (ImagesInput & { image: string }) | EmbeddingsInput | ModerationsInput,
+    input: OperationInput,
     options: Budget & { quote: Quote },
   ): Promise<Response>;
   run(
     kind: Operation,
-    input: ResponsesInput | ImagesInput | (ImagesInput & { image: string }) | EmbeddingsInput | ModerationsInput,
+    input: OperationInput,
     options: Budget,
   ): Promise<Response>;
 }

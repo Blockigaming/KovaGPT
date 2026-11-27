@@ -1337,7 +1337,7 @@ const developerPages = [
       ),
       section(
         "Availability and limits",
-        "The public model catalog and enabled provider determine availability. This page does not promise image editing, consumer Library access or unrestricted file uploads.",
+        "The public model catalog and enabled provider determine availability. Approved image contracts may additionally advertise bounded inline PNG editing. Consumer Library access and unrestricted file uploads are not part of this API.",
       ),
     ],
     [link("Models", "/developers/models"), link("Rate limits", "/developers/rate-limits")],
@@ -1350,11 +1350,11 @@ const developerPages = [
     [
       section(
         "Public endpoint status",
-        "A standalone public search endpoint is not implemented. The gated Responses contract supports one native web_search tool with low search_context_size, max_tool_calls from 1 to 3, and stream false. It requires an approved search pricing contract and enabled provider capability.",
+        "POST /api/v1/search accepts model, query, max_output_tokens and max_tool_calls from 1 to 3. Quote operation search first. It uses the gated native Responses search contract with low context, nonstreaming execution, approved search pricing and an enabled provider capability.",
       ),
       section(
         "Plan an integration",
-        "Discover web_search support from GET /api/v1/models before requesting a quote for the exact search-enabled Responses input. The gate remains disabled until provider metering is qualified. Do not substitute internal consumer search routes.",
+        "Discover web_search support from GET /api/v1/models before requesting a quote for the exact search input. The native response may contain source annotations. The gate remains disabled until provider metering is qualified. Do not substitute internal consumer search routes.",
       ),
     ],
     [link("API boundary", "/developers/docs"), link("Responses", "/developers/responses")],
