@@ -7,7 +7,10 @@ import {
   validDeveloperDecisionRequest,
   developerDecisionUsage,
 } from "./developer-decisions-policy.mjs";
-import { analysisContainerReceipt, validDeveloperAnalysisRequest } from "./developer-analysis-policy.mjs";
+import {
+  analysisContainerReceipt,
+  validDeveloperAnalysisRequest,
+} from "./developer-analysis-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -19,7 +22,12 @@ const integer = (value) => finite(value, 1e7) && Number.isSafeInteger(value);
 const dimensionsByMeter = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
-  responses_analysis: ["input_tokens", "cached_input_tokens", "output_tokens", "container_1g_sessions"],
+  responses_analysis: [
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "container_1g_sessions",
+  ],
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
@@ -140,7 +148,8 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
         !integer(contract.maximumAnalysisInputTokens) ||
         contract.maximumAnalysisInputTokens < 1 ||
         new TextEncoder().encode(JSON.stringify(request.body)).byteLength +
-          contract.maximumAnalysisInputTokens > contract.maximumUsage.input_tokens ||
+          contract.maximumAnalysisInputTokens >
+          contract.maximumUsage.input_tokens ||
         !validDeveloperAnalysisRequest(request.body))) ||
     (!analysisMeter && contract.maximumAnalysisInputTokens !== undefined)
   )

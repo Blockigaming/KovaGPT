@@ -136,11 +136,17 @@ function developerDecisionsEnabled() {
   return config.configured && config.capabilities?.includes("decisions") === true;
 }
 function developerAnalysisEnabled() {
-  if (runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") !== "true" ||
-    runtimeEnv("KOVA_DEVELOPER_ANALYSIS_ENABLED") !== "true") return false;
+  if (
+    runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_ANALYSIS_ENABLED") !== "true"
+  )
+    return false;
   const config = getAiProviderConfig("file_analysis");
-  return config.configured && config.provider === "openai" &&
-    config.capabilities?.includes("file_analysis") === true;
+  return (
+    config.configured &&
+    config.provider === "openai" &&
+    config.capabilities?.includes("file_analysis") === true
+  );
 }
 export function developerEnabled() {
   return (
@@ -594,8 +600,14 @@ export async function executeDeveloper(
     throw new Error("developer_provider_unavailable");
   }
   if (kind === "analysis")
-    return developerJson(await readDeveloperAnalysisResponse(response,
-      parsed.prepared.contract.expectedResponseModels, parsed.publicModel, deleteDeveloperAnalysisContainer));
+    return developerJson(
+      await readDeveloperAnalysisResponse(
+        response,
+        parsed.prepared.contract.expectedResponseModels,
+        parsed.publicModel,
+        deleteDeveloperAnalysisContainer,
+      ),
+    );
   if (kind === "decisions")
     return developerJson(
       await readDeveloperDecisionResponse(
@@ -1151,7 +1163,7 @@ export async function handleDeveloperConsole(request: Request) {
         workspaceV2,
         moderationEnabled: developerModerationEnabled(),
         decisionsEnabled: developerDecisionsEnabled(),
-          analysisEnabled: developerAnalysisEnabled(),
+        analysisEnabled: developerAnalysisEnabled(),
         consumerCreditSharing,
         accounts: accounts.data,
         projects: rows[0].data,

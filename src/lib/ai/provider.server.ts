@@ -745,8 +745,7 @@ export async function developerAnalysis(body: JsonObject, init?: RequestInit): P
   return providerFetch("/responses", "file_analysis", body, init);
 }
 export async function deleteDeveloperAnalysisContainer(container: string): Promise<void> {
-  if (!/^cntr_[A-Za-z0-9_-]{1,180}$/.test(container))
-    throw new Error("developer_analysis_invalid");
+  if (!/^cntr_[A-Za-z0-9_-]{1,180}$/.test(container)) throw new Error("developer_analysis_invalid");
   try {
     const { createOpenAiServiceClient } = await import("./openai-services.server.mjs");
     await createOpenAiServiceClient(env("OPENAI_API_KEY")).containers.delete(container, {

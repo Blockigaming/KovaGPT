@@ -17,7 +17,12 @@ const keys = (v, allowed) => object(v) && Object.keys(v).every((key) => allowed.
 const meters = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
   responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
-  responses_analysis: ["input_tokens", "cached_input_tokens", "output_tokens", "container_1g_sessions"],
+  responses_analysis: [
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "container_1g_sessions",
+  ],
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],

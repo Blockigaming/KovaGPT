@@ -581,7 +581,8 @@ test("image editing reserves reviewed image token bounds without treating base64
 });
 
 test("analysis container sessions need separate approved pricing and completed tool receipts", async () => {
-  const { developerAnalysisFields } = await import("../../src/lib/pricing/developer-analysis-policy.mjs");
+  const { developerAnalysisFields } =
+    await import("../../src/lib/pricing/developer-analysis-policy.mjs");
   const { config, request } = fixture();
   const c = config.version.public_price_configuration.contracts[0];
   c.provider = request.provider = "openai";
@@ -591,16 +592,39 @@ test("analysis container sessions need separate approved pricing and completed t
   c.maximumUsage.container_1g_sessions = 1;
   c.maximumAnalysisInputTokens = 1000;
   for (const row of config.registry) row.provider = "openai";
-  config.registry.push({ ...config.registry[0], billing_dimension: "container_1g_sessions", unit_quantity: 1, unit_price: 3 });
-  request.body = { model: c.upstreamModel, ...developerAnalysisFields({ input: "Analyze data.", max_output_tokens: 100 }) };
+  config.registry.push({
+    ...config.registry[0],
+    billing_dimension: "container_1g_sessions",
+    unit_quantity: 1,
+    unit_price: 3,
+  });
+  request.body = {
+    model: c.upstreamModel,
+    ...developerAnalysisFields({ input: "Analyze data.", max_output_tokens: 100 }),
+  };
   const at = new Date("2026-09-05");
   const quoted = prepareDeveloperQuote(config, request, at);
   assert.equal(quoted.options.usage.dimensions.container_1g_sessions, 1);
-  const receipt = { ...responseValue, output: [{ type: "code_interpreter_call", id: "ci_test", status: "completed", container_id: "cntr_test" }] };
-  assert.equal(authoritativeUsage(receipt, "responses_analysis").dimensions.container_1g_sessions, 1);
+  const receipt = {
+    ...responseValue,
+    output: [
+      {
+        type: "code_interpreter_call",
+        id: "ci_test",
+        status: "completed",
+        container_id: "cntr_test",
+      },
+    ],
+  };
+  assert.equal(
+    authoritativeUsage(receipt, "responses_analysis").dimensions.container_1g_sessions,
+    1,
+  );
   assert.equal(authoritativeUsage({ ...receipt, output: [] }, "responses_analysis"), null);
   const h = harness({ prepared: quoted, send: async () => Response.json(receipt) });
   await (await runMeteredProvider(h.options)).json();
   assert.equal(h.calls[0].outcome, "settled");
-  assert.throws(() => prepareDeveloperQuote({ ...config, registry: config.registry.slice(0, -1) }, request, at));
+  assert.throws(() =>
+    prepareDeveloperQuote({ ...config, registry: config.registry.slice(0, -1) }, request, at),
+  );
 });

@@ -128,7 +128,10 @@ export function parseDeveloperBatchRequest(
       };
     });
     if (new Set(items.map((item) => item.id)).size !== items.length) fail();
-    if (scheduled && items.some((item, index) => index > 0 && item.run_at <= items[index - 1].run_at))
+    if (
+      scheduled &&
+      items.some((item, index) => index > 0 && item.run_at <= items[index - 1].run_at)
+    )
       fail();
     if (new TextEncoder().encode(JSON.stringify(items)).byteLength > 60000) fail();
     return {

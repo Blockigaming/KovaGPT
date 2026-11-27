@@ -37,7 +37,9 @@ export function validDeveloperAnalysisRequest(body) {
     const expected = developerAnalysisFields(body);
     return (
       Object.keys(body).length === Object.keys(expected).length + 1 &&
-      Object.entries(expected).every(([key, value]) => JSON.stringify(body[key]) === JSON.stringify(value))
+      Object.entries(expected).every(
+        ([key, value]) => JSON.stringify(body[key]) === JSON.stringify(value),
+      )
     );
   } catch {
     return false;
@@ -74,7 +76,8 @@ export function validateDeveloperAnalysisResult(value, expectedModels, publicMod
     !object(value.usage)
   )
     invalid();
-  const usage = value.usage, cached = usage.input_tokens_details?.cached_tokens;
+  const usage = value.usage,
+    cached = usage.input_tokens_details?.cached_tokens;
   if (
     ![usage.input_tokens, usage.output_tokens, usage.total_tokens, cached].every(
       (n) => Number.isSafeInteger(n) && n >= 0 && n <= 10000000,
@@ -95,19 +98,38 @@ export function validateDeveloperAnalysisResult(value, expectedModels, publicMod
   const text = parts.join("\n");
   if (!text.trim() || new TextEncoder().encode(text).byteLength > 65536) invalid();
   return {
-    id: value.id, object: "analysis.result", model: publicModel, text,
-    usage: { input_tokens: usage.input_tokens, cached_input_tokens: cached,
-      output_tokens: usage.output_tokens, total_tokens: usage.total_tokens, container_1g_sessions: 1 },
+    id: value.id,
+    object: "analysis.result",
+    model: publicModel,
+    text,
+    usage: {
+      input_tokens: usage.input_tokens,
+      cached_input_tokens: cached,
+      output_tokens: usage.output_tokens,
+      total_tokens: usage.total_tokens,
+      container_1g_sessions: 1,
+    },
   };
 }
-export async function readDeveloperAnalysisResponse(response, expectedModels, publicModel, dispose) {
-  if (!response.ok || !response.body ||
-    (response.headers.get("content-type") ?? "").split(";")[0].trim() !== "application/json") {
+export async function readDeveloperAnalysisResponse(
+  response,
+  expectedModels,
+  publicModel,
+  dispose,
+) {
+  if (
+    !response.ok ||
+    !response.body ||
+    (response.headers.get("content-type") ?? "").split(";")[0].trim() !== "application/json"
+  ) {
     await response.body?.cancel().catch(() => {});
     invalid();
   }
-  const reader = response.body.getReader(), decoder = new TextDecoder("utf-8", { fatal: true });
-  let body = "", bytes = 0, container = null;
+  const reader = response.body.getReader(),
+    decoder = new TextDecoder("utf-8", { fatal: true });
+  let body = "",
+    bytes = 0,
+    container = null;
   try {
     for (;;) {
       const part = await reader.read();
