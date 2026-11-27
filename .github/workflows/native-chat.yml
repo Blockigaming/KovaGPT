@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - "ios/KovaChat*/**"
-      - "android/**"
+      - "android-chat/**"
       - "tests/native/**"
       - "src/lib/kova-native.ts"
       - ".github/workflows/native-chat.yml"
@@ -77,4 +77,4 @@ jobs:
           unzip -q "$RUNNER_TEMP/gradle-8.13-bin.zip" -d "$RUNNER_TEMP/gradle"
           echo "$RUNNER_TEMP/gradle/gradle-8.13/bin" >> "$GITHUB_PATH"
       - name: Build the Android debug APK and run its unit tests
-        run: gradle --no-daemon -p android :app:assembleDebug :app:testDebugUnitTest
+        run: gradle --no-daemon -p android-chat :app:assembleDebug :app:testDebugUnitTest

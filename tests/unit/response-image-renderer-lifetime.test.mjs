@@ -1,3 +1,5 @@
+import * as responseTable from "../../src/lib/response-table.mjs";
+import * as responseFiles from "../../src/lib/response-files.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
@@ -29,6 +31,9 @@ function fixture(initial = {}) {
     ]),
   );
   react.memo = (component) => component;
+  // Enhanced blocks load lazily; this harness renders their plain fallbacks.
+  react.lazy = () => "ResponseEnhanced";
+  react.Suspense = "Suspense";
   react.useMemo = (factory, deps) => {
     const ref = react.useRef(null);
     if (!ref.current || deps.some((value, index) => !Object.is(value, ref.current.deps[index])))
@@ -57,6 +62,10 @@ function fixture(initial = {}) {
       "./ChatImage": { ChatImage: "chat-image" },
       "./ResponseSpriteExport": { ResponseSpriteExport: "response-sprite-export" },
       "@/lib/chat-image-actions": { downloadChatImage: async () => {} },
+      "@/lib/conversation-images": {
+        chatKeyFromScope: () => null,
+        registerConversationImage: () => () => {},
+      },
     },
     { Error },
   );
@@ -71,6 +80,11 @@ function fixture(initial = {}) {
     "lucide-react": icons,
     "./response-output-blocks.css": {},
     "@/lib/table-overflow": { observeTableOverflow },
+    "@/lib/response-files.mjs": responseFiles,
+    "./ResponseFileCard": { ResponseFileCard: () => null },
+    "@/lib/response-table.mjs": responseTable,
+    "@/lib/remark-inline-marks.mjs": { __esModule: true, default: () => () => {} },
+    "./response-enhanced/ResponseEnhanced": { default: () => null },
   });
   const markdownHooks = createHookHarness();
   let imageHooks;

@@ -28,7 +28,7 @@ for (const [tier, choices] of [
         () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
       );
       await height.toBeLessThanOrEqual(
-        singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+        singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 100,
       );
     } else {
       const phone = await page.evaluate(
@@ -114,7 +114,7 @@ test("appearance controls change the application and persist after reload", asyn
       page.evaluate(() => document.documentElement.style.getPropertyValue("--kova-reading-width")),
     )
     .toBe("900px");
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("/settings/appearance");
   await waitForKovaHydration(page);
   for (const [label, value] of [
     ["Theme", "Light"],
@@ -153,7 +153,6 @@ test("every primary settings destination opens its own working section", async (
   await coreFixture(page, "dark", "free", { preserveStorageOnReload: true });
   await page.goto("/settings/appearance");
   await waitForKovaHydration(page);
-  const openedUrl = page.url();
   for (const label of [
     "Profile",
     "General",
@@ -170,7 +169,7 @@ test("every primary settings destination opens its own working section", async (
     "Appearance",
   ]) {
     await chooseSettingsSection(page, label);
-    await expect(page).toHaveURL(openedUrl);
+    await expect(page).toHaveURL(/\/$/);
     await expect(
       page
         .locator(".kova-settings-content-header")

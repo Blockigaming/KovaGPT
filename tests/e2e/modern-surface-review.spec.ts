@@ -25,12 +25,13 @@ for (const theme of ["dark", "light"] as const) {
       await expect(main).toHaveCount(1);
       await expect(main).toBeVisible();
       if (path === "/apps") {
-        await expect(page.locator(".spec400-plugin-card h2").first()).toHaveCSS(
+        await expect(page.locator(".spec400-plugin-card h3").first()).toHaveCSS(
           "font-size",
-          "15px",
+          "16px",
         );
         const radius = await page
           .locator(".spec400-plugin-tabs")
+          .first()
           .evaluate((el) => parseFloat(getComputedStyle(el).borderRadius));
         expect(radius).toBeGreaterThanOrEqual(12);
       }

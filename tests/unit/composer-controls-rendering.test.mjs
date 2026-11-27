@@ -56,6 +56,9 @@ const closedSurfaces = {
   "@/components/ResponsiveModelSelector": { ResponsiveModelSelector: empty },
   "@/components/ConsumerModelSelector": { ConsumerModelSelector: empty },
   "@/components/ComposerDrawingDialog": { ComposerDrawingDialog: empty },
+  "@/components/PastedTextCard": { PastedTextCard: empty },
+  "@/components/ChatGoalRow": { ChatGoalRow: empty },
+  "@/lib/localization": { t: (text) => text },
   "@/components/ComposerPluginList": {
     ComposerPluginList: empty,
     useComposerPluginConnections: () => ({}),
@@ -199,20 +202,16 @@ function assertMicrophoneControls(html, dictateDisabled = false) {
   }
 }
 
-test("history initialization blocks Send while the draft remains editable", () => {
+test("a first draft is editable and can be submitted on desktop and phone", () => {
   for (const viewport of [desktopLayout, phoneLayout]) {
-    const html = render(
-      { value: "Keep this first draft", sendDisabled: true },
-      signedInAccount,
-      viewport,
-    );
+    const html = render({ value: "Keep this first draft" }, signedInAccount, viewport);
     const input = html.match(/<textarea\b[^>]*>/)?.[0];
     const send = html.match(/<button\b[^>]*data-testid="send-button"[^>]*>/)?.[0];
     assert.ok(input);
     assert.doesNotMatch(input, /\sdisabled(?:=|\s|>)/);
     assert.match(html, /Keep this first draft<\/textarea>/);
     assert.ok(send);
-    assert.match(send, /\sdisabled(?:=|\s|>)/);
+    assert.doesNotMatch(send, /\sdisabled(?:=|\s|>)/);
   }
 });
 

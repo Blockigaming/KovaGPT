@@ -5,7 +5,11 @@ const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 export type ChatImageAttachmentHandler = (file: File, isCurrent: () => boolean) => Promise<void>;
-export type ChatImageAttachmentRequest = { accept: (handler: ChatImageAttachmentHandler) => void };
+export type ChatImageAttachmentRequest = {
+  accept: (handler: ChatImageAttachmentHandler) => void;
+  /** Optional: the composer also hands back a guarded "append text" function. */
+  acceptText?: (append: (text: string) => void) => void;
+};
 
 /** Capture the current composer's own guarded file handler before any image read. */
 export function prepareChatImageAttachment(
@@ -36,6 +40,38 @@ export function prepareChatImageAttachment(
   );
   if (!attach) throw new Error("The message box is not ready. Try again.");
   return attach;
+}
+
+/** Capture this chat's composer image handler and text appender together. */
+export function prepareChatComposer(principal: string, chatId: string) {
+  let appendText: ((text: string) => void) | undefined;
+  const boxes = document.querySelectorAll<HTMLElement>("[data-chat-image-context]");
+  const target = Array.from(boxes).find((box) => {
+    if (!box.getClientRects().length) return false;
+    try {
+      const context = JSON.parse(box.getAttribute("data-chat-image-context") ?? "null");
+      return Array.isArray(context) && context[0] === principal && context[1] === chatId;
+    } catch {
+      return false;
+    }
+  });
+  if (!target) throw new Error("Open this chat's message box first.");
+  let attach: ChatImageAttachmentHandler | undefined;
+  target.dispatchEvent(
+    new CustomEvent<ChatImageAttachmentRequest>("kova:prepare-chat-image-attachment", {
+      bubbles: true,
+      detail: {
+        accept: (handler) => {
+          attach ??= handler;
+        },
+        acceptText: (append) => {
+          appendText ??= append;
+        },
+      },
+    }),
+  );
+  if (!attach || !appendText) throw new Error("The message box is not ready. Try again.");
+  return { attach, appendText };
 }
 
 export function chatImageUrl(src: string): string {

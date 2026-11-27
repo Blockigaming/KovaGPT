@@ -8,6 +8,8 @@ import {
 import { loadChatHistoryDevice, commitChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 import { visibleChatHistory, restoreChatHistoryState } from "@/lib/chat-history-state.mjs";
 import {
+  chatHistoryIsBusy,
+  CHAT_HISTORY_WRITER_REQUEST_EVENT,
   registerChatHistoryView,
   closeChatHistoryOwner,
   notifyChatHistoryChanged,
@@ -86,6 +88,9 @@ export function ChatHistorySyncRuntime() {
     if (!ownerId) return;
     const lifetime = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let handoffTimer: ReturnType<typeof setTimeout> | undefined;
+    let releaseWriter: (() => void) | undefined;
     let controller: ReturnType<typeof createChatHistoryController> | null = null;
     const summarized = new Map<string, number>();
     const pendingSummaries = new Set<string>();
@@ -174,7 +179,6 @@ export function ChatHistorySyncRuntime() {
       if (!isPrincipalBrowserStorageClearedEvent(e, ownerId)) return;
       closeChatHistoryOwner(ownerId);
       lifetime.abort();
-      controller?.stop();
       unregister();
       controls.delete(ownerId);
       event("cleared");
@@ -187,7 +191,7 @@ export function ChatHistorySyncRuntime() {
         if (!stored || stored.cleared || lifetime.signal.aborted || stored.ownerId !== ownerId)
           return;
         const state = await restoreChatHistoryState(stored, ownerId);
-        if (lifetime.signal.aborted) return;
+        if (lifetime.signal.aborted || controller) return;
         view.active = visibleChatHistory(state);
         view.archived = visibleChatHistory(state, true);
         view.ready = true;
@@ -196,36 +200,60 @@ export function ChatHistorySyncRuntime() {
         event("device_error");
       }
     };
+    const requestWriter = () => {
+      if (!lifetime.signal.aborted && !view.writable)
+        channel?.postMessage({ ownerId, requestWriter: true });
+    };
+    const onWriterRequest = (e: Event) => {
+      if ((e as CustomEvent).detail === ownerId) requestWriter();
+    };
+    window.addEventListener(CHAT_HISTORY_WRITER_REQUEST_EVENT, onWriterRequest);
+    window.addEventListener("focus", requestWriter);
     if (channel)
       channel.onmessage = (e) => {
         if (e.data?.ownerId !== ownerId) return;
         if (e.data.reset === true) dispatchPrincipalBrowserStorageCleared(ownerId);
-        else if (!view.writable) {
-          clearTimeout(timer);
-          timer = setTimeout(() => void readOnlyRefresh(), 500);
+        else if (e.data.requestWriter === true) {
+          if (handoffTimer !== undefined) return;
+          const deadline = Date.now() + 8000;
+          const releaseWhenIdle = () => {
+            handoffTimer = undefined;
+            if (lifetime.signal.aborted || !view.writable || Date.now() >= deadline) return;
+            if (controller?.dirty || chatHistoryIsBusy(ownerId)) {
+              handoffTimer = setTimeout(releaseWhenIdle, 100);
+              return;
+            }
+            releaseWriter?.();
+          };
+          releaseWhenIdle();
+        } else if (!view.writable) {
+          clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(() => void readOnlyRefresh(), 500);
         }
       };
-    let ticking = false;
+    let pumpingWriter: ReturnType<typeof createChatHistoryController> | null = null;
     const tick = async () => {
+      const writer = controller;
       if (
-        !view.writable ||
+        !writer ||
         lifetime.signal.aborted ||
-        ticking ||
+        !view.writable ||
+        pumpingWriter === writer ||
         document.visibilityState === "hidden"
       )
         return;
-      ticking = true;
+      pumpingWriter = writer;
       try {
-        await controller?.pump();
+        await writer.pump();
       } finally {
-        ticking = false;
+        if (pumpingWriter === writer) pumpingWriter = null;
       }
-      if (!lifetime.signal.aborted)
+      if (!lifetime.signal.aborted && controller === writer && view.writable)
         timer = setTimeout(
           () => void tick(),
           Math.max(
-            controller?.retryDelay ?? 0,
-            current.pending || !controller?.getState()?.complete ? 1200 : 15000,
+            writer.retryDelay,
+            current.pending || !writer.getState()?.complete ? 1200 : 15000,
           ),
         );
     };
@@ -250,17 +278,21 @@ export function ChatHistorySyncRuntime() {
         if (lifetime.signal.aborted) return;
         // Wait for the current writer to release ownership. Never steal its
         // lock or make this tab writable before initialization completes.
-        return navigator.locks.request(
+        const waiting = navigator.locks.request(
           `kova-chat-history:${ownerId}`,
           { signal: lifetime.signal },
           acquire,
         );
+        if (document.hasFocus()) requestWriter();
+        return waiting;
       }
       event("connecting");
+      const writerLifetime = new AbortController();
+      const writerSignal = AbortSignal.any([lifetime.signal, writerLifetime.signal]);
       controller = createChatHistoryController({
         ownerId,
         retireArchives: true,
-        signal: lifetime.signal,
+        signal: writerSignal,
         loadDevice: loadChatHistoryDevice,
         commitDevice: commitChatHistoryDevice,
         getLegacy: () => legacy,
@@ -274,7 +306,7 @@ export function ChatHistorySyncRuntime() {
             body,
           ),
         changed: ({ active, archived, source, dirty }) => {
-          if (lifetime.signal.aborted) return;
+          if (writerSignal.aborted) return;
           view.active = active;
           view.archived = archived;
           view.ready = true;
@@ -284,7 +316,7 @@ export function ChatHistorySyncRuntime() {
         },
         status: (value) => {
           view.dirty = controller?.dirty ?? false;
-          if (!lifetime.signal.aborted) {
+          if (!writerSignal.aborted) {
             publish(value);
             syncConversationSummaries();
           }
@@ -292,16 +324,16 @@ export function ChatHistorySyncRuntime() {
       });
       const writer = controller;
       const initializeWriter = async () => {
+        if (writerSignal.aborted) return;
         try {
           await writer.initialize();
-          if (lifetime.signal.aborted) return;
+          if (writerSignal.aborted) return;
           view.writable = true;
-          // Publish the writable boundary after the device snapshot. A lazy
-          // controller must be ready before the composer accepts a first send.
+          // Publish readiness only after the local snapshot is available.
           notifyChatHistoryChanged(ownerId, "cloud");
           void tick();
         } catch {
-          if (!lifetime.signal.aborted) event("device_error");
+          if (!writerSignal.aborted) event("device_error");
         }
       };
       controls.set(ownerId, {
@@ -311,32 +343,51 @@ export function ChatHistorySyncRuntime() {
       });
       await initializeWriter();
       await new Promise<void>((resolve) => {
-        if (lifetime.signal.aborted) resolve();
-        else lifetime.signal.addEventListener("abort", () => resolve(), { once: true });
+        if (writerSignal.aborted) resolve();
+        else {
+          releaseWriter = () => {
+            view.writable = false;
+            writerLifetime.abort();
+          };
+          writerSignal.addEventListener("abort", () => resolve(), { once: true });
+        }
       });
+      clearTimeout(timer);
+      clearTimeout(handoffTimer);
+      handoffTimer = undefined;
+      releaseWriter = undefined;
+      view.writable = false;
+      controller = null;
+      controls.delete(ownerId);
+      if (!lifetime.signal.aborted) {
+        notifyChatHistoryChanged(ownerId, "cloud");
+        // Rejoin behind the requesting tab after releasing this Web Lock.
+        void navigator.locks
+          .request(`kova-chat-history:${ownerId}`, { signal: lifetime.signal }, acquire)
+          .catch(onLockError);
+      }
     }
-    if (!navigator.locks) {
-      unregister();
-      event("unavailable");
-    } else
+    function onLockError() {
+      if (!lifetime.signal.aborted) event("unavailable");
+    }
+    if (!navigator.locks) onLockError();
+    else
       void navigator.locks
         .request(`kova-chat-history:${ownerId}`, { ifAvailable: true }, acquire)
-        .catch(() => {
-          if (!lifetime.signal.aborted) {
-            unregister();
-            event("unavailable");
-          }
-        });
+        .catch(onLockError);
     return () => {
       window.removeEventListener("kova:settings-saved", syncConversationSummaries);
       window.removeEventListener("storage", syncConversationSummaries);
       closeChatHistoryOwner(ownerId);
       lifetime.abort();
-      controller?.stop();
       unregister();
       controls.delete(ownerId);
       clearTimeout(timer);
+      clearTimeout(refreshTimer);
+      clearTimeout(handoffTimer);
       channel?.close();
+      window.removeEventListener(CHAT_HISTORY_WRITER_REQUEST_EVENT, onWriterRequest);
+      window.removeEventListener("focus", requestWriter);
       window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
       window.removeEventListener("online", online);
       document.removeEventListener("visibilitychange", visibility);

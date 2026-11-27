@@ -1,0 +1,373 @@
+/* ---------- Code ---------- */
+.kova-code {
+  --kova-code-keyword: #c678dd;
+  --kova-code-string: #98c379;
+  --kova-code-number: #d19a66;
+  --kova-code-comment: #7f848e;
+  --kova-code-function: #61afef;
+  --kova-code-type: #e5c07b;
+  --kova-code-tag: #e06c75;
+  --kova-code-attr: #d19a66;
+  --kova-code-operator: #56b6c2;
+  --kova-code-inserted: #98c379;
+  --kova-code-deleted: #e06c75;
+}
+:root:not(.dark) .kova-code {
+  --kova-code-keyword: #a626a4;
+  --kova-code-string: #50a14f;
+  --kova-code-number: #986801;
+  --kova-code-comment: #8a8f98;
+  --kova-code-function: #4078f2;
+  --kova-code-type: #c18401;
+  --kova-code-tag: #e45649;
+  --kova-code-attr: #986801;
+  --kova-code-operator: #0184bc;
+  --kova-code-inserted: #2f7d32;
+  --kova-code-deleted: #c62828;
+}
+.kova-code-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.kova-code-tools button,
+.kova-table-tools button,
+.kova-diagram-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  cursor: pointer;
+}
+.kova-code-tools button:hover,
+.kova-table-tools button:hover,
+.kova-diagram-tools button:hover {
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+.kova-code-tools button[aria-pressed="true"],
+.kova-diagram-tools button[aria-pressed="true"] {
+  border-color: color-mix(in oklab, var(--border) 90%, transparent);
+  color: var(--foreground);
+}
+.kova-code-tools svg,
+.kova-table-tools svg,
+.kova-diagram-tools svg {
+  width: 14px;
+  height: 14px;
+}
+.kova-code pre {
+  margin: 0;
+  overflow: auto;
+  counter-reset: kova-code-line;
+}
+.kova-code-line {
+  display: block;
+  min-height: 1.5em;
+  white-space: pre;
+}
+.kova-code[data-wrap] .kova-code-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.kova-code[data-numbers] .kova-code-line {
+  position: relative;
+  padding-inline-start: 3.25em;
+  counter-increment: kova-code-line;
+}
+.kova-code[data-numbers] .kova-code-line::before {
+  content: counter(kova-code-line);
+  position: absolute;
+  inset-inline-start: 0;
+  width: 2.5em;
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  text-align: end;
+  user-select: none;
+}
+.kova-code .token.comment,
+.kova-code .token.prolog,
+.kova-code .token.doctype,
+.kova-code .token.cdata {
+  color: var(--kova-code-comment);
+  font-style: italic;
+}
+.kova-code .token.keyword,
+.kova-code .token.atrule,
+.kova-code .token.important {
+  color: var(--kova-code-keyword);
+}
+.kova-code .token.string,
+.kova-code .token.char,
+.kova-code .token.template-string,
+.kova-code .token.regex,
+.kova-code .token.url {
+  color: var(--kova-code-string);
+}
+.kova-code .token.number,
+.kova-code .token.boolean,
+.kova-code .token.constant {
+  color: var(--kova-code-number);
+}
+.kova-code .token.function,
+.kova-code .token.method {
+  color: var(--kova-code-function);
+}
+.kova-code .token.class-name,
+.kova-code .token.builtin,
+.kova-code .token.type,
+.kova-code .token.namespace {
+  color: var(--kova-code-type);
+}
+.kova-code .token.tag,
+.kova-code .token.selector,
+.kova-code .token.property {
+  color: var(--kova-code-tag);
+}
+.kova-code .token.attr-name,
+.kova-code .token.variable,
+.kova-code .token.parameter {
+  color: var(--kova-code-attr);
+}
+.kova-code .token.operator,
+.kova-code .token.entity {
+  color: var(--kova-code-operator);
+}
+.kova-code .token.punctuation {
+  opacity: 0.8;
+}
+.kova-code .token.inserted {
+  color: var(--kova-code-inserted);
+}
+.kova-code .token.deleted {
+  color: var(--kova-code-deleted);
+}
+.kova-code .token.bold {
+  font-weight: 600;
+}
+
+/* ---------- Tables ---------- */
+.kova-table-enhanced {
+  margin-block: 12px;
+}
+.kova-table-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.kova-table-count {
+  margin-inline-end: auto;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-table-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted-foreground);
+}
+.kova-table-filter input {
+  width: min(180px, 40vw);
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+}
+.kova-table-filter:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.kova-table-filter button {
+  min-height: 22px;
+  padding: 0 4px;
+}
+.kova-table-enhanced .kova-table-scroll {
+  max-height: min(70dvh, 560px);
+  overflow: auto;
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  border-radius: 12px;
+}
+.kova-table-enhanced table {
+  width: 100%;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.kova-table-enhanced thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: color-mix(in oklab, var(--background) 88%, var(--muted));
+  text-align: start;
+}
+.kova-table-enhanced th,
+.kova-table-enhanced td {
+  padding: 8px 12px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  vertical-align: top;
+}
+.kova-table-enhanced tbody tr:last-child td {
+  border-bottom: 0;
+}
+.kova-table-enhanced tbody tr:hover td {
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+.kova-table-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+.kova-table-sort svg {
+  width: 13px;
+  height: 13px;
+}
+.kova-table-sort:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.kova-table-empty {
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+/* ---------- Diagrams ---------- */
+.kova-diagram {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  border-radius: 12px;
+}
+.kova-diagram-tools {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.kova-diagram-canvas {
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+}
+.kova-diagram-canvas svg {
+  max-width: 100%;
+  height: auto;
+}
+.kova-diagram-error,
+.kova-diagram-loading {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.kova-diagram pre {
+  margin: 0;
+  overflow: auto;
+  font-size: 13px;
+}
+
+/* ---------- Media ---------- */
+.kova-media {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+.kova-media audio {
+  width: min(100%, 420px);
+}
+.kova-media video {
+  width: min(100%, 640px);
+  max-height: 60dvh;
+  border-radius: 12px;
+  background: #000;
+}
+.kova-media a {
+  font-size: 13px;
+}
+.kova-media-error {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-code-tools button,
+  .kova-table-tools button,
+  .kova-diagram-tools button {
+    transition: none;
+  }
+}
+.kova-table-filter input::-webkit-search-cancel-button {
+  display: none;
+}
+.kova-media-block {
+  display: grid;
+  gap: 6px;
+  margin-block: 8px;
+}
+.kova-media-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-media-tools select {
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+}
+.kova-media-tools a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.kova-media-tools svg {
+  width: 13px;
+  height: 13px;
+}
+.kova-media-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kova-media-chapters button {
+  display: inline-flex;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 12px;
+  cursor: pointer;
+}
+.kova-media-chapters time {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}

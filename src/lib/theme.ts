@@ -4,7 +4,7 @@
 
 export type ThemeMode = "light" | "dark" | "system";
 
-export const DEFAULT_THEME_COLOR = "#121212";
+export const DEFAULT_THEME_COLOR = "#191919";
 export const PHONE_THEME_QUERY =
   "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)";
 export const PHONE_DARK_THEME_COLOR = "#111111";

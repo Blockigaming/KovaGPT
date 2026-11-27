@@ -17,12 +17,15 @@ const compiled = ts.transpileModule(readFileSync("src/components/ChatInput.tsx",
     jsx: ts.JsxEmit.ReactJSX,
   },
 }).outputText;
+// Plain-function doubles (such as the pasted-text card) render their own small trees.
 const nodes = (node) =>
   !node || typeof node !== "object"
     ? []
     : Array.isArray(node)
       ? node.flatMap(nodes)
-      : [node, ...nodes(node.props?.children)];
+      : typeof node.type === "function"
+        ? [node, ...nodes(node.type(node.props ?? {}))]
+        : [node, ...nodes(node.props?.children)];
 const text = (node) =>
   node == null || typeof node === "boolean"
     ? ""
@@ -119,6 +122,7 @@ function fixture(
       ];
     },
     useEffect() {},
+    useCallback: (callback) => callback,
     useSyncExternalStore: () => true,
     lazy: (loader) => String(loader).match(/Composer[A-Za-z]+/)?.[0] ?? "Lazy",
     Suspense: "Suspense",
@@ -135,6 +139,25 @@ function fixture(
     ),
     "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/components/PastedTextCard": {
+      // Stand-in exposing the card's real controls; never renders the full pasted text.
+      PastedTextCard: (props) => [
+        {
+          type: "button",
+          props: {
+            "aria-label": props.inspectLabel,
+            onClick: (event) =>
+              props.onOpen(event?.currentTarget ?? { isConnected: true, focus() {} }),
+          },
+        },
+        props.onRemove && {
+          type: "button",
+          props: { "aria-label": props.removeLabel, onClick: () => props.onRemove() },
+        },
+      ],
+    },
+    "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
+    "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
@@ -276,7 +299,12 @@ function fixture(
     },
     input: () => nodes(tree).find((node) => node.type === "textarea").props,
     async click(label) {
-      await button(label).onClick({ detail: 1 });
+      await button(label).onClick({
+        detail: 0,
+        currentTarget: { isConnected: true, focus() {} },
+        preventDefault() {},
+        stopPropagation() {},
+      });
       await flush();
     },
     async account(next) {
@@ -299,7 +327,7 @@ function fixture(
 }
 
 const signedIn = { isLoaded: true, user: { id: "owner-a" } };
-const exactText = "  first\r\n\t" + "Line with emoji 🙂 and words.\n".repeat(600) + "tail  ";
+const exactText = "  first\r\n\t" + "Line with emoji 🙂 and words.\n".repeat(1200) + "tail  ";
 const paste = (plain, html = "<b>this must never replace the clipboard text</b>") => ({
   target: { tagName: "TEXTAREA", selectionStart: 4, selectionEnd: 8 },
   clipboardData: { files: [], getData: (type) => (type === "text/plain" ? plain : html) },
@@ -470,4 +498,32 @@ test("ordinary short rich text remains native plain-text input and is not conver
   });
   assert.equal(prevented, false);
   assert.deepEqual([f.attachmentChanges, f.quotas, f.saves], [[], [], []]);
+});
+
+const cardText = "Coverage labels: observed, documented, conditional.\n".repeat(100);
+
+test("a guest's long paste within the message limit becomes a Pasted card without sign-in", async () => {
+  assert.ok(cardText.length > 2_000 && cardText.length < 32 * 1024);
+  const f = fixture();
+  await f.root().onPaste(paste(cardText));
+  await f.flush();
+  const [card] = f.attachments();
+  assert.equal(f.attachments().length, 1);
+  assert.equal(card.pasted, true);
+  assert.equal(card.textContent, cardText);
+  assert.equal(f.signIn(), undefined);
+  assert.deepEqual([f.quotas, f.saves], [[], []]);
+  assert.ok(f.button("Inspect pasted-text.txt"));
+});
+
+test("pasted cards never use the two file slots", async () => {
+  const f = fixture({}, signedIn);
+  for (let index = 0; index < 4; index++) {
+    await f.root().onPaste(paste(`${index}\n${cardText}`));
+    await f.flush();
+  }
+  assert.equal(f.attachments().filter((item) => item.pasted).length, 4);
+  await f.root().onPaste(paste(`fifth\n${cardText}`));
+  await f.flush();
+  assert.equal(f.attachments().filter((item) => item.pasted).length, 4);
 });

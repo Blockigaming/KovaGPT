@@ -63,6 +63,10 @@ const routeSource = await readFile(
   new URL("../../src/routes/settings.$section.tsx", import.meta.url),
   "utf8",
 );
+const chatRouteSource = await readFile(
+  new URL("../../src/routes/index.tsx", import.meta.url),
+  "utf8",
+);
 const parsed = ts.createSourceFile(
   "SettingsDialog.tsx",
   settingsSource,
@@ -192,7 +196,7 @@ test("Settings selects and Library filters expose stable accessible names", asyn
 });
 
 test("signed-in settings uses searchable navigation and a purpose-built mobile drill-in", () => {
-  assert.match(settingsSource, /placeholder="Search settings"/);
+  assert.match(settingsSource, /placeholder=(?:"Search settings"|\{t\("Search settings"\)\})/);
   assert.match(settingsSource, /No settings found/);
   assert.match(settingsSource, /const filteredGroups = normalizedQuery/);
   assert.match(settingsSource, /const queryTerms = settingsQuery/);
@@ -260,6 +264,13 @@ test("settings navigation is centralized and routes every rendered category", ()
   const sectionForTab = execute(sectionFunction[0].getText(parsedModel).replace(/^export\s+/, ""), {
     SETTINGS_SECTIONS: sections,
   });
+  const [tabFunction] = matching(
+    parsedModel,
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === "settingsTabForSection",
+  );
+  const tabForSection = execute(tabFunction.getText(parsedModel).replace(/^export\s+/, ""), {
+    SETTINGS_SECTIONS: sections,
+  });
   const pageTabs = categories("destinationGroups");
   assert.match(settingsSource, /const groups = destinationGroups;/);
   assert.doesNotMatch(settingsSource, /const secondaryParents:|matchingSecondaryTabs/);
@@ -291,14 +302,16 @@ test("settings navigation is centralized and routes every rendered category", ()
     ],
   );
   for (const tab of pageTabs) {
-    assert.equal(sections[sectionForTab(tab.value)], tab.value);
+    assert.equal(tabForSection(sectionForTab(tab.value)), tab.value);
     assert.equal(panels.filter((value) => value === tab.value).length, 1, tab.label);
   }
+  assert.equal(tabForSection("__proto__"), "general");
   assert.match(
     routeSource,
-    /redirect\(\{ to: "\/", search: \{ settings: params\.section \}, replace: true \}\)/,
+    /redirect\(\{ to: "\/", search: \{ settings: section \}, replace: true \}\)/,
   );
-  assert.match(settingsSource, /if \(page\) onSectionChange\?\.\(settingsSectionForTab\(value\)\)/);
+  assert.match(chatRouteSource, /openSettings\(settingsTabForSection\(linkedSettingsSection\)\)/);
+  assert.match(chatRouteSource, /initialTab=\{settingsTab\}/);
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
   assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);
   assert.match(settingsSource, /<TabsTrigger[\s\S]*?value=\{v\}/);
@@ -314,8 +327,8 @@ test("full-page Settings keeps reference-style navigation theme-aware and functi
     settingsSource,
     /className="kova-settings-reference-group kova-settings-general-options"/,
   );
-  assert.match(settingsPageStylesSource, /background: var\(--background\)/);
-  assert.match(settingsStylesSource, /background: var\(--surface-selected\)/);
+  assert.match(settingsPageStylesSource, /background: var\(--composer-background\)/);
+  assert.match(settingsStylesSource, /box-shadow: inset 0 0 0 1px var\(--border-strong\)/);
   assert.doesNotMatch(settingsPageStylesSource, /background:\s*#(?:000|fff|000000|ffffff)\b/i);
 });
 
@@ -373,7 +386,8 @@ test("data controls avoid internal migration language", () => {
 
 test("theme changes cannot interpolate the Settings surface colors", () => {
   const { declarations, rule } = styleRule(settingsStylesSource, ".kova-settings-reference");
-  assert.equal(declarations.background, "var(--background)");
+  assert.equal(declarations["--settings-surface"], "var(--composer-background)");
+  assert.equal(declarations.background, "var(--settings-surface)");
   assert.equal(declarations.color, "var(--foreground)");
   assert.ok(
     !declarations["transition-property"] ||
@@ -384,10 +398,7 @@ test("theme changes cannot interpolate the Settings surface colors", () => {
     /transition-property:[^;]*(?:all|background|color|border)/,
     "Settings theme colors must switch atomically instead of interpolating",
   );
-  assert.match(
-    settingsSource,
-    /kova-settings-dialog kova-settings-reference[^`]*bg-\[var\(--surface-modal\)\]/,
-  );
+  assert.match(settingsSource, /kova-settings-dialog kova-settings-reference/);
   assert.doesNotMatch(stylesSource, /\.kova-settings-dialog\s*\{/);
 });
 
@@ -414,7 +425,7 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     "1",
   );
   assert.equal(page["max-height"], "none");
-  assert.equal(page.background, "var(--background)");
+  assert.equal(page.background, "var(--settings-surface)");
   for (const selector of [
     '[role="dialog"].kova-settings-dialog',
     '[role="dialog"].kova-settings-dialog.is-authenticated',

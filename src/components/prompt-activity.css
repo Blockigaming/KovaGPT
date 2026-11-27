@@ -55,6 +55,7 @@
 }
 .kova-activity-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -64,6 +65,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   min-height: 28px;
   font-size: 13px;
   color: var(--muted-foreground);
@@ -76,14 +78,26 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  overflow: hidden;
-  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  background: none;
 }
 .kova-activity-logo img {
-  width: 100%;
-  height: 100%;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
+}
+/* Brand logos sit directly on the page background: no tile, ring or circle behind them. */
+.kova-activity-logo:has(img) {
+  width: 18px;
+  height: 18px;
+  margin-inline: 2px;
+  border-radius: 0;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+}
+.kova-activity-logo:has(img) img {
+  width: 18px;
+  height: 18px;
 }
 .kova-activity-icon {
   width: 14px;
@@ -107,6 +121,8 @@
     opacity: 1;
     pointer-events: auto;
   }
+}
+@media (width < 1024px) {
   .kova-prompt-copy {
     min-width: 44px;
     min-height: 44px;
@@ -139,5 +155,327 @@
   .kova-prompt-actions .kova-prompt-copy {
     width: 44px;
     height: 44px;
+  }
+}
+
+/* Activity rows: nesting, secondary labels, progress, timing and states. */
+.kova-activity-row[data-nested] {
+  padding-inline-start: 32px;
+}
+.kova-activity-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  gap: 2px;
+}
+.kova-activity-detail {
+  color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.kova-activity-progress {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.kova-activity-progress progress {
+  width: 120px;
+  max-width: 100%;
+  height: 4px;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 12%, transparent);
+  overflow: hidden;
+}
+.kova-activity-progress progress::-webkit-progress-bar {
+  background: transparent;
+}
+.kova-activity-progress progress::-webkit-progress-value {
+  background: var(--foreground);
+  border-radius: 999px;
+}
+.kova-activity-progress progress::-moz-progress-bar {
+  background: var(--foreground);
+}
+.kova-activity-meta {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.kova-activity-state {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.kova-activity-state[data-tone="error"] {
+  color: var(--destructive);
+}
+.kova-activity-state[data-tone="warning"] {
+  color: #d97706;
+}
+.kova-activity-row[data-status="skipped"],
+.kova-activity-row[data-status="canceled"] {
+  opacity: 0.7;
+}
+.kova-activity-group {
+  margin: 0;
+}
+.kova-activity-group-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.kova-activity-group-summary::-webkit-details-marker {
+  display: none;
+}
+.kova-activity-group-summary::after {
+  content: "›";
+  transition: transform 160ms ease;
+}
+.kova-activity-group[open] > .kova-activity-group-summary::after {
+  transform: rotate(90deg);
+}
+.kova-activity-group-summary:hover {
+  color: var(--foreground);
+}
+.kova-activity-group-summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-activity-group-summary::after {
+    transition: none;
+  }
+}
+
+/* Live "Thinking" header while a reply is being made. */
+.kova-live-thinking {
+  margin-bottom: 8px;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+.kova-live-thinking > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.kova-live-thinking > summary::-webkit-details-marker {
+  display: none;
+}
+.kova-live-thinking > summary > span:nth-child(2) {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 30%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 70%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: kova-thinking-shimmer 1.8s linear infinite;
+}
+.kova-live-thinking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: kova-thinking-pulse 1.2s ease-in-out infinite;
+}
+.kova-live-thinking-time {
+  font-variant-numeric: tabular-nums;
+}
+@keyframes kova-thinking-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes kova-thinking-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-live-thinking > summary > span:nth-child(2),
+  .kova-live-thinking-dot {
+    animation: none;
+    color: inherit;
+  }
+}
+
+/* Steps between paragraphs: one quiet summary line that opens into a guided list. */
+.kova-reply-segments {
+  display: grid;
+  gap: 0;
+}
+.kova-step-group {
+  margin: 10px 0;
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+}
+.kova-step-group > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 2px 0;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 8px;
+  transition: color 120ms ease;
+}
+.kova-step-group > summary::-webkit-details-marker {
+  display: none;
+}
+.kova-step-group > summary:hover,
+.kova-step-group[open] > summary {
+  color: var(--foreground);
+}
+.kova-step-group > summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-step-group-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.kova-step-group-icon > img,
+.kova-step-group-icon > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.kova-step-group-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-step-group-chevron {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  opacity: 0.7;
+  transition:
+    transform 150ms ease,
+    opacity 120ms ease;
+}
+.kova-step-group > summary:hover .kova-step-group-chevron,
+.kova-step-group > summary:focus-visible .kova-step-group-chevron,
+.kova-step-group[open] .kova-step-group-chevron {
+  opacity: 1;
+}
+.kova-step-group[open] .kova-step-group-chevron {
+  transform: rotate(90deg);
+}
+.kova-step-group-flag {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--destructive) 16%, transparent);
+  color: var(--destructive);
+  font-size: 0.75rem;
+}
+.kova-step-group-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin: 8px 0 4px 7px;
+  padding: 4px 0 4px 22px;
+  border-inline-start: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  list-style: none;
+}
+.kova-step-group-list .kova-activity-row {
+  padding: 4px 0;
+}
+.kova-step-group[data-running] > summary .kova-step-group-text {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 30%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 70%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: kova-thinking-shimmer 1.8s linear infinite;
+}
+button.kova-response-work-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button.kova-response-work-time:hover {
+  color: var(--foreground);
+}
+.kova-response-work-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 150ms ease;
+}
+button.kova-response-work-time[aria-expanded="true"] .kova-response-work-chevron {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-step-group[data-running] > summary .kova-step-group-text {
+    animation: none;
+    color: inherit;
+  }
+}
+
+/* Monochrome dark marks would vanish on the dark background, so they flip to white there. */
+:is(.dark, [data-theme="dark"])
+  :is(.kova-activity-logo, .kova-step-group-icon)
+  img:is([data-brand="github"], [data-brand="linear"]) {
+  filter: invert(1);
+}
+/* Logos are not chat images: drop the framed-image fill, border, radius and shadow. */
+:is(.kova-activity-logo, .kova-step-group-icon) > img {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+@media (max-width: 479px) {
+  .kova-activity-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kova-activity-row[data-nested] {
+    padding-inline-start: 12px;
+  }
+  .kova-step-group-text {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .kova-step-group > summary {
+    min-height: 44px;
+    flex-wrap: wrap;
   }
 }

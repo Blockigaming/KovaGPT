@@ -56,6 +56,7 @@ const renderSidebar = (node, dependencies) =>
 const emptyState = enclosingExpression(classElement("kova-sidebar-empty"));
 const footer = classElement("kova-sidebar-footer");
 const shared = {
+  t: (text) => text,
   hideGuestLogin: false,
   CircleHelp: "CircleHelp",
   CreditCard: "CreditCard",
@@ -73,6 +74,7 @@ test("empty chat history reports one accurate state without duplicate guest copy
     [true, true, "No saved chats yet."],
   ]) {
     const tree = compile(`return (${emptyState});`, {
+      t: (value) => value,
       savedConversations: [],
       isLoaded,
       signedIn,
@@ -81,6 +83,7 @@ test("empty chat history reports one accurate state without duplicate guest copy
   }
   assert.equal(
     compile(`return (${emptyState});`, {
+      t: (value) => value,
       savedConversations: [{ id: "saved" }],
       isLoaded: true,
       signedIn: true,

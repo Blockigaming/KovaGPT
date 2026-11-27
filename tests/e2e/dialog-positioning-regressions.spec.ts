@@ -89,21 +89,16 @@ async function focusStaysInside(page: Page, surface: Locator) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: Settings workspace keeps its closed rail and reachable close control while content scrolls`, async ({
+  test(`${theme}: Settings popup keeps its close control reachable while content scrolls`, async ({
     page,
   }, info) => {
     await coreFixture(page, theme, "free", { preserveStorageOnReload: true });
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const deepLinkedDialog = page.getByRole("dialog", { name: "Settings", exact: true });
-    await expect(deepLinkedDialog).toBeVisible();
-    const pageColor = await page
-      .locator("body")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
-    await expect(deepLinkedDialog).toHaveCSS("background-color", pageColor);
-    await expect(deepLinkedDialog.locator(".kova-settings-content")).toHaveCSS(
-      "background-color",
-      "rgba(0, 0, 0, 0)",
+    const chatSettings = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(chatSettings).toBeVisible();
+    const settingsColor = await chatSettings.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
     );
     await page.goto("/images");
     await waitForKovaHydration(page);
@@ -114,17 +109,19 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
     } else {
       await openCurrentSettings(page);
+      // Phones open the Settings home list; open a section to get its header.
+      await chooseSettingsSection(page, "General");
     }
     await chooseSettingsSection(page, "General");
     await contained(page, modal);
-    const heading = modal.getByRole("heading", { level: 2 }).filter({ visible: true }).first();
+    const heading = modal.locator(".kova-settings-content-header h2");
     await expect(heading).toBeInViewport({ ratio: 1 });
     const close = modal.getByRole("button", {
       name: "Close settings",
       exact: true,
     });
     await usableClose(page, close);
-    await expect(modal).toHaveCSS("background-color", pageColor);
+    await expect(modal).toHaveCSS("background-color", settingsColor);
     const content = modal.locator(".kova-settings-content");
     await expect(content).toHaveCSS("overflow-y", "auto");
     await expect
@@ -139,9 +136,12 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("navigation", { name: "Primary navigation", exact: true }),
     ).toBeHidden();
-    await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
-    await expect(page.locator(".kova-sidebar")).toHaveJSProperty("inert", true);
-    await expect(page.locator(".kova-sidebar")).toHaveCSS("visibility", "hidden");
+    if (mobile) {
+      await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
+      await expect(page.locator(".kova-sidebar")).not.toBeInViewport();
+    } else {
+      await expect(page.locator(".kova-sidebar")).toHaveAttribute("aria-hidden", "true");
+    }
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),
       animations: "disabled",
@@ -180,53 +180,37 @@ for (const theme of ["light", "dark"] as const) {
     await expect(prompt).toHaveValue("Keep this unsaved image idea");
   });
 
-  test(`${theme}: Connections metadata details have one centering transform and a reachable close control`, async ({
+  test(`${theme}: connector details use a scrollable page with a reachable back control`, async ({
     page,
   }, info) => {
     await coreFixture(page, theme);
     await page.goto("/apps");
     await waitForKovaHydration(page);
     const card = page.locator('[data-plugin-id="github"]');
-    const details = card.getByRole("button", {
-      name: "Coming soon GitHub",
-      exact: true,
-    });
+    const details = card.getByRole("link", { name: "GitHub", exact: true });
     await expect(details).toBeVisible();
-    await expect(details).toHaveAttribute("data-coming-soon", "true");
-    await details.click(); // This card action opens metadata; it never connects a provider.
-    const modal = page.getByRole("dialog", { name: "GitHub", exact: true });
-    await contained(page, modal);
-    await expect(modal.getByRole("heading", { name: "GitHub", exact: true })).toBeInViewport({
-      ratio: 1,
+    await details.click();
+    await expect(page).toHaveURL(/\/apps\?plugin=github$/u);
+    const connector = page.getByRole("article", { name: "GitHub", exact: true });
+    await expect(connector.getByRole("heading", { level: 1, name: "GitHub" })).toBeInViewport();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const back = connector.getByRole("button", { name: "Back to Connections", exact: true });
+    await expect(back).toBeInViewport();
+    const geometry = await connector.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return { left: box.left, right: box.right, viewport: window.innerWidth };
     });
-    const close = modal.getByRole("button", {
-      name: "Close connection details",
-      exact: true,
-    });
-    await usableClose(page, close);
-    const scrolling = await modal.evaluate((element) => ({
-      overflow: getComputedStyle(element).overflowY,
-      height: element.clientHeight,
-      content: element.scrollHeight,
-    }));
-    expect(scrolling.overflow).toBe("auto");
-    await modal.evaluate((element) => {
-      element.scrollTop = element.scrollHeight;
-    });
-    await modal.evaluate((element) => {
-      element.scrollTop = 0;
-    });
-    await usableClose(page, close);
-    await focusStaysInside(page, modal);
+    expect(geometry.left).toBeGreaterThanOrEqual(0);
+    expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
     await page.screenshot({
-      path: info.outputPath(`connections-contained-${theme}.png`),
+      path: info.outputPath(`connections-page-${theme}.png`),
       animations: "disabled",
       caret: "hide",
     });
-    await page.keyboard.press("Escape");
-    await expect(modal).toBeHidden();
+    await back.click();
+    await expect(connector).toHaveCount(0);
     await expect(details).toBeFocused();
-    await expect(page).toHaveURL(/\/apps(?:[?#]|$)/);
+    await expect(page).toHaveURL(/\/apps$/u);
   });
 
   test(`${theme}: Sources drawer stays docked inside the viewport and scrolls long local evidence`, async ({

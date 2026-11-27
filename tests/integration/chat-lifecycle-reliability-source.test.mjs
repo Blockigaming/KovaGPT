@@ -71,7 +71,7 @@ test("inline chat attachments consume upload quota but not durable storage quota
   const uploadQuota = readFileSync("src/lib/upload-quota.server.mjs", "utf8");
   assert.match(
     chatRoute,
-    /preflight\.run\("upload_quota", \(signal\) =>\s*reserveUploads\(\s*auth,\s*currentAttachments,\s*DAILY_UPLOAD_LIMIT_BY_TIER\[callerTier\],\s*signal,/u,
+    /preflight\.run\("upload_quota", \(signal\) =>\s*reserveUploads\(\s*auth,\s*uploadedAttachments,\s*DAILY_UPLOAD_LIMIT_BY_TIER\[callerTier\],\s*signal,/u,
   );
   assert.match(chatRoute, /if \(!uploadAllowed\)[\s\S]{0,180}status: 429/u);
   assert.match(

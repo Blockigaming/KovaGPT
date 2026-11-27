@@ -26,13 +26,38 @@ test("Settings remains reachable from the responsive shell", async ({ page }) =>
     await page.getByRole("button", { name: "Open menu" }).click();
   }
   const settings = await openCurrentSettings(page);
-  await expect(settings.getByRole("tab", { name: "General", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  // Settings opens on its home list; choose Appearance explicitly.
   await chooseSettingsSection(page, "Appearance");
   await expect(settings.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
   await expect(settings.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
   await settings.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(settings).toBeHidden();
+});
+
+test("dark workspace dims behind Search chats and Settings and clears on close", async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const canvas = page.locator(".kova-chat-main");
+  await expect(canvas).toHaveCSS("background-color", "rgb(25, 25, 25)");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#191919");
+
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
+  await expect(search).toHaveCSS("background-color", "rgba(0, 0, 0, 0.52)");
+  await page.keyboard.press("Escape");
+  await expect(search).toHaveCount(0);
+  await expect(canvas).toHaveCSS("background-color", "rgb(25, 25, 25)");
+
+  if (page.viewportSize()!.width < 1024) {
+    await page.getByRole("button", { name: "Open menu" }).click();
+  }
+  const settings = await openCurrentSettings(page);
+  const overlay = page.locator('[data-slot="dialog-overlay"][data-state="open"]');
+  await expect(overlay).toHaveCSS("background-color", "rgba(0, 0, 0, 0.52)");
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(overlay).toHaveCount(0);
+  await expect(canvas).toHaveCSS("background-color", "rgb(25, 25, 25)");
 });

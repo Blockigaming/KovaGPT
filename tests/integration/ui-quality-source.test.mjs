@@ -126,11 +126,15 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
   assert.match(
     composer,
-    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*!sendDisabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
+    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
   );
   const sendButton = openingTag(composer, "button", /aria-label="Send message"/);
   assert.match(sendButton, /disabled=\{!canSubmit\}/);
-  assert.match(sendButton, /onClick=\{triggerSubmit\}/);
+  // A long-press consumes its own click; an ordinary activation submits.
+  assert.match(
+    sendButton,
+    /if \(event\.detail > 0 && sendHoldConsumed\.current\) return;\s*triggerSubmit\(\);/,
+  );
   assert.match(sendButton, /hidden=\{!hasDraft\}/);
   const submit = composer.slice(
     composer.indexOf("const triggerSubmit ="),
@@ -280,18 +284,10 @@ test("canonical reference styles own shell and composer contracts without retire
   const send = declarations(composerStyles, ".spec400-send-button");
   for (const key of ["width", "height", "min-width", "min-height"]) assert.equal(send[key], "36px");
   assert.equal(send["border-radius"], "50%");
-  const phone = declarations(
-    composerStyles,
-    ".spec400-composer",
-    "(max-width: 1023px), (any-pointer: coarse)",
-  );
+  const phone = declarations(composerStyles, ".spec400-composer", "(width < 1024px)");
   assert.equal(phone.display, "flex");
   assert.equal(phone["flex-direction"], "column");
-  const touchSend = declarations(
-    composerStyles,
-    ".spec400-send-button",
-    "(max-width: 1023px), (any-pointer: coarse)",
-  );
+  const touchSend = declarations(composerStyles, ".spec400-send-button", "(width < 1024px)");
   for (const key of ["width", "height", "min-width", "min-height"])
     assert.equal(touchSend[key], "44px");
 
@@ -302,7 +298,7 @@ test("canonical reference styles own shell and composer contracts without retire
   const touchAction = declarations(
     responseStyles,
     actionSelector,
-    "(any-pointer: coarse), (max-width: 1023px)",
+    "(width < 1024px), (pointer: coarse)",
   );
   for (const key of ["width", "height", "min-width", "min-height"]) {
     assert.equal(compactAction[key], "28px");
@@ -379,7 +375,10 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
   assert.match(starters, /<HomeChatFrame[\s\S]*?\{children\}/);
-  assert.match(homeFrame, /<div className="kova-empty-composer">\s*\{children\}/);
+  assert.match(
+    homeFrame,
+    /<div className=\{home \? "kova-empty-composer" : "spec400-composer-dock[^"]*"\}>\s*\{children\}/,
+  );
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);

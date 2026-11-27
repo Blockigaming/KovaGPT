@@ -861,3 +861,106 @@
     background: var(--accent);
   }
 }
+
+/* Voice session transcript: who spoke, when, and what was said. */
+.kova-voice-log {
+  display: grid;
+  gap: 10px;
+  max-height: 220px;
+  margin: 0 0 12px;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  font-size: 14px;
+}
+.kova-voice-log li {
+  display: grid;
+  gap: 2px;
+}
+.kova-voice-log-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.kova-voice-log-meta strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.kova-voice-log li[data-speaker="Kova"] .kova-voice-log-meta strong {
+  color: var(--primary);
+}
+
+/* Conversation goal row above the message box. */
+.kova-goal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto 8px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--background) 85%, var(--muted));
+  color: var(--foreground);
+  font-size: 14px;
+}
+.kova-goal-row > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted-foreground);
+}
+.kova-goal-row[data-paused] {
+  opacity: 0.7;
+}
+.kova-goal-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-goal-label {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+.kova-goal-row button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  cursor: pointer;
+}
+.kova-goal-row button:hover {
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+.kova-goal-row button svg {
+  width: 15px;
+  height: 15px;
+}
+.kova-goal-row button[type="submit"] {
+  background: var(--foreground);
+  color: var(--background);
+}
+.kova-goal-row textarea {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  resize: none;
+  outline: none;
+}
+.kova-goal-row:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}

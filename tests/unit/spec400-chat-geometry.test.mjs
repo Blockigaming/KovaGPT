@@ -39,7 +39,7 @@ test("the two-row ChatGPT composer has one authoritative desktop and touch geome
   );
   const empty = declarations('.spec400-chat-input[data-composer-surface="empty"]');
   assert.equal(empty["padding-bottom"].value, "0");
-  const mobile = declarations(".spec400-composer", "(max-width: 1023px), (any-pointer: coarse)");
+  const mobile = declarations(".spec400-composer", "(width < 1024px)");
   assert.equal(mobile.display.value, "flex");
   assert.equal(mobile["flex-direction"].value, "column");
   assert.equal(mobile["min-height"].value, "136px");
@@ -87,10 +87,13 @@ test("home has one content layout while viewport panels retain bounded shared co
   panelRadius(expanded);
 });
 
-test("spec400 failures retry only through a guarded explicit action using the original idempotency identity", () => {
+test("spec400 retries retain the user message and use a distinct guarded attempt", () => {
   const route = readFileSync("src/routes/index.tsx", "utf8");
   assert.match(route, /id: requestId \?\? newId\(\)/);
-  assert.match(route, /headers: chatRequestHeaders\(userMsg\.id, assistantMsg\.id, voiceRequest\)/);
+  assert.match(
+    route,
+    /headers: chatRequestHeaders\(\s*requestId \? `\$\{userMsg\.id\}:\$\{assistantMsg\.id\}` : userMsg\.id,/,
+  );
   assert.equal(
     chatRequestHeaders("original-request", "assistant")["Idempotency-Key"],
     "original-request",

@@ -23,7 +23,7 @@ test("Temporary Chat is reachable and truthfully selected from the mobile top ba
     read("src/components/DesktopChatToolbar.tsx"),
   ]);
 
-  assert.match(topBar, /MessageCircleOff/);
+  assert.match(topBar, /TemporaryChatIcon/);
   assert.match(topBar, /isSignedIn && !chatStarted && onTemporaryChatChange/);
   assert.match(topBar, /onTemporaryChatChange\(!temporaryChat, event.currentTarget\)/);
   assert.match(topBar, /aria-pressed=\{temporaryChat\}/);
@@ -119,7 +119,7 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
     if (
       rule.parent.type === "atrule" &&
       rule.parent.name === "media" &&
-      rule.parent.params === "(pointer: coarse), (max-width: 1023px)"
+      rule.parent.params === "(width < 1024px)"
     )
       coarseOptions.push(
         Object.fromEntries(

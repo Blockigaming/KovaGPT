@@ -12,7 +12,7 @@ const mobileProjects = new Set([
   "phone-430x932",
   "phone-landscape-844x390",
   "tablet-768x1024",
-  "tablet-1024x768",
+  // tablet-1024x768 uses the docked desktop sidebar.
 ]);
 
 async function expectNoPageOverflow(page: Page) {
@@ -43,8 +43,9 @@ test("navigation opens, contains its controls, and dismisses predictably", async
     );
     expect(centers).toHaveLength(3);
     expect(centers.every((button) => button.target >= 44)).toBe(true);
-    expect(centers[1].x - centers[0].x).toBeCloseTo(32, 0);
-    expect(centers[2].x - centers[1].x).toBeCloseTo(32, 0);
+    // Each press target is centered on its icon, so neighbors sit a full target apart.
+    expect(centers[1].x - centers[0].x).toBeGreaterThanOrEqual(44);
+    expect(centers[2].x - centers[1].x).toBeGreaterThanOrEqual(44);
   }
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation" });
@@ -126,9 +127,16 @@ test("the single phone composer and drawer retain every workspace destination an
   const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(composer).toBeInViewport({ ratio: 1 });
   await expect(tabs).toHaveCount(0);
-  await expect(page.locator(".kova-composer-tray")).toBeHidden();
-  const box = (await page.locator(".spec400-composer:visible").boundingBox())!;
-  expect(viewport.height - box.y - box.height).toBeLessThanOrEqual(24);
+  const appShell = await page.evaluate(
+    () => document.documentElement.dataset.kovaSurface === "app",
+  );
+  // Phones pin one composer to the bottom on web and in the app shell.
+  void appShell;
+  {
+    await expect(page.locator(".kova-composer-tray")).toBeHidden();
+    const box = (await page.locator(".spec400-composer:visible").boundingBox())!;
+    expect(viewport.height - box.y - box.height).toBeLessThanOrEqual(24);
+  }
   await composer.fill("Keep this draft while I change pages");
 
   for (const name of ["Projects", "Library", "Connections"]) {

@@ -1,4 +1,49 @@
 export const LOCAL_PASTE_THRESHOLD = 10_000;
+/**
+ * Long pastes turn into a compact "Pasted" card instead of flooding the composer.
+ * Either bound is enough: a short but tall list is as hard to edit inline as a long block.
+ */
+export const PASTE_CARD_MIN_CHARACTERS = 2_000;
+export const PASTE_CARD_MIN_LINES = 40;
+/**
+ * A pasted card up to the typed-message limit is message text, not a file upload:
+ * it needs no account, uses no attachment slot and no daily upload allowance.
+ * Mirrors CHAT_MAX_MESSAGE_CHARS in chat-ingress.server.mjs.
+ */
+export const PASTED_TEXT_MAX_CHARACTERS = 32 * 1024;
+export const PASTED_TEXT_MAX_PER_MESSAGE = 4;
+const PASTE_SNIPPET_CHARACTERS = 320;
+
+/** True when a plain-text paste should become a card rather than inline text. */
+export function shouldCardPaste(text) {
+  if (typeof text !== "string" || !text.trim()) return false;
+  if (text.length >= PASTE_CARD_MIN_CHARACTERS) return true;
+  let lines = 1;
+  for (let index = 0; index < text.length; index++) {
+    if (text.charCodeAt(index) === 10 && ++lines >= PASTE_CARD_MIN_LINES) return true;
+  }
+  return false;
+}
+
+/** True when the paste fits the free "message text" budget rather than the upload path. */
+export function isFreePastedText(text) {
+  return typeof text === "string" && text.length <= PASTED_TEXT_MAX_CHARACTERS;
+}
+
+/**
+ * The first few visible lines of a paste for the card face. Bounded so the full text is
+ * never mounted in the composer or transcript; whitespace runs are kept readable.
+ */
+export function pastePreviewSnippet(text) {
+  const head = String(text ?? "").slice(0, PASTE_SNIPPET_CHARACTERS * 2);
+  const lines = head
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/\t/g, "  ").trimEnd())
+    .filter((line, index, all) => line || (index > 0 && all[index - 1]));
+  const snippet = lines.join("\n").trim().slice(0, PASTE_SNIPPET_CHARACTERS);
+  return snippet.length < String(text ?? "").trim().length ? snippet.trimEnd() + "…" : snippet;
+}
 export const LOCAL_PASTE_MAX_CHARACTERS = 80_000;
 export const LOCAL_PASTE_MAX_BYTES = 200_000;
 export const ATTACHMENT_PREVIEW_CHARACTERS = 4_000;

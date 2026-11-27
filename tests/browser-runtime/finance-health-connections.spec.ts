@@ -19,6 +19,12 @@ const mocks: Record<string, string> = {
     if(url==='/api/finances/link-token')return Response.json({link_token:'link-production-fixture',expiration:new Date(Date.now()+600000).toISOString()});
     if(url==='/api/finances/exchange'){window.financeStatus.connections=[{id:'00000000-0000-4000-8000-000000000004',status:'connected'}];return Response.json({id:'00000000-0000-4000-8000-000000000004'},{status:201})}
     if(url==='/api/finances/manage'&&body.action==='disconnect'){window.financeStatus.connections=[];return Response.json({disconnected:true})}
+    if(url==='/api/finances/manage'&&body.action==='maintenance'){
+      const connection=window.financeStatus.connections.find(candidate=>candidate.id===body.connectionId);
+      connection.maintenanceAllowed=body.enabled;
+      return Response.json({maintenanceAllowed:body.enabled});
+    }
+    if(url==='/api/finances/manage'&&body.action==='restore_webhook'&&body.confirmed===true)return Response.json({restored:true});
     if(url==='/api/finances/manage'&&body.action==='read'){
       if(window.delayRead)return new Promise(resolve=>window.resolveRead=()=>resolve(Response.json(window.financeSnapshot)));
       return Response.json(window.financeSnapshot);
@@ -275,6 +281,34 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
   await expect(input).toHaveCount(0);
 });
 
+test("Plaid webhook restoration is gated by opt-in and explicit confirmation", async ({ page }) => {
+  await boot(page, { connection: true });
+  const restore = page.getByRole("button", { name: "Restore Plaid webhook" });
+  await expect(restore).toHaveCount(0);
+  await page.getByRole("button", { name: "Allow connection maintenance" }).click();
+  await restore.click();
+  const dialog = page.getByRole("alertdialog", { name: "Restore the Plaid webhook?" });
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  const writes = () =>
+    page.evaluate(() =>
+      (window as StateWindow).operations
+        .map((operation) => operation[1] as { action?: string; confirmed?: boolean })
+        .filter((operation) => operation?.action === "restore_webhook"),
+    );
+  expect(await writes()).toEqual([]);
+  await restore.click();
+  await dialog.getByRole("button", { name: "Restore webhook" }).click();
+  await expect.poll(writes).toEqual([
+    {
+      connectionId: "00000000-0000-4000-8000-000000000004",
+      action: "restore_webhook",
+      confirmed: true,
+    },
+  ]);
+  await page.getByRole("button", { name: "Disable connection maintenance" }).click();
+  await expect(restore).toHaveCount(0);
+});
+
 test("native Apple Health updates refresh the chart only during the active connection", async ({
   page,
 }) => {
@@ -329,6 +363,41 @@ test("native Apple Health updates refresh the chart only during the active conne
   await push(320, true);
   await expect(health.getByText("320 steps", { exact: true }).first()).toBeVisible();
   await page.getByText("Manage health connections", { exact: true }).click();
+  await expect(region.getByText("Record steps", { exact: true })).toHaveCount(0);
+  await page.evaluate(() => {
+    const { healthBridgeMessages: messages } = window as Window & {
+      healthBridgeMessages: { id: string }[];
+    };
+    window.dispatchEvent(
+      new CustomEvent("kova-health-update-v1", {
+        detail: {
+          id: messages[0].id,
+          canWriteSteps: true,
+          report: { asOf: "2026-11-20", metrics: {} },
+        },
+      }),
+    );
+  });
+  await region.getByText("Record steps", { exact: true }).click();
+  await region.getByLabel("Steps", { exact: true }).fill("250");
+  await region.getByLabel("Started at").fill("2026-11-20T13:00");
+  await region.getByLabel("Ended at").fill("2026-11-20T13:15");
+  await region.getByRole("button", { name: "Review on device" }).click();
+  await expect(region.getByRole("button", { name: "Waiting for device…" })).toBeDisabled();
+  await page.evaluate(() => {
+    const { healthBridgeMessages: messages } = window as Window & {
+      healthBridgeMessages: { action: string; id: string; count?: string }[];
+    };
+    const write = messages.at(-1);
+    if (write?.action !== "record_steps" || write.id !== messages[0].id || write.count !== "250")
+      throw new Error("The step request must be bound to the active native connection");
+    window.dispatchEvent(
+      new CustomEvent("kova-health-update-v1", {
+        detail: { id: write.id, stepWriteState: "permission_required" },
+      }),
+    );
+  });
+  await expect(region.getByText("Allow step writing", { exact: false })).toBeVisible();
   await region.getByText("Connection options", { exact: true }).click();
   await region.getByRole("button", { name: "Disconnect Apple Health" }).click();
   await push(321, true);
@@ -348,9 +417,81 @@ test("unconfigured finance and health stay disabled and never fetch private data
   await page.getByRole("button", { name: "Connect Health", exact: true }).click();
   const chooser = page.getByRole("dialog", { name: "Connect Health", exact: true });
   await expect(chooser.getByRole("button", { name: /Oura/ })).toBeDisabled();
-  await expect(chooser.getByText("Coming soon", { exact: true })).toBeVisible();
+  await expect(chooser.getByText("Requires iPhone app", { exact: true })).toBeVisible();
+  await expect(chooser.getByText("Requires Android app", { exact: true })).toBeVisible();
+  await expect(chooser.getByText("WHOOP", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
+});
+test("Android Health Connect confirms a native read and clears the dashboard when permission is lost", async ({
+  page,
+}) => {
+  type HealthCommand = { action: string; id: string; owner?: string };
+  await page.addInitScript(() => {
+    const commands: HealthCommand[] = [];
+    Object.assign(window, {
+      androidHealthCommands: commands,
+      kovaAndroidHealth: {
+        postMessage(raw: string) {
+          const message: HealthCommand = JSON.parse(raw);
+          commands.push(message);
+          if (message.action === "resume")
+            queueMicrotask(() =>
+              window.dispatchEvent(
+                new CustomEvent("kova-health-update-v1", {
+                  detail: { id: message.id, state: "not_connected" },
+                }),
+              ),
+            );
+        },
+      },
+    });
+  });
+  await boot(page);
+  await page.getByRole("button", { name: "Connect Health", exact: true }).click();
+  const choice = page
+    .getByRole("dialog", { name: "Connect Health", exact: true })
+    .getByRole("button", { name: /^Android Health Connect/u });
+  await expect(choice).toBeVisible();
+  await choice.click();
+  const health = page.getByRole("region", { name: "Health Connect", exact: true });
+  await expect(health.getByRole("status")).toHaveText("Connecting to Health Connect…");
+  const emit = (detail: Record<string, unknown>, matches = true) =>
+    page.evaluate(
+      ({ detail, matches }) => {
+        const commands = (window as Window & { androidHealthCommands: HealthCommand[] })
+          .androidHealthCommands;
+        const start = commands.find((command) => command.action === "start");
+        if (!start || start.owner !== "00000000-0000-4000-8000-000000000001")
+          throw new Error("Missing owner binding");
+        window.dispatchEvent(
+          new CustomEvent("kova-health-update-v1", {
+            detail: { ...detail, id: matches ? start.id : "another-user" },
+          }),
+        );
+      },
+      { detail, matches },
+    );
+  const reading = {
+    report: {
+      asOf: "2026-11-20",
+      metrics: {
+        StepCount: [{ date: "2026-11-20", value: 432 }],
+        FlightsClimbed: [{ date: "2026-11-20", value: 999 }],
+      },
+    },
+  };
+  await emit(reading, false);
+  await expect(page.getByText("432 steps", { exact: true })).toHaveCount(0);
+  await emit(reading);
+  await expect(page.getByText("432 steps", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Flights climbed", exact: true })).toHaveCount(0);
+  await emit({ state: "permission_required" });
+  await expect(health.getByRole("status")).toHaveText(
+    "Allow at least one read permission in Health Connect to connect.",
+  );
+  await expect(page.getByText("432 steps", { exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
 });
 test("Oura refreshes automatically in the unified health dashboard", async ({ page }) => {

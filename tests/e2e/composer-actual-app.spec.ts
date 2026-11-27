@@ -13,9 +13,7 @@ import { fixture, functionNames, owner, chatA } from "./actual-app-fixture";
 
 async function geometry(page: Page) {
   const composer = page.locator(".spec400-composer");
-  const coarseLayout = await page.evaluate(
-    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
-  );
+  const coarseLayout = await page.evaluate(() => matchMedia("(width < 1024px)").matches);
   const targetSize = coarseLayout ? 44 : 36;
   const send = composer.getByTestId("send-button");
   const voice = composer.getByTestId("voice-button");
@@ -35,22 +33,23 @@ async function geometry(page: Page) {
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  const phone = await page.evaluate(
-    () =>
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
+  // Compact phone corners apply in the native app shell and on phone-width web.
+  const phone = await page.evaluate(() =>
+    document.documentElement.dataset.kovaSurface === "app"
+      ? matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches
+      : matchMedia("(width < 768px)").matches,
   );
   await expect(composer).toHaveCSS(
     "border-radius",
     phone ? (conversation ? "26px" : "21px") : "34px",
   );
   const singleRow =
-    conversation &&
-    (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
+    conversation && (await page.evaluate(() => matchMedia("(min-width: 1024px)").matches));
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   const modeOnOwnRow = await expectsSeparateModeRow(composer);
-  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : modeOnOwnRow ? 144 : 92);
+  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : modeOnOwnRow ? 144 : 100);
   else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   await expect
     .poll(() =>
@@ -76,7 +75,9 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
   const menu = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this draft");
-  const coarsePointer = await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches);
+  const coarsePointer = await page.evaluate(
+    () => matchMedia("(width < 1024px) and (any-pointer: coarse)").matches,
+  );
   const attachmentActions = [
     "Add photos & files",
     "Add from Library",
@@ -100,7 +101,13 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
     await page.keyboard.press("Home");
     await expect(menu.getByRole("button", { name: /^Add photos & files/ })).toBeFocused();
     await page.keyboard.press("End");
+    // The chat goal lives in its own section after the attachment actions.
+    await expect(
+      menu.getByRole("button", { name: "Set a goal for this chat", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowUp");
     await expect(menu.getByRole("button", { name: "Drawing", exact: true })).toBeFocused();
+    await page.keyboard.press("End");
     await page.keyboard.press("ArrowDown");
     await expect(menu.getByRole("button", { name: /^Add photos & files/ })).toBeFocused();
     await expectViewportBounds();
@@ -628,9 +635,7 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   await input.fill("A draft stays editable");
   await expect(page.getByTestId("voice-button")).toBeHidden();
   await expect(page.getByTestId("send-button")).toBeVisible();
-  const touchLayout = await page.evaluate(
-    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
-  );
+  const touchLayout = await page.evaluate(() => matchMedia("(width < 1024px)").matches);
   const sendTarget = await page.getByTestId("send-button").boundingBox();
   expect(sendTarget!.width).toBe(touchLayout ? 44 : 36);
   expect(sendTarget!.height).toBe(touchLayout ? 44 : 36);

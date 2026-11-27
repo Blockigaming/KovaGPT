@@ -15,6 +15,9 @@
   color: var(--foreground);
   box-shadow: none;
 }
+.dark .kova-response-output {
+  background: color-mix(in oklab, var(--surface-secondary, var(--card)) 90%, var(--foreground));
+}
 .kova-response-output-header {
   grid-area: header;
   min-height: 44px;
@@ -24,7 +27,6 @@
   gap: 8px;
   padding-inline: 16px;
   min-width: 0;
-  border-bottom: 1px solid var(--border);
   font-size: 13px;
   line-height: 18px;
 }
@@ -76,7 +78,6 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  border-bottom: 1px solid var(--border);
 }
 .kova-response-copy-button,
 .kova-response-download-button {
@@ -132,7 +133,7 @@
   text-underline-offset: 3px;
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-image-actions button[aria-busy="true"] .kova-image-busy-label {
     position: absolute;
     width: 1px;
@@ -471,5 +472,210 @@ body .prose-chat .kova-table-scroll:focus-visible {
   [data-kova-response-image-view] img {
     margin-inline: auto;
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 80px);
+  }
+}
+
+/* GFM checklists: real checkboxes, aligned with the first line of each item. */
+.prose-chat .contains-task-list {
+  padding-inline-start: 0.25em;
+  list-style: none;
+}
+.prose-chat .task-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.prose-chat .task-list-item > input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 0.3em;
+  accent-color: var(--foreground);
+}
+.prose-chat .task-list-item:has(> input:checked) {
+  color: var(--muted-foreground);
+}
+/* Footnotes: small superscript references and a quiet note list. */
+.prose-chat sup > a[data-footnote-ref] {
+  padding: 0 2px;
+  font-size: 0.75em;
+  text-decoration: none;
+}
+.prose-chat section[data-footnotes] {
+  margin-top: 1.5em;
+  padding-top: 0.75em;
+  border-top: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.875em;
+}
+.prose-chat section[data-footnotes] h2 {
+  font-size: 0.875rem;
+}
+.prose-chat del {
+  opacity: 0.75;
+}
+.prose-chat mark {
+  padding: 0 0.15em;
+  border-radius: 3px;
+  background: color-mix(in oklab, #facc15 45%, transparent);
+  color: inherit;
+}
+.prose-chat sub,
+.prose-chat sup {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+/* Image canvas: every image in the chat, selectable with notes. */
+.kova-image-view-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 2px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+.kova-image-view-tabs button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  cursor: pointer;
+}
+.kova-image-view-tabs button[aria-pressed="true"] {
+  background: var(--background);
+  color: var(--foreground);
+}
+.kova-image-canvas {
+  display: grid;
+  gap: 12px;
+  max-height: 72dvh;
+  overflow: auto;
+}
+.kova-image-canvas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kova-image-canvas-grid li {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+}
+.kova-image-canvas-grid li[data-selected] {
+  border-color: var(--ring);
+}
+.kova-image-canvas-pick {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+.kova-image-canvas-pick input {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--foreground);
+}
+.kova-image-canvas-pick img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.kova-image-canvas-note textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  resize: vertical;
+}
+.kova-image-canvas-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.kova-image-canvas-actions button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 500;
+  cursor: pointer;
+}
+.kova-image-canvas-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Code blocks: every tool is an icon in the header row, with Copy on the far right. */
+@media (min-width: 768px) and (pointer: fine) {
+  .kova-response-output[data-output-kind="code"] {
+    position: relative;
+  }
+  .kova-response-output:has(.kova-code) .kova-code-tools {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 48px;
+    margin: 0;
+    gap: 2px;
+  }
+  .kova-code-tools button {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+  .kova-code-tools svg {
+    width: 16px;
+    height: 16px;
+  }
+  .kova-response-output[data-output-kind="code"] .kova-response-copy-panel {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 8px;
+    border: 0;
+  }
+  .kova-response-output[data-output-kind="code"] .kova-response-copy-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border-radius: var(--kova-radius-button);
+  }
+  .kova-response-output[data-output-kind="code"] .kova-response-copy-button svg {
+    width: 16px;
+    height: 16px;
+  }
+  .kova-response-output[data-output-kind="code"] .kova-copy-label-stack {
+    display: none;
+  }
+  .kova-response-output[data-output-kind="code"] .kova-response-output-header {
+    padding-inline-end: 168px;
+  }
+}
+
+/* Desktop writing blocks share the code block's quiet, icon-only header. */
+@media (min-width: 768px) {
+  .kova-response-output[data-output-kind="text"] .kova-response-copy-button {
+    padding-inline: 12px;
+  }
+  .kova-response-output[data-output-kind="text"] .kova-copy-label-stack {
+    display: none;
   }
 }

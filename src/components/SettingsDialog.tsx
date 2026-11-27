@@ -1,4 +1,5 @@
 import { settingsSearchMatches, VOICE_SETTINGS_SEARCH_TERMS } from "@/lib/settings-search.mjs";
+import { effectiveDirection, t, useLocalization } from "@/lib/localization";
 import { EmailChangeForm } from "@/components/EmailChangeForm";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
@@ -11,6 +12,7 @@ import "@/styles/settings-reference.css";
 import "@/styles/settings-page-layout.css";
 import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
+import { LocalizationSettings } from "@/components/LocalizationSettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
@@ -78,6 +80,7 @@ import {
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
+import { MASTER_PLUGIN_REVIEW_CATALOG } from "@/lib/plugin-review-catalog";
 import {
   useEffect,
   useCallback,
@@ -340,6 +343,7 @@ export function SettingsDialog({
   page?: boolean;
   onSectionChange?: (section: string) => void;
 }) {
+  useLocalization();
   const Surface = page ? SettingsPageContent : DialogContent;
   const currentSectionHeadingId = useId();
   const pageUtilities = useContext(WorkspacePageUtilities);
@@ -1262,7 +1266,7 @@ export function SettingsDialog({
         closeLabel="Close settings"
         data-ui-reference="chatgpt.settings"
         data-settings-open={open ? "true" : undefined}
-        className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
+        className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} border border-border overflow-hidden flex flex-col gap-0 p-0`}
         onOpenAutoFocus={() => {
           // Capture once per opening, before the dialog moves focus. Navigating
           // Settings sections must not replace the original external invoker.
@@ -1316,12 +1320,12 @@ export function SettingsDialog({
             target.focus({ preventScroll: true });
             return document.activeElement === target;
           };
-          // A desktop menu item unmounts when Settings opens; its account
-          // trigger remains available. A closed mobile drawer instead restores
-          // its visible menu opener. Both fallbacks use the same focus guards.
+          // The sidebar can mount both account triggers. Skip the hidden one.
           if (
             !restore(previous) &&
-            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]')) &&
+            !Array.from(document.querySelectorAll<HTMLElement>('[aria-label="Account menu"]')).some(
+              restore,
+            ) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]')) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Toggle sidebar"]'))
           )
@@ -1331,9 +1335,7 @@ export function SettingsDialog({
         <DialogHeader
           className={
             loggedIn
-              ? page
-                ? "sr-only"
-                : "hidden"
+              ? "sr-only"
               : "kova-settings-page-header px-5 sm:px-7 pt-5 pb-4 border-b border-border"
           }
         >
@@ -1341,11 +1343,11 @@ export function SettingsDialog({
             <div>
               {page ? (
                 <h1 className="kova-settings-main-title text-xl font-semibold tracking-tight font-display">
-                  Settings
+                  {t("Settings")}
                 </h1>
               ) : (
                 <DialogTitle className="kova-settings-main-title text-xl font-semibold tracking-tight font-display">
-                  Settings
+                  {t("Settings")}
                 </DialogTitle>
               )}
               <p className="text-xs text-muted-foreground mt-1">
@@ -1392,6 +1394,7 @@ export function SettingsDialog({
             value={tab}
             onValueChange={selectTab}
             orientation="vertical"
+            dir={effectiveDirection()}
             activationMode="manual"
             className="flex-1 overflow-hidden flex flex-col md:flex-row"
           >
@@ -1423,7 +1426,7 @@ export function SettingsDialog({
                 {pageBack}
                 <div className="kova-settings-nav-title">
                   <h2 ref={navigationHeadingRef} tabIndex={-1}>
-                    Settings
+                    {t("Settings")}
                   </h2>
                 </div>
                 {page ? <div className="kova-settings-navigation-close">{pageClose}</div> : null}
@@ -1441,18 +1444,18 @@ export function SettingsDialog({
               </div>
               <label className="kova-settings-search">
                 <Search aria-hidden="true" />
-                <span className="sr-only">Search settings</span>
+                <span className="sr-only">{t("Search settings")}</span>
                 <input
                   ref={settingsSearchRef}
                   value={settingsQuery}
                   onChange={(event) => setSettingsQuery(event.target.value)}
-                  placeholder="Search settings"
+                  placeholder={t("Search settings")}
                 />
               </label>
               <TabsList className="kova-settings-nav" aria-orientation="vertical">
                 {filteredGroups.map((group) => (
                   <section key={group.title} aria-label={group.title}>
-                    <p className="kova-settings-nav-group">{group.title}</p>
+                    <p className="kova-settings-nav-group">{t(group.title)}</p>
                     {group.tabs.map(({ v, icon: Icon, label }) => (
                       <TabsTrigger
                         key={v}
@@ -1468,8 +1471,7 @@ export function SettingsDialog({
                           <Icon aria-hidden="true" />
                         </span>
                         <span className="kova-settings-nav-copy">
-                          <span>{label}</span>
-                          {v !== "logout" && <small>{SETTINGS_DESCRIPTIONS[v]}</small>}
+                          <span>{t(label)}</span>
                         </span>
                         <span className="kova-settings-nav-chevron" aria-hidden="true">
                           ›
@@ -1873,17 +1875,49 @@ export function SettingsDialog({
 
               <TabsContent aria-labelledby={currentSectionHeadingId} value="linked">
                 {!loggedIn ? (
-                  <SignInGate label="Apps" />
+                  <SignInGate label="Connections" />
                 ) : (
                   <section className="space-y-4">
                     <div className="space-y-1">
-                      <h3 className="text-sm font-semibold">Connected apps</h3>
+                      <h3 className="text-sm font-semibold">Connections</h3>
                       <p className="text-xs text-muted-foreground">
-                        Connection status, provider permissions, reconnection, and revocation are
-                        verified from the server-backed Apps page.
+                        Open a connection to see its status, change permissions, reconnect, or
+                        disconnect. Status is verified from the server-backed Apps page.
                       </p>
                     </div>
-                    <Button asChild variant="outline">
+                    <ul className="grid min-w-0 gap-2">
+                      {MASTER_PLUGIN_REVIEW_CATALOG.filter(
+                        (entry) => entry.availability === "implemented",
+                      ).map((entry) => (
+                        <li
+                          key={entry.connector.id}
+                          className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted/40 px-3 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              {entry.connector.label}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {entry.connector.category}
+                            </div>
+                          </div>
+                          <Button asChild variant="outline" className="shrink-0 rounded-full">
+                            <Link
+                              to="/apps"
+                              search={{ plugin: entry.connector.id } as never}
+                              onClick={closeForNavigation}
+                            >
+                              Manage
+                            </Link>
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-auto min-h-11 max-w-full whitespace-normal rounded-full py-2 text-center"
+                    >
                       <Link to="/apps" onClick={closeForNavigation}>
                         Manage apps and permissions
                       </Link>
@@ -2253,6 +2287,7 @@ export function SettingsDialog({
               {/* APPEARANCE */}
               <TabsContent aria-labelledby={currentSectionHeadingId} value="appearance">
                 <AppearanceSettings settings={settings} onChange={onChange} />
+                <LocalizationSettings />
               </TabsContent>
 
               {/* NOTIFICATIONS */}

@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Route } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
 import { chatA, chatB, fixture, owner } from "../e2e/actual-app-fixture";
 import { dismissMobileSidebar, openComposerAddMenu, revealSidebar } from "../e2e/current-ui";
 import { waitForKovaHydration } from "../e2e/hydration";
@@ -15,12 +15,17 @@ async function frame(shell: Locator) {
 
 type HomeFrame = Awaited<ReturnType<typeof frame>>;
 
+const appShell = (page: Page) =>
+  page.evaluate(() => document.documentElement.dataset.kovaSurface === "app");
+
 function checkOpeningLayout(
   first: HomeFrame,
   { width, height }: { width: number; height: number },
+  appShell: boolean,
 ) {
   if (width >= 768) return;
   expect(first.composer.width).toBeCloseTo(width - 24, 0);
+  void appShell;
   expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
   const center = first.heading.y + first.heading.height / 2;
   const freeSpaceCenter = (first.header.y + first.header.height + first.composer.y) / 2;
@@ -59,7 +64,7 @@ for (const theme of ["dark", "light"] as const) {
       await expect(pending).toBeVisible();
       await expect(pending).toHaveAttribute("inert", "");
       await page.evaluate(() => document.fonts.ready);
-      checkOpeningLayout(await frame(pending), page.viewportSize()!);
+      checkOpeningLayout(await frame(pending), page.viewportSize()!, await appShell(page));
     } else {
       await expect(pending).toBeHidden();
       await expect(page.locator("dialog[data-kova-entry-pending]")).toBeHidden();
@@ -103,7 +108,7 @@ for (const theme of ["dark", "light"] as const) {
             await expect(entryDialog).toHaveCSS("outline-style", "none");
             await page.evaluate(() => document.fonts.ready);
             first = await frame(pending);
-            checkOpeningLayout(first, viewport);
+            checkOpeningLayout(first, viewport, await appShell(page));
           } else {
             await expect(pending).toBeHidden();
             await expect(entryDialog.locator("[data-kova-entry-fallback]")).toBeVisible();
@@ -190,7 +195,7 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
   await expect(shell.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
   await page.evaluate(() => document.fonts.ready);
   const opening = await frame(shell);
-  checkOpeningLayout(opening, page.viewportSize()!);
+  checkOpeningLayout(opening, page.viewportSize()!, await appShell(page));
   const capture = info.project.name === "phone-390" && !process.env.KOVA_MOBILE_STATE_ENGINE;
   const menu = await openComposerAddMenu(page);
   await expect(menu.getByRole("button", { name: "Choose project", exact: true })).toBeVisible();

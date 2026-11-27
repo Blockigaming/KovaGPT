@@ -208,6 +208,8 @@ test("explicit OpenAI text selection preserves dedicated Azure image and primary
     AZURE_OPENAI_API_KEY: "offline-primary-nonsecret",
     AZURE_OPENAI_IMAGE_ENDPOINT: "https://offline-images.openai.azure.com",
     AZURE_OPENAI_IMAGE_API_KEY: "offline-image-nonsecret",
+    // With an OpenAI key, images default to OpenAI; Azure images are an explicit choice.
+    KOVA_IMAGE_PROVIDER: "azure_openai",
   });
   assert.equal(actual.providerTarget("chat").provider, "openai");
   assert.equal(actual.providerTarget("streaming").provider, "openai");

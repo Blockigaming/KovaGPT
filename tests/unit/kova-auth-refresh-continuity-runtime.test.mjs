@@ -12,12 +12,17 @@ const deferred = () => {
 };
 const session = (id) => ({ access_token: `${id}-token`, user: { id } });
 
-function fixture(initialSession = session("first-owner")) {
+function fixture(initialSession = session("first-owner"), { returningOAuth = false } = {}) {
   const calls = [],
-    timers = [];
+    timers = new Map();
+  let nextTimer = 0;
   const window = {
-    location: new URL("https://kova.test/"),
-    setTimeout: (callback) => timers.push(callback),
+    location: new URL(returningOAuth ? "https://kova.test/?code=one-use" : "https://kova.test/"),
+    setTimeout(callback) {
+      timers.set(++nextTimer, callback);
+      return nextTimer;
+    },
+    clearTimeout: (id) => timers.delete(id),
   };
   let active = false,
     generation = 0,
@@ -80,7 +85,18 @@ function fixture(initialSession = session("first-owner")) {
     "@/components/StreamingStatus": {},
     "@/components/LogoutConfirmDialog": {},
     "@/components/ui/dropdown-menu": {},
-    "@/lib/oauth-session": { hasOAuthResponseInUrl: () => false },
+    "@/lib/oauth-session": {
+      OAUTH_CALLBACK_PATH: "/~oauth/callback",
+      hasOAuthResponseInUrl: () => window.location.searchParams.has("code"),
+      completeOAuthSessionFromUrl: async (_source, signal) => {
+        signal.throwIfAborted();
+        assert.equal(window.location.searchParams.get("code"), "one-use");
+        window.location.search = "";
+        calls.push("exchange-oauth");
+        return (currentSession = session("oauth-owner"));
+      },
+      clearOAuthResponseFromUrl: () => {},
+    },
     "@/lib/auth-validation-policy.mjs": validationPolicy,
     "@/lib/principal-browser-storage.mjs": {
       clearPrincipalBrowserStorage: (id) => {
@@ -158,7 +174,10 @@ function fixture(initialSession = session("first-owner")) {
       listener("SIGNED_IN", value);
     },
     runTimers() {
-      for (const callback of timers.splice(0)) callback();
+      for (const [id, callback] of [...timers]) {
+        timers.delete(id);
+        callback();
+      }
     },
     fence() {
       active = true;
@@ -177,6 +196,18 @@ function fixture(initialSession = session("first-owner")) {
     },
   };
 }
+
+test("effect replay preserves an OAuth response returned to the home page", async () => {
+  const f = fixture(null, { returningOAuth: true });
+  await f.flush();
+  assert.equal(f.calls.includes("exchange-oauth"), false);
+  f.replayEffects();
+  f.runTimers();
+  await f.flush();
+  assert.equal(f.calls.filter((call) => call === "exchange-oauth").length, 1);
+  assert.equal(f.tree.props.value.user.id, "oauth-owner");
+  f.unmount();
+});
 
 test("initial guest validation preserves the server subtree without resolving auth early", async () => {
   const f = fixture(null);

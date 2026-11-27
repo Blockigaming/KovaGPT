@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { revealSidebar } from "./current-ui";
+import { chooseSettingsSection, revealSidebar } from "./current-ui";
 
 test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop-1440x900");
@@ -99,7 +99,7 @@ test("sidebar keeps separate desktop and phone preferences across Library and re
   await expect(page.locator("#library-title")).toBeVisible();
 });
 
-test("desktop Settings opens at its home and closes over the originating page", async ({
+test("desktop Settings width is editable and closing returns focus to the originating page", async ({
   page,
 }, info) => {
   test.skip(info.project.name !== "desktop-1440x900");
@@ -107,11 +107,13 @@ test("desktop Settings opens at its home and closes over the originating page", 
   await page.goto("/library?return-check=1");
   await waitForKovaHydration(page);
   const previousUrl = page.url();
-  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  const account = page.getByRole("button", { name: "Account menu", exact: true });
+  await account.click();
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
   await expect(page).toHaveURL(previousUrl);
-  const settings = page.getByRole("dialog", { name: "Settings", exact: true });
-  await expect(settings).toBeVisible();
+  const settings = page.locator('.kova-settings-dialog[role="dialog"]');
+  // Settings opens on its first section; the width control lives in Appearance.
+  await chooseSettingsSection(page, "Appearance");
   const navigation = settings.getByRole("complementary", { name: "Settings navigation" });
   await expect(navigation.getByRole("tab", { name: "General", exact: true })).toHaveAttribute(
     "aria-selected",
@@ -142,11 +144,12 @@ test("desktop Settings opens at its home and closes over the originating page", 
   });
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await navigation.getByRole("tab", { name: "Profile", exact: true }).click();
-  await expect(page).toHaveURL(previousUrl);
+  await expect(settings.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
-  await page.keyboard.press("Escape");
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(settings).toBeHidden();
   await expect(page).toHaveURL(previousUrl);
+  await expect(account).toBeFocused();
 });
 
 test("appearance sliders stay reachable on a narrow phone", async ({ page }, info) => {

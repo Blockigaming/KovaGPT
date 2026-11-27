@@ -67,7 +67,7 @@ test("shared composer defaults preserve existing callers while supporting projec
   assert.match(chatInput, /showAddMenu\?: boolean/);
   assert.match(
     chatInput,
-    /if \(disabled \|\| sendDisabled \|\| submittingRef\.current \|\| isStreaming \|\| pasteOffer\) return/,
+    /if \(disabled \|\| submittingRef\.current \|\| isStreaming \|\| pasteOffer\) return/,
   );
   assert.match(chatInput, /disabled=\{disabled\}/);
   assert.match(

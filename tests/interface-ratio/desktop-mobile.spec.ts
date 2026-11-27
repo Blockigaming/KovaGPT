@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
-import { expectsSeparateModeRow } from "../e2e/current-ui";
 import { fixture } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
@@ -180,11 +179,35 @@ for (const state of states) {
     const phone =
       data.viewport.width < 768 ||
       (data.viewport.width < 1024 && data.viewport.height <= 500 && data.viewport.coarse);
+    if (state.name === "connections") {
+      const grid = row(".spec400-plugin-grid");
+      const card = row(".spec400-plugin-card");
+      const next = row(".spec400-plugin-card", 1);
+      const columns = grid.columns.split(" ");
+      expect(grid.display).toBe("grid");
+      expect(columns).toHaveLength(grid.width >= 740 ? 2 : 1);
+      expect(card.width).toBeCloseTo(Number.parseFloat(columns[0]), 1);
+      expect(card.x + card.width).toBeLessThanOrEqual(grid.x + grid.width);
+      expect(next.x + next.width).toBeLessThanOrEqual(grid.x + grid.width);
+      expect(card.height).toBeGreaterThanOrEqual(72);
+      unchanged(".spec400-plugin-card", ["radius", "gap", "padding"]);
+      if (columns.length === 1) {
+        expect(next.x).toBe(card.x);
+        expect(next.y).toBeGreaterThanOrEqual(card.y + card.height);
+      } else {
+        expect(next.y).toBe(card.y);
+        expect(next.x).toBeGreaterThanOrEqual(card.x + card.width);
+      }
+    }
     if (!phone) return;
     if (state.name === "home") {
       const welcomeLogo = page.locator(".kova-greeting .kova-home-welcome-logo");
       await expect(welcomeLogo).toBeVisible();
-      await expect(page.locator(".kova-greeting .kova-home-greeting-text")).toBeHidden();
+      // Portrait phones show the greeting text under the logo; short landscape
+      // phones keep only the logo to leave room for the composer.
+      const greetingText = page.locator(".kova-greeting .kova-home-greeting-text");
+      if (data.viewport.width < 768) await expect(greetingText).toBeVisible();
+      else await expect(greetingText).toBeHidden();
       const expectedSize = Math.min(72, Math.max(48, data.viewport.width * 0.16));
       const logo = await welcomeLogo.boundingBox();
       expect(logo!.width).toBeCloseTo(expectedSize, 1);
@@ -195,8 +218,20 @@ for (const state of states) {
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
       ).toBeCloseTo(0.47, 2);
-      const stacked = await expectsSeparateModeRow(page.locator(".spec400-composer"));
-      expect(row(".spec400-composer").height).toBe(stacked ? 148 : 96);
+      // The add control, model chip, mic and voice share one compact action row.
+      const centers = await page.evaluate(() =>
+        [
+          'button[aria-label="Attach"]',
+          ".kova-consumer-model-trigger, .kova-thinking-toggle",
+          "[data-testid=dictate-button]",
+          ".spec400-primary-voice",
+        ].map((selector) => {
+          const box = document.querySelector(selector)!.getBoundingClientRect();
+          return box.top + box.height / 2;
+        }),
+      );
+      for (const center of centers) expect(Math.abs(center - centers[0])).toBeLessThanOrEqual(4);
+      expect(row(".spec400-composer").height).toBe(96);
       expect(row(".kova-topbar").height).toBe(56);
       expect(row(".spec400-primary-voice").height).toBeGreaterThanOrEqual(44);
       await expect(page.locator(".kova-composer-tray")).toBeHidden();
@@ -212,28 +247,9 @@ for (const state of states) {
       expect(row(".kova-file-filters").gap).toBe("4px");
       unchanged(".kova-file-filters button", ["font", "line", "radius"]);
     }
-    if (state.name === "connections") {
-      const list = row(".spec400-plugin-grid");
-      const connection = row(".spec400-plugin-card");
-      // The phone catalog uses grouped rows with touch targets.
-      expect(list.display).toBe("block");
-      expect(list.radius).toBe("18px");
-      expect(connection.width).toBeCloseTo(list.width - 2, 0);
-      expect(connection.height).toBeGreaterThanOrEqual(48);
-      expect(connection.padding).toBe("10px 12px");
-      expect(connection.gap).toBe("8px");
-    }
     if (state.name === "settings") {
-      const header = page.locator(".kova-settings-content-header");
-      await expect(header.getByRole("heading", { name: "Profile", exact: true })).toHaveCSS(
-        "font-size",
-        "20px",
-      );
-      await expect(header).toHaveCSS("height", "56px");
-      await expect(header.getByRole("button", { name: "Back to settings" })).toHaveCSS(
-        "height",
-        "44px",
-      );
+      // Settings opens as a modal; its section heading stays in view.
+      await expect(page.locator(".kova-settings-content-header h2")).toBeInViewport();
     }
     if (state.name === "tasks") {
       await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "26px");

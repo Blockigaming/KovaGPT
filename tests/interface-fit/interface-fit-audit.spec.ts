@@ -280,7 +280,7 @@ if (scope === "public") {
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       await expect.poll(() => heldModules).toBeGreaterThan(0);
-      await expect(page.locator("[data-chat-transcript-loading]")).toBeVisible();
+      await expect(page.locator("[data-chat-transcript-loading]:visible").first()).toBeVisible();
       await expect(
         page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
       ).toBeVisible();
@@ -302,9 +302,10 @@ if (scope === "public") {
       test(`${theme} workspace fits: ${route}`, async ({ page }, info) => {
         const errors = watchErrors(page);
         await coreFixture(page, theme, "plus");
-        // Use the dialog's canonical URL. Legacy redirects have dedicated coverage.
-        const destination = route.replace(/^\/settings\//, "/?settings=");
-        await page.goto(destination, { waitUntil: "domcontentloaded" });
+        const url = route.startsWith("/settings/")
+          ? `/?settings=${route.slice("/settings/".length)}`
+          : route;
+        await page.goto(url, { waitUntil: "domcontentloaded" });
         await waitForKovaHydration(page);
         if (destination !== route) {
           await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();

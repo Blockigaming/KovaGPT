@@ -60,9 +60,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
   await expect(send).toBeHidden();
   await expect(send).toBeDisabled();
   await expect(page.getByRole("button", { name: "Voice", exact: true })).toBeVisible();
-  const coarseComposer = await page.evaluate(
-    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
-  );
+  const coarseComposer = await page.evaluate(() => matchMedia("(width < 1024px)").matches);
   await expect(composer).toHaveCSS("outline-style", "none");
 
   await focusComposerByKeyboard(page);
@@ -109,10 +107,14 @@ test("empty workspace remains contained and composer focus is deliberate", async
         input: bounds(".spec400-composer-input"),
         modeOnOwnRow:
           getComputedStyle(element.querySelector(".spec400-composer-toolbar")!).display === "grid",
-        coarse: matchMedia("(any-pointer: coarse)").matches,
-        phone: matchMedia(
-          "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
-        ).matches,
+        coarse: matchMedia("(width < 1024px) and (any-pointer: coarse)").matches,
+        // The compact phone frame applies in the native app shell and on phone-width web.
+        phone:
+          document.documentElement.dataset.kovaSurface === "app"
+            ? matchMedia(
+                "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+              ).matches
+            : matchMedia("(width < 768px)").matches,
         attach: bounds('[aria-label="Attach"]'),
         send: bounds('[aria-label="Send message"]'),
       };
@@ -301,7 +303,7 @@ for (const theme of ["light", "dark"] as const) {
       await Promise.all(images.map((image) => (image as HTMLImageElement).decode()));
     });
     await expect(page.locator("#public-google-status")).toContainText("unavailable");
-    await expect(page.locator("#public-github-status")).toContainText("coming soon");
+    await expect(page.locator("#public-github-status")).toContainText("unavailable on this site");
     await expect(page).toHaveScreenshot(`account-entry-${theme}.png`, {
       animations: "disabled",
       caret: "hide",

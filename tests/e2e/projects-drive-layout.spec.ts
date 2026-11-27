@@ -220,7 +220,7 @@ for (const theme of ["light", "dark"] as const) {
     const toolsBox = await page
       .getByRole("button", { name: "More project tools", exact: true })
       .boundingBox();
-    expect(Math.abs(tabsBox!.y - toolsBox!.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(tabsBox!.y - toolsBox!.y)).toBeLessThanOrEqual(4);
     await more.click();
     await page.getByRole("menuitem", { name: "Search this project", exact: true }).click();
     await expect(

@@ -4,6 +4,7 @@ import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
 
 export function HomeWelcome({
+  home = true,
   owner,
   firstName,
   chatId,
@@ -11,6 +12,7 @@ export function HomeWelcome({
   onSelect,
   children,
 }: {
+  home?: boolean;
   owner: string | null;
   firstName?: string | null;
   chatId: string | null;
@@ -22,44 +24,52 @@ export function HomeWelcome({
   const homeScrollRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!owner) return;
+    if (!home || !owner) return;
     const section = homeScrollRef.current;
     if (!section) return;
     const phoneLayout = window.matchMedia(
       "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
     );
     let following = true;
-    const followLatest = () => {
-      if (following && !phoneLayout.matches) section.scrollTop = section.scrollHeight;
+    let frame: number | null = null;
+    const queueFollowLatest = () => {
+      if (!following || phoneLayout.matches || frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        if (following && !phoneLayout.matches) section.scrollTop = section.scrollHeight;
+      });
     };
     const stopFollowing = () => {
       following = false;
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      frame = null;
     };
-    const frame = window.requestAnimationFrame(followLatest);
+    queueFollowLatest();
     // Composer measurement and font loading can change the initial content height.
-    // Follow those changes until the user starts navigating the welcome surface.
-    const observer = new ResizeObserver(followLatest);
+    // Never write scroll geometry during ResizeObserver delivery.
+    const observer = new ResizeObserver(queueFollowLatest);
     observer.observe(section);
     if (section.firstElementChild) observer.observe(section.firstElementChild);
     for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
       section.addEventListener(event, stopFollowing, { passive: true });
     }
     return () => {
-      window.cancelAnimationFrame(frame);
+      stopFollowing();
       observer.disconnect();
       for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
         section.removeEventListener(event, stopFollowing);
       }
     };
-  }, [owner, chatId, conversations.length]);
+  }, [home, owner, chatId, conversations.length]);
 
   return (
     <HomeChatFrame
+      home={home}
       scrollRef={homeScrollRef}
       headingId="chat-greeting"
       heading={greeting}
       recentWork={
-        conversations.length ? (
+        home && conversations.length ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
         ) : null
       }

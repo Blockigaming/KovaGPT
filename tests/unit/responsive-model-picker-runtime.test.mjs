@@ -224,3 +224,16 @@ test("signed-in Free keeps Default and Thinking switchable and resets a stale pa
   assert.equal(toggle().props["aria-pressed"], false);
   assert.deepEqual(f.changes, ["instant", "thinking", "instant"]);
 });
+
+test("a desktop-width touch screen uses the desktop model popover", async () => {
+  const f = fixture();
+  f.config.interaction = "touch";
+  await f.flush();
+  f.open();
+  await f.flush();
+  assert.equal(f.find("popover").props.open, true);
+  assert.equal(
+    f.nodes().some((node) => node.type === "mobile-sheet"),
+    false,
+  );
+});

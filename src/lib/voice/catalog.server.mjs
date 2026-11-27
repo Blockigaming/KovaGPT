@@ -5,6 +5,18 @@ export const TTS_MODEL_IDS = Object.freeze([
   "eleven_v4",
 ]);
 const PLANS = new Set(["free", "plus", "pro"]);
+// Product rule for which catalog voices each plan may use, keyed by catalog ID.
+// Free: Jessica only. Plus: Jarnathan, Jessica and Lauren. Pro: every voice.
+// An entry's own allowedPlans can only narrow this further, never widen it.
+export const VOICE_IDS_BY_PLAN = Object.freeze({
+  free: Object.freeze(["jessica"]),
+  plus: Object.freeze(["jarnathan", "jessica", "lauren"]),
+  pro: null,
+});
+export function planIncludesVoice(tier, catalogId) {
+  const ids = VOICE_IDS_BY_PLAN[tier];
+  return ids === null || (ids !== undefined && ids.includes(String(catalogId).toLowerCase()));
+}
 const ID = /^[a-zA-Z0-9_-]{1,64}$/;
 const PROVIDER_ID = /^[a-zA-Z0-9_-]{1,128}$/;
 export function readVoiceCatalog(env, tier) {
@@ -49,7 +61,7 @@ export function readVoiceCatalog(env, tier) {
           modelId: entry.modelId ?? "eleven_multilingual_v2",
           allowedPlans: [...entry.allowedPlans],
           showWhenLocked: entry.showWhenLocked === true,
-          available: entry.allowedPlans.includes(tier),
+          available: entry.allowedPlans.includes(tier) && planIncludesVoice(tier, entry.id),
         };
       });
     } catch {
@@ -73,11 +85,6 @@ export function readVoiceCatalog(env, tier) {
             },
           ]
         : [];
-  }
-  if (env("KOVA_VOICE_REALTIME_ENABLED") === "true") {
-    const count =
-      tier === "free" ? 3 : tier === "plus" ? Math.min(10, entries.length) : entries.length;
-    entries = entries.map((entry, index) => ({ ...entry, available: index < count }));
   }
   const preferred = env("KOVA_VOICE_DEFAULT_ID");
   if (preferred !== undefined && !entries.some((entry) => entry.id === preferred))

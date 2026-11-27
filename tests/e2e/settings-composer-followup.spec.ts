@@ -12,32 +12,53 @@ for (const theme of ["dark", "light"] as const) {
     await page.goto("/settings/memory");
     await waitForKovaHydration(page);
     const surface = page.getByRole("dialog", { name: "Settings", exact: true });
-    await expect(surface).toBeVisible();
-    await expect(page.locator(".kova-settings-page")).toHaveCount(0);
+    await expect(page.locator(".kova-topbar:visible")).toHaveCount(1);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
-    const heading = surface.getByRole("heading", { name: "Personalization", exact: true });
-    await expect(heading).toHaveCount(1);
-    await expect(heading).toBeInViewport({ ratio: 1 });
-    const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
-    if (!(await usesCompactSettings(page))) {
-      await expect(navigation).toBeVisible();
-      const panelBox = (await surface.boundingBox())!;
-      const navBox = (await navigation.boundingBox())!;
-      expect(navBox.height).toBeGreaterThanOrEqual(panelBox.height - 4);
-      await expect(navigation.getByRole("heading", { name: "Settings", exact: true })).toHaveCount(
-        1,
+    const composerBackground = theme === "dark" ? "rgb(48, 48, 48)" : "rgb(255, 255, 255)";
+    await expect(surface).toHaveCSS("background-color", composerBackground);
+    await expect(page.locator('[data-slot="dialog-overlay"]')).toBeVisible();
+    await expect(
+      surface.getByRole("heading", { name: "Personalization", exact: true }),
+    ).toBeVisible();
+    await expect(surface.locator(".kova-settings-page-header")).toHaveCount(0);
+    const top = (await surface.boundingBox())!.y;
+    const header = surface.locator(".kova-settings-content-header");
+    await expect(header).toHaveCSS("background-color", composerBackground);
+    expect((await header.boundingBox())!.y - top).toBeLessThanOrEqual(1);
+    const phone = await usesCompactSettings(page);
+    if (!phone) {
+      const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
+      await expect(navigation).toHaveCSS("background-color", composerBackground);
+      await expect(surface.getByRole("textbox", { name: "Search settings" })).toHaveCSS(
+        "background-color",
+        composerBackground,
       );
+      expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
+      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
+      expect(
+        await surface.locator(".kova-settings-main-title").evaluate((node) => {
+          const style = getComputedStyle(node.closest(".sr-only")!);
+          return { position: style.position, clipPath: style.clipPath };
+        }),
+      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     } else {
-      await expect(navigation).toBeHidden();
       await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
       await expect(close).toBeVisible();
-      await expect(
-        navigation.getByRole("heading", { name: "Settings", exact: true }),
-      ).toBeInViewport({ ratio: 1 });
-      await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
-      await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
+      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
+      expect(
+        await surface.locator(".kova-settings-main-title").evaluate((node) => {
+          const style = getComputedStyle(node.closest(".sr-only")!);
+          return { position: style.position, clipPath: style.clipPath };
+        }),
+      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     }
+    await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
+    await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
+    await expect(surface.locator(".kova-appearance-size")).toHaveCSS(
+      "background-color",
+      composerBackground,
+    );
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
@@ -133,4 +154,42 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   await expect(dictation).toHaveCount(0);
   await expect(input).toHaveValue("Keep my typed draft");
   await expect(trigger).toBeFocused();
+});
+
+test("a second tab can send while the first tab stays open", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop-1440x900");
+  await fixture(page, "dark", true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        (await navigator.locks.query()).held?.some((lock) =>
+          lock.name.startsWith("kova-chat-history:"),
+        ),
+      ),
+    )
+    .toBe(true);
+
+  const second = await page.context().newPage();
+  await fixture(second, "dark", true);
+  let requests = 0;
+  await second.route("**/api/chat", (route) => {
+    requests += 1;
+    return route.fulfill({
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Reply from the second tab."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  await second.goto("/");
+  await waitForKovaHydration(second);
+  await expect(second.locator(".kova-composer-tray")).toHaveCSS(
+    "background-color",
+    "rgb(33, 33, 33)",
+  );
+  await second.getByRole("textbox", { name: "Message KovaGPT" }).fill("Send from the second tab");
+  await second.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(second.getByText("Reply from the second tab.", { exact: true })).toBeVisible();
+  expect(page.isClosed()).toBe(false);
+  expect(requests).toBe(1);
 });

@@ -54,8 +54,10 @@ export function PlatformRuntime() {
   return (
     <>
       <Suspense fallback={null}>
-        <WorkSyncRuntime />
         <ChatHistoryRuntime />
+      </Suspense>
+      <Suspense fallback={null}>
+        <WorkSyncRuntime />
         <PwaRuntime />
       </Suspense>
       {DeveloperConsole ? (

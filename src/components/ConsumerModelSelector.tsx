@@ -48,6 +48,21 @@ export function ConsumerModelSelector({
   const { isLoaded, isSignedIn } = useUser();
   const [open, setOpen] = useState(false);
   const [showModels, setShowModels] = useState(false);
+  // On phones the popup sits directly above the chat bar: measure the bar's
+  // top edge when it opens; the stylesheet positions the popup from that value.
+  useEffect(() => {
+    if (!open) return;
+    const composer = Array.from(document.querySelectorAll<HTMLElement>(".spec400-composer")).find(
+      (element) => element.getClientRects().length > 0,
+    );
+    if (!composer) return;
+    const box = composer.getBoundingClientRect();
+    const root = document.documentElement.style;
+    root.setProperty("--kova-composer-top", `${Math.round(box.top)}px`);
+    root.setProperty("--kova-composer-left", `${Math.round(box.left)}px`);
+    root.setProperty("--kova-composer-right", `${Math.round(window.innerWidth - box.right)}px`);
+    root.setProperty("--kova-composer-radius", getComputedStyle(composer).borderTopLeftRadius);
+  }, [open]);
   const [dragPosition, setDragPosition] = useState<number | null>(null);
   const drag = useRef<{ pointerId: number; bounds: DOMRect; recommended: boolean } | null>(null);
   const thumbRail = useRef<HTMLDivElement>(null);
@@ -174,18 +189,18 @@ export function ConsumerModelSelector({
           align="end"
           sideOffset={6}
           collisionPadding={12}
-          className="kova-consumer-model-menu p-1.5"
+          className="kova-consumer-model-menu border-0 p-1.5"
         >
           <h2 id={titleId} className="sr-only">
             Select model
           </h2>
-          <div className="flex items-center justify-between gap-2 px-2 pb-1">
+          <div className="flex items-center gap-0.5 pb-1">
             <button
               type="button"
               ref={modelViewToggle}
               onClick={() => setShowModels((visible) => !visible)}
               aria-expanded={showModels}
-              className={optionClass}
+              className={`${optionClass} kova-consumer-model-view-toggle`}
               disabled={locked}
             >
               {showModels ? "Back to response effort" : "Select model"}
@@ -195,7 +210,7 @@ export function ConsumerModelSelector({
               type="button"
               className="kova-effort-reset shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Reset to recommended model and Lite effort"
-              title="Reset to recommended"
+              title={`Reset to ${recommended} Lite`}
               disabled={locked}
               onClick={resetToDefault}
             >

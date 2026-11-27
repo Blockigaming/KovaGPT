@@ -61,6 +61,7 @@ function all(tree) {
 function fixture(options = {}) {
   const calls = [];
   const deps = {
+    t: (text) => text,
     React,
     SIDEBAR_SHORTCUTS,
     SIDEBAR_ITEMS,
@@ -423,7 +424,7 @@ test("rail geometry has a single shared owner and expands touch controls without
   assert.equal(property(width, "width"), "var(--kova-sidebar-rail-width, 60px)");
   const touch = rules.find(
     (rule) =>
-      rule.parent.params === "(pointer: coarse), (max-width: 1023px)" &&
+      rule.parent.params === "(width < 1024px)" &&
       rule.selector.includes(".kova-sidebar-rail .kova-rail-button"),
   );
   assert.equal(property(touch, "min-width"), "44px");

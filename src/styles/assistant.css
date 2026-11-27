@@ -197,6 +197,7 @@
 }
 
 .kova-assistant .kova-desktop-topbar {
+  --chat-toolbar: 48px;
   flex-basis: var(--chat-toolbar);
   padding-inline: var(--chat-gap);
 }
@@ -460,7 +461,7 @@
   min-height: var(--chat-message-action) !important;
   flex-basis: var(--chat-message-action) !important;
 }
-@media (min-width: 1024px) and (pointer: fine) {
+@media (width >= 1024px) {
   .kova-assistant .kova-desktop-topbar .kova-topbar-button {
     width: var(--chat-control);
     height: var(--chat-control);
@@ -475,7 +476,7 @@
     --chat-nav-gap: 8px;
   }
 }
-@media (pointer: coarse), (max-width: 1023px) {
+@media (width < 1024px) {
   /* Reserve a separate row for the44px Remove target above attachment content. */
   .kova-assistant .kova-composer .kova-attachment-card {
     padding-top: 52px;
@@ -484,6 +485,10 @@
   .kova-assistant {
     --chat-control: 44px;
     --chat-nav-height: 44px;
+  }
+}
+@media (width < 1024px), (pointer: coarse) {
+  .kova-assistant {
     --chat-message-action: 44px;
   }
 }

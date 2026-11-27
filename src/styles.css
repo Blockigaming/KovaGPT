@@ -3,12 +3,14 @@
 @import "tw-animate-css";
 @import "./styles/core-system.css";
 @import "./styles/sidebar-core.css";
+@import "./styles/held-chat-menu.css";
 @import "./styles/composer-core.css";
 @import "./styles/core-pages.css";
 @import "./components/account-surfaces.css";
 @import "./styles/spec400-system.css";
 @import "./styles/spec400-chat.css";
 @import "./styles/visual-tokens.css";
+@import "./styles/localization.css";
 @import "./styles/control-geometry.css";
 @import "./styles/assistant-overlays.css";
 @import "./styles/reference-surfaces.css";
@@ -17,6 +19,7 @@
 @import "./styles/app-finish.css";
 @import "./styles/phone-layout.css";
 @import "./styles/phone-equivalence.css";
+@import "./styles/mobile-web-fixes.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -82,6 +85,8 @@
   }
   html {
     font-size: calc(var(--kova-native-font-size, 16px) * var(--kova-interface-scale, 1));
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     background-color: var(--color-background);
   }
   html,
@@ -1233,7 +1238,7 @@ body {
   }
 }
 
-@media (max-width: 767px), (pointer: coarse) {
+@media (width < 768px) {
   .kova-glass,
   .glassy {
   }
@@ -1956,10 +1961,6 @@ body {
 .kova-starter-icon {
   color: var(--kova-blue);
   background: color-mix(in oklab, var(--kova-blue) 9%, transparent);
-}
-
-.kova-chat-input[data-composer-surface="conversation"] {
-  background: linear-gradient(to top, var(--background) 70%, transparent);
 }
 
 .kova-message[data-message-role="user"] {

@@ -201,8 +201,15 @@ test.describe("mobile shell UI truth", () => {
     const close = page.getByRole("button", { name: "Close command palette" });
     const closeBox = await close.boundingBox();
     expect(closeBox?.width).toBeGreaterThanOrEqual(44);
-    const coarsePointer = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
-    expect(closeBox?.height).toBe(coarsePointer ? 44 : 36);
+    const coarsePointer = await page.evaluate(
+      () => matchMedia("(width < 1024px) and (pointer: coarse)").matches,
+    );
+    // A touch screen keeps the 44px target even with the docked desktop layout.
+    expect(closeBox?.height).toBe(
+      coarsePointer || (await page.evaluate(() => matchMedia("(pointer: coarse)").matches))
+        ? 44
+        : 36,
+    );
 
     const panel = palette.locator(":scope > div").first();
     const animationDuration = await panel.evaluate(
@@ -233,7 +240,9 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   const viewport = page.viewportSize()!;
   test.skip(
     viewport.width >= 1024 &&
-      !(await page.evaluate(() => matchMedia("(pointer: coarse) and (hover: none)").matches)),
+      !(await page.evaluate(
+        () => matchMedia("(width < 1024px) and (pointer: coarse) and (hover: none)").matches,
+      )),
     "drawer layout",
   );
   await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
@@ -294,7 +303,8 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
     const composerFrame = page.locator(".spec400-composer:visible");
     await expect(composerFrame).toHaveCSS("border-radius", "24px");
     const composer = (await composerFrame.boundingBox())!;
-    const logo = page.locator(".kova-empty-chat .kova-home-welcome-logo");
+    // The app shell shows its welcome mark here; the website shows its greeting.
+    const logo = page.locator(".kova-empty-chat .kova-greeting");
     await expect(logo).toBeVisible();
     const logoBox = (await logo.boundingBox())!;
     const shellBox = (await shell.boundingBox())!;
@@ -339,6 +349,8 @@ test("touch hold opens the chat menu without opening the conversation", async ({
   browserName,
 }) => {
   test.skip(!hasTouch || browserName !== "chromium", "Chromium touch input");
+  // Touch screens 1024px and wider use the docked desktop sidebar.
+  test.skip(page.viewportSize()!.width >= 1024, "drawer navigation");
   await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
   await page.addInitScript((userId) => {
     const now = Date.now();
@@ -402,8 +414,15 @@ test("touch home keeps the greeting centered and the composer text inset", async
     text!.x -
     frame!.x +
     (await input.evaluate((field) => Number.parseFloat(getComputedStyle(field).paddingLeft)));
-  if (width < 768 || (width < 1024 && height <= 500)) expect(inset).toBeCloseTo(19, 0);
-  else expect(inset).toBeGreaterThanOrEqual(20);
-  expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
+  const appShell = await page.evaluate(
+    () => document.documentElement.dataset.kovaSurface === "app",
+  );
+  if ((appShell && (width < 768 || (width < 1024 && height <= 500))) || width < 768)
+    expect(inset).toBeCloseTo(19, 0);
+  else expect(inset).toBeGreaterThanOrEqual(19);
+  // The app shell centers its greeting in the free space above a bottom
+  // composer; the website keeps the desktop home with the greeting on top.
+  if (appShell || width < 768)
+    expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
   expect(greeting!.y + greeting!.height).toBeLessThan(frame!.y);
 });

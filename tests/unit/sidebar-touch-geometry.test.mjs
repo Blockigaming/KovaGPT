@@ -6,7 +6,7 @@ import postcss from "postcss";
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const sidebarCss = postcss.parse(read("src/styles/sidebar-core.css"));
 const responseCss = postcss.parse(read("src/components/response-action-refinement.css"));
-const touchQuery = "(pointer: coarse), (max-width: 1023px)";
+const touchQuery = "(width < 1024px)";
 const normalize = (value) => value.replace(/\s+/g, " ").trim();
 const rulesFor = (sheet, selector) => {
   const matches = [];
@@ -86,7 +86,7 @@ test("response actions use 28px desktop density and 44px touch targets inside a 
   const selector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const desktop = ruleFor(responseCss, selector);
-  const touch = ruleFor(responseCss, selector, "(any-pointer: coarse), (max-width: 1023px)");
+  const touch = ruleFor(responseCss, selector, "(width < 1024px), (pointer: coarse)");
   for (const property of ["width", "height", "min-width", "min-height", "flex-basis"]) {
     assert.equal(declaration(desktop, property).value, "28px");
     assert.equal(declaration(touch, property).value, "44px");

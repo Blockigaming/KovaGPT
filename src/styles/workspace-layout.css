@@ -100,7 +100,7 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-workspace-mode-switch,
   .kova-workspace-mode {
     min-height: 44px;

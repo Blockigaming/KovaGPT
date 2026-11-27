@@ -327,15 +327,7 @@ test("Settings deep links open the modal; narrow headings keep their safe-area l
   const chat = readFileSync("src/routes/index.tsx", "utf8");
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
-  assert.match(
-    route,
-    /throw redirect\(\{ to: "\/", search: \{ settings: params\.section \}, replace: true \}\)/,
-  );
-  assert.match(chat, /Route\.useSearch\(\{ select: \(search\) => search\.settings \}\)/);
-  assert.match(
-    chat,
-    /if \(!principalReady \|\| !settingsSection\) return;[\s\S]*?openSettings\(tab\)/,
-  );
+  assert.match(route, /redirect\(\{ to: "\/", search: \{ settings: section \}, replace: true \}\)/);
   assert.doesNotMatch(route, /<SettingsDialog/);
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(

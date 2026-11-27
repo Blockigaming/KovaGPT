@@ -1,0 +1,171 @@
+/* Long pastes become a square "Pasted" card, the same footprint as a composer photo. */
+.kova-pasted-card {
+  position: relative;
+  display: block;
+  width: var(--composer-photo-size, 120px);
+  aspect-ratio: 1;
+  flex: none;
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--background) 72%, var(--muted));
+  color: var(--muted-foreground);
+  overflow: hidden;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+.kova-pasted-card:hover,
+.kova-pasted-card:focus-within {
+  border-color: color-mix(in oklab, var(--foreground) 22%, var(--border));
+}
+.kova-pasted-card[data-variant="message"] {
+  width: 128px;
+  border-radius: 14px;
+}
+.kova-pasted-card-open {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 10px 11px 38px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.kova-pasted-card-open:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.kova-pasted-card-snippet {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* Fade the last visible line instead of a hard cut. */
+.kova-pasted-card-open::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 34px;
+  height: 14px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklab, var(--background) 72%, var(--muted))
+  );
+  pointer-events: none;
+}
+.kova-pasted-card-badge {
+  position: absolute;
+  inset: auto auto 8px 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 80%, transparent);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.kova-pasted-card-edit,
+.kova-pasted-card-remove {
+  position: absolute;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.kova-pasted-card-edit {
+  inset: auto 7px 7px auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+.kova-pasted-card-edit:hover {
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+}
+.kova-pasted-card-edit svg {
+  width: 13px;
+  height: 13px;
+}
+.kova-pasted-card-remove {
+  inset: 6px 6px auto auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--background) 30%, #000);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.kova-pasted-card-remove svg {
+  width: 12px;
+  height: 12px;
+}
+.kova-pasted-card:hover .kova-pasted-card-remove,
+.kova-pasted-card:focus-within .kova-pasted-card-remove {
+  opacity: 1;
+}
+@media (hover: none) {
+  .kova-pasted-card-remove {
+    opacity: 1;
+  }
+}
+.kova-pasted-card-edit:focus-visible,
+.kova-pasted-card-remove:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.kova-pasted-card-edit:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-pasted-card,
+  .kova-pasted-card-remove {
+    transition: none;
+  }
+}
+
+/* Editing a pasted card happens in the preview dialog. */
+.kova-pasted-editor {
+  display: block;
+  width: 100%;
+  min-height: min(52dvh, 420px);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--background) 80%, var(--muted));
+  color: var(--foreground);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13px;
+  line-height: 20px;
+  resize: vertical;
+  tab-size: 2;
+}
+.kova-pasted-editor:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.kova-pasted-save:not(:disabled) {
+  background: var(--foreground);
+  color: var(--background);
+}

@@ -88,6 +88,8 @@ for (const input of ["pointer", "keyboard"] as const) {
     hasTouch,
   }) => {
     test.skip(!hasTouch);
+    // Touch screens 1024px and wider use the docked desktop sidebar.
+    test.skip(page.viewportSize()!.width >= 1024, "drawer navigation");
     await coreFixture(page, "dark", "free");
     await page.goto("/");
     await waitForKovaHydration(page);

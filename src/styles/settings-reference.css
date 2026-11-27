@@ -1,15 +1,30 @@
 /* Settings has one shared control system. Page and dialog sizing live in
    settings-page-layout.css; phone navigation is intentionally a separate view. */
 .kova-settings-reference {
-  --settings-space: 16px;
-  --settings-inset: 28px;
-  --settings-card-padding: 16px 20px;
+  --settings-space: 24px;
+  --settings-inset: 32px;
   --settings-control-width: 208px;
-  --settings-card: color-mix(in srgb, var(--foreground) 2%, var(--background));
+  --settings-surface: var(--composer-background);
+  /* Keep neutral panels and controls on the same theme-aware surface. */
+  --background: var(--settings-surface);
+  --card: var(--settings-surface);
+  --popover: var(--settings-surface);
+  --surface-modal: var(--settings-surface);
+  --surface-secondary: var(--settings-surface);
+  --surface-input: var(--settings-surface);
+  --secondary: var(--settings-surface);
+  --muted: var(--settings-surface);
+  --accent: var(--settings-surface);
+  --surface-hover: var(--settings-surface);
+  --surface-selected: var(--settings-surface);
   font-family: var(--font-ui);
   color: var(--foreground);
-  background: var(--background);
+  background: var(--settings-surface);
   isolation: isolate;
+}
+[role="dialog"].kova-settings-dialog {
+  background: var(--settings-surface);
+  box-shadow: var(--dialog-shadow);
 }
 [role="dialog"].kova-settings-dialog.is-authenticated {
   width: min(980px, calc(100vw - 48px));
@@ -55,12 +70,11 @@
   border-right: 1px solid var(--border);
   overflow: auto;
   overscroll-behavior: contain;
-  background: var(--background);
+  background: var(--settings-surface);
 }
 .kova-settings-reference .kova-settings-sidebar-top,
 .kova-settings-reference .kova-settings-section-select,
 .kova-settings-reference .kova-settings-nav-chevron,
-.kova-settings-reference .kova-settings-nav-copy small,
 .kova-settings-reference .kova-settings-account-summary,
 .kova-settings-reference .kova-settings-mobile-intro {
   display: none;
@@ -106,7 +120,7 @@
   padding: 0 14px 0 39px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--settings-card);
+  background: var(--settings-surface);
   color: var(--foreground);
   font: inherit;
   font-size: 14px;
@@ -152,8 +166,9 @@
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
+  white-space: normal;
   box-shadow: none;
-  transition: background-color 140ms ease;
+  transition: box-shadow 140ms ease;
 }
 .kova-settings-reference .kova-settings-nav-icon {
   display: grid;
@@ -170,16 +185,18 @@
 }
 .kova-settings-reference .kova-settings-nav-copy {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .kova-settings-reference .kova-settings-nav-copy > span {
   display: block;
 }
 .kova-settings-reference .kova-settings-nav-item:hover {
-  background: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 .kova-settings-reference .kova-settings-nav-item[aria-selected="true"] {
-  background: var(--surface-selected);
-  font-weight: 500;
+  background: var(--settings-surface);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  font-weight: 600;
 }
 .kova-settings-reference .kova-settings-no-results {
   padding: 20px 12px;
@@ -208,6 +225,7 @@
 .kova-settings-reference .kova-settings-section-copy {
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .kova-settings-reference .kova-settings-content-header h2 {
   margin: 0;
@@ -264,10 +282,9 @@
 .kova-settings-reference .kova-profile-settings > section {
   min-width: 0;
   margin: 0;
-  padding: var(--settings-card-padding);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--settings-card);
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 .kova-settings-reference .kova-settings-content h3 {
   font-size: 16px;
@@ -297,9 +314,9 @@
   align-items: center;
   gap: 8px 16px;
   min-width: 0;
-  min-height: 52px;
+  min-height: 56px;
   margin: 0;
-  padding: 12px 0;
+  padding: 14px 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -467,7 +484,6 @@
 @media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
   .kova-settings-reference {
     --settings-inset: 16px;
-    --settings-card-padding: 14px;
   }
   [role="dialog"].kova-settings-dialog,
   [role="dialog"].kova-settings-dialog.is-authenticated {
@@ -520,7 +536,7 @@
     margin-bottom: 20px;
     border: 1px solid var(--border);
     border-radius: 20px;
-    background: var(--settings-card);
+    background: var(--settings-surface);
   }
   .kova-settings-reference .kova-settings-account-avatar {
     display: grid;
@@ -574,9 +590,6 @@
     border-radius: 12px;
     background: transparent;
   }
-  .kova-settings-reference .kova-settings-nav-item[aria-selected="true"] {
-    background: var(--surface-selected);
-  }
   .kova-settings-reference .kova-settings-nav-icon {
     width: 28px;
     height: 28px;
@@ -595,14 +608,6 @@
     font-weight: 500;
     line-height: 21px;
   }
-  .kova-settings-reference .kova-settings-nav-copy small {
-    display: block;
-    margin-top: 3px;
-    color: var(--muted-foreground);
-    font-size: 12px;
-    line-height: 17px;
-    white-space: normal;
-  }
   .kova-settings-reference .kova-settings-nav-chevron {
     display: block;
     font-size: 24px;
@@ -616,9 +621,9 @@
     top: 0;
     z-index: 5;
     gap: 8px;
-    min-height: calc(56px + var(--safe-top, 0px));
-    padding: calc(5px + var(--safe-top, 0px)) 16px 5px;
-    background: var(--background);
+    min-height: 68px;
+    padding: max(10px, var(--safe-top, 0px)) 16px 10px;
+    background: var(--settings-surface);
     border-bottom: 1px solid var(--border);
   }
   .kova-settings-reference .kova-settings-content-header h2 {
@@ -745,7 +750,7 @@
     border-radius: 0;
     padding: 12px 14px;
     gap: 12px;
-    background: var(--settings-card);
+    background: var(--settings-surface);
     font-size: 14px;
   }
   .kova-settings-reference .kova-settings-related button + button {
@@ -801,13 +806,19 @@
   (min-width: 768px) and (pointer: fine),
   (min-width: 1024px) {
   [role="dialog"].kova-settings-dialog.is-authenticated {
-    width: min(820px, calc(100vw - 48px));
-    height: min(640px, calc(100dvh - 48px));
-    border-radius: 20px;
+    --settings-inset: clamp(24px, 3.5vw, 40px);
+    --settings-space: 28px;
+    /* The same 40px gap from the window edge on every side, capped for very large screens. */
+    width: min(1600px, calc(100vw - 80px));
+    max-width: none;
+    max-height: none;
+    height: min(820px, calc(100dvh - 80px));
+    border-radius: 24px;
   }
   .kova-settings-reference .kova-settings-sidebar {
-    width: var(--kova-settings-navigation-width, 210px);
-    padding: 16px 12px;
+    width: var(--kova-settings-navigation-width, 272px);
+    max-width: 42%;
+    padding: 20px 14px;
   }
   .kova-settings-reference .kova-settings-navigation-heading {
     min-height: 36px;
@@ -839,5 +850,36 @@
     .kova-settings-reference-row
     + .kova-settings-reference-row {
     border-top: 1px solid var(--border);
+  }
+}
+
+@media (min-width: 768px) and (min-height: 501px),
+  (min-width: 768px) and (pointer: fine),
+  (min-width: 1024px) {
+  [role="dialog"].kova-settings-dialog .kova-settings-content-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    min-height: 78px;
+    margin: 0 0 20px;
+    padding: 18px 76px 18px var(--settings-inset);
+    border-bottom: 1px solid var(--border);
+    background: var(--settings-surface);
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-content-header h2 {
+    font-size: 22px;
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-section-copy p {
+    max-width: 52ch;
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-reference-group {
+    margin-top: 8px;
+  }
+  [role="dialog"].kova-settings-dialog :is(.kova-settings-row, .kova-settings-reference-row) {
+    min-height: 58px;
+    padding-block: 14px;
+  }
+  [role="dialog"].kova-settings-dialog :is(.kova-settings-parent-link, .kova-settings-related) {
+    padding-inline: var(--settings-inset);
   }
 }

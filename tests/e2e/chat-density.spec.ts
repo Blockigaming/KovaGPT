@@ -81,5 +81,6 @@ test("desktop Settings renders and closes to chat", async ({ page }, testInfo) =
   await expect(settings).toBeVisible();
   await expect(settings.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
   await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(settings).toBeHidden();
   await expect(page).toHaveURL(/\/$/);
 });

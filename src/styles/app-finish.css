@@ -313,7 +313,7 @@
   margin: -10px 12px 0;
   padding: 18px 10px 8px;
   border-radius: 0 0 22px 22px;
-  background: color-mix(in srgb, var(--foreground) 3%, var(--background));
+  background: var(--composer-tray-background);
 }
 .kova-composer-tray-action {
   display: inline-flex;
@@ -470,7 +470,7 @@
   border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
   border-radius: 16px;
   padding: 16px 18px !important;
-  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  background: var(--composer-background, var(--surface-secondary));
   transition:
     background 0.15s,
     transform 0.15s;
@@ -511,13 +511,6 @@
 }
 .kova-source-activity {
   margin-bottom: 18px;
-}
-.kova-conversation-outputs {
-  border-radius: 20px;
-  padding: 18px !important;
-  max-height: min(78dvh, 740px);
-  overflow-y: auto;
-  scrollbar-width: thin;
 }
 .kova-conversation-outputs h2 {
   color: #b4c9df;
@@ -1370,6 +1363,9 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
+.kova-consumer-model-view-toggle {
+  padding-inline: 8px 4px;
+}
 
 .kova-consumer-effort {
   flex-shrink: 0;
@@ -1446,6 +1442,7 @@
   max-inline-size: 100%;
   block-size: auto;
   padding: 0;
+  border: 0;
   border-radius: 999px;
   background: transparent;
   font-size: 0.875rem;
@@ -1540,7 +1537,30 @@
   }
 }
 
-@media (pointer: coarse), (max-width: 767px) {
+/* On the website the shorter Thinking toggle shares the action row until the
+   composer is narrower than a 320px phone; the app shell keeps the mode row. */
+@container chat-composer (width < 20rem) {
+  .spec400-composer .spec400-composer-toolbar:has(.kova-thinking-toggle) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--composer-action-gap);
+  }
+  .spec400-composer-toolbar:has(.kova-thinking-toggle) .spec400-composer-trailing {
+    display: contents;
+  }
+  .spec400-composer-toolbar .kova-thinking-toggle {
+    grid-area: 1 / 1 / 2 / -1;
+    justify-self: end;
+  }
+  .spec400-composer-toolbar .spec400-composer-tools {
+    grid-area: 2 / 1;
+  }
+  .spec400-composer-toolbar .spec400-composer-speech-actions {
+    grid-area: 2 / 2;
+  }
+}
+
+@media (width < 768px) {
   .kova-consumer-model-menu .kova-consumer-model-option {
     min-height: 44px;
   }
@@ -1569,8 +1589,9 @@
 :root.dark {
   --kova-default-reading-accent: #7cc4ff;
 }
-.kova-response-emphasis {
+.prose-chat strong.kova-response-emphasis {
   color: var(--kova-reading-accent);
+  font-weight: inherit;
 }
 @media (max-width: 1023px), (max-height: 679px) {
   .spec400-recent-work li:nth-child(n + 3) {

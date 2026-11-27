@@ -15,7 +15,7 @@ export async function buildPluginPreview(root, out) {
     target: "es2022",
     jsx: "automatic",
     alias: { "@": join(root, "src") },
-    loader: { ".svg": "dataurl" },
+    loader: { ".svg": "dataurl", ".png": "dataurl" },
     define: { "process.env.NODE_ENV": '"production"' },
   });
   await build({
@@ -27,7 +27,7 @@ export async function buildPluginPreview(root, out) {
     target: "es2022",
     jsx: "automatic",
     alias: { "@": join(root, "src") },
-    loader: { ".svg": "dataurl" },
+    loader: { ".svg": "dataurl", ".png": "dataurl" },
     define: { "process.env.NODE_ENV": '"production"' },
   });
   await build({

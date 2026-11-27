@@ -36,6 +36,7 @@ const Card = compile(`${cardSource};return AppCard;`, {
   AppLogo: "logo",
   StatusBadge: "status",
   Button: "button",
+  Ellipsis: "ellipsis",
 });
 const buttonOf = (node) => {
   if (!node || typeof node !== "object") return null;
@@ -45,10 +46,9 @@ const buttonOf = (node) => {
 test("spec400 card actions always open details, including unavailable and recovery states", () => {
   for (const [state, configured, label] of [
     ["idle", true, "Connect"],
-    ["connected", true, "Manage"],
+    ["connected", true, "Connected"],
     ["reauthorize", true, "Reconnect"],
-    ["permission_incomplete", true, "Details"],
-    ["temporarily_unavailable", false, "Details"],
+    ["permission_incomplete", true, "Reconnect"],
     ["temporarily_unavailable", true, "Unavailable"],
   ]) {
     let trigger;
@@ -62,17 +62,15 @@ test("spec400 card actions always open details, including unavailable and recove
         },
       }),
     );
-    assert.equal(button.props.children, label);
-    assert.equal(button.props["aria-haspopup"], "dialog");
-    const target = {};
-    button.props.onClick({ currentTarget: target });
-    assert.equal(trigger, target);
+    assert.equal(button.props["aria-label"], label + " Gmail");
+    button.props.onClick();
+    assert.equal(trigger, "action");
   }
 });
 test("spec400 directory uses approved catalog, primary tabs, neutral scoped styles, and verified redirects", () => {
   assert.match(source, /const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map/);
   assert.match(source, /title="Connections"/);
-  assert.match(source, /description="Connect tools and sources to Kova"/);
+  assert.match(source, /description="Browse and manage the tools you use with KovaGPT."/);
   assert.match(source, /<TabsTrigger value="all">/);
   assert.match(source, /<TabsTrigger value="connected">/);
   assert.match(source, /status.connected && status.state === "connected"/);
@@ -82,5 +80,5 @@ test("spec400 directory uses approved catalog, primary tabs, neutral scoped styl
   const css = readFileSync("src/styles/spec400-plugins.css", "utf8");
   assert.match(css, /width: 38px/);
   assert.match(css, /max-width: 1080px/);
-  assert.doesNotMatch(css, /gradient/);
+  assert.doesNotMatch(css.replace(/\.kova-connection-hero-motion \{[^}]+\}/, ""), /gradient/);
 });

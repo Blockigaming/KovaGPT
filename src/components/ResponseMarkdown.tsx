@@ -1,5 +1,7 @@
 import {
   createContext,
+  lazy,
+  Suspense,
   memo,
   useContext,
   useEffect,
@@ -16,18 +18,27 @@ import type { Components, ExtraProps } from "react-markdown";
 import type { Element, Root, RootContent } from "hast";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import remarkInlineMarks from "@/lib/remark-inline-marks.mjs";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy, Download } from "lucide-react";
 import type { ResponseSource } from "@/lib/response-sources";
 import "katex/dist/katex.min.css";
 import "./response-output-blocks.css";
 import { observeTableOverflow } from "@/lib/table-overflow";
+import { describeFile, type ResponseFile } from "@/lib/response-files.mjs";
+import { ResponseFileCard } from "./ResponseFileCard";
+import { tableModelFromHast } from "@/lib/response-table.mjs";
+
+// Code colours, table sorting, diagrams and media load together, after the reply renders.
+const ResponseEnhanced = lazy(() => import("./response-enhanced/ResponseEnhanced"));
+const MEDIA_LINK = /\.(mp3|wav|ogg|oga|m4a|aac|flac|mp4|webm|mov|m4v|ogv)(?:[?#]|$)/iu;
 
 declare module "hast" {
   interface ElementData {
     kovaTextOutput?: string;
     kovaOutputLabel?: string;
     kovaCodeFilename?: string;
+    kovaCodeComplete?: boolean;
   }
 }
 
@@ -236,6 +247,7 @@ const writingLanguages = new Set([
   "document",
 ]);
 function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & ExtraProps) {
+  const { onOpenFile, activeFileName, fileInterrupted } = useContext(MarkdownActionsContext);
   const code = node?.children.length === 1 ? node.children[0] : undefined;
   if (
     code?.type !== "element" ||
@@ -262,6 +274,30 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
     "kova-xlsx": "Spreadsheet",
   }[language];
   const writing = Boolean(officeLabel) || writingLanguages.has(language.toLowerCase());
+  const filename = node?.data?.kovaCodeFilename;
+  if (language.toLowerCase() === "mermaid" && !filename)
+    return (
+      <Suspense
+        fallback={
+          <pre tabIndex={0} aria-label="Diagram source">
+            <code>{text}</code>
+          </pre>
+        }
+      >
+        <ResponseEnhanced kind="diagram" source={text} />
+      </Suspense>
+    );
+  if (filename && !officeLabel && onOpenFile) {
+    const file = describeFile(filename, language.toLowerCase(), text, node?.data?.kovaCodeComplete);
+    return (
+      <ResponseFileCard
+        file={file}
+        active={activeFileName === filename}
+        interrupted={fileInterrupted}
+        onOpen={onOpenFile}
+      />
+    );
+  }
   return (
     <ResponseContentBox
       text={text}
@@ -274,9 +310,15 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
       {writing ? (
         <ResponseMarkdown boxLongProse={false}>{text}</ResponseMarkdown>
       ) : (
-        <pre tabIndex={0} aria-label={`${language} code block`}>
-          <code className={className}>{text}</code>
-        </pre>
+        <Suspense
+          fallback={
+            <pre tabIndex={0} aria-label={`${language} code block`}>
+              <code className={className}>{text}</code>
+            </pre>
+          }
+        >
+          <ResponseEnhanced kind="code" language={language} text={text} />
+        </Suspense>
       )}
     </ResponseContentBox>
   );
@@ -309,11 +351,24 @@ function separateTextOutputs(options: { boxLongProse: boolean } = { boxLongProse
           const filename = /\b(?:filename|file)=(["'])(.*?)\1|\b(?:filename|file)=([^\s]+)/.exec(
             firstLine,
           );
-          if (filename)
+          if (filename) {
+            const end = child.position?.end.offset;
+            const raw = start === undefined || end === undefined ? "" : source.slice(start, end);
+            const fence = /^ {0,3}(`{3,}|~{3,})/.exec(raw)?.[1];
+            const lastLine = raw.trimEnd().split("\n").pop() ?? "";
             child.data = {
               ...child.data,
               kovaCodeFilename: safeOutputFilename(filename[2] || filename[3]),
+              // An unclosed fence is a file still being written by a streaming reply.
+              kovaCodeComplete: Boolean(
+                fence &&
+                raw.trimEnd().includes("\n") &&
+                new RegExp(`^ {0,3}${fence[0] === "`" ? "`" : "~"}{${fence.length},}\\s*$`).test(
+                  lastLine,
+                ),
+              ),
             };
+          }
         }
         visit(child);
       }
@@ -371,6 +426,10 @@ function separateTextOutputs(options: { boxLongProse: boolean } = { boxLongProse
 }
 
 type MarkdownActions = {
+  /** Named files (```html filename="game.html") render as cards that open this preview. */
+  onOpenFile?: (file: ResponseFile, trigger: HTMLButtonElement) => void;
+  activeFileName?: string;
+  fileInterrupted?: boolean;
   sources?: ResponseSource[];
   onSourceClick?: (sourceId: string, trigger: HTMLButtonElement) => void;
   onSaveImage?: (src: string, title: string) => Promise<void>;
@@ -382,6 +441,34 @@ const MarkdownActionsContext = createContext<MarkdownActions>({});
 function MarkdownLink({ node: _node, children, href, ...props }: ComponentProps<"a"> & ExtraProps) {
   const { sources, onSourceClick } = useContext(MarkdownActionsContext);
   const source = sources?.find((item) => item.url === href || item.id === href?.replace(/^#/, ""));
+  if (!source && href && /^https:\/\//iu.test(href) && MEDIA_LINK.test(href)) {
+    const media = /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/iu.test(href) ? "video" : "audio";
+    const label = typeof children === "string" ? children : `${media} file`;
+    return (
+      <Suspense
+        fallback={
+          <a {...props} href={href} target="_blank" rel="noreferrer noopener">
+            {children}
+          </a>
+        }
+      >
+        <ResponseEnhanced
+          kind="media"
+          src={href}
+          media={media}
+          label={label}
+          title={typeof props.title === "string" ? props.title : undefined}
+        />
+      </Suspense>
+    );
+  }
+  // Footnote references and back-links stay on this page.
+  if (!source && href?.startsWith("#"))
+    return (
+      <a {...props} href={href}>
+        {children}
+      </a>
+    );
   return source && onSourceClick ? (
     <button
       type="button"
@@ -459,10 +546,14 @@ const markdownComponents: Components = {
     ) : (
       <blockquote {...props}>{children}</blockquote>
     ),
-  table: ({ children }) => <ResponseTable>{children}</ResponseTable>,
-  strong: ({ children }) => (
-    <strong className="kova-response-emphasis font-semibold">{children}</strong>
+  table: ({ node, children }) => (
+    <Suspense fallback={<ResponseTable>{children}</ResponseTable>}>
+      <ResponseEnhanced kind="table" model={tableModelFromHast(node)}>
+        {children}
+      </ResponseEnhanced>
+    </Suspense>
   ),
+  strong: ({ children }) => <strong className="kova-response-emphasis">{children}</strong>,
   a: MarkdownLink,
   img: MarkdownImage,
   span: MarkdownSpan,
@@ -475,13 +566,32 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
   onSourceClick,
   onSaveImage,
   imageActions,
+  onOpenFile,
+  activeFileName,
+  fileInterrupted,
 }: MarkdownActions & {
   children: string;
   boxLongProse?: boolean;
 }) {
   const actions = useMemo(
-    () => ({ sources, onSourceClick, onSaveImage, imageActions }),
-    [sources, onSourceClick, onSaveImage, imageActions],
+    () => ({
+      sources,
+      onSourceClick,
+      onSaveImage,
+      imageActions,
+      onOpenFile,
+      activeFileName,
+      fileInterrupted,
+    }),
+    [
+      sources,
+      onSourceClick,
+      onSaveImage,
+      imageActions,
+      onOpenFile,
+      activeFileName,
+      fileInterrupted,
+    ],
   );
   return (
     <MarkdownActionsContext.Provider value={actions}>
@@ -491,7 +601,11 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
             ? url
             : defaultUrlTransform(url)
         }
-        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+        remarkPlugins={[
+          [remarkGfm, { singleTilde: false }],
+          [remarkMath, { singleDollarTextMath: false }],
+          remarkInlineMarks,
+        ]}
         rehypePlugins={[
           [separateTextOutputs, { boxLongProse }],
           [rehypeKatex, { trust: false, maxExpand: 300, maxSize: 20, strict: "ignore" }],

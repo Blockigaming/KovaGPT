@@ -972,7 +972,7 @@ html[data-kova-density="compact"]
   border-radius: var(--kova-radius-card);
   background: var(--background);
 }
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .spec400-primary,
   .kova-assistant-tabs input {
     min-height: 44px;
@@ -1119,7 +1119,7 @@ html[data-kova-density="compact"]
   }
 }
 
-.kova-page :is(#library-title, #scheduled-tasks-title) {
+.kova-page :is(#library-title, #projects-title, #scheduled-tasks-title, #apps-title) {
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-weight: 600;
 }

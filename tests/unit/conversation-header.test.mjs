@@ -128,6 +128,7 @@ function fixture(overrides = {}, desktop = true) {
     react: {
       lazy: () => "LazyComponent",
       Suspense: "Suspense",
+      useId: () => "activity-id",
       useMemo: (fn) => fn(),
       useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
       useState(initial) {
@@ -151,6 +152,8 @@ function fixture(overrides = {}, desktop = true) {
     "@/lib/chat-output-templates": starterTemplates,
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "lucide-react": primitives([
+      "Check",
+      "CircleAlert",
       "ArrowLeft",
       "Archive",
       "File",
@@ -180,17 +183,19 @@ function fixture(overrides = {}, desktop = true) {
     "@/components/auth/ClerkSafe": {
       useUser: () => ({ user: { id: "owner" }, isLoaded: true, isSignedIn: true }),
     },
+    "@/lib/browser-activity-contract.mjs": { browserActivityIsFresh: () => true },
     "@/lib/conversation-sources": {
       conversationSources: (conversation) => ({
         web: [],
         memory: overrides.sourceMemory ?? [],
         attachments: conversation.messages.flatMap((message) => message.attachments ?? []),
-        browser: [],
+        browser: overrides.sourceBrowser ?? [],
       }),
     },
     "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: desktop }) },
     "./MobileBottomSheet": { MobileBottomSheet: "MobileBottomSheet" },
     "./MessageActivityList": { MessageActivityList: "MessageActivityList" },
+    "./ConversationSourcesView": { ConversationInputRows: "ConversationInputRows" },
     "./ConversationSourcesPanel": {
       ConversationSourcesPanel: "ConversationSourcesPanel",
       ConversationActivitySummary: "ConversationActivitySummary",
@@ -277,10 +282,6 @@ test("Activity shows Outputs and Sources before any content exists", () => {
   const activity = nodes(root).find((node) => node.type === "PopoverContent");
   assert.equal(activity.props["aria-label"], "Activity");
   assert.match(text(activity), /Outputs.*Create an output.*Sources.*Attach files or connect apps/);
-  const browserPanel = nodes(activity).find(
-    (node) => node.type === "ConversationSourcesPanel" && node.props.browserOnly,
-  );
-  assert.equal(browserPanel.props.conversation, chat);
   assert.equal(
     nodes(activity).filter((node) => node.props.className === "kova-output-row").length,
     0,
@@ -418,7 +419,7 @@ test("attachment preview returns focus to the visible Activity button", () => {
     (node) => node.type === "button" && node.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("u:attachment:0");
   root = f.render();
   nodes(root)
@@ -443,7 +444,7 @@ test("per-output downloads still use only the selected attachment", async () => 
     },
   });
   nodes(f.render())
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("file-message:attachment:0");
   const originalDocument = globalThis.document;
   const originalCreate = URL.createObjectURL;
@@ -503,7 +504,7 @@ test("outputs open real attachment content and report missing originals truthful
   });
   let root = f.render();
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("u:attachment:0");
   root = f.render();
   assert.equal(text(nodes(root).find((node) => node.type === "pre")), "Exact attached content");
@@ -527,7 +528,7 @@ test("outputs open real attachment content and report missing originals truthful
   });
   root = library.render();
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
+    .find((node) => node.type === "ConversationInputRows")
     .props.onOpenAttachment("u:attachment:0");
   root = library.render();
   assert.match(text(root), /This chat keeps a Library reference/);
@@ -578,14 +579,14 @@ test("memory inspection closes the popover and restores the Activity trigger", (
 });
 
 test("unbound browser activity opens an honest detail dialog and restores Activity", () => {
-  const f = fixture();
+  const f = fixture({ sourceBrowser: [{}] });
   let root = f.render();
   const target = { id: "outputs" };
   nodes(root).find(
     (n) => n.type === "button" && n.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
-    .find((n) => n.type === "ConversationSourcesPanel" && n.props.browserOnly)
+    .find((n) => n.type === "ConversationSourcesPanel" && n.props.compactBrowser)
     .props.onOpenBrowser({ id: "event", label: "Recorded sample" });
   root = f.render();
   assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, false);
@@ -612,6 +613,7 @@ test("unbound browser activity opens an honest detail dialog and restores Activi
 test("Free recorded browser history never grants sample takeover or claims a live session", () => {
   const f = fixture({
     userTier: "free",
+    sourceBrowser: [{}],
     browserPresentation: {
       thumbnail: "fake",
       renderDialog() {
@@ -621,7 +623,7 @@ test("Free recorded browser history never grants sample takeover or claims a liv
   });
   let root = f.render();
   const sources = nodes(root).find(
-    (n) => n.type === "ConversationSourcesPanel" && n.props.browserOnly,
+    (n) => n.type === "ConversationSourcesPanel" && n.props.compactBrowser,
   );
   assert.equal(sources.props.browserPreview, undefined);
   sources.props.onOpenBrowser({ id: "sample", label: "Recorded event" });
@@ -646,7 +648,7 @@ test("composer action disc uses a compact desktop control and full phone target"
   assert.match(css, /\.spec400-composer \{[^}]*--composer-action-size: 36px;/);
   assert.match(
     css,
-    /@media \(any-pointer: coarse\), \(max-width: 1023px\) \{\s*\.spec400-composer \{\s*--composer-action-size: 44px;/,
+    /@media \(width < 1024px\) \{\s*\.spec400-composer \{\s*--composer-action-size: 44px;/,
   );
   const sharedAction = css.match(
     /\.spec400-composer-trailing \.spec400-primary-voice,\s*\.spec400-composer-trailing \[data-testid="stop-button"\],\s*\.spec400-composer-trailing \[data-testid="send-button"\] \{([^}]*)\}/,
@@ -657,7 +659,7 @@ test("composer action disc uses a compact desktop control and full phone target"
   }
   assert.match(
     css,
-    /@media \(max-width: 1023px\), \(any-pointer: coarse\)[\s\S]*\.spec400-send-button \{\s*min-width: 44px;\s*width: 44px;\s*height: 44px;\s*min-height: 44px/,
+    /@media \(width < 1024px\)[\s\S]*\.spec400-send-button \{\s*min-width: 44px;\s*width: 44px;\s*height: 44px;\s*min-height: 44px/,
   );
   assert.match(css, /\.spec400-send-button \{[^}]*border-radius: 50%/);
   assert.doesNotMatch(css, /border: 4px solid transparent !important/);

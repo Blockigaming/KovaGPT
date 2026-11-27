@@ -583,24 +583,6 @@ button.kova-sidebar-scrim {
   font-weight: 500;
   line-height: 24px;
 }
-@media (max-width: 599px) {
-  .kova-mobile-home-actions {
-    gap: 0;
-    --mobile-header-icon-inset: 6px;
-  }
-  .kova-mobile-home-actions:has(> :nth-child(3)) {
-    --mobile-header-icon-inset: 12px;
-  }
-  .kova-mobile-home-actions:dir(rtl) {
-    --mobile-header-direction: -1;
-  }
-  .kova-mobile-home-actions > :first-child:not(:last-child) > svg {
-    translate: calc(var(--mobile-header-icon-inset) * var(--mobile-header-direction, 1));
-  }
-  .kova-mobile-home-actions > :last-child:not(:first-child) > svg {
-    translate: calc(-1 * var(--mobile-header-icon-inset) * var(--mobile-header-direction, 1));
-  }
-}
 @media (min-width: 1024px) {
   .kova-sidebar-rail[data-kova-core-rail] {
     display: flex;
@@ -609,9 +591,11 @@ button.kova-sidebar-scrim {
     display: none;
   }
 }
-@media (width < 1024px), (pointer: coarse) and (hover: none) {
+@media (width < 1024px) {
   .kova-sidebar[data-kova-core-sidebar] {
     position: fixed;
+    --sidebar-row-height: 44px;
+    --sidebar-button-size: 44px;
     --sidebar-motion: 240ms;
     --kova-sidebar-drawer-width: min(86vw, 360px);
     inset: var(--kova-visible-top, 0px) auto auto 0;
@@ -663,8 +647,7 @@ button.kova-sidebar-scrim {
     font-size: 16px;
   }
 }
-@media (pointer: coarse), (max-width: 1023px) {
-  .kova-sidebar[data-kova-core-sidebar],
+@media (width < 1024px) {
   .kova-sidebar-rail[data-kova-core-rail] {
     --sidebar-row-height: 44px;
     --sidebar-button-size: 44px;
@@ -766,7 +749,7 @@ button.kova-auth-sign-up:hover {
   color: #fff;
   opacity: 0.85;
 }
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-topbar button.kova-auth-primary,
   .kova-desktop-topbar button.kova-auth-primary,
   button.kova-auth-sign-up {
@@ -783,7 +766,7 @@ button.kova-auth-sign-up:hover {
   margin-block: 7px;
 }
 
-@media (pointer: coarse), (max-width: 1023px) {
+@media (width < 1024px) {
   .kova-sidebar .kova-chat-quick-pin {
     opacity: 1;
   }
@@ -983,27 +966,6 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
   }
 }
 
-/* A touch tablet keeps the same drawer width as a 390px phone. */
-@media (min-width: 1024px) and (pointer: coarse) and (hover: none) {
-  .kova-sidebar-rail[data-kova-core-rail],
-  .kova-desktop-topbar,
-  .kova-sidebar-toggle[aria-label="Collapse sidebar"] {
-    display: none;
-  }
-
-  .kova-topbar:not(.kova-desktop-topbar) {
-    display: block;
-  }
-
-  .kova-sidebar-scrim[data-state="open"] {
-    display: block;
-  }
-
-  .kova-sidebar-toggle[aria-label="Close sidebar"] {
-    display: flex;
-  }
-}
-
 @media (pointer: coarse) {
   .kova-sidebar .kova-chat-row-main {
     -webkit-touch-callout: none;
@@ -1184,4 +1146,10 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
 }
 .kova-chat-search-results small {
   color: var(--muted-foreground);
+}
+
+@media (hover: none) {
+  .kova-sidebar :is(.kova-chat-options, .kova-chat-quick-pin) {
+    opacity: 1;
+  }
 }

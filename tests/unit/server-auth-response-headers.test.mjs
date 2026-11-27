@@ -35,6 +35,7 @@ function serverWithRoute(fetch, enabled = false) {
   vm.runInNewContext(compiled, {
     module,
     exports: module.exports,
+    process: { env: {} },
     URL,
     Headers,
     Request,
@@ -138,6 +139,7 @@ test("Start middleware permits same-origin microphone and preserves a route's st
   vm.runInNewContext(start, {
     module,
     exports: module.exports,
+    process: { env: {} },
     URL,
     Headers,
     Request,

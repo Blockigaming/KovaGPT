@@ -211,14 +211,14 @@ test("saved speech rejects tampered, stale or revoked-model replies before quota
 
 const catalog = [
   {
-    id: "standard",
+    id: "jessica",
     label: "Fixture Standard",
     providerVoiceId: "fixtureStandardProvider",
     modelId: "eleven_flash_v2_5",
     allowedPlans: ["free", "plus", "pro"],
   },
   {
-    id: "expressive",
+    id: "lauren",
     label: "Fixture Expressive",
     providerVoiceId: "fixtureExpressiveProvider",
     modelId: "eleven_v4",
@@ -245,7 +245,7 @@ test("saved-response speech resolves the opaque selected voice and model from th
       return null;
     },
   });
-  const response = await f.handler(request({ ...input, voiceId: "expressive" }));
+  const response = await f.handler(request({ ...input, voiceId: "lauren" }));
   assert.equal(response.status, 200);
   await response.arrayBuffer();
   const [url, init] = f.calls.provider[0];
@@ -257,7 +257,7 @@ test("saved-response speech resolves the opaque selected voice and model from th
 
 test("catalog-only default voice works without a legacy provider voice binding", async () => {
   const f = fixture({
-    config: configuredSpeech("plus", { KOVA_VOICE_DEFAULT_ID: "expressive" }),
+    config: configuredSpeech("plus", { KOVA_VOICE_DEFAULT_ID: "lauren" }),
   });
   const response = await f.handler(request());
   assert.equal(response.status, 200);
@@ -281,21 +281,21 @@ test("legacy saved-response speech keeps its configured voice and multilingual m
 });
 
 for (const [name, selected, overrides, code, status] of [
-  ["locked", "expressive", {}, "speech_voice_plan_required", 403],
+  ["locked", "lauren", {}, "speech_voice_plan_required", 403],
   ["unknown", "missing", {}, "speech_invalid_voice", 400],
   ["provider ID", "fixtureStandardProvider", {}, "speech_invalid_voice", 400],
   ["malformed", "../escape", {}, "speech_invalid_voice", 400],
   ["null", null, {}, "speech_invalid_voice", 400],
   [
     "invalid catalog",
-    "standard",
+    "jessica",
     { KOVA_VOICE_CATALOG: "broken", ELEVENLABS_VOICE_ID: "noFallback" },
     "speech_not_configured",
     503,
   ],
   [
     "unsupported catalog model",
-    "standard",
+    "jessica",
     { KOVA_VOICE_CATALOG: JSON.stringify([{ ...catalog[0], modelId: "unknown" }]) },
     "speech_not_configured",
     503,
@@ -313,7 +313,7 @@ for (const [name, selected, overrides, code, status] of [
 test("caller cannot override the catalog provider/model on saved-response speech", async () => {
   const f = fixture({ config: configuredSpeech("plus") });
   const response = await f.handler(
-    request({ ...input, voiceId: "expressive", modelId: "eleven_flash_v2_5" }),
+    request({ ...input, voiceId: "lauren", modelId: "eleven_flash_v2_5" }),
   );
   assert.equal(response.status, 400);
   assert.equal(f.calls.limits.length, 0);
@@ -672,4 +672,53 @@ test("Stop discards queued audio before the next downstream read", async () => {
   controller.abort();
   await assert.rejects(response.body.getReader().read(), /speech_stream_interrupted/);
   assert.equal(canceled, true);
+});
+
+test("every voice spends the plan's daily voice quota before provider work", async () => {
+  for (const [tier, voiceId] of [
+    ["free", "jessica"],
+    ["plus", "lauren"],
+    ["pro", "jessica"],
+  ]) {
+    const charged = [];
+    const f = fixture({
+      config: configuredSpeech(tier),
+      quota: async () => {
+        charged.push(f.calls.provider.length);
+        return null;
+      },
+    });
+    const response = await f.handler(request({ ...input, voiceId }));
+    assert.equal(response.status, 200, `${tier}/${voiceId}`);
+    await response.arrayBuffer();
+    // Exactly one unit, reserved while the provider had not been called yet.
+    assert.deepEqual(charged, [0], `${tier}/${voiceId}`);
+    assert.equal(f.calls.provider.length, 1);
+  }
+});
+
+test("an exhausted daily voice quota blocks speech before any provider call", async () => {
+  const f = fixture({
+    config: configuredSpeech("free"),
+    quota: async () =>
+      Response.json({ error: "Daily voice request limit reached" }, { status: 429 }),
+  });
+  const response = await f.handler(request({ ...input, voiceId: "jessica" }));
+  assert.equal(response.status, 429);
+  assert.equal(f.calls.provider.length, 0);
+});
+
+test("a free account cannot speak with a Plus-only voice, and is not charged for the refusal", async () => {
+  let charged = 0;
+  const f = fixture({
+    config: configuredSpeech("free"),
+    quota: async () => {
+      charged++;
+      return null;
+    },
+  });
+  const response = await f.handler(request({ ...input, voiceId: "lauren" }));
+  assert.equal(response.status, 403);
+  assert.equal(charged, 0);
+  assert.equal(f.calls.provider.length, 0);
 });

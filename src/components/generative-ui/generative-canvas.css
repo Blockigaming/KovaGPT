@@ -314,7 +314,7 @@
   line-height: 18px;
   color: var(--muted-foreground);
 }
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-generative-canvas button {
     min-height: 44px;
   }

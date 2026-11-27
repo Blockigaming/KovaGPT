@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getCallerTier, requireVerifiedUser } from "@/lib/api-auth.server";
+import { enforceQuota, getCallerTier, requireVerifiedUser } from "@/lib/api-auth.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { createSpeechHandler, speechConfiguration } from "@/lib/speech.server.mjs";
 import { assertImagePrincipal } from "@/lib/multimodal/image-source.server.mjs";
+import { voiceConfiguration } from "@/lib/voice/elevenlabs.server.mjs";
 import { voiceModelPolicy } from "@/lib/voice/openai-model-eligibility.server.mjs";
 
 // Reuse the existing live-session/deletion-fence check; no new Auth implementation.
@@ -20,6 +21,16 @@ const speechPost = () =>
         { ownerId, chatId, operationId: request.headers.get("x-kova-acceptance-operation") ?? "" },
         () => generationAcceptance.speech({ ...input, ownerId, chatId }),
       );
+    },
+    quota: async (auth, signal) => {
+      const { dailyLimit } = voiceConfiguration(runtimeEnv, await getCallerTier(auth));
+      // Fail closed: speech never runs without a configured plan allowance.
+      if (!Number.isSafeInteger(dailyLimit) || dailyLimit < 1)
+        return Response.json(
+          { error: "speech_limits_unavailable" },
+          { status: 503, headers: { "Cache-Control": "private, no-store" } },
+        );
+      return enforceQuota(auth, "voice", dailyLimit, 1, signal);
     },
     config: async (auth, input) =>
       speechConfiguration(runtimeEnv, await getCallerTier(auth), input.voiceId),

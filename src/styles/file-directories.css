@@ -679,7 +679,7 @@ html[data-kova-density="compact"] .kova-core-page.kova-file-directory .kova-file
   }
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-core-page.kova-file-directory .kova-file-filters button,
   .kova-core-page.kova-file-directory .kova-file-view-toggle button {
     min-width: 44px;

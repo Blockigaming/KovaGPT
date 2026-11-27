@@ -194,7 +194,20 @@ export function inspectConfiguredVoiceComposer(source) {
     const button = buttons[0];
     const click = attr(button, "onClick")?.initializer;
     const handler = click && ts.isJsxExpression(click) ? click.expression : undefined;
-    const call = handler && ts.isArrowFunction(handler) ? handler.body : undefined;
+    const body = handler && ts.isArrowFunction(handler) ? handler.body : undefined;
+    const branch =
+      body && ts.isBlock(body) && body.statements.length === 1 ? body.statements[0] : undefined;
+    const inlineVoice =
+      mode === "voice" &&
+      branch &&
+      ts.isIfStatement(branch) &&
+      branch.expression.getText(file).replace(/\s+/gu, "") === 'activeVoiceMode==="voice"' &&
+      ts.isExpressionStatement(branch.thenStatement) &&
+      branch.thenStatement.expression.getText(file).replace(/\s+/gu, "") ===
+        "setVoiceOpenMode(null)" &&
+      branch.elseStatement &&
+      ts.isExpressionStatement(branch.elseStatement);
+    const call = inlineVoice ? branch.elseStatement.expression : body;
     const exactOpen =
       call &&
       ts.isCallExpression(call) &&
@@ -217,10 +230,29 @@ export function inspectConfiguredVoiceComposer(source) {
           !attr(button, "aria-haspopup") &&
           attr(button, "aria-expanded")?.initializer?.getText(file).replace(/\s+/gu, "") ===
             '{activeVoiceMode==="dictate"}'
-        : literal(button, "aria-haspopup") === "dialog";
+        : inlineVoice
+          ? !attr(button, "aria-haspopup") &&
+            attr(button, "aria-controls")?.initializer?.getText(file).replace(/\s+/gu, "") ===
+              '{activeVoiceMode==="voice"?"kova-inline-voice":undefined}' &&
+            attr(button, "aria-expanded")?.initializer?.getText(file).replace(/\s+/gu, "") ===
+              '{activeVoiceMode==="voice"}'
+          : literal(button, "aria-haspopup") === "dialog";
+    const labelValue = attr(button, "aria-label")?.initializer;
+    const labelExpression =
+      labelValue && ts.isJsxExpression(labelValue) ? labelValue.expression : undefined;
+    const validLabel = inlineVoice
+      ? labelExpression &&
+        ts.isConditionalExpression(labelExpression) &&
+        labelExpression.condition.getText(file).replace(/\s+/gu, "") ===
+          'activeVoiceMode==="voice"' &&
+        ts.isStringLiteral(labelExpression.whenTrue) &&
+        labelExpression.whenTrue.text === "Stop voice" &&
+        ts.isStringLiteral(labelExpression.whenFalse) &&
+        labelExpression.whenFalse.text === label
+      : literal(button, "aria-label") === label;
     if (
       literal(button, "type") !== "button" ||
-      literal(button, "aria-label") !== label ||
+      !validLabel ||
       !validSurface ||
       !attr(button, "disabled") ||
       !safeAttributes ||

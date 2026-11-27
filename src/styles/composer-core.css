@@ -151,7 +151,7 @@
   padding-block: 6px;
   border-radius: var(--kova-radius-compact);
 }
-@media (any-pointer: coarse), (max-width: 1023px) {
+@media (width < 1024px) {
   .kova-model-trigger,
   .kova-composer-action,
   .kova-composer-plugin {
@@ -160,7 +160,7 @@
 }
 
 /* Two columns keep touch-sized attachment actions inside a short popup. */
-@media (any-pointer: coarse) and (min-width: 768px) {
+@media (768px <= width < 1024px) and (any-pointer: coarse) {
   .kova-composer-menu.spec400-attach-menu {
     width: 22rem;
   }
@@ -309,7 +309,7 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-drawing-toolbar button,
   .kova-drawing-colors button,
   .kova-drawing-colors input {
@@ -415,4 +415,10 @@
   font-size: 16px;
   line-height: 24px;
   caret-color: var(--foreground);
+}
+.kova-composer-menu-section {
+  display: grid;
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
 }

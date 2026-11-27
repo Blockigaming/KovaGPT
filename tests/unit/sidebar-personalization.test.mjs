@@ -170,7 +170,7 @@ test("sidebar colors and bounded drawer width come from one shared owner without
   assert.equal(property(desktop, "--sidebar-row-height"), "36px");
   const mobile = sharedRules.find(
     (rule) =>
-      rule.parent.params === "(width < 1024px), (pointer: coarse) and (hover: none)" &&
+      rule.parent.params === "(width < 1024px)" &&
       rule.selector === ".kova-sidebar[data-kova-core-sidebar]",
   );
   assert.equal(property(mobile, "width"), "var(--kova-sidebar-drawer-width)");
@@ -209,7 +209,7 @@ test("sidebar colors and bounded drawer width come from one shared owner without
 test("navigation keeps dense desktop rows, touch targets and account outside scrollable shortcuts", () => {
   const touch = sharedRules.find(
     (rule) =>
-      rule.parent.params === "(pointer: coarse), (max-width: 1023px)" &&
+      rule.parent.params === "(width < 1024px)" &&
       rule.selector.includes(".kova-sidebar[data-kova-core-sidebar]") &&
       property(rule, "--sidebar-row-height"),
   );

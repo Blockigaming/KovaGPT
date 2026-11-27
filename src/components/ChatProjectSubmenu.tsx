@@ -22,8 +22,8 @@ export function ChatProjectSubmenu({
   onSelect: (id: string) => void;
 }) {
   const list = useServerFn(listProjects);
-  const { isMobile, interaction } = useLayout();
-  const inlineChoices = isMobile || interaction === "touch";
+  const { isMobile, isDesktop, interaction } = useLayout();
+  const inlineChoices = isMobile || (!isDesktop && interaction === "touch");
   const [expandedOwner, setExpandedOwner] = useState<string | null>(null);
   const [state, setState] = useState<{
     owner: string;

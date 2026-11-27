@@ -53,56 +53,64 @@
   }
 
   .kova-assistant .kova-empty-chat {
-    padding: 0 max(var(--phone-gutter), var(--safe-right)) 0
-      max(var(--phone-gutter), var(--safe-left));
+    padding-inline: max(var(--phone-gutter), var(--safe-left))
+      max(var(--phone-gutter), var(--safe-right));
   }
 
-  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
-    flex: 1 0 auto;
-    align-items: stretch;
-    justify-content: flex-start;
-    min-height: 100%;
-    padding-block: clamp(18px, 5dvh, 44px) 0 !important;
-  }
+  /* Phone-app home: greeting at the top, composer pinned to the bottom.
+     The website keeps the centered desktop home on every screen size. */
+  :where(:root[data-kova-surface="app"]) {
+    .kova-assistant .kova-empty-chat {
+      padding-block: 0;
+    }
 
-  .kova-assistant[data-keyboard-open="true"] section.kova-empty-chat > .kova-empty-chat-content {
-    padding-block-start: 8px !important;
-  }
+    .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+      flex: 1 0 auto;
+      align-items: stretch;
+      justify-content: flex-start;
+      min-height: 100%;
+      padding-block: clamp(18px, 5dvh, 44px) 0 !important;
+    }
 
-  .kova-assistant .kova-empty-chat .kova-greeting {
-    align-items: flex-start;
-    margin-block-end: clamp(16px, 4dvh, 32px);
-  }
+    .kova-assistant[data-keyboard-open="true"] section.kova-empty-chat > .kova-empty-chat-content {
+      padding-block-start: 8px !important;
+    }
 
-  .kova-assistant .kova-empty-chat .kova-greeting h1 {
-    max-width: none;
-    font-family: var(--font-ui);
-    font-size: clamp(1.75rem, 7vw, 2.375rem);
-    font-weight: 600;
-    line-height: 1.1;
-    text-align: start;
-  }
+    .kova-assistant .kova-empty-chat .kova-greeting {
+      align-items: flex-start;
+      margin-block-end: clamp(16px, 4dvh, 32px);
+    }
 
-  .kova-assistant .kova-empty-composer {
-    position: sticky;
-    z-index: 2;
-    inset-block-end: 0;
-    order: 1;
-    margin-block-start: auto;
-    padding-block: 8px max(8px, var(--safe-bottom));
-    background: var(--background);
-  }
+    .kova-assistant .kova-empty-chat .kova-greeting h1 {
+      max-width: none;
+      font-family: var(--font-ui);
+      font-size: clamp(1.75rem, 7vw, 2.375rem);
+      font-weight: 600;
+      line-height: 1.1;
+      text-align: start;
+    }
 
-  .kova-assistant .kova-empty-composer .spec400-composer {
-    min-height: 0;
-    padding-block-start: 8px;
-    gap: 3px;
-    --chat-composer-corner: 21px;
-    border-radius: var(--chat-composer-corner);
-  }
+    .kova-assistant .kova-empty-composer {
+      position: sticky;
+      z-index: 2;
+      inset-block-end: 0;
+      order: 1;
+      margin-block-start: auto;
+      padding-block: 8px max(8px, var(--safe-bottom));
+      background: var(--background);
+    }
 
-  .kova-assistant .kova-empty-composer .spec400-input-region {
-    min-height: 36px;
+    .kova-assistant .kova-empty-composer .spec400-composer {
+      min-height: 0;
+      padding-block-start: 8px;
+      gap: 3px;
+      --chat-composer-corner: 21px;
+      border-radius: var(--chat-composer-corner);
+    }
+
+    .kova-assistant .kova-empty-composer .spec400-input-region {
+      min-height: 36px;
+    }
   }
 
   .kova-phone-workspace[data-ui="modern"] .kova-app-content main:is(.kova-page, .kova-tool-page) {

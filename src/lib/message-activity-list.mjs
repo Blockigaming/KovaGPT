@@ -42,12 +42,51 @@ export function messageActivitiesFromDelta(current, delta) {
       : {}),
     ...(receipt ? { taskReceipt: receipt } : {}),
     ...(failure ? { taskFailure: failure } : {}),
-    status:
-      delta.status === "failed" || delta.status === "canceled"
-        ? delta.status
-        : delta.status === "running" || delta.status === "pending"
-          ? "running"
-          : "done",
+    ...(typeof delta.detail === "string" && delta.detail.trim()
+      ? { detail: delta.detail.trim().slice(0, 200) }
+      : {}),
+    ...(Number.isSafeInteger(delta.count) && delta.count >= 0 ? { count: delta.count } : {}),
+    ...(Number.isSafeInteger(delta.total) && delta.total > 0 ? { total: delta.total } : {}),
+    ...(Number.isSafeInteger(delta.duration_ms) && delta.duration_ms >= 0
+      ? { durationMs: delta.duration_ms }
+      : {}),
+    ...(typeof delta.parent_id === "string" && delta.parent_id.trim()
+      ? { parentId: delta.parent_id.slice(0, 160) }
+      : {}),
+    status: ACTIVITY_DELTA_STATUSES.has(delta.status)
+      ? delta.status
+      : delta.status === "running" || delta.status === "pending"
+        ? "running"
+        : "done",
+  });
+}
+
+const ACTIVITY_DELTA_STATUSES = new Set([
+  "failed",
+  "canceled",
+  "queued",
+  "paused",
+  "skipped",
+  "partial",
+]);
+const LIVE_STATUSES = new Set(["running", "queued", "paused"]);
+
+/**
+ * Record when a live operation was first seen and, once it settles, how long it ran.
+ * Times come from this client's clock only; nothing is claimed that was not observed.
+ */
+export function timeMessageActivities(previous = [], next = [], now = Date.now()) {
+  return next.map((activity, index) => {
+    const before = activity.activityId
+      ? previous.find((item) => item.activityId === activity.activityId)
+      : previous[index];
+    const startedAt =
+      before?.startedAt ?? (activity.status === "running" ? now : activity.startedAt);
+    const settled = !LIVE_STATUSES.has(activity.status);
+    const timed = startedAt === undefined ? activity : { ...activity, startedAt };
+    return settled && startedAt !== undefined && timed.durationMs === undefined
+      ? { ...timed, durationMs: Math.max(0, now - startedAt) }
+      : timed;
   });
 }
 
@@ -66,7 +105,7 @@ export function receiveMessageActivity(delta, principal, conversationId, message
     publishLiveBrowserActivity({ principal, conversationId, messageId, expiresAt, activity });
     expiryTimer = window.setTimeout(() => publishLiveBrowserActivity(null), expiresAt - Date.now());
   }
-  return (current = []) => appendMessageActivity(current, activity);
+  return (current = []) => timeMessageActivities(current, appendMessageActivity(current, activity));
 }
 
 // Keep each operation in arrival order; only its own status updates replace a row.

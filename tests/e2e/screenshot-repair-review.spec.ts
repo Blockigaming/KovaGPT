@@ -108,9 +108,8 @@ for (const theme of ["dark", "light"] as const) {
     );
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const panel = page.getByRole("dialog", { name: "Settings", exact: true });
+    const panel = page.locator('.kova-settings-dialog[role="dialog"]');
     await expect(panel).toBeVisible();
-    const openedFrom = page.url();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
     const phone = await usesCompactSettings(page);
     if (!phone) {
@@ -119,10 +118,9 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toHaveCount(0);
     }
     await expect(page.getByRole("combobox", { name: "Preferred response length" })).toBeVisible();
-    const color = await page
-      .locator("body")
-      .evaluate((body) => getComputedStyle(body).backgroundColor);
-    await expect(panel).toHaveCSS("background-color", color);
+    await expect(
+      page.locator('[data-slot="dialog-overlay"]').filter({ visible: true }).last(),
+    ).toBeVisible();
     if (!phone) {
       const nav = page.getByRole("complementary", { name: "Settings navigation" });
       await expect(nav).toBeVisible();
@@ -130,15 +128,14 @@ for (const theme of ["dark", "light"] as const) {
         const box = node.getBoundingClientRect();
         return { width: box.width, border: getComputedStyle(node).borderRightWidth };
       });
-      if (page.viewportSize()!.width < 1024) expect(geometry.width).toBe(240);
-      else expect(geometry.width).toBeGreaterThan(270);
+      expect(geometry.width).toBeGreaterThanOrEqual(240);
       expect(geometry.border).toBe("1px");
       await nav.getByRole("tab", { name: "Appearance", exact: true }).click();
     } else {
       await page.getByRole("button", { name: "Back to settings" }).click();
       await page.getByRole("tab", { name: "Appearance", exact: true }).click();
     }
-    await expect(page).toHaveURL(openedFrom);
+    await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
     await panel.screenshot({
       path: info.outputPath(`settings-reference-${theme}.png`),

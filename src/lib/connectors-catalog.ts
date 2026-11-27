@@ -40,31 +40,32 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "granola",
     label: "Granola",
-    description: "Planned connection for meeting notes and shared context.",
+    description: "Search recent meeting note titles and dates allowed by your Granola API key.",
     category: "Notes & Docs",
-    status: "planned",
+    status: "setup_required",
     domain: "granola.ai",
   },
   {
     id: "tana",
     label: "Tana",
-    description: "Planned connection for structured notes, tasks and workspace context.",
+    description: "Search notes and workspace items using your Tana authorization.",
     category: "Notes & Docs",
-    status: "planned",
+    status: "setup_required",
     domain: "tana.inc",
   },
   {
     id: "etoro",
     label: "eToro",
-    description: "Planned eToro connection. Account eligibility and API access are unverified.",
+    description: "Read real-account portfolio value, cash balance, and unrealized P&L.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "etoro.com",
   },
   {
     id: "excalidraw",
     label: "Excalidraw",
-    description: "Planned Excalidraw integration for diagrams.",
+    description:
+      "Attach an Excalidraw scene to chat or export a Kova sketch for editing in Excalidraw.",
     category: "Productivity",
     status: "planned",
     domain: "excalidraw.com",
@@ -72,59 +73,57 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "gamma",
     label: "Gamma",
-    description: "Planned Gamma integration for presentations and documents.",
+    description: "Find document titles and links in the Gamma workspace you authorize.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "gamma.app",
   },
   {
     id: "google-bigquery",
     label: "Google Cloud BigQuery",
-    description:
-      "Planned BigQuery connection. Dataset access and billing must be configured separately.",
+    description: "List dataset metadata in an authorized Google Cloud project.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "cloud.google.com",
   },
   {
     id: "hubspot",
     label: "HubSpot",
-    description: "Planned HubSpot connection for CRM context.",
+    description: "Search authorized CRM company names and domains.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "hubspot.com",
   },
   {
     id: "hyperframes-heygen",
     label: "HyperFrames by HeyGen",
-    description: "Planned HyperFrames by HeyGen integration.",
+    description: "Read recent HyperFrames render titles and statuses from HeyGen.",
     category: "Social & Media",
-    status: "planned",
+    status: "setup_required",
     domain: "heygen.com",
   },
   {
     id: "interactive-brokers",
     label: "Interactive Brokers (IBKR)",
-    description:
-      "Planned Interactive Brokers connection. Account eligibility and API access are unverified.",
+    description: "Read open positions from your selected Activity Flex report.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "interactivebrokers.com",
   },
   {
     id: "meltwater",
     label: "Meltwater",
-    description: "Planned Meltwater connection for media intelligence.",
+    description: "Find saved media searches by name.",
     category: "Social & Media",
-    status: "planned",
+    status: "setup_required",
     domain: "meltwater.com",
   },
   {
     id: "sp-global",
     label: "S&P Global",
-    description: "Planned S&P Global connection. Licensed data access must be verified.",
+    description: "Find companies by name with licensed S&P Capital IQ API access.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "spglobal.com",
   },
   {
@@ -138,18 +137,17 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "webull",
     label: "Webull",
-    description: "Planned Webull connection. Account eligibility and API access are unverified.",
+    description: "List account types available to your Webull OpenAPI app.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "webull.com",
   },
   {
     id: "custom-mcp",
     label: "Custom MCP connectors",
-    description:
-      "Bring your own MCP server. Server registration, authentication and tool review are not implemented yet.",
+    description: "Connect an approved MCP server and query its reviewed read tool.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "",
   },
   {
@@ -164,7 +162,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "apple-health",
     label: "Apple Health",
-    description: "Requires native iOS HealthKit implementation and on-device permission.",
+    description: "Read approved HealthKit trends on the KovaGPT Health iOS app.",
     category: "Productivity",
     status: "planned",
     domain: "apple.com",
@@ -172,7 +170,8 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "android-health-connect",
     label: "Android Health Connect",
-    description: "Requires native Android Health Connect implementation and on-device permission.",
+    description:
+      "Read approved steps, sleep, and heart-rate trends on the KovaGPT Health Android app.",
     category: "Productivity",
     status: "planned",
     domain: "android.com",
@@ -281,9 +280,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "box",
     label: "Box",
-    description: "Reference files from Box.",
+    description: "Search files you can access in Box.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "box.com",
   },
   {
@@ -313,7 +312,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "notion",
     label: "Notion",
-    description: "Read and update Notion pages.",
+    description: "Search and read Notion pages you share with Kova.",
     category: "Notes & Docs",
     status: "setup_required",
     domain: "notion.so",
@@ -385,7 +384,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "ms-teams",
     label: "Microsoft Teams",
-    description: "Read Teams chats.",
+    description: "Find joined teams and search chat messages with separate permission.",
     category: "Communication",
     status: "setup_required",
     domain: "teams.microsoft.com",
@@ -617,17 +616,17 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "vercel",
     label: "Vercel",
-    description: "Read deployments.",
+    description: "Read deployment names and statuses in a linked Vercel team.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "vercel.com",
   },
   {
     id: "stripe",
     label: "Stripe",
-    description: "Read payment summaries.",
+    description: "Read recent Stripe payment amounts, currencies, and statuses.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "stripe.com",
   },
   {
@@ -1449,9 +1448,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "figma",
     label: "Figma",
-    description: "Reference design files, comments, and prototypes.",
+    description: "Read design metadata from a Figma link or file key.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "figma.com",
   },
   {
@@ -1465,9 +1464,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "canva",
     label: "Canva",
-    description: "Reference designs, brand assets, and presentations.",
+    description: "Search and reference Canva design metadata.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "canva.com",
   },
   {
@@ -1689,9 +1688,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "calendly",
     label: "Calendly",
-    description: "Reference scheduled meetings and event links.",
+    description: "Find upcoming meetings and their times in your Calendly account.",
     category: "Calendar",
-    status: "planned",
+    status: "setup_required",
     domain: "calendly.com",
   },
   {
@@ -2073,9 +2072,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "mixpanel",
     label: "Mixpanel",
-    description: "Reference analytics events, cohorts, and funnels.",
+    description: "Find saved cohort names and aggregate counts in an authorized project.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "mixpanel.com",
   },
   {
@@ -2721,9 +2720,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "wix",
     label: "Wix",
-    description: "Planned Wix integration for website context.",
+    description: "Read the business name and locale from your Wix Headless project.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "wix.com",
   },
   {
@@ -3101,10 +3100,11 @@ export const GOOGLE_CONNECT_IDS: ReadonlySet<string> = new Set([
 /** The connect mechanism actually implemented for an entry, if any. */
 export function connectorConnectFlow(
   item: ConnectorItem,
-): "google-oauth" | "github-app" | "provider-oauth" | null {
+): "google-oauth" | "github-app" | "provider-oauth" | "provider-key" | null {
   if (item.status !== "live" && item.status !== "setup_required") return null;
   if (GOOGLE_CONNECT_IDS.has(item.id)) return "google-oauth";
   if (item.id === "github") return "github-app";
+  if (CONNECTION_FLOWS[item.id]?.authentication === "api-key") return "provider-key";
   if (CONNECTION_FLOWS[item.id]) return "provider-oauth";
   return null;
 }

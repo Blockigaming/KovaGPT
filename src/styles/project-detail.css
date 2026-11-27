@@ -543,7 +543,7 @@
   }
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-project-workspace .spec400-project-navigation :is([role="tablist"], [role="tab"]),
   .kova-project-workspace :is(.kova-project-tools-trigger, .kova-project-resource-link) {
     min-height: 44px;

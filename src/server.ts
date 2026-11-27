@@ -28,7 +28,7 @@ const CONTENT_SECURITY_POLICY = [
   "connect-src 'self' wss://api.elevenlabs.io https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://link.com https://*.link.com https://tiles.openfreemap.org https://server.arcgisonline.com https://s3.amazonaws.com https://production.plaid.com",
   "frame-src https://checkout.stripe.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com https://cdn.plaid.com",
   "worker-src 'self' blob:",
-  "media-src 'self' blob:",
+  "media-src 'self' blob: https:",
   "upgrade-insecure-requests",
 ].join("; ");
 
@@ -147,12 +147,43 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
+function normalizeStagingIntegrationRequest(request: Request): Request {
+  const configuredOrigin = process.env.KOVA_STAGING_PUBLIC_ORIGIN;
+  if (process.env.AZURE_ENVIRONMENT !== "staging" || !configuredOrigin) return request;
+
+  const publicOrigin = new URL(configuredOrigin);
+  const target = new URL(request.url);
+  if (
+    publicOrigin.protocol !== "https:" ||
+    publicOrigin.origin !== configuredOrigin ||
+    target.protocol !== "http:" ||
+    target.host !== publicOrigin.host ||
+    !target.pathname.startsWith("/api/integrations/") ||
+    request.headers.get("x-forwarded-proto") !== "https" ||
+    (request.headers.has("host") && request.headers.get("host") !== publicOrigin.host) ||
+    (request.headers.has("x-forwarded-host") &&
+      request.headers.get("x-forwarded-host") !== publicOrigin.host)
+  ) {
+    return request;
+  }
+
+  target.protocol = "https:";
+  return new Request(target, {
+    method: request.method,
+    headers: request.headers,
+    signal: request.signal,
+    ...(!["GET", "HEAD"].includes(request.method)
+      ? { body: request.body, duplex: "half" as const }
+      : {}),
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const rejectedOrigin = enforceAzureProductionOriginBoundary(request);
       if (rejectedOrigin) return hardenResponse(rejectedOrigin);
-      request = normalizeAzureProductionRequest(request);
+      request = normalizeStagingIntegrationRequest(normalizeAzureProductionRequest(request));
       // Never trust a caller-supplied nonce. Both CSP layers and SSR receive
       // this fresh, request-local value only when advertising is activated.
       const nonce = withRuntimeBindings(env, () =>

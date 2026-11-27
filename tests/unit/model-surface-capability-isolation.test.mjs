@@ -41,6 +41,7 @@ function actualModule(path, bindings, expose, suffix = "") {
 
 const azure = {
   KOVA_TEXT_PROVIDER: "openai",
+  // With an OpenAI key, images default to OpenAI; this fixture chooses Azure images explicitly.
   KOVA_IMAGE_PROVIDER: "azure_openai",
   OPENAI_API_KEY: "synthetic-openai-not-a-key",
   AZURE_OPENAI_ENDPOINT: "https://synthetic-primary.openai.azure.com",

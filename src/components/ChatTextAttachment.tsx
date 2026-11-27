@@ -9,6 +9,7 @@ import {
   AttachmentPreviewMobileHeader,
 } from "./AttachmentPreviewMobile";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { PastedTextCard } from "./PastedTextCard";
 
 export function ChatTextAttachment({
   attachment,
@@ -60,23 +61,42 @@ export function ChatTextAttachment({
       </button>
     </>
   );
+  const pasted = attachment.pasted === true || attachment.name === "pasted-text.txt";
+  const openPreview = () => {
+    onOpenPane?.();
+    setOffset(0);
+    setOpen(true);
+  };
   return (
     <>
-      <button
-        ref={trigger}
-        type="button"
-        aria-haspopup="dialog"
-        data-attachment-preview-trigger=""
-        className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-[var(--kova-radius-panel)] border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground hover:bg-muted"
-        onClick={() => {
-          onOpenPane?.();
-          setOffset(0);
-          setOpen(true);
-        }}
-      >
-        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <span className="max-w-48 truncate">{title}</span>
-      </button>
+      {pasted ? (
+        <PastedTextCard
+          variant="message"
+          text={attachment.content}
+          summary={title}
+          inspectLabel={`Open pasted text: ${title}`}
+          onOpen={(button) => {
+            trigger.current = button;
+            openPreview();
+          }}
+        />
+      ) : (
+        <button
+          ref={trigger}
+          type="button"
+          aria-haspopup="dialog"
+          data-attachment-preview-trigger=""
+          className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-[var(--kova-radius-panel)] border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground hover:bg-muted"
+          onClick={() => {
+            onOpenPane?.();
+            setOffset(0);
+            setOpen(true);
+          }}
+        >
+          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="max-w-48 truncate">{title}</span>
+        </button>
+      )}
       <Dialog attachmentPreview open={open} onOpenChange={setOpen}>
         <DialogContent
           attachmentPreview
@@ -90,9 +110,11 @@ export function ChatTextAttachment({
           <DialogHeader className="kova-preview-mobile-description">
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
-              {attachment.fileType && !attachment.fileType.startsWith("text/")
-                ? "Extracted text"
-                : "Text preview"}
+              {pasted
+                ? "Pasted text"
+                : attachment.fileType && !attachment.fileType.startsWith("text/")
+                  ? "Extracted text"
+                  : "Text preview"}
             </DialogDescription>
           </DialogHeader>
           <AttachmentPreviewMobileHeader title={title} actions={actions} />

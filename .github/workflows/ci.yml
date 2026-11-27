@@ -307,9 +307,9 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
-    # The tablet job runs three full browser projects on two workers.
-    # Allow it to finish on slower runners without changing per-test limits.
-    timeout-minutes: ${{ matrix.id == 'tablet' && 75 || 45 }}
+    # Tablet and landscape projects run independently on fresh runners. The
+    # combined job exhausted its 75-minute limit despite passing assertions.
+    timeout-minutes: ${{ startsWith(matrix.id, 'tablet') && 60 || 45 }}
     env:
       HOME: /root
       KOVA_BROWSER_PREVIEW: "node"
@@ -341,10 +341,17 @@ jobs:
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
             shard: 4/4
-          - id: tablet
-            check_name: Browser (tablet)
-            projects: >-
-              --project=tablet-768x1024 --project=phone-landscape-844x390 --project=tablet-1024x768
+          - id: tablet-portrait
+            check_name: Browser (tablet-portrait)
+            projects: --project=tablet-768x1024
+            shard: 1/1
+          - id: tablet-landscape
+            check_name: Browser (tablet-landscape)
+            projects: --project=tablet-1024x768
+            shard: 1/1
+          - id: tablet-phone-landscape
+            check_name: Browser (phone-landscape)
+            projects: --project=phone-landscape-844x390
             shard: 1/1
           - id: desktop-1280
             check_name: Browser (desktop-1280)
@@ -405,6 +412,18 @@ jobs:
             test-results
             playwright-report
           if-no-files-found: ignore
+
+  tablet-coverage:
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && !cancelled()
+    name: Browser (tablet)
+    needs: [verify, browser]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require all browser shards to finish successfully
+        env:
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: test "$BROWSER_RESULT" = success
 
   phone-coverage:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && !cancelled()

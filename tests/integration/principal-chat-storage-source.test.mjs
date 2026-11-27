@@ -51,7 +51,7 @@ test("draft, pending-selection, archive, import, and export paths carry the curr
 
   assert.match(home, /draftStorageKey\(userKey, activeId\)/);
   assert.match(home, /loadDraft\(userKey, activeId\)/);
-  assert.match(home, /saveDraft\(userKey, activeId, input\)/);
+  assert.match(home, /saveDraft\(userKey, activeId, preserved\?\.text \?\? input\)/);
   assert.match(home, /loadPendingActive\(userKey\)/);
   assert.match(home, /clearPendingActive\(userKey\)/);
   const history = await read("src/lib/home-chat-history-actions.ts");

@@ -17,7 +17,9 @@ export function createLibraryAttachmentAutoSaver({
       attachment.status !== "complete" ||
       attachment.source !== "file_upload" ||
       !UUID.test(attachment.clientId ?? "") ||
-      !["image", "text_file"].includes(attachment.kind)
+      !["image", "text_file"].includes(attachment.kind) ||
+      // Pasted cards are message text, not uploaded files.
+      attachment.pasted === true
     )
       return;
     const key = `${scope.principal}:${attachment.clientId}`;

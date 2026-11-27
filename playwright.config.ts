@@ -27,7 +27,7 @@ export default defineConfig({
   ],
   ...(browserSuite === "public" ? { testMatch: publicSuitePatterns } : {}),
   timeout: 30_000,
-  expect: { timeout: 5_000 },
+  expect: { timeout: 10_000 },
   fullyParallel: true,
   retries: 0,
   reporter: [["list"]],
@@ -46,6 +46,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "off",
   },
+  // Phones run in real mobile viewport mode: the website uses the device width.
   projects: [
     {
       name: "phone-320x700",

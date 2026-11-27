@@ -50,6 +50,7 @@ export function ResponseSourceIcon({
         <img
           className="h-full w-full object-contain"
           src={asset}
+          data-brand={brand}
           alt=""
           onError={() => setFailed(asset)}
         />

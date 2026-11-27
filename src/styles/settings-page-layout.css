@@ -5,7 +5,7 @@
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: var(--background);
+  background: var(--composer-background);
 }
 .kova-settings-route.kova-secondary-page {
   --page-max: none;
@@ -33,7 +33,7 @@
   transform: none;
   box-shadow: none;
   overflow: hidden;
-  background: var(--background);
+  background: var(--settings-surface);
 }
 .kova-settings-route section.kova-settings-page > [data-orientation="vertical"] {
   flex: 1;
@@ -98,7 +98,7 @@
   position: sticky;
   top: 0;
   z-index: 4;
-  background: var(--background);
+  background: var(--settings-surface);
   min-height: 0;
   padding-block: 20px 14px;
   padding-inline: var(--settings-inset);

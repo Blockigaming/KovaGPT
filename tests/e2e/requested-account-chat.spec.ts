@@ -22,6 +22,24 @@ test("requested: returning accounts never render the signed-out homepage", async
   );
 });
 
+test("Settings opens over the current transcript and preserves the draft", async ({ page }) => {
+  await fixture(page, "dark", true, true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const transcript = page.locator("[data-chat-transcript]");
+  await expect(transcript).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await input.fill("Keep this local draft");
+  const url = page.url();
+  const settings = await openCurrentSettings(page);
+  await expect(settings).toHaveAttribute("role", "dialog");
+  await expect(page).toHaveURL(url);
+  await expect(transcript).toBeVisible();
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(settings).toBeHidden();
+  await expect(input).toHaveValue("Keep this local draft");
+});
+
 test("requested: every Settings section has room and Settings owns sidebar interaction", async ({
   page,
 }, info) => {
@@ -34,7 +52,7 @@ test("requested: every Settings section has room and Settings owns sidebar inter
       localStorage.getItem("kova-mobile-sidebar-open"),
     ]);
   const before = await sidebarPreferences();
-  // Desktop Settings replaces the shell; mobile Settings makes it inaccessible.
+  // The popup owns interaction while the desktop sidebar stays behind it.
   await expect
     .poll(() =>
       page
@@ -162,6 +180,20 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
   await waitForKovaHydration(page);
   const header = page.getByLabel("Conversation actions", { exact: true }).filter({ visible: true });
   await expect(header.getByRole("button")).toHaveCount(2);
+  await expect(header.locator("xpath=ancestor::header")).toHaveCSS("border-bottom-width", "0px");
+  const pane = page.locator(".spec400-conversation-pane");
+  const transcript = pane.locator("[data-chat-transcript]");
+  const dock = pane.locator(".spec400-composer-dock");
+  await expect
+    .poll(() => pane.evaluate((node) => getComputedStyle(node, "::before").backgroundImage))
+    .toContain("linear-gradient");
+  await expect
+    .poll(() => dock.evaluate((node) => getComputedStyle(node).backgroundImage))
+    .toContain("linear-gradient");
+  const transcriptBounds = (await transcript.boundingBox())!;
+  const dockBounds = (await dock.boundingBox())!;
+  const overlap = page.viewportSize()!.height > 500 ? 16 : 0;
+  expect(transcriptBounds.y + transcriptBounds.height - dockBounds.y).toBeCloseTo(overlap, 0);
   await header.getByRole("button", { name: "Activity", exact: true }).click();
   const activity = page.locator(".kova-conversation-outputs");
   await expect(activity.getByRole("button", { name: "Outputs", exact: true })).toHaveAttribute(
@@ -173,6 +205,10 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
     "true",
   );
   await expect(activity).toContainText("Actual-input.txt");
+  const row = activity.getByRole("button", { name: /Actual-input\.txt/ });
+  await expect(row).toHaveCSS("border-radius", "12px");
+  const coarse = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
+  await expect(row).toHaveCSS("min-height", coarse ? "44px" : "32px");
   await expect(activity.getByRole("region", { name: "Cloud browser", exact: true })).toHaveCount(0);
   await page.screenshot({ path: info.outputPath("chat-activity.png"), animations: "disabled" });
   await page.keyboard.press("Escape");

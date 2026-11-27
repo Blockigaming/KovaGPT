@@ -49,3 +49,26 @@
     max-height: 16rem;
   }
 }
+
+/* Picture-in-picture: a pinned chart floats above the conversation until returned. */
+.kova-chart[data-pinned] {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(120px + env(safe-area-inset-bottom));
+  z-index: 40;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(60dvh, 520px);
+  margin: 0;
+  overflow: auto;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.35);
+}
+/* A pinned chart is a smaller window: plots shrink instead of overflowing the footer. */
+.kova-chart[data-pinned] .kova-chart-layout > [role="img"],
+.kova-chart[data-pinned] .kova-chart-extra {
+  height: 200px;
+  max-height: 200px;
+  overflow: hidden;
+}
+.kova-chart[data-pinned] .kova-chart-extra svg {
+  max-height: 200px;
+}

@@ -45,7 +45,14 @@ const HYDRATION_READY_EVENT = "kova:hydrated";
 // The blocking script runs after the render-blocking app stylesheet, before UI
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
 // applyThemeMode restores them atomically after setting the hydrated root class.
+// The website keeps the desktop experience on every device; a native KovaGPT
+// app shell names itself in its user agent and gets the phone-app presentation
+// before first paint.
 const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
+  try {
+    if (/\bKovaGPTApp\//.test(navigator.userAgent))
+      document.documentElement.setAttribute("data-kova-surface", "app");
+  } catch {}
   let mode = "dark";
   try {
     const stored = localStorage.getItem("kova-theme-mode");
@@ -243,6 +250,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { charSet: "utf-8" },
         {
           name: "viewport",
+          // The website serves the desktop experience on every device and
+          // reflows it to the real screen width; it is not zoomed out from a
+          // fixed desktop canvas. Pinch zoom stays available.
           content: "width=device-width, initial-scale=1, viewport-fit=cover",
         },
         {
@@ -326,7 +336,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-kova-hydration="pending"
+      data-kova-surface="web"
+      aria-busy="true"
+    >
       <head>
         <HeadContent />
         <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>

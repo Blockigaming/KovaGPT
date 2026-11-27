@@ -174,10 +174,7 @@ test("sidebar geometry has one owner and keeps compact desktop rows separate fro
   );
   assert.equal(declarations(row, "border-radius")[0].value, "8px");
   assert.match(css, /--sidebar-row-height: 36px/);
-  assert.match(
-    css,
-    /@media \(pointer: coarse\), \(max-width: 1023px\)[\s\S]*--sidebar-row-height: 44px/,
-  );
+  assert.match(css, /@media \(width < 1024px\)[\s\S]*--sidebar-row-height: 44px/);
   assert.match(css, /\.kova-sidebar-primary[\s\S]*?padding: 8px/);
 });
 

@@ -84,7 +84,7 @@ for (const { mode, system, dark } of themeCases) {
     const background = dark
       ? phone
         ? "rgb(17, 17, 17)"
-        : "rgb(18, 18, 18)"
+        : "rgb(25, 25, 25)"
       : "rgb(255, 255, 255)";
     const foreground = dark ? "rgb(255, 255, 255)" : phone ? "rgb(17, 17, 17)" : "rgb(13, 13, 13)";
     const themeColor = dark ? (phone ? "#111111" : "#121212") : "#ffffff";

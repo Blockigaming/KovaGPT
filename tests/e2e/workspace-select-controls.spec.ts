@@ -168,7 +168,7 @@ for (const theme of ["light", "dark"] as const) {
     });
     await page.keyboard.press("Escape");
     await expect(artifact).toBeFocused();
-    await page.reload();
+    await page.goto("/settings/responses");
     await waitForKovaHydration(page);
     await expect(format).toContainText("Plain text");
     await expect(tone).toContainText("Formal");
@@ -191,7 +191,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(billing).toBeInViewport({ ratio: 1 });
       const origin = page.url();
       await billing.click();
-      await expect(page).toHaveURL(origin);
+      await expect(page).toHaveURL(/\/$/);
       await expect(
         settings.getByRole("heading", { name: "Subscriptions", exact: true }),
       ).toBeVisible();

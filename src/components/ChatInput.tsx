@@ -1,4 +1,5 @@
 import { ChatOutputTemplates } from "./ChatOutputTemplates";
+import { t } from "@/lib/localization";
 import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
 import { Grid2X2, List as ListIcon, Settings as SettingsIcon } from "lucide-react";
 import {
@@ -39,16 +40,24 @@ import {
   Folder,
   AlertCircle,
   Loader2,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { ExpandViewIcon } from "@/components/ui/ExpandViewIcon";
 
 import {
   attachmentPreviewWindow,
-  LOCAL_PASTE_THRESHOLD,
+  isFreePastedText,
   pasteAttachmentIntoDraft,
+  PASTED_TEXT_MAX_CHARACTERS,
+  PASTED_TEXT_MAX_PER_MESSAGE,
   prepareLocalPaste,
+  shouldCardPaste,
+  summarizeLocalPaste,
+  utf8TextBytes,
 } from "@/lib/composer-local-attachments.mjs";
+import { PastedTextCard } from "@/components/PastedTextCard";
+import { ChatGoalRow } from "@/components/ChatGoalRow";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import type { Settings } from "@/components/SettingsDialog";
 import { ComposerPdfPages } from "@/components/ComposerPdfPages";
@@ -124,6 +133,26 @@ const ComposerProjectPicker = lazy(() =>
   })),
 );
 
+/** [principal, chatId] for the goal row, only when the composer is not editing a message. */
+function chatGoalContext(attachmentContext: string | undefined) {
+  try {
+    const parsed: unknown = JSON.parse(attachmentContext ?? "null");
+    return Array.isArray(parsed) && parsed[2] == null
+      ? {
+          principal: typeof parsed[0] === "string" ? parsed[0] : null,
+          chatId: typeof parsed[1] === "string" ? parsed[1] : null,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// Pasted cards are message text: they never take one of the two file slots.
+function fileSlotsUsed(items: PendingAttachment[]) {
+  return items.filter((item) => !item.pasted).length;
+}
+
 export type PendingAttachment = {
   clientId?: string;
   source?: "file_upload" | "library";
@@ -132,6 +161,8 @@ export type PendingAttachment = {
   textContent?: string;
   /** Local clipboard input; it is not uploaded or saved before explicit Send. */
   localPaste?: boolean;
+  /** Pasted message text shown as a card: no account, slot or upload allowance needed. */
+  pasted?: boolean;
   pasteSummary?: string;
   pasteOrigin?: { original: string; start: number; end: number };
   name: string;
@@ -196,7 +227,7 @@ const SLASH_COMMANDS = [
 type SlashCommand = (typeof SLASH_COMMANDS)[number]["id"];
 
 const TEXT_LIKE_EXT =
-  /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
+  /\.(txt|md|markdown|csv|tsv|json|jsonl|excalidraw|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
 const MAX_IMAGE_FILE_BYTES = 3 * 1024 * 1024; // bounded for inline vision requests and device history
 
@@ -233,7 +264,6 @@ export function ChatInput({
   sendOnEnter,
 
   disabled = false,
-  sendDisabled = false,
   showAddMenu = true,
   saveAttachmentsToLibrary = false,
   attachments,
@@ -270,8 +300,10 @@ export function ChatInput({
   latestAssistantText = "",
   latestAssistantReply,
   voiceMode,
+  voiceSessionContext,
   onVoiceModeChange,
   onVoiceSubmit,
+  onVoicePlaybackProgress,
 }: {
   activityComposerRef?: Ref<ChatActivityComposer>;
   value: string;
@@ -288,7 +320,6 @@ export function ChatInput({
 
   /** Disables text entry and submission without changing existing callers. */
   disabled?: boolean;
-  sendDisabled?: boolean;
   /** Hides and disables attachments, tools, and prompt shortcuts. */
   showAddMenu?: boolean;
   /** Only persistent, authenticated chat may automatically retain uploads. */
@@ -340,9 +371,11 @@ export function ChatInput({
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   /** Controlled by the chat route so opening a new voice chat survives layout changes. */
   voiceMode?: "dictate" | "voice" | null;
+  voiceSessionContext?: string;
   onVoiceModeChange?: (mode: "dictate" | "voice" | null) => void;
   /** Uses the existing chat/history path and returns only a confirmed saved reply. */
   onVoiceSubmit?: ComposerVoiceSubmit;
+  onVoicePlaybackProgress?: (fraction: number | null) => void;
   responseSettings?: Pick<Settings, "responseLength" | "responseFormat" | "responseTone">;
   onResponseSettingsChange?: (
     change: Partial<Pick<Settings, "responseLength" | "responseFormat" | "responseTone">>,
@@ -452,6 +485,8 @@ export function ChatInput({
   const [previewAttachment, setPreviewAttachment] = useState<PendingAttachment | null>(null);
   const [previewOffset, setPreviewOffset] = useState(0);
   const [pastePreviewOpen, setPastePreviewOpen] = useState(false);
+  /** Draft text while a pasted card is being edited in the preview dialog. */
+  const [pasteEditDraft, setPasteEditDraft] = useState<string | null>(null);
   const [removedPaste, setRemovedPaste] = useState<PendingAttachment | null>(null);
   const previewReturnToInputRef = useRef(false);
   const expandTriggerRef = useRef<HTMLButtonElement>(null);
@@ -493,6 +528,9 @@ export function ChatInput({
     "keyboard",
   );
   const [utilityMenu, setUtilityMenu] = useState<"files" | "plugins" | null>(null);
+  const [goalEditing, setGoalEditing] = useState(false);
+  // The goal belongs to this chat: [principal, chatId] from the composer's chat context.
+  const goalContext = chatGoalContext(attachmentContext);
   const [resourceSection, setResourceSection] = useState<"files" | "plugins" | null>(null);
   const phoneResourceSection = isMobileLayout ? resourceSection : null;
   const addMenuRef = useRef<HTMLDivElement>(null);
@@ -551,7 +589,7 @@ export function ChatInput({
       voiceModeRef.current = null;
     };
   }, []);
-  const voiceContextKey = attachmentContext ?? "composer";
+  const voiceContextKey = voiceSessionContext ?? attachmentContext ?? "composer";
   const voiceIdentityRef = useRef({
     isLoaded,
     userId: user?.id ?? null,
@@ -594,6 +632,7 @@ export function ChatInput({
   const voiceReturnUrlRef = useRef<string | undefined>(undefined);
   const voiceDraftAppliedRef = useRef(false);
   const setVoiceOpenMode = (next: "dictate" | "voice" | null) => {
+    if (voiceModeRef.current === "voice" && next !== "voice") onVoicePlaybackProgress?.(null);
     voiceModeRef.current = next;
     setLocalVoiceMode(next);
     voiceCallbacksRef.current.onVoiceModeChange?.(next);
@@ -728,7 +767,7 @@ export function ChatInput({
           parseFloat(metrics.paddingBottom),
       );
       const composer = el.closest<HTMLElement>(".spec400-composer");
-      if (composer && surface === "conversation" && !isMobileLayout && !isCoarsePointer) {
+      if (composer && surface === "conversation" && !isMobileLayout) {
         // Measure against the compact text slot even while the draft is expanded.
         // Measuring only the current wider row would repeatedly expand/collapse
         // drafts that fit one wide line but not the compact input slot.
@@ -797,7 +836,7 @@ export function ChatInput({
       observer.disconnect();
       if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
     };
-  }, [value, isLoaded, user?.id, isMobileLayout, isCoarsePointer, surface]);
+  }, [value, isLoaded, user?.id, isMobileLayout, surface]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
   useEffect(() => {
@@ -898,10 +937,13 @@ export function ChatInput({
   };
 
   const triggerSubmit = () => {
-    if (disabled || sendDisabled || submittingRef.current || isStreaming || pasteOffer) return;
+    if (disabled || submittingRef.current || isStreaming || pasteOffer) return;
     if (!online) return;
     if (!value.trim() && !validAttachmentInstruction) return;
-    if ((attachments.length > 0 || selectedToolRef.current === "image") && !requireFileAccount())
+    if (
+      (fileSlotsUsed(attachments) > 0 || selectedToolRef.current === "image") &&
+      !requireFileAccount()
+    )
       return;
     if (blockedAttachmentMessage) {
       setUploadAnnouncement(blockedAttachmentMessage);
@@ -1109,7 +1151,7 @@ export function ChatInput({
     const readContext = attachmentContextRef.current;
     const currentRead = () =>
       attachmentScopeRef.current === readScope && attachmentContextRef.current === readContext;
-    const availableSlots = Math.max(0, 2 - attachments.length);
+    const availableSlots = Math.max(0, 2 - fileSlotsUsed(attachments));
     if (availableSlots === 0) {
       setUploadAnnouncement("Remove an attachment before adding another.");
       toast.error("You can attach up to 2 files per message.");
@@ -1127,7 +1169,8 @@ export function ChatInput({
       const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
 
       for (const f of files.slice(0, availableSlots)) {
-        const isImage = f.type.startsWith("image/");
+        const isExcalidraw = /\.excalidraw$/iu.test(f.name);
+        const isImage = !isExcalidraw && f.type.startsWith("image/");
         const isTextLike =
           f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
 
@@ -1263,6 +1306,11 @@ export function ChatInput({
                 documentReadsRef.current.delete(controller);
                 documentReadIdsRef.current.delete(uploading.clientId!);
               }
+            } else if (isExcalidraw) {
+              const { summarizeExcalidrawScene } = await import("@/lib/excalidraw-scene.mjs");
+              if (!currentRead()) return false;
+              textContent = summarizeExcalidrawScene(await f.text());
+              extractionNote = "Attached the diagram's text and layout summary.";
             } else textContent = await f.text();
             if (!currentRead()) return false;
             nextAttachments = composerStateRef.current.attachments;
@@ -1273,7 +1321,7 @@ export function ChatInput({
               extractionNote: extractionNote || undefined,
               pdf,
               status: "complete",
-              ...(isDocument
+              ...(isDocument || isExcalidraw
                 ? {
                     name: `${f.name}.extracted.txt`,
                     fileType: "text/plain",
@@ -1320,6 +1368,14 @@ export function ChatInput({
 
   const externalImageFiles = useRef(addFiles);
   externalImageFiles.current = addFiles;
+  // Text handed over with images (for example notes from the image canvas) appends to the draft.
+  const externalAppendText = useRef((text: string) => {
+    void text;
+  });
+  externalAppendText.current = (text: string) => {
+    const draft = composerStateRef.current.value;
+    onChange(draft.trim() ? `${draft.trimEnd()}\n\n${text}` : text);
+  };
   useEffect(() => {
     let mounted = true;
     const prepare = (event: Event) => {
@@ -1330,6 +1386,10 @@ export function ChatInput({
       if (!detail || typeof detail.accept !== "function") return;
       const context = attachmentContextRef.current;
       const scope = attachmentScopeRef.current;
+      detail.acceptText?.((text) => {
+        if (mounted && context === attachmentContextRef.current && typeof text === "string")
+          externalAppendText.current(text.slice(0, 4_000));
+      });
       detail.accept(async (file, isCurrent) => {
         const current = () =>
           mounted &&
@@ -1376,7 +1436,7 @@ export function ChatInput({
     if (disabled || !showAddMenu || !requireFileAccount()) return false;
     const current = composerStateRef.current;
     if (current.attachments.some((attachment) => attachment.clientId === paste.id)) return true;
-    if (current.attachments.length >= 2) {
+    if (fileSlotsUsed(current.attachments) >= 2) {
       setPasteOffer({
         ...paste,
         error: "Two files are already attached. Remove one or paste this text into the message.",
@@ -1422,7 +1482,7 @@ export function ChatInput({
       if (
         !disabled &&
         target === ref.current &&
-        plain.length <= LOCAL_PASTE_THRESHOLD &&
+        !shouldCardPaste(plain) &&
         firstLinkPreviewToken(plain)
       ) {
         event.preventDefault();
@@ -1437,7 +1497,56 @@ export function ChatInput({
         return;
       }
       // Native short-text paste remains untouched for other content.
-      if (disabled || !showAddMenu || plain.length <= LOCAL_PASTE_THRESHOLD) return;
+      if (disabled || !showAddMenu || !shouldCardPaste(plain)) return;
+      // Long text up to the typed-message limit becomes a "Pasted" card. It is message
+      // text, so guests can use it and it takes no file slot or upload allowance.
+      if (isFreePastedText(plain)) {
+        event.preventDefault();
+        const current = composerStateRef.current;
+        if (
+          current.attachments.filter((item) => item.pasted).length >= PASTED_TEXT_MAX_PER_MESSAGE
+        ) {
+          const message = `You can include up to ${PASTED_TEXT_MAX_PER_MESSAGE} pasted texts per message.`;
+          setUploadAnnouncement(message);
+          toast.error(message);
+          return;
+        }
+        const selectionPasteTarget = event.target as HTMLTextAreaElement | undefined;
+        const selectionTarget =
+          selectionPasteTarget?.tagName === "TEXTAREA" ? selectionPasteTarget : ref.current;
+        const start = selectionTarget?.selectionStart ?? current.value.length;
+        const end = selectionTarget?.selectionEnd ?? current.value.length;
+        // Pasted cards are never auto-saved to Library; they are message text.
+        const pasteId = crypto.randomUUID();
+        updateAttachments([
+          ...current.attachments,
+          {
+            clientId: pasteId,
+            source: "file_upload",
+            kind: "text_file",
+            dataUrl: "",
+            textContent: plain,
+            localPaste: true,
+            pasted: true,
+            pasteSummary: summarizeLocalPaste(plain),
+            pasteOrigin: {
+              original: current.value,
+              start:
+                selectionTarget === ref.current ? canonicalComposerOffset(editor, start) : start,
+              end: selectionTarget === ref.current ? canonicalComposerOffset(editor, end) : end,
+            },
+            name: "pasted-text.txt",
+            fileType: "text/plain",
+            size: utf8TextBytes(plain),
+            status: "complete",
+          },
+        ]);
+        setRemovedPaste(null);
+        setUploadAnnouncement(
+          "Long text pasted as a card. Select it to read or edit it, or put it back into the message.",
+        );
+        return;
+      }
       event.preventDefault();
       if (pasteOffer) {
         setUploadAnnouncement(
@@ -1495,6 +1604,7 @@ export function ChatInput({
     setPasteOffer(null);
     setPastePreviewOpen(false);
     setPreviewAttachment(null);
+    setPasteEditDraft(null);
     setRemovedPaste(null);
     previewReturnToInputRef.current = true;
     setUploadAnnouncement("Exact pasted text restored to the message.");
@@ -1502,7 +1612,15 @@ export function ChatInput({
   };
 
   const undoPasteRemoval = () => {
-    if (!removedPaste || disabled || composerStateRef.current.attachments.length >= 2) return;
+    if (
+      !removedPaste ||
+      disabled ||
+      (removedPaste.pasted
+        ? composerStateRef.current.attachments.filter((item) => item.pasted).length >=
+          PASTED_TEXT_MAX_PER_MESSAGE
+        : fileSlotsUsed(composerStateRef.current.attachments) >= 2)
+    )
+      return;
     updateAttachments([...composerStateRef.current.attachments, removedPaste]);
     setRemovedPaste(null);
     setUploadAnnouncement("Pasted text attachment restored locally.");
@@ -1533,7 +1651,7 @@ export function ChatInput({
       toast.message(`${name} is already attached.`);
       return;
     }
-    if (attachments.length >= 2) {
+    if (fileSlotsUsed(attachments) >= 2) {
       setUploadAnnouncement("Remove an attachment before adding another.");
       toast.error("You can attach up to 2 files per message.");
       return;
@@ -1935,6 +2053,23 @@ export function ChatInput({
             ))}
           </div>
         ) : null}
+        {goalContext && (
+          <div className="kova-composer-menu-section">
+            <button
+              type="button"
+              aria-label="Set a goal for this chat"
+              className="kova-composer-action"
+              onClick={() => {
+                closeActions();
+                setGoalEditing(true);
+              }}
+            >
+              <Target aria-hidden="true" />
+              <span>{t("Set a goal")}</span>
+              <small>{t("Keep this chat working toward one outcome")}</small>
+            </button>
+          </div>
+        )}
         {user ? (
           <ComposerPluginList
             connections={pluginConnections}
@@ -1991,7 +2126,6 @@ export function ChatInput({
   const canSubmit =
     !pasteOffer &&
     !disabled &&
-    !sendDisabled &&
     online &&
     Boolean(value.trim() || validAttachmentInstruction) &&
     !blockedAttachmentMessage;
@@ -2077,12 +2211,75 @@ export function ChatInput({
     attachmentPreviewRef.current = null;
     setPreviewAttachment(null);
     setPastePreviewOpen(false);
+    setPasteEditDraft(null);
     setPreviewOffset(0);
+  };
+  const savePastedEdit = () => {
+    const target = previewAttachment;
+    const draft = pasteEditDraft;
+    if (!target || draft === null || disabled) return;
+    const current = composerStateRef.current.attachments;
+    const index = current.indexOf(target);
+    if (index < 0) return closeAttachmentPreview();
+    if (!draft.trim()) {
+      closeAttachmentPreview();
+      removeAttachment(index);
+      return;
+    }
+    if (target.pasted && draft.length > PASTED_TEXT_MAX_CHARACTERS) {
+      const message = `Pasted text can be up to ${PASTED_TEXT_MAX_CHARACTERS.toLocaleString()} characters. Shorten it or attach it as a file.`;
+      setUploadAnnouncement(message);
+      toast.error(message);
+      return;
+    }
+    const updated: PendingAttachment = {
+      ...target,
+      textContent: draft,
+      pasteSummary: summarizeLocalPaste(draft),
+      size: utf8TextBytes(draft),
+    };
+    updateAttachments(current.map((item, position) => (position === index ? updated : item)));
+    setPreviewAttachment(updated);
+    setPasteEditDraft(null);
+    setUploadAnnouncement("Pasted text updated.");
   };
   const hasDraft = Boolean(value.trim() || attachments.length || pasteOffer);
 
   const mediaTiles = new Map<string, ReactNode>();
   attachments.forEach((attachment, index) => {
+    if (attachment.kind === "text_file" && attachment.localPaste && attachment.textContent) {
+      // Long pastes are square cards that sit with photos at the front of the composer.
+      const pastedText = attachment.textContent;
+      mediaTiles.set(
+        `photo:paste:${attachment.clientId ?? index}`,
+        <li className="spec400-pasted-item" data-kind="pasted" data-status={attachment.status}>
+          <PastedTextCard
+            text={pastedText}
+            summary={attachment.pasteSummary}
+            inspectLabel={`Inspect ${attachment.name}`}
+            removeLabel={`Remove ${attachment.name}`}
+            status={attachment.status}
+            disabled={disabled}
+            onOpen={(trigger) => {
+              previewTriggerRef.current = trigger;
+              previewReturnToInputRef.current = false;
+              setPreviewOffset(0);
+              setPasteEditDraft(null);
+              setPreviewAttachment(attachment);
+            }}
+            onEdit={(trigger) => {
+              previewTriggerRef.current = trigger;
+              previewReturnToInputRef.current = false;
+              setPreviewOffset(0);
+              setPasteEditDraft(pastedText);
+              setPreviewAttachment(attachment);
+            }}
+            onRemove={() => removeAttachment(index)}
+          />
+        </li>,
+      );
+      return;
+    }
     const isPhoto = attachment.kind === "image";
     const group = isPhoto ? "photo" : "file";
     const fileDetails = [
@@ -2246,7 +2443,10 @@ export function ChatInput({
   const mediaOrder = ["photo:", "file:", "link:"].flatMap((prefix) =>
     mediaKeys.filter((key) => key.startsWith(prefix)),
   );
-  const photoCount = attachments.filter((attachment) => attachment.kind === "image").length;
+  const photoCount = attachments.filter(
+    (attachment) =>
+      attachment.kind === "image" || (attachment.kind === "text_file" && attachment.localPaste),
+  ).length;
   useEffect(() => {
     mediaOrderRef.current = { context: mediaContext, keys: mediaOrder };
   });
@@ -2255,6 +2455,7 @@ export function ChatInput({
     <div
       className="spec400-chat-input"
       data-composer-surface={surface}
+      data-voice-active={activeVoiceMode === "voice" || undefined}
       data-signed-in={isLoaded && user ? "true" : undefined}
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
@@ -2286,6 +2487,52 @@ export function ChatInput({
           }}
         />
       )}
+      {goalContext && (
+        <ChatGoalRow
+          principal={goalContext.principal}
+          chatId={goalContext.chatId}
+          editing={goalEditing}
+          onEditingChange={setGoalEditing}
+        />
+      )}
+      <ComposerVoiceDialog
+        open={activeVoiceMode !== null}
+        inlineDictation
+        autoStartVoice
+        mode={activeVoiceMode ?? "dictate"}
+        onOpenChange={(open) => {
+          if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)
+            setVoiceOpenMode(null);
+        }}
+        userId={isLoaded ? (user?.id ?? null) : null}
+        contextKey={voiceContextKey}
+        disabled={disabled || !online}
+        isStreaming={isStreaming}
+        latestAssistantText={latestAssistantText}
+        latestAssistantReply={latestAssistantReply}
+        conversationModelControl={
+          <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
+        }
+        onTranscript={acceptVoiceTranscript}
+        onVoiceSubmit={onVoiceSubmit ? submitVoiceTranscript : undefined}
+        onVoicePlaybackProgress={onVoicePlaybackProgress}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (
+            !voiceMountedRef.current ||
+            voiceIdentityRef.current !== voiceScope ||
+            voiceCallbacksRef.current.disabled
+          )
+            return;
+          const invoker = voiceTriggerRef.current;
+          restoreDialogFocus(
+            voiceDraftAppliedRef.current || invoker?.hidden
+              ? ref.current
+              : (invoker ?? ref.current),
+            voiceReturnUrlRef.current,
+          );
+        }}
+      />
       <div
         ref={composerAnchorRef}
         className="spec400-composer"
@@ -2330,7 +2577,7 @@ export function ChatInput({
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
-              placeholder={placeholder ?? "Work with KovaGPT"}
+              placeholder={placeholder ?? t("Work with KovaGPT")}
               rows={1}
               spellCheck
               autoComplete="off"
@@ -2434,7 +2681,7 @@ export function ChatInput({
               aria-label="Choose files"
               disabled={disabled || isStreaming || !isLoaded || !user}
               type="file"
-              accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+              accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.excalidraw,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
               multiple
               hidden
               onChange={onFileChange}
@@ -2588,7 +2835,9 @@ export function ChatInput({
                 aria-label="Type with voice"
                 aria-controls="kova-inline-dictation"
                 aria-expanded={activeVoiceMode === "dictate"}
-                disabled={disabled || isStreaming || !isLoaded || !online}
+                disabled={
+                  disabled || isStreaming || !isLoaded || !online || activeVoiceMode === "voice"
+                }
                 title="Type with voice"
                 onClick={(event) => openVoice("dictate", event.currentTarget)}
               >
@@ -2599,31 +2848,41 @@ export function ChatInput({
                 type="button"
                 data-testid="voice-button"
                 className="spec400-send-button spec400-primary-voice"
-                hidden={hasDraft || isStreaming}
-                aria-label="Voice"
-                aria-haspopup="dialog"
+                hidden={activeVoiceMode !== "voice" && (hasDraft || isStreaming)}
+                aria-label={activeVoiceMode === "voice" ? "Stop voice" : "Voice"}
+                aria-controls={activeVoiceMode === "voice" ? "kova-inline-voice" : undefined}
                 aria-expanded={activeVoiceMode === "voice"}
                 disabled={
-                  disabled ||
-                  isStreaming ||
-                  !isLoaded ||
-                  !user ||
-                  !online ||
-                  !onVoiceSubmit ||
-                  voiceOpeningBlocked
+                  activeVoiceMode !== "voice" &&
+                  (disabled ||
+                    isStreaming ||
+                    !isLoaded ||
+                    !user ||
+                    !online ||
+                    !onVoiceSubmit ||
+                    voiceOpeningBlocked)
                 }
                 title={
-                  onVoiceSubmit
-                    ? "Start a voice conversation"
-                    : "Voice conversations require a saved chat"
+                  activeVoiceMode === "voice"
+                    ? "Stop voice"
+                    : onVoiceSubmit
+                      ? "Start a voice conversation"
+                      : "Voice conversations require a saved chat"
                 }
                 ref={nativeVoiceInvoker}
-                onClick={(event) => openVoice("voice", event.currentTarget)}
+                onClick={(event) => {
+                  if (activeVoiceMode === "voice") setVoiceOpenMode(null);
+                  else openVoice("voice", event.currentTarget);
+                }}
               >
-                <AudioLines aria-hidden="true" />
-                <span className="sr-only">Voice</span>
+                {activeVoiceMode === "voice" ? (
+                  <Square aria-hidden="true" />
+                ) : (
+                  <AudioLines aria-hidden="true" />
+                )}
+                {activeVoiceMode === "voice" && <span>Stop</span>}
               </button>
-              {isStreaming ? (
+              {isStreaming && activeVoiceMode !== "voice" ? (
                 <button
                   type="button"
                   onPointerDown={(event) => {
@@ -2689,10 +2948,8 @@ export function ChatInput({
                   title={
                     disabled
                       ? "Messaging is unavailable"
-                      : sendDisabled
-                        ? "Getting this chat ready…"
-                        : (blockedAttachmentMessage ??
-                          (!online ? "Reconnect to send" : "Send message"))
+                      : (blockedAttachmentMessage ??
+                        (!online ? "Reconnect to send" : "Send message"))
                   }
                 >
                   <ArrowUp aria-hidden="true" />
@@ -2895,7 +3152,7 @@ export function ChatInput({
           <button
             type="button"
             className="spec400-paste-back"
-            disabled={disabled || attachments.length >= 2}
+            disabled={disabled || (removedPaste?.pasted ? false : fileSlotsUsed(attachments) >= 2)}
             ref={undoPasteButtonRef}
             onClick={undoPasteRemoval}
           >
@@ -2908,43 +3165,6 @@ export function ChatInput({
           {blockedAttachmentMessage}
         </p>
       )}
-      <ComposerVoiceDialog
-        open={activeVoiceMode !== null}
-        inlineDictation
-        autoStartVoice
-        mode={activeVoiceMode ?? "dictate"}
-        onOpenChange={(open) => {
-          if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)
-            setVoiceOpenMode(null);
-        }}
-        userId={isLoaded ? (user?.id ?? null) : null}
-        contextKey={voiceContextKey}
-        disabled={disabled || !online}
-        isStreaming={isStreaming}
-        latestAssistantText={latestAssistantText}
-        latestAssistantReply={latestAssistantReply}
-        conversationModelControl={
-          <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
-        }
-        onTranscript={acceptVoiceTranscript}
-        onVoiceSubmit={onVoiceSubmit ? submitVoiceTranscript : undefined}
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          if (
-            !voiceMountedRef.current ||
-            voiceIdentityRef.current !== voiceScope ||
-            voiceCallbacksRef.current.disabled
-          )
-            return;
-          const invoker = voiceTriggerRef.current;
-          restoreDialogFocus(
-            voiceDraftAppliedRef.current || invoker?.hidden
-              ? ref.current
-              : (invoker ?? ref.current),
-            voiceReturnUrlRef.current,
-          );
-        }}
-      />
       {nextPromptPanel}
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent
@@ -3038,11 +3258,13 @@ export function ChatInput({
             <DialogDescription>
               {pastePreviewOpen
                 ? "Kept locally. Not attached or uploaded. Reloading discards this pasted text."
-                : previewAttachment?.localPaste
-                  ? "Exact clipboard text. Kept locally until you send. Reloading discards this pasted text."
-                  : previewAttachment
-                    ? attachmentState(previewAttachment)
-                    : "Attachment"}
+                : previewAttachment?.pasted
+                  ? "Pasted text. Sent with your message as part of the prompt; it is not uploaded as a file."
+                  : previewAttachment?.localPaste
+                    ? "Exact clipboard text. Kept locally until you send. Reloading discards this pasted text."
+                    : previewAttachment
+                      ? attachmentState(previewAttachment)
+                      : "Attachment"}
             </DialogDescription>
           </DialogHeader>
           <AttachmentPreviewMobileHeader
@@ -3115,6 +3337,34 @@ export function ChatInput({
                 loading="lazy"
                 decoding="async"
               />
+            ) : pasteEditDraft !== null && previewAttachment?.localPaste ? (
+              <>
+                <label className="sr-only" htmlFor="kova-pasted-text-editor">
+                  Edit pasted text
+                </label>
+                <textarea
+                  id="kova-pasted-text-editor"
+                  className="kova-pasted-editor"
+                  value={pasteEditDraft}
+                  autoFocus
+                  spellCheck={false}
+                  disabled={disabled}
+                  onChange={(event) => setPasteEditDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                      event.preventDefault();
+                      savePastedEdit();
+                    }
+                  }}
+                />
+                <p className="spec400-preview-range" aria-live="polite">
+                  {pasteEditDraft.length.toLocaleString()} characters
+                  {previewAttachment.pasted
+                    ? ` of ${PASTED_TEXT_MAX_CHARACTERS.toLocaleString()}`
+                    : ""}
+                  . Press {"\u2318"}/Ctrl+Enter to save.
+                </p>
+              </>
             ) : textWindow ? (
               <>
                 <p className="spec400-preview-range">
@@ -3161,8 +3411,37 @@ export function ChatInput({
               </p>
             )}
             {previewAttachment?.extractionNote && <p>{previewAttachment.extractionNote}</p>}
-            {(pastePreviewOpen || previewAttachment?.localPaste) && (
+            {previewAttachment?.localPaste && pasteEditDraft !== null && (
               <div className="spec400-dialog-footer">
+                <button
+                  type="button"
+                  className="spec400-toolbar-button"
+                  onClick={() => setPasteEditDraft(null)}
+                >
+                  Cancel edit
+                </button>
+                <button
+                  type="button"
+                  className="spec400-toolbar-button kova-pasted-save"
+                  disabled={disabled || pasteEditDraft === previewAttachment.textContent}
+                  onClick={savePastedEdit}
+                >
+                  Save changes
+                </button>
+              </div>
+            )}
+            {(pastePreviewOpen || previewAttachment?.localPaste) && pasteEditDraft === null && (
+              <div className="spec400-dialog-footer">
+                {previewAttachment?.localPaste && (
+                  <button
+                    type="button"
+                    className="spec400-toolbar-button"
+                    disabled={disabled}
+                    onClick={() => setPasteEditDraft(previewAttachment.textContent ?? "")}
+                  >
+                    Edit text
+                  </button>
+                )}
                 <button
                   type="button"
                   className="spec400-toolbar-button"
@@ -3174,7 +3453,7 @@ export function ChatInput({
                   <button
                     type="button"
                     className="spec400-toolbar-button"
-                    disabled={disabled || !isLoaded || attachments.length >= 2}
+                    disabled={disabled || !isLoaded || fileSlotsUsed(attachments) >= 2}
                     onClick={() => attachLocalPaste(pasteOffer)}
                   >
                     Attach text

@@ -787,16 +787,16 @@ function SupabaseClerkProvider({
       }, 0);
     });
 
+    const isReturningOAuth = () =>
+      hasOAuthResponseInUrl() &&
+      window.location.pathname !== OAUTH_CALLBACK_PATH &&
+      window.location.pathname !== "/reset-password";
+
     async function hydrateSession() {
       const hydrationValidation = sessionValidationRef.current;
       try {
-        if (
-          hasOAuthResponseInUrl() &&
-          window.location.pathname !== OAUTH_CALLBACK_PATH &&
-          window.location.pathname !== "/reset-password"
-        ) {
-          // Clear the OAuth params from the URL up-front so a StrictMode
-          // double-invoke / reload can't re-trigger exchange.
+        if (isReturningOAuth()) {
+          // The exchange handler scrubs credentials before consuming them.
           const oauthSession = await completeOAuthSessionFromUrl(
             "app bootstrap",
             callbackController.signal,
@@ -850,10 +850,16 @@ function SupabaseClerkProvider({
       }
     }
 
-    hydrateSession();
+    // A provider may return to the home page. Defer that one-use exchange
+    // so effect replay can cancel before the first mount scrubs its URL.
+    const callbackStart = isReturningOAuth()
+      ? window.setTimeout(() => void hydrateSession(), 0)
+      : undefined;
+    if (callbackStart === undefined) void hydrateSession();
 
     return () => {
       cancelled = true;
+      if (callbackStart !== undefined) window.clearTimeout(callbackStart);
       sessionValidationRef.current += 1;
       callbackController.abort();
       sub.subscription.unsubscribe();
@@ -939,7 +945,14 @@ function SupabaseClerkProvider({
     // Resolving the initial public session must preserve the SSR subtree.
     // isLoaded still gates all principal access; per-account keys discard
     // private child state immediately when a validated account is cleared.
-    <Ctx.Provider key={session?.user.id ?? "guest"} value={value}>
+    <Ctx.Provider
+      key={
+        typeof window !== "undefined" && window.location.pathname === "/reset-password"
+          ? "hosted-password-recovery"
+          : (session?.user.id ?? "guest")
+      }
+      value={value}
+    >
       <div
         style={{ display: !isLoaded || authorityUnresolved ? "none" : "contents" }}
         inert={!isLoaded || authorityUnresolved || undefined}

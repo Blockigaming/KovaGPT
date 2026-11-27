@@ -1,0 +1,33 @@
+.kova-localization {
+  margin-top: 28px;
+  padding-block: 16px 8px;
+  border-radius: var(--kova-radius-card);
+  background: var(--surface-secondary);
+}
+.kova-localization h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.kova-localization .kova-preference-row {
+  padding: 12px 0;
+}
+.kova-localization-note {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.kova-localization-preview {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: 6px 16px;
+  margin: 12px 0 8px;
+  font-size: 0.875rem;
+}
+.kova-localization-preview dt {
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.kova-localization-preview dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

@@ -14,7 +14,11 @@ test("workspace discovery routes expose one deliberate main landmark contract", 
   for (const [name, source] of Object.entries(routes)) {
     assert.match(source, /<main[\s\S]{0,220}id="main-content"/, name);
     assert.match(source, /tabIndex=\{-1\}/, name);
-    assert.match(source, /aria-labelledby="(?:projects|library|apps|images)-title"/, name);
+    assert.match(
+      source,
+      /aria-labelledby=(?:"|\{[^}]*"?)(?:projects|library|apps|images)-title/,
+      name,
+    );
   }
 });
 
@@ -29,7 +33,7 @@ test("Connections uses one page name and one truthful signed-out action", () => 
   assert.doesNotMatch(routes.apps, /FILTER_CATEGORIES|You haven't connected any apps/);
   assert.match(routes.apps, /GitHub connection status is unavailable/);
   assert.match(routes.apps, /min-h-11/);
-  assert.match(routes.apps, /role="status" aria-label="Loading connections"/);
+  assert.match(routes.apps, /role="status"\s+aria-label="Loading connections"/);
   assert.doesNotMatch(routes.apps, /aria-busy=\{!isLoaded \|\| undefined\}/);
 });
 

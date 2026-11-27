@@ -468,7 +468,11 @@ function fixture(initial = {}, options = {}) {
     }
   }
   function control(label) {
-    const found = nodes(tree).find((node) => node.type === "button" && text(node).trim() === label);
+    const found = nodes(tree).find(
+      (node) =>
+        node.type === "button" &&
+        (node.props["aria-label"] === label || text(node).trim() === label),
+    );
     assert.ok(found, `Missing button ${label}; visible: ${text(tree)}`);
     return found.props;
   }
@@ -508,13 +512,9 @@ function fixture(initial = {}, options = {}) {
       fakeDocument.visibilityState = visibility;
       fakeDocument.dispatchEvent(new Event("visibilitychange"));
     },
-    async chooseVoice(id) {
-      const picker = nodes(tree).find((node) => node.type === "Select");
-      assert.ok(picker, "Voice picker should be visible");
-      picker.props.onValueChange(id);
-      await flush();
-    },
-    selectedVoice: () => nodes(tree).find((node) => node.type === "Select")?.props.value,
+    // Voice choice lives in Settings only; the composer must never render a picker.
+    hasVoicePicker: () =>
+      nodes(tree).some((node) => node.type === "Select" || node.type === "SelectTrigger"),
     flush,
     control,
     text: () => text(tree),
@@ -950,75 +950,32 @@ test("repeated recording and TTS clicks are serialized before a rerender", async
   f.unmount();
 });
 
-test("picker renders only server catalog labels and stores available choices per account", async () => {
-  const f = fixture();
-  await f.ready();
-  assert.equal(f.selectedVoice(), "default");
-  assert.match(f.text(), /Locked voice.*View plans/);
-  const picker = f.nodes().find((node) => node.type === "SelectTrigger");
-  const label = f.nodes().find((node) => node.type === "label" && text(node) === "Reply voice");
-  assert.equal(picker.props.id, label.props.htmlFor);
-  assert.match(picker.props.className, /min-h-11/);
-  assert.ok(
-    f
-      .nodes()
-      .filter((node) => node.type === "SelectItem")
-      .every((node) => /min-h-11/.test(node.props.className)),
-  );
-  await f.chooseVoice("warm");
-  assert.equal(f.selectedVoice(), "warm");
-  assert.equal(f.storage.get(voiceKey("owner-a")), "warm");
-  assert.equal(f.requests.length, 1);
-  assert.equal(f.microphoneRequests.length, 0);
-  await f.click("Read latest completed reply");
-  await waitForRequest(f, 2);
-  assert.equal(JSON.parse(f.requests.at(-1).init.body).voiceId, "warm");
-  assert.equal(f.requests.at(-1).init.headers["X-Kova-Owner"], "owner-a");
-  f.unmount();
+test("the chat voice screen has no voice picker and speaks with the voice saved in Settings", async () => {
+  for (const mode of ["dictate", "voice"]) {
+    const f = fixture({ mode });
+    await f.ready();
+    assert.equal(f.hasVoicePicker(), false, mode);
+    assert.doesNotMatch(f.text(), /Reply voice|Choose a voice|View plans/, mode);
+    f.unmount();
+  }
+  const saved = fixture({}, { storage: new Map([[voiceKey("owner-a"), "warm"]]) });
+  await saved.ready();
+  await saved.click("Read latest completed reply");
+  await waitForRequest(saved, 2);
+  assert.equal(JSON.parse(saved.requests.at(-1).init.body).voiceId, "warm");
+  assert.equal(saved.storageWrites.length, 0, "The composer never writes the voice choice");
+  saved.unmount();
 });
 
-test("stored voice is validated against fresh permissions, with isolated account/default fallback", async () => {
-  const storage = new Map([
-    [voiceKey("owner-a"), "warm"],
-    [voiceKey("owner-b"), "locked"],
-  ]);
-  const f = fixture({}, { storage });
-  await f.ready();
-  assert.equal(f.selectedVoice(), "warm");
-  const oldChange = f.nodes().find((node) => node.type === "Select").props.onValueChange;
-  await f.update({ userId: "owner-b" });
-  oldChange("warm");
-  await f.flush();
-  assert.equal(storage.get(voiceKey("owner-b")), "locked");
-  f.requests.at(-1).resolve(Response.json({ ...configured, defaultVoiceId: "default" }));
-  await f.flush();
-  assert.equal(f.selectedVoice(), "default");
-  assert.equal(storage.has(voiceKey("owner-b")), false);
-  assert.equal(storage.get(voiceKey("owner-a")), "warm");
-  await f.chooseVoice("warm");
-  assert.equal(storage.get(voiceKey("owner-b")), "warm");
-  await f.update({ open: false });
-  await f.update({ open: true });
-  f.requests.at(-1).resolve(
-    Response.json({
-      ...configured,
-      voices: configured.voices.map((voice) => ({ ...voice, available: voice.id === "default" })),
-    }),
-  );
-  await f.flush();
-  assert.equal(f.selectedVoice(), "default");
-  assert.equal(storage.has(voiceKey("owner-b")), false);
-  f.unmount();
-});
-
-test("unknown or locked stored preferences never authorize playback and guest storage is untouched", async () => {
-  for (const saved of ["unknown-provider-id", "locked", "", "x".repeat(1000)]) {
-    const storage = new Map([[voiceKey("owner-a"), saved]]);
+test("a stored voice that is locked, unknown or malformed is discarded for the plan default", async () => {
+  for (const savedChoice of ["unknown-provider-id", "locked", "", "x".repeat(1000)]) {
+    const storage = new Map([[voiceKey("owner-a"), savedChoice]]);
     const f = fixture({}, { storage });
-    await f.ready({ ...configured, defaultVoiceId: "missing" });
-    assert.equal(f.selectedVoice(), "default");
+    await f.ready({ ...configured, defaultVoiceId: "default" });
+    await f.click("Read latest completed reply");
+    await waitForRequest(f, 2);
+    assert.equal(JSON.parse(f.requests.at(-1).init.body).voiceId, "default");
     assert.equal(storage.has(voiceKey("owner-a")), false);
-    assert.equal(f.dispatched.length, 0);
     f.unmount();
   }
   const guest = fixture({ userId: null });
@@ -1028,141 +985,32 @@ test("unknown or locked stored preferences never authorize playback and guest st
   guest.unmount();
 });
 
-test("voice changes cancel pending speech and discard stale playback", async () => {
-  const f = fixture();
+test("Voice conversations speak with the Settings voice and Stop rejects late audio", async () => {
+  const f = fixture({ mode: "voice" }, { storage: new Map([[voiceKey("owner-a"), "warm"]]) });
   await f.ready();
-  await f.click("Read latest completed reply");
-  const stale = await waitForRequest(f, 2);
-  await f.chooseVoice("warm");
-  assert.equal(stale.init.signal.aborted, true);
-  stale.resolve(new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }));
+  const { submission } = await voiceTurn(f);
+  submission.resolve(savedVoiceReply());
   await f.flush();
-  assert.equal(f.urls.length, 0);
-  await f.click("Read latest completed reply");
-  await waitForRequest(f, 3);
-  f.requests
-    .at(-1)
-    .resolve(new Response(new Uint8Array([2]), { headers: { "content-type": "audio/mpeg" } }));
-  await f.flush();
-  assert.equal(f.playbackSinks.at(-1).writes.length, 1);
-  f.playbackSinks.at(-1).options.onEnded();
-  await f.flush();
-  await f.chooseVoice("default");
-  assert.equal(f.playbackSinks.at(-1).disposed, 1);
-  assert.equal(f.selectedVoice(), "default");
-  f.unmount();
-});
-
-test("locked voices open only existing billing after close focus releases, without saving or posting", async () => {
-  let normalFocus = 0,
-    prevented = 0;
-  const f = fixture({ onCloseAutoFocus: () => normalFocus++ });
-  await f.ready();
-  await f.chooseVoice("locked");
-  assert.deepEqual(f.closed, [false]);
-  assert.equal(f.dispatched.length, 0);
-  assert.equal(f.storageWrites.length, 0);
-  assert.equal(f.requests.length, 1);
-  await f.update({ open: false });
-  f.nodes()
-    .find((node) => node.type === "DialogContent")
-    .props.onCloseAutoFocus({
-      preventDefault() {
-        prevented++;
-      },
-    });
-  assert.equal(prevented, 1);
-  assert.equal(normalFocus, 0);
-  assert.equal(f.dispatched.length, 1);
-  assert.equal(f.dispatched[0].type, "kova-open-settings");
-  assert.equal(f.dispatched[0].detail.tab, "billing");
-  f.nodes()
-    .find((node) => node.type === "DialogContent")
-    .props.onCloseAutoFocus({ preventDefault() {} });
-  assert.equal(f.dispatched.length, 1);
-  assert.equal(normalFocus, 0);
-  f.unmount();
-});
-
-test("billing handoff is discarded if the account changes before close autofocus", async () => {
-  const f = fixture();
-  await f.ready();
-  await f.chooseVoice("locked");
-  await f.update({ open: false, userId: "owner-b" });
-  f.nodes()
-    .find((node) => node.type === "DialogContent")
-    .props.onCloseAutoFocus({ preventDefault() {} });
-  assert.equal(f.dispatched.length, 0);
-  f.unmount();
-});
-
-test("storage denial never blocks selecting or using an available voice", async () => {
-  for (const options of [
-    { storageUnavailable: true },
-    { storageReadError: true },
-    { storageWriteError: true },
-    { storageRemoveError: true, storage: new Map([[voiceKey("owner-a"), "locked"]]) },
-  ]) {
-    const f = fixture({}, options);
-    await f.ready();
-    assert.equal(f.selectedVoice(), "default");
-    await f.chooseVoice("warm");
-    assert.equal(f.selectedVoice(), "warm");
-    if (options.storageUnavailable || options.storageWriteError)
-      assert.match(f.text(), /could not be saved/);
-    await f.click("Read latest completed reply");
-    await waitForRequest(f, 2);
-    assert.equal(JSON.parse(f.requests.at(-1).init.body).voiceId, "warm");
-    f.unmount();
-  }
-});
-
-test("account data cleanup resets mounted preference, cancels speech and does not rewrite storage", async () => {
-  const f = fixture();
-  await f.ready();
-  await f.chooseVoice("warm");
-  const writes = f.storageWrites.length;
-  await f.click("Read latest completed reply");
-  const pending = await waitForRequest(f, 2);
-  f.dispatch({
-    type: principalStorage.PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
-    detail: { principal: "user:someone-else" },
+  const oldSpeech = f.requests.at(-1);
+  assert.equal(oldSpeech.url, "/api/speech");
+  assert.deepEqual(JSON.parse(oldSpeech.init.body), {
+    ownerId: "owner-a",
+    chatId: "chat-a",
+    messageId: "new-voice-assistant",
+    contentSha256: "a".repeat(64),
+    voiceId: "warm",
   });
-  await f.flush();
-  assert.equal(f.selectedVoice(), "warm");
-  assert.equal(pending.init.signal.aborted, false);
-  f.storage.delete(voiceKey("owner-a"));
-  f.dispatch({
-    type: principalStorage.PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
-    detail: { principal: "user:owner-a" },
-  });
-  await f.flush();
-  assert.equal(f.selectedVoice(), "default");
-  assert.equal(pending.init.signal.aborted, true);
-  assert.equal(f.storageWrites.length, writes);
-  assert.equal(f.storage.has(voiceKey("owner-a")), false);
-  f.unmount();
-});
-
-test("catalog choices can be previewed while provider audio remains unconfigured", async () => {
-  const model = { type: "button", props: { children: "Existing model control" } };
-  const f = fixture({ conversationModelControl: model });
-  await f.ready({ ...configured, configured: false, stt: false, tts: false, sts: false });
-  assert.doesNotMatch(f.text(), /Existing model control/);
-  assert.ok(!f.nodes().some((node) => node.props?.className === "kova-voice-mark"));
-  assert.doesNotMatch(f.text(), /Your conversation is here when/);
-  await f.chooseVoice("warm");
-  assert.equal(f.selectedVoice(), "warm");
-  assert.equal(f.requests.length, 1);
-  assert.equal(f.microphoneRequests.length, 0);
-  assert.ok(
-    !f
-      .nodes()
-      .some(
-        (node) => node.type === "button" && text(node).trim() === "Read latest completed reply",
-      ),
+  await f.click("Stop");
+  assert.equal(oldSpeech.init.signal.aborted, true);
+  oldSpeech.resolve(
+    new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "audio/mpeg" } }),
   );
-  assert.match(f.text(), /Voice is not available yet/);
+  const oldSink = f.playbackSinks[0];
+  oldSink.options.onEnded();
+  await f.flush();
+  assert.equal(oldSink.writes.length, 0, "The old voice never reaches playback after Stop");
+  assert.ok(oldSink.disposed > 0);
+  assert.equal(f.microphoneRequests.length, 1, "The old voice cannot begin another turn");
   f.unmount();
 });
 
@@ -1183,21 +1031,6 @@ test("empty, locked-only and malformed catalogs never enable unauthorized TTS", 
     assert.equal(f.requests.length, 1);
     f.unmount();
   }
-});
-
-test("permission denial after selection cannot create playback or reveal provider content", async () => {
-  const f = fixture();
-  await f.ready();
-  await f.chooseVoice("warm");
-  await f.click("Read latest completed reply");
-  const request = await waitForRequest(f, 2);
-  request.resolve(Response.json({ error: "speech_voice_plan_required" }, { status: 403 }));
-  await f.flush();
-  assert.match(f.text(), /requires a different plan/);
-  assert.doesNotMatch(f.text(), /speech_voice_plan_required/);
-  assert.equal(f.urls.length, 0);
-  assert.deepEqual(f.submitted, []);
-  f.unmount();
 });
 
 test("voice canvas keeps processor details contextual and secondary controls out of the main flow", async () => {
@@ -1413,6 +1246,27 @@ async function voiceTurn(f) {
   assert.equal(f.voiceSubmissions.length, 1);
   return { acquired, submission: f.voiceSubmissions[0] };
 }
+test("chat window limit asks the default ElevenLabs voice to speak the reset time", async () => {
+  const f = fixture({ mode: "voice" });
+  const { submission } = await voiceTurn(f);
+  submission.reject({
+    code: "message_window_limit",
+    resetsAt: new Date(Date.now() + 82.5 * 60_000).toISOString(),
+  });
+  await f.flush();
+  const tts = f.requests.at(-1);
+  assert.equal(tts.url, "/api/voice");
+  assert.deepEqual(JSON.parse(tts.init.body), {
+    action: "tts",
+    text: "Whoops! You've hit your usage limit, although we can talk again in 1 hour and 23 minutes.",
+  });
+  tts.resolve(Response.json({}, { status: 503 }));
+  await f.flush();
+  assert.match(f.text(), /1 hour and 23 minutes/);
+  assert.equal(f.microphoneRequests.length, 1);
+  f.unmount();
+});
+
 async function voiceReply(f) {
   const turn = await voiceTurn(f);
   turn.submission.resolve(savedVoiceReply());
@@ -1503,7 +1357,7 @@ test("the waveform starts recorded ElevenLabs Voice when realtime cannot connect
   assert.match(f.text(), /Starting Voice…/);
   assert.doesNotMatch(f.text(), /Realtime connection failed|Latest saved reply|Original/);
   await f.acquire();
-  assert.match(f.text(), /Recording/);
+  assert.match(f.text(), /Listening…/);
   assert.doesNotMatch(f.text(), /Starting Voice…/);
   await f.click("Finish turn");
   const stt = await waitForRequest(f, 3);
@@ -1542,11 +1396,7 @@ test("Voice requires explicit Start and uses STT before the existing chat callba
   const f = fixture({ mode: "voice" });
   await f.ready();
   assert.equal(f.microphoneRequests.length, 0);
-  assert.equal(
-    f.selectedVoice(),
-    "default",
-    "Saved-response speech uses the selected server catalog voice",
-  );
+  assert.equal(f.hasVoicePicker(), false, "Voice choice is only changed in Settings");
   assert.doesNotMatch(f.text(), /Read latest completed reply/);
   await f.click("Start");
   const acquired = await f.acquire();
@@ -1651,39 +1501,6 @@ test("Voice speaks the exact saved receipt and begins the next turn only after a
   const late = await f.acquire();
   assert.ok(late.tracks.every((t) => t.stopped > 0));
   assert.equal(f.recorders.length, 1);
-  f.unmount();
-});
-
-test("Voice uses the chosen catalog voice and Stop plus a changed selection rejects late audio", async () => {
-  const f = fixture({ mode: "voice" });
-  await f.ready();
-  assert.equal(f.selectedVoice(), "default");
-  await f.chooseVoice("warm");
-  const { submission } = await voiceTurn(f);
-  submission.resolve(savedVoiceReply());
-  await f.flush();
-  const oldSpeech = f.requests.at(-1);
-  assert.equal(oldSpeech.url, "/api/speech");
-  assert.deepEqual(JSON.parse(oldSpeech.init.body), {
-    ownerId: "owner-a",
-    chatId: "chat-a",
-    messageId: "new-voice-assistant",
-    contentSha256: "a".repeat(64),
-    voiceId: "warm",
-  });
-  await f.click("Stop");
-  await f.chooseVoice("default");
-  assert.equal(oldSpeech.init.signal.aborted, true);
-  oldSpeech.resolve(
-    new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "audio/mpeg" } }),
-  );
-  const oldSink = f.playbackSinks[0];
-  oldSink.options.onEnded();
-  await f.flush();
-  assert.equal(oldSink.writes.length, 0, "The old voice never reaches playback after Stop");
-  assert.ok(oldSink.disposed > 0);
-  assert.equal(f.microphoneRequests.length, 1, "The old voice cannot begin another turn");
-  assert.equal(f.selectedVoice(), "default");
   f.unmount();
 });
 

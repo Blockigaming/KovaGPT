@@ -39,22 +39,18 @@ test("keyboard users can dismiss menus and dialogs with focus restoration", asyn
   }
 
   const settings = await openCurrentSettings(page);
-  await expect(settings).toBeVisible();
+  await expect(settings).toHaveAttribute("role", "dialog");
+  await expect(page).toHaveURL(/\/$/);
+  await page.keyboard.press("Escape");
+  await expect(settings).toBeHidden();
   if (width < 1024) {
-    // Mobile Settings is a modal above the current chat, preserving its draft.
-    await expect(page).toHaveURL(/\/$/);
-    await page.keyboard.press("Escape");
-    await expect(settings).toBeHidden();
     const navigation = page.getByRole("dialog", { name: "Primary navigation" });
     await expect(navigation).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(navigation).toBeHidden();
     await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeFocused();
   } else {
-    await expect(page).toHaveURL(/\/$/);
-    await page.keyboard.press("Escape");
-    await expect(settings).toBeHidden();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("button", { name: "Account menu", exact: true })).toBeFocused();
   }
   const expand = page.getByRole("button", { name: "Expand input", exact: true });
   await expand.focus();

@@ -156,11 +156,11 @@ test("sidebar search and all main destinations keep honest service states", asyn
     page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
   await page.getByPlaceholder("Search connections").fill("Gmail");
-  await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
-  const plugin = page.getByRole("dialog", { name: "Gmail", exact: true });
-  await expect(plugin).toContainText("Capabilities and permissions");
+  await page.getByRole("link", { name: "Gmail", exact: true }).click();
+  const plugin = page.getByRole("article", { name: "Gmail", exact: true });
+  await expect(plugin.getByRole("tabpanel", { name: "Permissions" })).toBeVisible();
   await capture(page, info, "plugins-details");
-  await page.keyboard.press("Escape");
+  await plugin.getByRole("button", { name: "Back to Connections" }).click();
   await page.getByPlaceholder("Search connections").fill("");
   await capture(page, info, "plugins");
 
@@ -201,9 +201,10 @@ test("sidebar search and all main destinations keep honest service states", asyn
     await expect(accountMenu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
   }
   const help = accountMenu.getByRole("menuitem", { name: "Help", exact: true });
-  const helpOpensMenu = (await help.getAttribute("aria-haspopup")) === "menu";
+  // Read the item's role before activating it: a direct Help link closes the menu.
+  const helpOpensSubmenu = (await help.getAttribute("aria-haspopup")) === "menu";
   await help.click();
-  if (helpOpensMenu) {
+  if (helpOpensSubmenu) {
     await page.getByRole("menuitem", { name: "Help center", exact: true }).click();
   }
   await expect(page).toHaveURL(/\/help$/);
@@ -270,6 +271,9 @@ test("project sections and account settings remain navigable and cancel safely",
     await expect(page.getByRole("tabpanel")).toBeVisible();
   }
   await capture(page, info, "project-workspace");
+  const workspace = page.locator(".kova-app-content");
+  await openSidebar(page);
+  await expect(workspace).toHaveAttribute("data-sidebar", "open");
   const settings = await openCurrentSettings(page);
   for (const name of [
     "General",
@@ -321,10 +325,8 @@ test("project sections and account settings remain navigable and cancel safely",
     await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
     await page.keyboard.press("Escape");
   }
-  const workspace = page.locator(".kova-app-content");
-  if (await page.locator(".kova-settings-page").count())
-    await expect(page.locator(".kova-sidebar")).toHaveCount(0);
-  else await expect(workspace).toHaveAttribute("data-sidebar", "closed");
+  const drawer = await usesSidebarDrawer(page);
+  await expect(workspace).toHaveAttribute("data-sidebar", drawer ? "closed" : "open");
   await page.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(settings).toBeHidden();
   await expect(workspace).toHaveAttribute("data-sidebar", "open");

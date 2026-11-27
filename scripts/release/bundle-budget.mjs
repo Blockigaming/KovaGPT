@@ -48,6 +48,12 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 648_944,
       gzip: 201_025,
     }),
+    Object.freeze({
+      head: "9f54a3f97c18ba2f3c9d52cbe2e39ed5ea360f85",
+      source: "PR #771 CI production build, run 45829792418",
+      raw: 651_002,
+      gzip: 201_727,
+    }),
   ]),
   deviceSettingsAdjustment:
     "On 2026-11-08 the clean main client build measured 200,896 gzip bytes, already above the previous 200,000 ceiling. The device-specific Settings candidate measured 200,991 locally and 201,025 in CI. A 201,500 ceiling leaves 475 bytes (0.24%) above the measured CI candidate; raw, home-route, omega and chart ceilings remain unchanged.",
@@ -86,20 +92,54 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 62_698,
       gzip: 20_651,
     }),
+    Object.freeze({
+      tree: "f425d73082b82a7b89afbf2d9a1b21c999146b5e",
+      source: "Node 22 local production build, PR #749 response-UI candidate rebased on #748",
+      raw: 61_224,
+      gzip: 20_861,
+    }),
+    Object.freeze({
+      tree: "pr-749-localization",
+      source: "Node 22 local production build, PR #749 with spec §75 localization",
+      raw: 61_408,
+      gzip: 20_932,
+    }),
+    Object.freeze({
+      head: "c174b2fae6bf5d21a1acdccd532fa91699c8f298",
+      source: "PR #762 CI production build, run 45416613044",
+      raw: 62_373,
+      gzip: 21_670,
+    }),
+    Object.freeze({
+      head: "9f54a3f97c18ba2f3c9d52cbe2e39ed5ea360f85",
+      source: "PR #771 CI production build, run 45829792418",
+      raw: 62_583,
+      gzip: 21_805,
+    }),
   ]),
+  responseFileBrowserAdjustment:
+    "PR #771 run 45829792418 measured the home route at 62,583 raw / 21,805 gzip bytes and the shared entry at 651,002 raw / 201,727 gzip bytes after lazy browser handoff and transport deferral. The 21,950 and 202,000 gzip ceilings retain 145 and 273 bytes of headroom (0.67% and 0.14%). Raw, omega and chart ceilings and fail-closed chunk identification remain unchanged.",
+  composerAvailabilityAdjustment:
+    "The immediate composer and consolidated UI correction in PR #762 measured 62,373 raw / 21,670 gzip bytes in CI after deferring the streaming transport. The initial gzip ceiling of 21,800 leaves 130 bytes (0.60%) of headroom over that measured build. The 62,750 raw limit, all other chunk ceilings, and chunk identification checks remain unchanged.",
   apiAudioAdjustment:
     "The 2026-10-29 UI/Auth/API integration measured 20,238 home-route gzip bytes in PR #489 CI. Decisions, moderation and audio controls measured 20,253 in PR #492 CI; the combined sidebar preference repair measured 20,259 locally. The 20,400 ceiling retains less than 1% headroom over that complete build. The 62,500 raw ceiling and every shared-entry, omega and chart ceiling are unchanged.",
   usageReleaseAdjustment:
     "PR #691 CI run 43623726051 at 8ee794ef9702f9e170cf69bcd497d45f64739876 measured the home route at 62,667 raw / 20,623 gzip bytes after the existing settings and response-follow-up release. The 62,750 raw / 20,650 gzip ceiling leaves 83 raw / 27 gzip bytes of headroom. All other budgets and bundle identification checks are unchanged.",
   richResponseAdjustment:
     "The rich response catalog measured 62,698 raw and 20,651 gzip bytes in GitHub CI. The home-route gzip ceiling of 20,675 allows 24 bytes of headroom over that build.",
+  deviceWidthWebAdjustment:
+    "PR #747 CI measured the home route at 61,001 raw / 20,692 gzip bytes after the device-width website, the Settings modal deep-link fix and the native app surface switch; raw size is unchanged from the prior build while gzip varies with chunk hashes. The gzip ceiling moves to 20,725, leaving 33 bytes of headroom. All other budgets are unchanged.",
+  filePreviewAdjustment:
+    "The 2026-11-23 owner-approved file-preview candidate (PR #749) measured 61,224 raw / 20,861 gzip for the initial route in a local production build after rebasing on PR #748; main measured 20,692 against a 20,725 ceiling after PR #747. Its home route adds automatic file-preview opening, the background-tab response notification and the conversation goal sent with each message. The initial gzip ceiling moves to 20,875, giving 14 bytes of headroom; other ceilings are unchanged.",
+  localizationAdjustment:
+    "PR #749 adds spec §75 language and region preferences. Translated labels and formatters load on demand; only the language store and label lookup reach the first page. A local production build measured the initial route at 61,408 raw / 20,932 gzip (the language store, label lookup, the on-demand loader for public pages and the global stylesheet for right-to-left code and script fonts). The gzip ceiling moves to 20,950, leaving 18 bytes of headroom; other ceilings are unchanged.",
   openAiModelOfferAdjustment:
     "The 2026-11-08 OpenAI model-catalog and Free-offer candidate measured 62,567 raw / 20,567 gzip for the initial route and 648,770 raw / 200,927 gzip for the Vite entry in CI. The initial ceilings move to 62,600 raw / 20,600 gzip, providing 33 gzip bytes of headroom; the main gzip ceiling remains 201,500 from the device-specific Settings CI evidence. Omega and chart ceilings remain unchanged.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_750, gzip: 20_675 }),
-  main: Object.freeze({ raw: 670_000, gzip: 201_500 }),
+  initial: Object.freeze({ raw: 62_750, gzip: 21_950 }),
+  main: Object.freeze({ raw: 670_000, gzip: 202_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
 });

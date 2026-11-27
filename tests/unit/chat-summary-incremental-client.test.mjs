@@ -68,6 +68,28 @@ function completed(snapshot) {
   };
 }
 
+test("short chats skip the memory descriptor lookup until a summary proof can fit", async () => {
+  const options = {
+    principal: id,
+    chatId,
+    memoryEnabled: true,
+    getSession: async () => ({ data: { session } }),
+  };
+  let lookups = 0;
+  const fetchImpl = async () => {
+    lookups++;
+    return Response.json({ enabled: false });
+  };
+
+  const shortHistory = history.slice(0, 17);
+  const payload = await createChatHistoryPayload(shortHistory, 2, { ...options, fetchImpl });
+  assert.deepEqual(payload, { messages: shortHistory, historyOffset: 0, memoryStartIndex: 2 });
+  assert.equal(lookups, 0);
+
+  await createChatHistoryPayload(history.slice(0, 18), 2, { ...options, fetchImpl });
+  assert.equal(lookups, 1);
+});
+
 test("a 1201-message archive catches up through bounded increments without truncating local history", async () => {
   const before = structuredClone(history);
   let descriptor = null;

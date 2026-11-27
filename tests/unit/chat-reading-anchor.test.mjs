@@ -268,11 +268,30 @@ test("every transition frame and breakpoint resize preserves the cached text anc
   assert.equal(f.element.style.overflowAnchor, "none");
   for (const width of [340, 380, 420, 470, 510, 590, 768, 1023, 1024, 830, 320]) {
     f.resized(width);
+    f.flush();
     assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset, `width${width}`);
     f.emit("scroll"); // A correction scroll is not a new reading target.
   }
   c.dispose();
   assert.equal(f.element.style.overflowAnchor, "auto");
+});
+
+test("resize notifications coalesce without synchronous scroll writes", () => {
+  const f = fixture();
+  f.readInside();
+  const anchor = capture(f.element);
+  const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
+  f.resized(420);
+  f.resized(590);
+  assert.equal(f.writes.length, 0);
+  assert.equal(f.frames.size, 1);
+  f.flush();
+  assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
+  f.resized(340);
+  const writes = f.writes.length;
+  c.dispose();
+  f.flush();
+  assert.equal(f.writes.length, writes);
 });
 
 test("reopening a chat restores its reading line after pending scroll and remount", () => {
@@ -320,6 +339,7 @@ test("real scrolling during a transition rebases and no longer restores the prev
   f.readInside();
   const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
   f.resized(420);
+  f.flush();
   f.emit("scroll");
   f.emit("wheel");
   f.readInside(9, 2, 3);
@@ -328,6 +348,7 @@ test("real scrolling during a transition rebases and no longer restores the prev
   const next = capture(f.element);
   assert.equal(next.messageId, "message-9");
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(next), next.text.viewportOffset);
   c.dispose();
 });
@@ -346,6 +367,7 @@ test("a user scroll pending in the same frame takes priority over resize compens
   const next = capture(f.element);
   assert.notEqual(next.messageId, "message-23");
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(next), next.text.viewportOffset);
   c.dispose();
 });
@@ -386,6 +408,7 @@ test("an ongoing touch or scrollbar gesture can keep scrolling across resize fra
     assert.equal(f.lineOffset(next), next.text.viewportOffset);
     f.emitWindow(end);
     f.resized(590);
+    f.flush();
     assert.equal(f.lineOffset(next), next.text.viewportOffset);
     c.dispose();
   }
@@ -402,6 +425,7 @@ test("unprompted non-clamp scrolls during reflow remain navigation rather than c
   f.resized(340);
   f.flush();
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(next), next.text.viewportOffset);
   c.dispose();
 });
@@ -412,6 +436,7 @@ test("bottom-follow retains the end across reflow and manual reading can leave i
   f.element.scrollTop = f.element.scrollHeight - f.element.clientHeight;
   const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => following });
   f.resized(590, 300);
+  f.flush();
   assert.equal(f.element.scrollTop, f.element.scrollHeight - f.element.clientHeight);
   f.emit("scroll");
   following = false;
@@ -421,6 +446,7 @@ test("bottom-follow retains the end across reflow and manual reading can leave i
   f.flush();
   const next = capture(f.element);
   f.resized(420);
+  f.flush();
   assert.equal(f.lineOffset(next), next.text.viewportOffset);
   assert.notEqual(f.element.scrollTop, f.element.scrollHeight - f.element.clientHeight);
   c.dispose();
@@ -434,6 +460,7 @@ test("explicit Jump capture promotes the end before its smooth scroll event", ()
   following = true;
   c.followEnd();
   f.resized(590);
+  f.flush();
   assert.equal(f.element.scrollTop, f.element.scrollHeight - f.element.clientHeight);
   c.dispose();
 });
@@ -450,10 +477,12 @@ test("correction scroll changing near-bottom classification cannot replace the c
   following = true;
   f.emit("scroll");
   f.resized(1024);
+  f.flush();
   assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
   // Reopening captures geometry again after React's near-bottom classification.
   c.capture();
   f.resized(320);
+  f.flush();
   assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
   c.dispose();
 });
@@ -471,6 +500,7 @@ test("navigation capture flushes a pending manual-scroll rebase before the next 
   c.capture();
   assert.equal(f.frames.size, 0);
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
   c.dispose();
 });
@@ -488,6 +518,7 @@ test("control mutations before a focus scroll event preserve the newly visible p
   f.emit("scroll");
   f.flush();
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
   c.dispose();
 });
@@ -505,6 +536,7 @@ test("control focus navigation takes priority over a same-frame layout change", 
   f.flush();
   const next = capture(f.element);
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(next), next.text.viewportOffset);
   c.dispose();
 });
@@ -525,6 +557,7 @@ test("a control press cannot be repositioned between pointer down and release", 
   f.flush();
   const next = capture(f.element);
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(next), next.text.viewportOffset);
   c.dispose();
 });
@@ -630,12 +663,14 @@ test("a hidden transcript retains its passage until visible and replacement scop
   const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
   f.resized(590, 0);
   f.resized(420, 220);
+  f.flush();
   assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
   c.dispose();
   f.readInside(4, 1, 2);
   const replacement = capture(f.element);
   const next = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
   f.resized(590);
+  f.flush();
   assert.equal(f.lineOffset(replacement), replacement.text.viewportOffset);
   next.dispose();
 });
@@ -645,6 +680,7 @@ test("start position stays at start and a removed-message mutation drops obsolet
   assert.deepEqual(capture(f.element), { kind: "start" });
   const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
   f.resized(590);
+  f.flush();
   assert.equal(f.element.scrollTop, 0);
   const removed = f.element.messages.pop();
   f.mutated();

@@ -6,10 +6,15 @@ test("launch directory exposes planned details without unsupported connect actio
   assert.match(route, /MASTER_PLUGIN_REVIEW_CATALOG/);
   assert.match(route, /const filtered = catalog.filter/);
   assert.match(route, /connectionFilter === "connected" && !hasConnection/);
-  assert.match(route, /category !== "all" && c.category !== category/);
-  assert.match(route, /setCategory\("all"\)/);
+  // Category filters were removed: search also matches each provider's category.
+  assert.match(
+    route,
+    /\[c\.label, c\.description, c\.category, masterConnectorSearchText\(c\.id\)\]/,
+  );
+  assert.doesNotMatch(route, /setCategory\(/);
   assert.match(route, /!configured\s*\? "Coming soon"/);
-  assert.match(route, /selectedReview.permissions.map/);
+  assert.match(route, /selectedProfile.read.map/);
+  assert.match(route, /selectedProfile.write.map/);
   assert.doesNotMatch(route, /google.com\/s2\/favicons|label.slice\(0, 2\)/);
   assert.doesNotMatch(route, /PluginConnectionPreview|plugin-preview/);
 });

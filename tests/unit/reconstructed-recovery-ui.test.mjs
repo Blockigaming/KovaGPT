@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
 
-function recoveryFixture(request = async () => ({ ok: true })) {
+function recoveryFixture(request = async () => ({ error: null })) {
   let open = true;
   const changes = [];
   const f = reactFixture(
@@ -26,13 +26,25 @@ function recoveryFixture(request = async () => ({ ok: true })) {
           DialogTitle: "h2",
           DialogDescription: "p",
         },
-        "@/integrations/supabase/client": { supabase: {} },
-        "@/lib/kova-auth-browser": {
-          browserKovaAuthEnabled: () => true,
-          kovaPublicAuthJson: request,
+        "@/integrations/supabase/client": {
+          supabase: {
+            auth: {
+              resetPasswordForEmail: (email, options) => {
+                assert.equal(email, "person@example.test");
+                assert.equal(options.redirectTo, "https://kova.test/reset-password");
+                return request();
+              },
+            },
+          },
         },
       },
-      globals: { window: { requestAnimationFrame: (run) => run() }, console },
+      globals: {
+        window: {
+          location: { origin: "https://kova.test" },
+          requestAnimationFrame: (run) => run(),
+        },
+        console,
+      },
     },
   );
   return {
@@ -76,7 +88,7 @@ test("recovery Cancel invalidates pending requests and ignores their late result
   assert.equal(requests, 1);
   await f.click("Cancel");
   await f.reopen();
-  resolve({ ok: true });
+  resolve({ error: null });
   await first;
   await f.flush();
   assert.equal(f.find("input").props.value, "");

@@ -24,7 +24,9 @@ if (
     "KOVA_EXPECTED_SUPABASE_URL and a valid KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256 must be provided together",
   );
 }
-const MAX_JAVASCRIPT_ASSETS = 256;
+// The Connections staging candidate has 277 JavaScript files. Bound the
+// request count separately from the shared download size limit.
+const MAX_JAVASCRIPT_ASSETS = 384;
 const MAX_JAVASCRIPT_BYTES = 64 * 1024 * 1024;
 const maximumBytesValue =
   process.env.KOVA_SMOKE_MAX_JAVASCRIPT_BYTES || String(MAX_JAVASCRIPT_BYTES);

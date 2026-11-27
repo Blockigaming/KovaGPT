@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from "react";
-import { BarChart3, Copy, Download, Table2 } from "lucide-react";
+import { BarChart3, Copy, Download, Pin, PinOff, Table2 } from "lucide-react";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
@@ -39,6 +39,7 @@ import {
 } from "recharts";
 import {
   CHART_TYPES,
+  isExtraChartType,
   candlestickRows,
   chartToCsv,
   histogramRows,
@@ -47,6 +48,7 @@ import {
   type ChartSpec,
   type ChartType,
 } from "./chat-chart-utils";
+import { ChatChartExtra } from "./ChatChartExtra";
 import "./chat-chart.css";
 
 const chartNames = {
@@ -56,7 +58,14 @@ const chartNames = {
   "percent-stacked-bar": "100% stacked bar",
 } as const;
 
-const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
+const DEFAULT_COLORS = ["#3b82f6", "#14b8a6", "#a78bfa", "#f59e0b", "#22c55e", "#ef4444"];
+const CHART_PALETTES = {
+  blue: DEFAULT_COLORS,
+  teal: ["#14b8a6", "#3b82f6", "#22c55e", "#a78bfa", "#f59e0b", "#ef4444"],
+  violet: ["#a78bfa", "#3b82f6", "#14b8a6", "#f59e0b", "#22c55e", "#ef4444"],
+  warm: ["#f59e0b", "#ef4444", "#ec4899", "#a78bfa", "#3b82f6", "#14b8a6"],
+} as const;
+type ChartPalette = keyof typeof CHART_PALETTES | "original";
 
 function ChartHeatmap({ spec, xKey, keys }: { spec: ChartSpec; xKey: string; keys: string[] }) {
   const values = spec.data.flatMap((row) =>
@@ -190,8 +199,17 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
     spec.type === "scatter" && !numericX ? "line" : spec.type,
   );
   const [table, setTable] = useState(false);
+  // Picture-in-picture: the chart floats in a corner while the chat scrolls, then returns.
+  const [pinned, setPinned] = useState(false);
   const chartTypeId = useId();
-  const colors = spec.colors?.length ? spec.colors : DEFAULT_COLORS;
+  const paletteId = useId();
+  const [palette, setPalette] = useState<ChartPalette>("original");
+  const colors =
+    palette === "original"
+      ? spec.colors?.length
+        ? spec.colors
+        : DEFAULT_COLORS
+      : [...CHART_PALETTES[palette]];
   const circular = type === "pie" || type === "donut";
   const legendLabels = circular
     ? spec.data.map((row, index) => String(row[xKey] ?? `Item ${index + 1}`))
@@ -254,17 +272,41 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
     (["percent-stacked-bar", "funnel", "treemap"].includes(type) && !nonNegative) ||
     (type === "treemap" && !tree.length) ||
     (type === "bubble" && !hasBubble);
-  const displayTypes = CHART_TYPES.filter(
-    (candidate) =>
-      (candidate !== "scatter" || numericX) &&
-      (candidate !== "bubble" || hasBubble) &&
-      (candidate !== "treemap" || tree.length > 0) &&
-      (candidate !== "candlestick" || !!candlestickRows(spec)) &&
-      (candidate !== "sankey" || !!flow) &&
-      (candidate !== "waterfall" || !!waterfall) &&
-      (candidate !== "range" || !!range) &&
-      (!["percent-stacked-bar", "funnel", "treemap"].includes(candidate) || nonNegative),
-  );
+  // Extended families keep their own shape; the picker offers only that type.
+  const extra = isExtraChartType(type) ? type : null;
+  const reserved = new Set([
+    "lat",
+    "lon",
+    "lng",
+    "x",
+    "y",
+    "z",
+    "dx",
+    "dy",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "error",
+    "start",
+    "end",
+    "date",
+  ]);
+  const extraKeys = spec.keys?.length ? keys : keys.filter((key) => !reserved.has(key));
+  const displayTypes: ChartType[] = isExtraChartType(spec.type)
+    ? [spec.type]
+    : CHART_TYPES.filter(
+        (candidate) =>
+          (candidate !== "scatter" || numericX) &&
+          (candidate !== "bubble" || hasBubble) &&
+          (candidate !== "treemap" || tree.length > 0) &&
+          (candidate !== "candlestick" || !!candlestickRows(spec)) &&
+          (candidate !== "sankey" || !!flow) &&
+          (candidate !== "waterfall" || !!waterfall) &&
+          (candidate !== "range" || !!range) &&
+          (!["percent-stacked-bar", "funnel", "treemap"].includes(candidate) || nonNegative),
+      );
   const axes = (
     <>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -298,312 +340,345 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   const tooltip = <Tooltip trigger={tooltipTrigger} isAnimationActive={false} />;
 
   return (
-    <figure
-      className="kova-chart my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
-      aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
-    >
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <figcaption className="mr-auto basis-full break-words text-sm font-semibold sm:basis-auto">
-          {spec.title ?? "Chart"}
-        </figcaption>
-        <label className="sr-only" htmlFor={chartTypeId}>
-          Chart type
-        </label>
-        <Select value={type} onValueChange={(value) => setType(value as ChartType)}>
-          <SelectTrigger id={chartTypeId} className="min-h-11 w-auto">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {displayTypes.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item in chartNames
-                  ? chartNames[item as keyof typeof chartNames]
-                  : item[0].toUpperCase() + item.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <button
-          type="button"
-          onClick={() => setTable((value) => !value)}
-          aria-pressed={table}
-          className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
-        >
-          <Table2 className="h-4 w-4" /> Table
-        </button>
-        <button
-          type="button"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(chartToCsv(spec));
-              toast.success("Chart data copied");
-            } catch {
-              toast.error("Could not copy the chart data. Try downloading the CSV instead.");
-            }
-          }}
-          className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
-        >
-          <Copy className="h-4 w-4" /> Copy
-        </button>
-        <button
-          type="button"
-          onClick={() => save(chartToCsv(spec), "text/csv", "csv")}
-          className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
-        >
-          <Download className="h-4 w-4" /> CSV
-        </button>
-      </div>
-      {type === "sankey" && flow ? (
-        <div className="h-64 w-full sm:h-80" role="img" aria-label="Sankey flow diagram">
-          <ResponsiveContainer width="100%" height="100%">
-            <Sankey
-              data={flow}
-              nodePadding={6}
-              nodeWidth={14}
-              node={{ fill: colors[0] }}
-              link={{ stroke: colors[0], strokeOpacity: 0.35 }}
-            >
-              <Tooltip
-                trigger={tooltipTrigger}
-                isAnimationActive={tooltipTrigger === "click" ? false : undefined}
-              />
-            </Sankey>
-          </ResponsiveContainer>
+    <>
+      {pinned && (
+        <div className="kova-chart-pinned-placeholder my-4 rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+          {spec.title ?? "Chart"} is pinned to the corner.{" "}
+          <button type="button" className="underline" onClick={() => setPinned(false)}>
+            Return it here
+          </button>
         </div>
-      ) : candles ? (
-        <CandlePlot rows={candles} />
-      ) : noCompatibleSeries ? (
-        <div role="alert" className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
-          This chart has no compatible numeric series. The source data is preserved below.
-        </div>
-      ) : type === "heatmap" ? (
-        <ChartHeatmap spec={spec} xKey={xKey} keys={keys} />
-      ) : (
-        <div
-          className="kova-chart-layout"
-          data-compact-legend={legendLabels.length > 8 ? "true" : undefined}
-        >
-          <div
-            className="h-56 w-full min-w-0 sm:h-72"
-            role="img"
-            aria-label={`${type} chart with ${spec.data.length} data points`}
+      )}
+      <figure
+        className="kova-chart my-4 overflow-hidden rounded-2xl bg-card p-3 sm:p-4"
+        data-pinned={pinned || undefined}
+        aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
+      >
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <figcaption className="mr-auto basis-full break-words text-sm font-semibold sm:basis-auto">
+            {spec.title ?? "Chart"}
+          </figcaption>
+          <label className="sr-only" htmlFor={chartTypeId}>
+            Chart type
+          </label>
+          <Select value={type} onValueChange={(value) => setType(value as ChartType)}>
+            <SelectTrigger id={chartTypeId} className="min-h-11 w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {displayTypes.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item in chartNames
+                    ? chartNames[item as keyof typeof chartNames]
+                    : (item[0].toUpperCase() + item.slice(1)).replaceAll("-", " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <label className="sr-only" htmlFor={paletteId}>
+            Chart colors
+          </label>
+          <Select value={palette} onValueChange={(value) => setPalette(value as ChartPalette)}>
+            <SelectTrigger id={paletteId} className="min-h-11 w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="original">Default colors</SelectItem>
+              <SelectItem value="blue">Blue</SelectItem>
+              <SelectItem value="teal">Teal</SelectItem>
+              <SelectItem value="violet">Violet</SelectItem>
+              <SelectItem value="warm">Warm</SelectItem>
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            onClick={() => setPinned((value) => !value)}
+            aria-pressed={pinned}
+            aria-label={pinned ? "Return chart to the conversation" : "Pin chart while scrolling"}
+            title={pinned ? "Return to conversation" : "Pin while scrolling"}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 hover:bg-accent"
           >
+            {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTable((value) => !value)}
+            aria-pressed={table}
+            className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
+          >
+            <Table2 className="h-4 w-4" /> Table
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(chartToCsv(spec));
+                toast.success("Chart data copied");
+              } catch {
+                toast.error("Could not copy the chart data. Try downloading the CSV instead.");
+              }
+            }}
+            className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
+          >
+            <Copy className="h-4 w-4" /> Copy
+          </button>
+          <button
+            type="button"
+            onClick={() => save(chartToCsv(spec), "text/csv", "csv")}
+            className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
+          >
+            <Download className="h-4 w-4" /> CSV
+          </button>
+        </div>
+        {extra ? (
+          <ChatChartExtra spec={spec} type={extra} colors={colors} xKey={xKey} keys={extraKeys} />
+        ) : type === "sankey" && flow ? (
+          <div className="h-64 w-full sm:h-80" role="img" aria-label="Sankey flow diagram">
             <ResponsiveContainer width="100%" height="100%">
-              {intervals ? (
-                <BarChart data={intervals}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="label" fontSize={12} minTickGap={isMobile ? 16 : 5} />
-                  <YAxis domain={["auto", "auto"]} fontSize={12} />
-                  <Tooltip
-                    trigger={tooltipTrigger}
-                    isAnimationActive={tooltipTrigger === "click" ? false : undefined}
-                    formatter={(value: number | number[], name, item) => {
-                      if (type === "waterfall" && item.payload)
-                        return [String(item.payload.detail), "Change"];
-                      return [Array.isArray(value) ? value.join(" to ") : value, name];
-                    }}
-                  />
-                  <Bar isAnimationActive={false} dataKey="interval" name="Range">
-                    {intervals.map((item, index) => (
-                      <Cell
-                        key={index}
-                        fill={
-                          type === "waterfall" && item.detail < 0
-                            ? "var(--destructive)"
-                            : colors[index % colors.length]
-                        }
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              ) : type === "treemap" ? (
-                <Treemap
-                  data={tree}
-                  dataKey="size"
-                  nameKey="name"
-                  fill={colors[0]}
-                  stroke="var(--card)"
-                  isAnimationActive={false}
-                >
-                  {tooltip}
-                </Treemap>
-              ) : type === "histogram" ? (
-                <BarChart data={histogram} barCategoryGap={2}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="range" fontSize={11} minTickGap={isMobile ? 16 : 5} />
-                  <YAxis allowDecimals={false} fontSize={12} />
-                  <Tooltip
-                    trigger={tooltipTrigger}
-                    isAnimationActive={tooltipTrigger === "click" ? false : undefined}
-                    labelFormatter={(label, payload) => {
-                      const bin = payload[0]?.payload;
-                      return bin
-                        ? `${label}: ${Number(bin.lower.toPrecision(4))} to ${Number(bin.upper.toPrecision(4))}`
-                        : label;
-                    }}
-                  />
-                  <Bar isAnimationActive={false} dataKey="count" name="Count" fill={colors[0]} />
-                </BarChart>
-              ) : type === "funnel" ? (
-                <FunnelChart>
-                  {tooltip}
-                  <Funnel
-                    isAnimationActive={false}
-                    data={spec.data}
-                    dataKey={keys[0]}
-                    nameKey={xKey}
-                    fill={colors[0]}
-                  />
-                </FunnelChart>
-              ) : type === "radar" ? (
-                <RadarChart data={spec.data}>
-                  <PolarGrid stroke="var(--border)" />
-                  <PolarAngleAxis
-                    dataKey={xKey}
-                    tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-                  />
-                  <PolarRadiusAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
-                  {tooltip}
-                  {keys.map((key, index) => (
-                    <Radar
-                      isAnimationActive={false}
-                      key={key}
-                      dataKey={key}
-                      fill={colors[index % colors.length]}
-                      stroke={colors[index % colors.length]}
-                      fillOpacity={0.18}
-                    />
-                  ))}
-                </RadarChart>
-              ) : type === "pie" || type === "donut" ? (
-                <PieChart>
-                  {tooltip}
-                  <Pie
-                    isAnimationActive={false}
-                    data={spec.data}
-                    dataKey={keys[0]}
-                    nameKey={xKey}
-                    innerRadius={type === "donut" ? "45%" : 0}
-                    outerRadius="75%"
-                    label
-                  >
-                    {spec.data.map((_, index) => (
-                      <Cell key={index} fill={colors[index % colors.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              ) : type === "bar" || type === "stacked-bar" || percent || horizontal ? (
-                <BarChart
-                  data={spec.data}
-                  layout={horizontal ? "vertical" : "horizontal"}
-                  stackOffset={percent ? "expand" : undefined}
-                >
-                  {axes}
-                  {keys.map((key, index) => (
-                    <Bar
-                      isAnimationActive={false}
-                      key={key}
-                      dataKey={key}
-                      fill={colors[index % colors.length]}
-                      stackId={type === "stacked-bar" || percent ? "series" : undefined}
-                      radius={type === "bar" ? [4, 4, 0, 0] : undefined}
-                    />
-                  ))}
-                </BarChart>
-              ) : type === "area" || type === "stacked-area" ? (
-                <AreaChart data={spec.data}>
-                  {axes}
-                  {keys.map((key, index) => (
-                    <Area
-                      isAnimationActive={false}
-                      key={key}
-                      dataKey={key}
-                      stackId={type === "stacked-area" ? "series" : undefined}
-                      stroke={colors[index % colors.length]}
-                      fill={colors[index % colors.length]}
-                      fillOpacity={0.28}
-                    />
-                  ))}
-                </AreaChart>
-              ) : scatter ? (
-                <ScatterChart>
-                  {axes}
-                  {type === "bubble" && <ZAxis type="number" dataKey={sizeKey} range={[30, 360]} />}
-                  {(type === "bubble" && bubbleY ? [bubbleY] : keys.slice(0, 1)).map(
-                    (key, index) => (
-                      <Scatter
-                        isAnimationActive={false}
-                        key={key}
-                        name={key}
-                        data={spec.data}
-                        dataKey={key}
-                        fill={colors[index]}
-                      />
-                    ),
-                  )}
-                </ScatterChart>
-              ) : (
-                <LineChart data={spec.data}>
-                  {axes}
-                  {keys.map((key, index) => (
-                    <Line
-                      isAnimationActive={false}
-                      key={key}
-                      type={type === "step" ? "stepAfter" : "monotone"}
-                      dataKey={key}
-                      stroke={colors[index % colors.length]}
-                      strokeWidth={2}
-                      activeDot={{ r: 5 }}
-                    />
-                  ))}
-                </LineChart>
-              )}
+              <Sankey
+                data={flow}
+                nodePadding={6}
+                nodeWidth={14}
+                node={{ fill: colors[0] }}
+                link={{ stroke: colors[0], strokeOpacity: 0.35 }}
+              >
+                {tooltip}
+              </Sankey>
             </ResponsiveContainer>
           </div>
-          <ul className="kova-chart-legend" aria-label="Chart legend">
-            {legendLabels.map((label, index) => (
-              <li key={`${index}:${label}`}>
-                <span
-                  aria-hidden="true"
-                  style={{ backgroundColor: colors[index % colors.length] }}
-                />
-                {label}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {(table || noCompatibleSeries || type === "sankey") && (
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">Data used in {spec.title ?? "chart"}</caption>
-            <thead>
-              <tr>
-                {Object.keys(spec.data[0] ?? {}).map((column) => (
-                  <th key={column} scope="col" className="border-b px-2 py-2 font-medium">
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {spec.data.map((row, index) => (
-                <tr key={index} tabIndex={0} className="focus-within:bg-accent hover:bg-muted/50">
+        ) : candles ? (
+          <CandlePlot rows={candles} />
+        ) : noCompatibleSeries ? null : type === "heatmap" ? (
+          <ChartHeatmap spec={spec} xKey={xKey} keys={keys} />
+        ) : (
+          <div
+            className="kova-chart-layout"
+            data-compact-legend={legendLabels.length > 8 ? "true" : undefined}
+          >
+            <div
+              className="h-56 w-full min-w-0 sm:h-72"
+              role="img"
+              aria-label={`${type} chart with ${spec.data.length} data points`}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                {intervals ? (
+                  <BarChart data={intervals}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="label" fontSize={12} />
+                    <YAxis domain={["auto", "auto"]} fontSize={12} />
+                    <Tooltip
+                      trigger={tooltipTrigger}
+                      isAnimationActive={false}
+                      formatter={(value: number | number[], name, item) => {
+                        if (type === "waterfall" && item.payload)
+                          return [String(item.payload.detail), "Change"];
+                        return [Array.isArray(value) ? value.join(" to ") : value, name];
+                      }}
+                    />
+                    <Bar isAnimationActive={false} dataKey="interval" name="Range">
+                      {intervals.map((item, index) => (
+                        <Cell
+                          key={index}
+                          fill={
+                            type === "waterfall" && item.detail < 0
+                              ? "var(--destructive)"
+                              : colors[index % colors.length]
+                          }
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : type === "treemap" ? (
+                  <Treemap
+                    data={tree}
+                    dataKey="size"
+                    nameKey="name"
+                    fill={colors[0]}
+                    stroke="var(--card)"
+                    isAnimationActive={false}
+                  >
+                    {tooltip}
+                  </Treemap>
+                ) : type === "histogram" ? (
+                  <BarChart data={histogram} barCategoryGap={2}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="range" fontSize={11} />
+                    <YAxis allowDecimals={false} fontSize={12} />
+                    <Tooltip
+                      trigger={tooltipTrigger}
+                      isAnimationActive={false}
+                      labelFormatter={(label, payload) => {
+                        const bin = payload[0]?.payload;
+                        return bin
+                          ? `${label}: ${Number(bin.lower.toPrecision(4))} to ${Number(bin.upper.toPrecision(4))}`
+                          : label;
+                      }}
+                    />
+                    <Bar isAnimationActive={false} dataKey="count" name="Count" fill={colors[0]} />
+                  </BarChart>
+                ) : type === "funnel" ? (
+                  <FunnelChart>
+                    {tooltip}
+                    <Funnel
+                      isAnimationActive={false}
+                      data={spec.data}
+                      dataKey={keys[0]}
+                      nameKey={xKey}
+                      fill={colors[0]}
+                    />
+                  </FunnelChart>
+                ) : type === "radar" ? (
+                  <RadarChart data={spec.data}>
+                    <PolarGrid stroke="var(--border)" />
+                    <PolarAngleAxis
+                      dataKey={xKey}
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                    />
+                    <PolarRadiusAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                    {tooltip}
+                    {keys.map((key, index) => (
+                      <Radar
+                        isAnimationActive={false}
+                        key={key}
+                        dataKey={key}
+                        fill={colors[index % colors.length]}
+                        stroke={colors[index % colors.length]}
+                        fillOpacity={0.18}
+                      />
+                    ))}
+                  </RadarChart>
+                ) : type === "pie" || type === "donut" ? (
+                  <PieChart>
+                    {tooltip}
+                    <Pie
+                      isAnimationActive={false}
+                      data={spec.data}
+                      dataKey={keys[0]}
+                      nameKey={xKey}
+                      innerRadius={type === "donut" ? "45%" : 0}
+                      outerRadius="75%"
+                      label
+                    >
+                      {spec.data.map((_, index) => (
+                        <Cell key={index} fill={colors[index % colors.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                ) : type === "bar" || type === "stacked-bar" || percent || horizontal ? (
+                  <BarChart
+                    data={spec.data}
+                    layout={horizontal ? "vertical" : "horizontal"}
+                    stackOffset={percent ? "expand" : undefined}
+                  >
+                    {axes}
+                    {keys.map((key, index) => (
+                      <Bar
+                        isAnimationActive={false}
+                        key={key}
+                        dataKey={key}
+                        fill={colors[index % colors.length]}
+                        stackId={type === "stacked-bar" || percent ? "series" : undefined}
+                        radius={type === "bar" ? [4, 4, 0, 0] : undefined}
+                      />
+                    ))}
+                  </BarChart>
+                ) : type === "area" || type === "stacked-area" ? (
+                  <AreaChart data={spec.data}>
+                    {axes}
+                    {keys.map((key, index) => (
+                      <Area
+                        isAnimationActive={false}
+                        key={key}
+                        dataKey={key}
+                        stackId={type === "stacked-area" ? "series" : undefined}
+                        stroke={colors[index % colors.length]}
+                        fill={colors[index % colors.length]}
+                        fillOpacity={0.28}
+                      />
+                    ))}
+                  </AreaChart>
+                ) : scatter ? (
+                  <ScatterChart>
+                    {axes}
+                    {type === "bubble" && (
+                      <ZAxis type="number" dataKey={sizeKey} range={[30, 360]} />
+                    )}
+                    {(type === "bubble" && bubbleY ? [bubbleY] : keys.slice(0, 1)).map(
+                      (key, index) => (
+                        <Scatter
+                          isAnimationActive={false}
+                          key={key}
+                          name={key}
+                          data={spec.data}
+                          dataKey={key}
+                          fill={colors[index]}
+                        />
+                      ),
+                    )}
+                  </ScatterChart>
+                ) : (
+                  <LineChart data={spec.data}>
+                    {axes}
+                    {keys.map((key, index) => (
+                      <Line
+                        isAnimationActive={false}
+                        key={key}
+                        type={type === "step" ? "stepAfter" : "monotone"}
+                        dataKey={key}
+                        stroke={colors[index % colors.length]}
+                        strokeWidth={2}
+                        activeDot={{ r: 5 }}
+                      />
+                    ))}
+                  </LineChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+            <ul className="kova-chart-legend" aria-label="Chart legend">
+              {legendLabels.map((label, index) => (
+                <li key={`${index}:${label}`}>
+                  <span
+                    aria-hidden="true"
+                    style={{ backgroundColor: colors[index % colors.length] }}
+                  />
+                  {label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {(table || (!extra && noCompatibleSeries) || type === "sankey") && (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <caption className="sr-only">Data used in {spec.title ?? "chart"}</caption>
+              <thead>
+                <tr>
                   {Object.keys(spec.data[0] ?? {}).map((column) => (
-                    <td key={column} className="border-b px-2 py-2">
-                      {row[column]}
-                    </td>
+                    <th key={column} scope="col" className="border-b px-2 py-2 font-medium">
+                      {column}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <BarChart3 className="h-3.5 w-3.5" /> Generated only from the structured data in this
-        response.
-      </p>
-    </figure>
+              </thead>
+              <tbody>
+                {spec.data.map((row, index) => (
+                  <tr key={index} tabIndex={0} className="focus-within:bg-accent hover:bg-muted/50">
+                    {Object.keys(spec.data[0] ?? {}).map((column) => (
+                      <td key={column} className="border-b px-2 py-2">
+                        {row[column]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <BarChart3 className="h-3.5 w-3.5" /> Generated only from the structured data in this
+          response.
+        </p>
+      </figure>
+    </>
   );
 }

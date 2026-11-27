@@ -73,29 +73,29 @@ test("a short split window keeps Send visible with a full attachment tray", asyn
 });
 
 async function expectRestingComposer(page: Page, composer = page.locator(".spec400-composer")) {
-  const compactDesktop = await page.evaluate(
-    () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
-  );
+  const compactDesktop = await page.evaluate(() => matchMedia("(min-width: 1024px)").matches);
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  const phone = await page.evaluate(
-    () =>
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
+  // Compact phone corners apply in the native app shell and on phone-width web.
+  const phoneApp = await page.evaluate(() =>
+    document.documentElement.dataset.kovaSurface === "app"
+      ? matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches
+      : matchMedia("(width < 768px)").matches,
   );
   await expect(composer).toHaveCSS(
     "border-radius",
-    phone ? (conversation ? "26px" : "21px") : "34px",
+    phoneApp ? (conversation ? "26px" : "21px") : "34px",
   );
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   if (conversation)
     await height.toBeLessThanOrEqual(
-      singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+      singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 100,
     );
-  else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
+  else await height.toBeGreaterThanOrEqual(phoneApp ? 88 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
   if (singleRow) return compactDesktop;
@@ -196,6 +196,17 @@ test("signed-in homepage initially scrolls to the latest content", async ({ page
   await expect(page.getByRole("button", { name: "Prepare or manage Work" })).toHaveCount(0);
   const home = page.locator(".kova-empty-chat");
   await expect(home.getByRole("heading", { name: "Continue working", exact: true })).toBeVisible();
+  const composerColor = await home
+    .locator(".spec400-composer")
+    .evaluate((node) => getComputedStyle(node).backgroundColor);
+  await expect(home.locator(".kova-composer-tray")).toHaveCSS(
+    "background-color",
+    "rgb(33, 33, 33)",
+  );
+  await expect(home.locator(".kova-desktop-recent-work button").first()).toHaveCSS(
+    "background-color",
+    composerColor,
+  );
   await expect
     .poll(() => home.evaluate((node) => node.scrollHeight - node.clientHeight))
     .toBeGreaterThan(8);
@@ -568,9 +579,7 @@ for (const surface of ["empty", "conversation"] as const) {
       Array.from({ length: 12 }, (_, index) => `https://example.org/page-${index}`).join(" "),
     );
     await expect(websites).toHaveCount(15);
-    const desktop = await page.evaluate(
-      () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
-    );
+    const desktop = await page.evaluate(() => matchMedia("(min-width: 1024px)").matches);
     const readLayout = () =>
       composer.evaluate((frame) => {
         const shell = frame.getBoundingClientRect();
@@ -666,10 +675,24 @@ for (const surface of ["empty", "conversation"] as const) {
         .toBeLessThan(0.5);
     }
 
-    await websites
-      .nth(1)
-      .getByRole("button", { name: /^Remove linked page from message/ })
-      .click();
+    const removeLink = tray
+      .locator('[data-link-preview-url="https://github.com/review"]')
+      .getByRole("button", { name: /^Remove linked page from message/ });
+    if (phone) {
+      await input.focus();
+      await expect(input).toBeFocused();
+      await removeLink.scrollIntoViewIfNeeded();
+      const bounds = (await removeLink.boundingBox())!;
+      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      await page.mouse.down();
+      try {
+        await expect(input).toBeFocused();
+      } finally {
+        await page.mouse.up();
+      }
+    } else {
+      await removeLink.click();
+    }
     await expect(websites).toHaveCount(14);
     await expect(tray.locator('[data-link-preview-url="https://github.com/review"]')).toHaveCount(
       0,
@@ -729,7 +752,22 @@ test("Cloud Browser limit displays a top notification and keeps the sent Wikiped
   await expect(notice).toHaveAttribute("data-y-position", "top");
   const width = page.viewportSize()!.width;
   await expect(notice).toHaveAttribute("data-x-position", width >= 1024 ? "right" : "center");
-  await expect.poll(async () => (await notice.boundingBox())?.y).toBeCloseTo(16, 0);
+  if (width < 768) {
+    // Phones center the notice on screen; larger screens keep the top offset.
+    const height = page.viewportSize()!.height;
+    await expect
+      .poll(async () => {
+        const box = await notice.boundingBox();
+        return box ? box.y + box.height / 2 : 0;
+      })
+      .toBeGreaterThan(height / 2 - 4);
+    await expect
+      .poll(async () => {
+        const box = await notice.boundingBox();
+        return box ? box.y + box.height / 2 : 0;
+      })
+      .toBeLessThan(height / 2 + 4);
+  } else await expect.poll(async () => (await notice.boundingBox())?.y).toBeCloseTo(16, 0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const assistant = page.locator('[data-message-role="assistant"]');
   await expect(assistant).toHaveCount(1);

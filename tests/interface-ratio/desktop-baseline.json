@@ -328,8 +328,8 @@
       "height": 36,
       "font": "28px",
       "line": "36px",
-      "weight": "400",
-      "family": "Georgia, \"Times New Roman\", serif",
+      "weight": "600",
+      "family": "ui-sans-serif, system-ui, sans-serif",
       "padding": "0px",
       "gap": "normal",
       "radius": "0px",
@@ -431,11 +431,10 @@
     {
       "selector": ".kova-page-title",
       "index": 0,
-      "width": 239.078125,
       "height": 37.5,
       "font": "30px",
       "line": "37.5px",
-      "weight": "500",
+      "weight": "600",
       "family": "ui-sans-serif, system-ui, sans-serif",
       "padding": "0px",
       "gap": "normal",
@@ -446,47 +445,41 @@
     {
       "selector": ".spec400-plugin-card",
       "index": 0,
-      "width": 265,
-      "height": 184,
+      "width": 536,
       "font": "15px",
       "line": "22.0001px",
       "weight": "400",
       "family": "ui-sans-serif, system-ui, sans-serif",
-      "padding": "16px",
+      "padding": "9px 10px",
       "gap": "10px",
-      "radius": "22px",
-      "display": "flex",
-      "columns": "none"
+      "radius": "9999px",
+      "display": "grid"
     },
     {
       "selector": ".spec400-plugin-card",
       "index": 1,
-      "width": 265,
-      "height": 184,
+      "width": 536,
       "font": "15px",
       "line": "22.0001px",
       "weight": "400",
       "family": "ui-sans-serif, system-ui, sans-serif",
-      "padding": "16px",
+      "padding": "9px 10px",
       "gap": "10px",
-      "radius": "22px",
-      "display": "flex",
-      "columns": "none"
+      "radius": "9999px",
+      "display": "grid"
     },
     {
       "selector": ".spec400-plugin-card",
       "index": 2,
-      "width": 265,
-      "height": 184,
+      "width": 536,
       "font": "15px",
       "line": "22.0001px",
       "weight": "400",
       "family": "ui-sans-serif, system-ui, sans-serif",
-      "padding": "16px",
+      "padding": "9px 10px",
       "gap": "10px",
-      "radius": "22px",
-      "display": "flex",
-      "columns": "none"
+      "radius": "9999px",
+      "display": "grid"
     },
     {
       "selector": "main h2",
@@ -506,7 +499,6 @@
     {
       "selector": "main h2",
       "index": 1,
-      "width": 1096,
       "height": 28,
       "font": "20px",
       "line": "28px",
@@ -519,38 +511,7 @@
       "columns": "none"
     }
   ],
-  "settings": [
-    {
-      "selector": "main h2",
-      "index": 0,
-      "width": 90.40625,
-      "height": 24,
-      "font": "20px",
-      "line": "24px",
-      "weight": "600",
-      "family": "ui-sans-serif, system-ui, sans-serif",
-      "padding": "0px",
-      "gap": "normal",
-      "radius": "0px",
-      "display": "block",
-      "columns": "none"
-    },
-    {
-      "selector": "main h2",
-      "index": 1,
-      "width": 672,
-      "height": 33.59375,
-      "font": "28px",
-      "line": "33.6px",
-      "weight": "600",
-      "family": "ui-sans-serif, system-ui, sans-serif",
-      "padding": "0px",
-      "gap": "normal",
-      "radius": "0px",
-      "display": "block",
-      "columns": "none"
-    }
-  ],
+  "settings": [],
   "images": [
     {
       "selector": ".kova-sidebar",

@@ -1,3 +1,8 @@
+/* Phone-app presentation (phone-frame home, bottom-pinned composer, compact
+   composer corners) is wrapped in :where(:root[data-kova-surface="app"]) so it
+   applies only inside a native app shell, in its original cascade order and
+   without extra specificity. The website keeps the desktop composition and
+   uses the remaining reflow rules. */
 .kova-greeting .kova-home-welcome-logo {
   display: none;
 }
@@ -97,24 +102,26 @@
     background-color: var(--kova-phone-danger-text);
   }
 
-  /* Paint the same phone frame before hydration and during the route chunk
-     load. The default account placeholder remains in place at larger widths. */
-  dialog[data-kova-entry-pending]:not([open]),
-  .kova-home-startup-surface {
-    display: block;
-  }
+  :where(:root[data-kova-surface="app"]) {
+    /* Paint the same phone frame before hydration and during the route chunk
+       load. The default account placeholder remains in place at larger widths. */
+    dialog[data-kova-entry-pending]:not([open]),
+    .kova-home-startup-surface {
+      display: block;
+    }
 
-  [data-kova-entry-fallback] > :is(aside, section) {
-    display: none;
-  }
+    [data-kova-entry-fallback] > :is(aside, section) {
+      display: none;
+    }
 
-  .kova-home-composer-placeholder .spec400-composer-toolbar {
-    opacity: 0.6;
-  }
+    .kova-home-composer-placeholder .spec400-composer-toolbar {
+      opacity: 0.6;
+    }
 
-  /* The inert startup dialog has no interactive focus target. */
-  dialog[data-kova-entry-pending]:focus {
-    outline: none;
+    /* The inert startup dialog has no interactive focus target. */
+    dialog[data-kova-entry-pending]:focus {
+      outline: none;
+    }
   }
 
   .kova-assistant[data-ui="modern"],
@@ -145,58 +152,58 @@
   [data-public-shell] [data-kova-revealed="true"]:is(:target, :has(:target)) {
     animation: none;
   }
+  :where(:root[data-kova-surface="app"]) {
+    /* Keep the phone header compact and reserve the top safe area separately. */
+    .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
+      min-height: calc(56px + var(--safe-top, 0px));
+    }
 
-  /* Keep the phone header compact and reserve the top safe area separately. */
-  .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
-    min-height: calc(56px + var(--safe-top, 0px));
-    padding-top: var(--safe-top);
-  }
+    .kova-assistant .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
+      min-height: 55px;
+    }
 
-  .kova-assistant .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
-    min-height: 55px;
-  }
+    .kova-assistant[data-compact-chat-home] .kova-topbar:not(.kova-desktop-topbar) {
+      border-bottom-color: transparent !important;
+    }
 
-  .kova-assistant .kova-topbar:not(.kova-desktop-topbar) button.kova-action {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-  }
+    .kova-assistant .kova-topbar:not(.kova-desktop-topbar) button.kova-action {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+    }
 
-  .kova-assistant[data-compact-chat-home] .kova-topbar:not(.kova-desktop-topbar) {
-    border-bottom-color: transparent !important;
-  }
+    .kova-assistant .kova-empty-chat .kova-greeting {
+      align-items: center;
+      margin-block: 0 24px;
+    }
 
-  .kova-assistant .kova-empty-chat .kova-greeting {
-    align-items: center;
-    margin-block: var(--kova-phone-space-0) var(--kova-phone-space-24);
-  }
+    .kova-greeting .kova-home-greeting-text {
+      display: none;
+    }
 
-  .kova-greeting .kova-home-greeting-text {
-    display: none;
-  }
+    .kova-greeting .kova-home-welcome-logo {
+      display: block;
+      width: clamp(48px, 16vw, 72px);
+      height: auto;
+      opacity: 0.45;
+    }
 
-  .kova-greeting .kova-home-welcome-logo {
-    display: block;
-    width: clamp(48px, 16vw, 72px);
-    height: auto;
-    opacity: 0.45;
-  }
+    .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+      padding-block-start: 0 !important;
+    }
 
-  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
-    padding-block-start: 0 !important;
-  }
+    .kova-assistant .kova-empty-chat-content .kova-greeting {
+      /* Center the greeting in the clear canvas above the docked composer. */
+      margin-block: auto;
+    }
 
-  .kova-assistant .kova-empty-chat-content .kova-greeting {
-    /* Center the greeting in the clear canvas above the docked composer. */
-    margin-block: auto;
-  }
+    .kova-assistant .kova-empty-chat-content .kova-empty-composer {
+      margin-block-start: 0;
+    }
 
-  .kova-assistant .kova-empty-chat-content .kova-empty-composer {
-    margin-block-start: 0;
-  }
-
-  .kova-assistant .kova-empty-chat-content > .spec400-recent-work {
-    display: none;
+    .kova-assistant .kova-empty-chat-content > .spec400-recent-work {
+      display: none;
+    }
   }
 
   /* A quiet two-row dock leaves the primary actions available at touch size. */
@@ -215,49 +222,50 @@
       --composer-card-width: calc((100cqi - var(--composer-photo-size) - 24px) / 2);
     }
   }
+  :where(:root[data-kova-surface="app"]) {
+    .kova-assistant .kova-empty-composer .spec400-composer {
+      --chat-composer-corner: 21px;
+      --composer-text-inset: 6px;
+      min-height: 0 !important;
+      padding-block-start: 4px;
+      gap: 2px;
+      border-radius: var(--chat-composer-corner);
+    }
 
-  .kova-assistant .kova-empty-composer .spec400-composer {
-    --chat-composer-corner: var(--phone-composer-radius);
-    --composer-text-inset: 6px;
-    min-height: 0 !important;
-    padding-block-start: var(--kova-phone-space-4);
-    gap: var(--kova-phone-space-2);
-    border-radius: var(--chat-composer-corner);
-  }
+    .kova-assistant[data-compact-chat-home] .kova-empty-composer {
+      padding-block-end: calc(max(8px, var(--safe-bottom)) + 6px);
+    }
 
-  .kova-assistant[data-compact-chat-home] .kova-empty-composer {
-    padding-block-end: var(--phone-composer-bottom);
-  }
+    .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] {
+      padding-block-end: calc(max(6px, var(--safe-bottom)) + 6px);
+    }
 
-  .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] {
-    padding-block-end: var(--phone-composer-bottom);
-  }
+    .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
+      --chat-composer-corner: 26px;
+      --composer-text-inset: 6px;
+      padding-block: 8px;
+    }
 
-  .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
-    --chat-composer-corner: var(--phone-composer-radius);
-    --composer-text-inset: 6px;
-    padding-block: 8px;
-  }
+    .kova-assistant[data-compact-chat-home] .kova-empty-composer .kova-composer-tray {
+      display: none;
+    }
 
-  .kova-assistant[data-compact-chat-home] .kova-empty-composer .kova-composer-tray {
-    display: none;
-  }
+    .kova-assistant[data-compact-chat-home]
+      .spec400-inline-project-context[data-desktop-tray="true"] {
+      display: flex;
+    }
 
-  .kova-assistant[data-compact-chat-home]
-    .spec400-inline-project-context[data-desktop-tray="true"] {
-    display: flex;
-  }
+    .kova-phone-resource-actions {
+      display: grid;
+      gap: 2px;
+      margin-block-start: 6px;
+      padding-block-start: 6px;
+      border-block-start: 1px solid var(--border);
+    }
 
-  .kova-phone-resource-actions {
-    display: grid;
-    gap: 2px;
-    margin-block-start: 6px;
-    padding-block-start: 6px;
-    border-block-start: 1px solid var(--border);
-  }
-
-  .kova-phone-resource-actions .kova-composer-action {
-    min-height: 44px;
+    .kova-phone-resource-actions .kova-composer-action {
+      min-height: 44px;
+    }
   }
 
   .kova-composer-full-menu
@@ -293,18 +301,19 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
+  :where(:root[data-kova-surface="app"]) {
+    .kova-assistant .kova-empty-composer .spec400-composer-toolbar {
+      margin-block-start: 0;
+    }
 
-  .kova-assistant .kova-empty-composer .spec400-composer-toolbar {
-    margin-block-start: 0;
-  }
+    .kova-home-composer-placeholder .spec400-composer-input {
+      display: flex;
+      align-items: center;
+    }
 
-  .kova-home-composer-placeholder .spec400-composer-input {
-    display: flex;
-    align-items: center;
-  }
-
-  .kova-assistant .kova-empty-composer .spec400-input-region {
-    min-height: 32px;
+    .kova-assistant .kova-empty-composer .spec400-input-region {
+      min-height: 32px;
+    }
   }
 
   .kova-assistant .spec400-chat-input .spec400-composer-input {
@@ -754,19 +763,22 @@
   }
 }
 
-@media (width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none) {
-  .kova-assistant[data-compact-chat-home] section.kova-empty-chat > .kova-empty-chat-content {
-    flex: 1 1 auto;
-    justify-content: center;
-    padding-block: 0 !important;
-  }
+@media (768px <= width < 1024px) and (height > 500px) and (pointer: coarse) {
+  :where(:root[data-kova-surface="app"]) {
+    .kova-assistant[data-compact-chat-home] section.kova-empty-chat > .kova-empty-chat-content {
+      flex: 1 1 auto;
+      justify-content: center;
+      padding-block: 0 !important;
+    }
 
-  .kova-assistant[data-compact-chat-home] .spec400-composer {
-    --composer-text-inset: 6px;
+    .kova-assistant[data-compact-chat-home] .spec400-composer {
+      --composer-text-inset: 6px;
+    }
   }
 }
 
-@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
+/* Touch-first browsers keep the desktop layout viewport, so width alone is insufficient. */
+@media (width < 1024px), (pointer: coarse) and (hover: none) {
   .kova-desktop-recent-work {
     display: none;
   }
