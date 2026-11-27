@@ -530,3 +530,14 @@ test("research runs use a separate scoped API and stable job identifiers", async
   await assert.rejects(f.client.researchRuns.retrieve("../keys"), /response_job_id_invalid/);
   assert.equal(f.calls.length, 4);
 });
+
+test("speech SDK authorizes exactly the same input and never sends unquoted generation", async () => {
+  const f = fixture();
+  const speech = { model: "speech", input: "hello", voice: "default" };
+  await assert.rejects(f.client.audio.speech.create(speech, {}), /budget_required/);
+  assert.equal(f.calls.length, 0);
+  await f.client.audio.speech.create(speech, options);
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/audio/speech");
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "audio/speech", input: speech });
+  assert.deepEqual(JSON.parse(f.calls[1].body), speech);
+});

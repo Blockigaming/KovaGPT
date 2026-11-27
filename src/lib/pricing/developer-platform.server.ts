@@ -31,6 +31,11 @@ import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
 import { summarizeDeveloperUsage } from "./developer-usage-summary.mjs";
 import { developerFileReferences } from "./developer-file-policy.mjs";
 import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
+import {
+  SPEECH_MODEL,
+  bindDeveloperSpeechVoice,
+  runDeveloperSpeech,
+} from "./developer-speech-policy.mjs";
 import { TRANSCRIPTION_BODY_LIMIT } from "./developer-transcription-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
@@ -158,6 +163,14 @@ function developerTranscriptionEnabled() {
     return false;
   const config = getAiProviderConfig("audio_transcription");
   return config.configured && config.capabilities?.includes("audio_transcription") === true;
+}
+function developerSpeechEnabled() {
+  return (
+    runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") === "true" &&
+    runtimeEnv("KOVA_DEVELOPER_SPEECH_ENABLED") === "true" &&
+    Boolean(runtimeEnv("ELEVENLABS_API_KEY")) &&
+    /^[A-Za-z0-9_-]{1,64}$/.test(runtimeEnv("KOVA_DEVELOPER_SPEECH_VOICE_ID") ?? "")
+  );
 }
 function developerDecisionsEnabled() {
   if (
@@ -487,9 +500,20 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   const files = await loadDeveloperFileContent(identity, parsed.body, references.ids);
   parsed.body = files.body;
   const version = await currentPricing(identity);
-  const providerConfig =
-    parsed.capability === "cloud_browser" ? null : getAiProviderConfig(parsed.capability);
-  const provider = providerConfig?.provider ?? "browserbase";
+  const providerConfig = ["cloud_browser", "audio_speech"].includes(parsed.capability)
+    ? null
+    : getAiProviderConfig(parsed.capability as ProviderCapability);
+  const provider =
+    parsed.capability === "audio_speech"
+      ? "elevenlabs"
+      : (providerConfig?.provider ?? "browserbase");
+  if (parsed.capability === "audio_speech") {
+    if (!developerSpeechEnabled()) throw new Error("developer_speech_unavailable");
+    parsed.body = bindDeveloperSpeechVoice(
+      parsed.body,
+      runtimeEnv("KOVA_DEVELOPER_SPEECH_VOICE_ID"),
+    );
+  }
   if (parsed.capability === "cloud_browser")
     await assertDeveloperBrowserAuthority(identity, developerBrowserUrl(parsed.body.url));
   if (
@@ -535,7 +559,11 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   parsed.body.model =
     parsed.capability === "cloud_browser"
       ? BROWSER_MODEL
-      : providerModelId(contract.upstreamModel, parsed.capability);
+      : parsed.capability === "audio_speech"
+        ? SPEECH_MODEL
+        : providerModelId(contract.upstreamModel, parsed.capability);
+  if (parsed.capability === "audio_speech" && contract.upstreamModel !== SPEECH_MODEL)
+    throw new Error("developer_speech_unavailable");
   if (parsed.capability === "cloud_browser" && contract.upstreamModel !== BROWSER_MODEL)
     throw new Error("developer_browser_unavailable");
   const at = new Date();
@@ -698,6 +726,19 @@ export async function executeDeveloper(
         });
       if (kind === "computer-use") return developerComputerUse(parsed.body, { signal });
       if (kind === "analysis") return developerAnalysis(parsed.body, { signal });
+      if (kind === "audio/speech")
+        return meterProviderRequest({
+          provider: "elevenlabs",
+          capability: "audio_speech",
+          body: parsed.body,
+          signal,
+          send: () =>
+            runDeveloperSpeech(parsed.body, {
+              apiKey: runtimeEnv("ELEVENLABS_API_KEY"),
+              approvedVoice: runtimeEnv("KOVA_DEVELOPER_SPEECH_VOICE_ID"),
+              signal: AbortSignal.any([AbortSignal.timeout(60000), ...(signal ? [signal] : [])]),
+            }),
+        });
       if (kind === "audio/transcriptions") return developerTranscriptions(parsed.body, { signal });
       const call =
         parsed.operation === "responses"
@@ -716,7 +757,7 @@ export async function executeDeveloper(
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
   }
-  if (kind === "audio/transcriptions") {
+  if (kind === "audio/transcriptions" || kind === "audio/speech") {
     const receipt = await response.json();
     return developerJson({ ...receipt, model: parsed.publicModel });
   }
@@ -936,6 +977,7 @@ const publicUsage = (row: Record<string, unknown>) => {
       usage.transcription_seconds > 0
         ? usage.transcription_seconds
         : null,
+    speech_character_credits: dimension("speech_character_credits"),
     container_1g_sessions: dimension("container_1g_sessions"),
     browser_sessions_60s: dimension("browser_sessions_60s"),
   };
@@ -1025,8 +1067,10 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
             (entry.capability !== "computer_use" || developerComputerEnabled()) &&
             (entry.capability === "cloud_browser"
               ? developerBrowserEnabled() && entry.provider === "browserbase"
-              : entry.provider ===
-                getAiProviderConfig(entry.capability as ProviderCapability).provider),
+              : entry.capability === "audio_speech"
+                ? developerSpeechEnabled() && entry.provider === "elevenlabs"
+                : entry.provider ===
+                  getAiProviderConfig(entry.capability as ProviderCapability).provider),
         )
         .map(
           (entry: {
@@ -1203,6 +1247,7 @@ export async function handleDeveloperConsole(request: Request) {
           workspaceV2,
           moderationEnabled: developerModerationEnabled(),
           transcriptionEnabled: developerTranscriptionEnabled(),
+          speechEnabled: developerSpeechEnabled(),
           decisionsEnabled: developerDecisionsEnabled(),
           analysisEnabled: developerAnalysisEnabled(),
           computerEnabled: developerComputerEnabled(),
@@ -1353,6 +1398,7 @@ export async function handleDeveloperConsole(request: Request) {
         workspaceV2,
         moderationEnabled: developerModerationEnabled(),
         transcriptionEnabled: developerTranscriptionEnabled(),
+        speechEnabled: developerSpeechEnabled(),
         decisionsEnabled: developerDecisionsEnabled(),
         analysisEnabled: developerAnalysisEnabled(),
         computerEnabled: developerComputerEnabled(),
@@ -1457,6 +1503,7 @@ export async function handleDeveloperConsole(request: Request) {
           new Set(body.scopes).size !== body.scopes.length ||
           (body.scopes.includes("moderation") && !developerModerationEnabled()) ||
           (body.scopes.includes("audio_transcription") && !developerTranscriptionEnabled()) ||
+          (body.scopes.includes("audio_speech") && !developerSpeechEnabled()) ||
           (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
           (body.scopes.includes("file_analysis") && !developerAnalysisEnabled()) ||
           (body.scopes.includes("computer_use") && !developerComputerEnabled()) ||

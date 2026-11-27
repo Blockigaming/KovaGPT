@@ -730,3 +730,64 @@ test("transcription reserves approved duration and settles only from a valid pro
   contract.maximumUsage.transcription_seconds = 21;
   assert.throws(() => prepareDeveloperQuote(config, request, at));
 });
+
+test("speech quotes reserve the bounded input and only settle actual provider character credits", async () => {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  Object.assign(contract, {
+    provider: "elevenlabs",
+    upstreamModel: "eleven_flash_v2_5",
+    publicModel: "speech",
+    capability: "audio_speech",
+    meter: "speech_character_credits",
+    expectedResponseModels: ["eleven_flash_v2_5"],
+    maximumUsage: { speech_character_credits: 1000 },
+  });
+  f.config.registry = [
+    {
+      ...f.config.registry[0],
+      provider: "elevenlabs",
+      upstream_model: "eleven_flash_v2_5",
+      billing_dimension: "speech_character_credits",
+    },
+  ];
+  f.request = {
+    provider: "elevenlabs",
+    capability: "audio_speech",
+    body: {
+      model: "eleven_flash_v2_5",
+      input: "hello world",
+      voice: "default",
+      response_format: "mp3",
+      provider_voice: "approved",
+    },
+  };
+  const p = prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  assert.deepEqual(p.options.usage.dimensions, { speech_character_credits: 11 });
+  const receipt = {
+    id: "provider-request",
+    model: "eleven_flash_v2_5",
+    status: "completed",
+    usage: { speech_character_credits: 5 },
+    audio: "//uAAA==",
+  };
+  const h = harness({ prepared: p, send: async () => Response.json(receipt) });
+  await (await runMeteredProvider(h.options)).json();
+  assert.equal(h.calls[0].outcome, "settled");
+  assert.deepEqual(h.calls[0].result.usage, { speech_character_credits: 5 });
+  const bad = harness({
+    prepared: p,
+    send: async () => Response.json({ ...receipt, usage: { speech_character_credits: 12 } }),
+  });
+  await (await runMeteredProvider(bad.options)).json();
+  assert.equal(bad.calls[0].outcome, "uncertain");
+  assert.throws(
+    () =>
+      prepareDeveloperQuote(
+        f.config,
+        { ...f.request, body: { ...f.request.body, provider_voice: "../wrong" } },
+        new Date("2026-09-05"),
+      ),
+    /speech_contract_invalid/,
+  );
+});

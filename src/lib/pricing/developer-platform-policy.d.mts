@@ -23,6 +23,7 @@ export function parseDeveloperInput(
     | "file_analysis"
     | "computer_use"
     | "cloud_browser"
-    | "audio_transcription";
+    | "audio_transcription"
+    | "audio_speech";
   publicModel: string;
 };

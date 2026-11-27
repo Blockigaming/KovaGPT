@@ -248,6 +248,7 @@ import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
+import { Route as ApiV1AudioSpeechRouteImport } from './routes/api/v1/audio/speech'
 import { Route as ApiV1AudioTranscriptionsRouteImport } from './routes/api/v1/audio/transcriptions'
 import { Route as ApiV1ChatCompletionsRouteImport } from './routes/api/v1/chat/completions'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
@@ -1483,6 +1484,11 @@ const ApiTasksEventsProviderRoute = ApiTasksEventsProviderRouteImport.update({
   path: '/api/tasks/events/$provider',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1AudioSpeechRoute = ApiV1AudioSpeechRouteImport.update({
+  id: '/api/v1/audio/speech',
+  path: '/api/v1/audio/speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1AudioTranscriptionsRoute = ApiV1AudioTranscriptionsRouteImport.update({
   id: '/api/v1/audio/transcriptions',
   path: '/api/v1/audio/transcriptions',
@@ -1781,6 +1787,7 @@ export interface FileRoutesByFullPath {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/audio/speech': typeof ApiV1AudioSpeechRoute
   '/api/v1/audio/transcriptions': typeof ApiV1AudioTranscriptionsRoute
   '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
@@ -2032,6 +2039,7 @@ export interface FileRoutesByTo {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/audio/speech': typeof ApiV1AudioSpeechRoute
   '/api/v1/audio/transcriptions': typeof ApiV1AudioTranscriptionsRoute
   '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
@@ -2284,6 +2292,7 @@ export interface FileRoutesById {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/audio/speech': typeof ApiV1AudioSpeechRoute
   '/api/v1/audio/transcriptions': typeof ApiV1AudioTranscriptionsRoute
   '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
@@ -2537,6 +2546,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/audio/speech'
     | '/api/v1/audio/transcriptions'
     | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
@@ -2788,6 +2798,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/audio/speech'
     | '/api/v1/audio/transcriptions'
     | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
@@ -3039,6 +3050,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/audio/speech'
     | '/api/v1/audio/transcriptions'
     | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
@@ -3280,6 +3292,7 @@ export interface RootRouteChildren {
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
+  ApiV1AudioSpeechRoute: typeof ApiV1AudioSpeechRoute
   ApiV1AudioTranscriptionsRoute: typeof ApiV1AudioTranscriptionsRoute
   ApiV1ChatCompletionsRoute: typeof ApiV1ChatCompletionsRoute
   ApiAuthPasskeysIndexRoute: typeof ApiAuthPasskeysIndexRoute
@@ -4967,6 +4980,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTasksEventsProviderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/audio/speech': {
+      id: '/api/v1/audio/speech'
+      path: '/api/v1/audio/speech'
+      fullPath: '/api/v1/audio/speech'
+      preLoaderRoute: typeof ApiV1AudioSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/audio/transcriptions': {
       id: '/api/v1/audio/transcriptions'
       path: '/api/v1/audio/transcriptions'
@@ -5392,6 +5412,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
+  ApiV1AudioSpeechRoute: ApiV1AudioSpeechRoute,
   ApiV1AudioTranscriptionsRoute: ApiV1AudioTranscriptionsRoute,
   ApiV1ChatCompletionsRoute: ApiV1ChatCompletionsRoute,
   ApiAuthPasskeysIndexRoute: ApiAuthPasskeysIndexRoute,

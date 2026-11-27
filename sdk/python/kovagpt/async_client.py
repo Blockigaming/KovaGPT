@@ -199,7 +199,7 @@ _INFERENCE = {
     "responses": "responses", "chat_completions": "chat/completions", "search": "search",
     "images": "images", "embeddings": "embeddings", "agent_turn": "agent-turns",
     "browser_snapshot": "browser", "computer_use": "computer-use", "analysis": "analysis",
-    "decisions": "decisions", "transcriptions": "audio/transcriptions", "moderations": "moderations",
+    "decisions": "decisions", "transcriptions": "audio/transcriptions", "speech": "audio/speech", "moderations": "moderations",
 }
 
 

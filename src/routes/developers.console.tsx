@@ -60,6 +60,7 @@ const CSV_FIELDS = [
   "web_search_calls",
   "moderation_requests",
   "transcription_seconds",
+  "speech_character_credits",
   "final_customer_charge",
   "maximum_reserved_charge",
   "currency",
@@ -86,6 +87,7 @@ type ConsoleData = {
   workspaceV2?: boolean;
   moderationEnabled?: boolean;
   transcriptionEnabled?: boolean;
+  speechEnabled?: boolean;
   decisionsEnabled?: boolean;
   analysisEnabled?: boolean;
   computerEnabled?: boolean;
@@ -1278,6 +1280,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "computer_use",
                     "cloud_browser",
                     "audio_transcription",
+                    "audio_speech",
                   ]
                     .filter(
                       (scope) =>
@@ -1286,7 +1289,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         (scope !== "file_analysis" || data?.analysisEnabled) &&
                         (scope !== "computer_use" || data?.computerEnabled) &&
                         (scope !== "cloud_browser" || data?.browserEnabled) &&
-                        (scope !== "audio_transcription" || data?.transcriptionEnabled),
+                        (scope !== "audio_transcription" || data?.transcriptionEnabled) &&
+                        (scope !== "audio_speech" || data?.speechEnabled),
                     )
                     .map((scope) => (
                       <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
@@ -1533,6 +1537,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "computer_use",
                     "cloud_browser",
                     "audio_transcription",
+                    "audio_speech",
                   ].map((item) => (
                     <option key={item} value={item}>
                       {item}

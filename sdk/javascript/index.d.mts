@@ -10,7 +10,8 @@ export type Operation =
   | "analysis"
   | "computer-use"
   | "browser"
-  | "audio/transcriptions";
+  | "audio/transcriptions"
+  | "audio/speech";
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -94,7 +95,14 @@ export type OperationInput =
   | AnalysisInput
   | ComputerUseInput
   | BrowserSnapshotInput
-  | TranscriptionInput;
+  | TranscriptionInput
+  | SpeechInput;
+export interface SpeechInput {
+  model: string;
+  input: string;
+  voice: "default";
+  response_format?: "mp3";
+}
 export interface TranscriptionInput {
   model: string;
   audio: string;
@@ -206,6 +214,7 @@ export interface DeveloperUsage {
   web_search_calls: number | null;
   moderation_requests: number | null;
   transcription_seconds: number | null;
+  speech_character_credits: number | null;
 }
 export class KovaError extends Error {
   code: string;
@@ -473,6 +482,7 @@ export class KovaGPT {
   };
   readonly embeddings: { create(input: EmbeddingsInput, options: Budget): Promise<Response> };
   readonly audio: {
+    speech: { create(input: SpeechInput, options: Budget): Promise<Response> };
     transcriptions: { create(input: TranscriptionInput, options: Budget): Promise<Response> };
   };
   readonly moderations: { create(input: ModerationsInput, options: Budget): Promise<Response> };

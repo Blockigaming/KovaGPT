@@ -11,6 +11,7 @@ import {
   developerTranscriptionFields,
   TRANSCRIPTION_BODY_LIMIT,
 } from "./developer-transcription-policy.mjs";
+import { developerSpeechFields } from "./developer-speech-policy.mjs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = (code) => {
   throw new Error(code);
@@ -26,6 +27,7 @@ export const DEVELOPER_SCOPES = Object.freeze([
   "computer_use",
   "cloud_browser",
   "audio_transcription",
+  "audio_speech",
   "files",
 ]);
 export function developerUuid(value) {
@@ -72,6 +74,20 @@ export function parseDeveloperInput(kind, input) {
     if (new TextEncoder().encode(JSON.stringify(body)).length > TRANSCRIPTION_BODY_LIMIT)
       fail("developer_input_too_large");
     return { body, capability: "audio_transcription", publicModel: input.model };
+  }
+  if (kind === "audio/speech") {
+    if (
+      typeof input.model !== "string" ||
+      input.model.length < 2 ||
+      input.model.length > 80 ||
+      !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+    )
+      fail("developer_model_invalid");
+    return {
+      body: { model: input.model, ...developerSpeechFields(input) },
+      capability: "audio_speech",
+      publicModel: input.model,
+    };
   }
   const common = ["model"];
   const fields =

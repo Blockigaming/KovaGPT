@@ -74,12 +74,20 @@ export const DEVELOPER_ENDPOINTS = [
     "One classification result is required for settlement. This endpoint does not provide image moderation or bulk classification. Consult approved pricing rather than assuming the service is free.",
   ),
   endpoint(
+    "audio-speech",
+    "Speech generation",
+    "audio/speech",
+    "POST",
+    "Quote and submit model, input (1–1000 UTF-8 bytes), voice default and optional response_format mp3. Returns base64 MP3 and usage.",
+    "Requires the audio_speech scope, an approved ElevenLabs Flash v2.5 price contract and a server-approved voice. Provider character-cost and request ID are mandatory. Disclose AI-generated speech; no voice cloning or arbitrary voice selection.",
+  ),
+  endpoint(
     "audio-transcription",
     "Audio transcription",
     "audio/transcriptions",
     "POST",
     "Supply model and audio as a canonical base64 PCM WAV data URI: mono, 16 kHz, 16-bit, 0.1–20 seconds. Quote audio/transcriptions.",
-    "The audio_transcription scope and approved duration receipt are required. Submit only recordings you may process; speech synthesis, translation and live audio are not implemented here.",
+    "The audio_transcription scope and approved duration receipt are required. Submit only recordings you may process; translation and live audio are not implemented here.",
   ),
   endpoint(
     "decisions",

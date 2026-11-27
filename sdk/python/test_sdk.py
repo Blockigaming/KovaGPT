@@ -83,6 +83,14 @@ class SDKTests(unittest.TestCase):
         self.addCleanup(self.mock.stop)
         self.client = Client(KEY)
 
+    def test_speech_uses_exact_quoted_input(self):
+        data = {"model": "speech", "input": "hello", "voice": "default"}
+        self.responses.extend([FakeResponse(quote()), FakeResponse({"audio": "//uAAA=="})])
+        self.assertEqual(self.client.speech(data, **BUDGET).json()["audio"], "//uAAA==")
+        self.assertEqual(json.loads(self.calls[0][2]), {"operation": "audio/speech", "input": data})
+        self.assertEqual(self.calls[1][1], "/api/v1/audio/speech")
+        self.assertEqual(json.loads(self.calls[1][2]), data)
+
     def test_explicit_budget_and_identical_quoted_input(self):
         self.responses.extend([FakeResponse(quote()), FakeResponse({"ok": True})])
         self.assertEqual(self.client.responses(DATA, **BUDGET).json(), {"ok": True})

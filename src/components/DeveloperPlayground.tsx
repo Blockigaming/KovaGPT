@@ -12,7 +12,8 @@ type Operation =
   | "embeddings"
   | "moderations"
   | "search"
-  | "audio/transcriptions";
+  | "audio/transcriptions"
+  | "audio/speech";
 type Model = {
   id: string;
   capability: string;
@@ -38,6 +39,7 @@ const capability: Record<Operation, string> = {
   embeddings: "embeddings",
   moderations: "moderation",
   "audio/transcriptions": "audio_transcription",
+  "audio/speech": "audio_speech",
   search: "chat",
 };
 
@@ -77,6 +79,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [error, setError] = useState("");
   const [output, setOutput] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [audio, setAudio] = useState<string | null>(null);
   const [dispatched, setDispatched] = useState(false);
   const active = useRef<AbortController | null>(null);
   const mounted = useRef(false);
@@ -93,6 +96,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     setQuote(null);
     setOutput("");
     setImages([]);
+    setAudio(null);
     setError("");
   };
 
@@ -256,7 +260,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               }
             : acceptsAudio
               ? { model, audio: sourceAudio }
-              : { model, input: prompt };
+              : operation === "audio/speech"
+                ? { model, input: prompt, voice: "default", response_format: "mp3" }
+                : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
@@ -333,7 +339,17 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       }
       const result = await request(accepted.operation, controller, accepted.requestBody, headers);
       if (!mounted.current || controller.signal.aborted) return;
-      if (accepted.operation === "images") {
+      if (accepted.operation === "audio/speech") {
+        const encoded = record(result).audio;
+        if (
+          typeof encoded !== "string" ||
+          encoded.length > 2796204 ||
+          !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)
+        )
+          throw new Error("Invalid speech result. Check Logs before retrying.");
+        setAudio(`data:audio/mpeg;base64,${encoded}`);
+        setOutput("AI-generated speech. Review usage in Logs.");
+      } else if (accepted.operation === "images") {
         const data = record(result).data;
         const previews = Array.isArray(data)
           ? data.flatMap((item): string[] => {
@@ -431,6 +447,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="embeddings">Embeddings</option>
               <option value="moderations">Moderation</option>
               <option value="search">Web search</option>
+              <option value="audio/speech">Speech generation</option>
               <option value="audio/transcriptions">Audio transcription</option>
             </select>
           </label>
@@ -696,6 +713,15 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             <p role="status" className="text-sm text-muted-foreground">
               Request in progress…
             </p>
+          )}
+          {audio && (
+            <audio
+              controls
+              preload="none"
+              src={audio}
+              className="w-full"
+              aria-label="AI-generated speech"
+            />
           )}
           {images.map((src, index) => (
             <img

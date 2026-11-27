@@ -25,6 +25,13 @@ import {
   validDeveloperBrowserRequest,
 } from "./developer-browser-policy.mjs";
 
+import {
+  SPEECH_MODEL,
+  SPEECH_MAX_CHARACTERS,
+  validDeveloperSpeechRequest,
+  developerSpeechReceipt,
+} from "./developer-speech-policy.mjs";
+
 const fail = (code) => {
   throw new PricingUnavailableError(code);
 };
@@ -45,6 +52,7 @@ const dimensionsByMeter = {
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
+  speech_character_credits: ["speech_character_credits"],
   transcription_duration: ["transcription_seconds"],
   browser_sessions: ["browser_sessions_60s"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
@@ -96,6 +104,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   const dimensions = dimensionsByMeter[contract.meter];
   const moderationMeter = contract.meter === "moderation_requests";
   const transcriptionMeter = contract.meter === "transcription_duration";
+  const speechMeter = contract.meter === "speech_character_credits";
   const browserMeter = contract.meter === "browser_sessions";
   const decisionsMeter = contract.meter === "decisions_tokens";
   const searchMeter = contract.meter === "responses_search";
@@ -128,6 +137,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   if (
     !moderationMeter &&
     !transcriptionMeter &&
+    !speechMeter &&
     !browserMeter &&
     new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
       (decisionsMeter
@@ -179,6 +189,18 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
           contract.maximumUsage.transcription_seconds))
   )
     fail("billing_transcription_contract_invalid");
+  if (
+    speechMeter !== (request.capability === "audio_speech") ||
+    speechMeter !== (request.provider === "elevenlabs") ||
+    (speechMeter &&
+      (!validDeveloperSpeechRequest(request.body) ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== SPEECH_MODEL ||
+        contract.maximumUsage.speech_character_credits < 1 ||
+        contract.maximumUsage.speech_character_credits > SPEECH_MAX_CHARACTERS ||
+        Buffer.byteLength(request.body.input) > contract.maximumUsage.speech_character_credits))
+  )
+    fail("billing_speech_contract_invalid");
   if (
     decisionsMeter !== (request.capability === "decisions") ||
     (decisionsMeter &&
@@ -406,9 +428,11 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     currency: version.currency,
     usage: {
       capability: request.capability,
-      dimensions: searchMeter
-        ? { ...contract.maximumUsage, web_search_calls: search?.max_tool_calls ?? 0 }
-        : contract.maximumUsage,
+      dimensions: speechMeter
+        ? { speech_character_credits: Buffer.byteLength(request.body.input) }
+        : searchMeter
+          ? { ...contract.maximumUsage, web_search_calls: search?.max_tool_calls ?? 0 }
+          : contract.maximumUsage,
     },
     allowances: version.allowance_configuration,
     pricingVersion: { id: version.id, status: version.status, marginFloor: version.margin_floor },
@@ -478,6 +502,9 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   } else if (meter === "browser_sessions") {
     if (!developerBrowserReceipt(response)) return null;
     dimensions = { browser_sessions_60s: 1 };
+  } else if (meter === "speech_character_credits") {
+    dimensions = developerSpeechReceipt(response);
+    if (!dimensions) return null;
   } else if (meter === "transcription_duration") {
     dimensions = developerTranscriptionReceipt(response);
     if (!dimensions) return null;
@@ -754,6 +781,12 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
         prepared.options.usage.dimensions.web_search_calls > 0;
       if (requestedSearch && actual?.dimensions.web_search_calls === 0) actual = null;
       if (prepared.imageEdit && actual?.dimensions.image_input_tokens === 0) actual = null;
+      if (
+        prepared.contract.meter === "speech_character_credits" &&
+        actual?.dimensions.speech_character_credits >
+          prepared.options.usage.dimensions.speech_character_credits
+      )
+        actual = null;
       if (actual) await finalize("settled", settleDeveloperQuote(prepared, actual));
       else await finalize("uncertain");
     };

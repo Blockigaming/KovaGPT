@@ -13,6 +13,7 @@ const operations = new Set([
   "computer-use",
   "browser",
   "audio/transcriptions",
+  "audio/speech",
 ]);
 export class KovaError extends Error {
   constructor(code, status = 0, requestMayHaveStarted = false) {
@@ -173,6 +174,9 @@ export class KovaGPT {
       create: (input, options) => this.run("embeddings", input, options),
     });
     this.audio = Object.freeze({
+      speech: Object.freeze({
+        create: (input, options) => this.run("audio/speech", input, options),
+      }),
       transcriptions: Object.freeze({
         create: (input, options) => this.run("audio/transcriptions", input, options),
       }),
