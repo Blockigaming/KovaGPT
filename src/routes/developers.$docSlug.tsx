@@ -1,19 +1,30 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { DEVELOPER_DOC_BY_SLUG } from "@/lib/developer-docs";
+import { useState } from "react";
 import { PublicPageView } from "@/components/public/PublicSite";
-import { PUBLIC_WEBSITE_ROUTE_BY_PATH } from "@/lib/public-website-route-index.mjs";
 import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
+import { filterDeveloperReference } from "@/lib/developer-reference-search.mjs";
+import type { DeveloperReferenceEntry } from "@/lib/developer-reference.mjs";
+
 export const Route = createFileRoute("/developers/$docSlug")({
   loader: async ({ params }) => {
-    const websitePath = `/developers/${params.docSlug}`;
-    if (PUBLIC_WEBSITE_ROUTE_BY_PATH.has(websitePath)) {
-      const { PUBLIC_WEBSITE_PAGE_BY_PATH } = await import("@/lib/public-website-catalog.mjs");
-      const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(websitePath);
-      if (websitePage) return { kind: "website" as const, item: websitePage };
+    const {
+      DEVELOPER_REFERENCE,
+      DEVELOPER_ENDPOINTS,
+      DEVELOPER_REFERENCE_BY_SLUG,
+      developerReferencePage,
+    } = await import("@/lib/developer-reference.mjs");
+    if (params.docSlug === "docs" || params.docSlug === "api-reference") {
+      const reference = params.docSlug === "api-reference";
+      return {
+        kind: "directory" as const,
+        slug: params.docSlug,
+        title: reference ? "API reference" : "Developer documentation",
+        entries: reference ? DEVELOPER_ENDPOINTS : DEVELOPER_REFERENCE,
+      };
     }
-    const doc = DEVELOPER_DOC_BY_SLUG.get(params.docSlug);
-    if (!doc) throw notFound();
-    return { kind: "legacy" as const, item: doc };
+    const entry = DEVELOPER_REFERENCE_BY_SLUG.get(params.docSlug);
+    if (!entry) throw notFound();
+    return { kind: "website" as const, item: developerReferencePage(entry) };
   },
   component: DeveloperDoc,
   head: ({ loaderData: doc }) =>
@@ -22,110 +33,92 @@ export const Route = createFileRoute("/developers/$docSlug")({
       : doc
         ? {
             meta: [
-              { title: `${doc.item.title} | KovaGPT Developers` },
-              { name: "description", content: doc.item.description },
+              { title: `${doc.title} | KovaGPT Developers` },
+              { name: "description", content: "Search the versioned developer source contracts." },
               { name: "robots", content: "noindex, follow" },
             ],
-            links: [
-              {
-                rel: "canonical",
-                href: `https://kovagpt.com/developers/${doc.item.slug}`,
-              },
-            ],
+            links: [{ rel: "canonical", href: `https://kovagpt.com/developers/${doc.slug}` }],
           }
         : {},
 });
 
-function DeveloperDoc() {
-  const doc = Route.useLoaderData();
-  if (doc.kind === "website") return <PublicWebsiteArticle item={doc.item} />;
+function DeveloperDirectory({
+  title,
+  entries,
+}: {
+  title: string;
+  entries: DeveloperReferenceEntry[];
+}) {
+  const [query, setQuery] = useState("");
+  const matches = filterDeveloperReference(entries, query);
   return (
     <PublicPageView
       reference="claude-documentation"
-      eyebrow="Developer documentation"
-      title={doc.item.title}
-      summary={doc.item.description}
+      eyebrow="Developers"
+      title={title}
+      summary="Preview reference for the versioned API and integration contracts. A documented endpoint is not proof of activation."
     >
-      <section className="space-y-3 rounded-xl border p-6">
-        <h2 className="text-lg font-semibold">Prepare an integration</h2>
-        <p>
-          Create a verified account and scoped key in the console. Configure organization, project,
-          and key budgets, then fund the account when purchases are available. Keep keys in your
-          server’s secret manager. Paid execution is disabled until the operator enables it with
-          verified pricing.
-        </p>
-        <Link to="/developers/console" className="underline">
-          Open developer console
+      <nav aria-label="Developer documentation navigation" className="flex flex-wrap gap-4 text-sm">
+        <Link to="/developers/$docSlug" params={{ docSlug: "docs" }} className="underline">
+          All documentation
         </Link>
-      </section>
-      <section className="space-y-3 rounded-xl border p-6">
-        <h2 className="text-lg font-semibold">Version 1 request contract</h2>
-        <p>
-          Use HTTPS and Authorization: Bearer with your developer key. GET /api/v1/models lists
-          current public model names for your key. POST /api/v1/quotes with operation and input
-          obtains a signed two-minute quote. Submit the identical input to the corresponding
-          endpoint with X-Kova-Quote and a stable, unique Idempotency-Key.
+        <Link to="/developers/$docSlug" params={{ docSlug: "api-reference" }} className="underline">
+          API reference
+        </Link>
+        <Link to="/developers/$docSlug" params={{ docSlug: "quickstart" }} className="underline">
+          Quickstart
+        </Link>
+        <Link to="/developers/$docSlug" params={{ docSlug: "api-pricing" }} className="underline">
+          Pricing
+        </Link>
+        <Link to="/developers/console" className="underline">
+          Console
+        </Link>
+      </nav>
+      <section className="space-y-4 rounded-xl border border-border p-4 sm:p-6">
+        <label className="block space-y-2 text-sm font-medium">
+          <span>Search developer documentation</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search endpoints, guides and fields"
+            className="block min-h-11 w-full rounded-lg border border-input bg-background px-3 text-base"
+          />
+        </label>
+        <p role="status" className="text-sm text-muted-foreground">
+          {matches.length} {matches.length === 1 ? "result" : "results"}
         </p>
-        <ul className="list-disc pl-5">
-          <li>
-            /api/v1/responses: model, text input, optional instructions, required max_output_tokens,
-            optional stream.
-          </li>
-          <li>/api/v1/images: model, prompt, size, quality, optional n (at most four).</li>
-          <li>
-            /api/v1/embeddings: model, text input or up to 32 text inputs, optional dimensions.
-          </li>
-          <li>/api/v1/chat/completions: bounded text-only compatible chat and SSE.</li>
-          <li>/api/v1/search: quoted, gated native hosted search.</li>
-          <li>/api/v1/moderations: quoted, gated text moderation.</li>
-          <li>/api/v1/files and /api/v1/file-search: scoped text storage and lexical retrieval.</li>
-          <li>
-            /api/v1/vector-stores: scoped vector resources and cosine retrieval; migration and
-            activation required.
-          </li>
-          <li>/api/v1/usage: key-scoped request history and settlement status.</li>
-        </ul>
-        <p>
-          A changed request, expired quote, increased charge, or changed pricing version needs a new
-          quote. Public models map to reviewed provider deployments on the server.
-        </p>
-      </section>
-      <section className="space-y-3 rounded-xl border p-6">
-        <h2 className="text-lg font-semibold">Billing and retries</h2>
-        <p>
-          All displayed credit amounts and spending limits use the account currency’s minor units.
-          The accepted maximum is reserved before dispatch. Authoritative provider usage determines
-          the final charge and releases unused credit. A timeout or disconnect can leave a hold
-          pending reconciliation. Reusing a request key never starts the same provider operation
-          again; check the console before creating a new request.
-        </p>
-        <p>
-          Responses streams forward native provider events. A terminal usage event can settle a
-          charge even if the client disconnects afterward. Requests do not enable provider-side
-          response storage. No client field can supply prices, usage, provider URLs, or another
-          account’s identity.
-        </p>
-      </section>
-      <section className="space-y-3 rounded-xl border p-6">
-        <h2 className="text-lg font-semibold">MCP and supported boundaries</h2>
-        <p>
-          /mcp supports stateless Streamable HTTP with a developer bearer key for clients that
-          support explicit bearer credentials, or owner-approved OAuth access. Send Accept:
-          application/json, text/event-stream and MCP-Protocol-Version: 2025-11-25. The quote, text,
-          image, and embedding tools use the same billing and scope checks. Browser OAuth discovery
-          is available only when the configured issuer and developer execution are enabled. Review
-          the exact client, callback, developer project, permissions and spending limits before
-          approving a connection. OAuth grants confer no consumer Project or Library access.
-        </p>
-        <p>
-          The source supports bounded private text files, gated inline PNG vision and editing, gated
-          hosted web search, scoped usage reads, text moderation and a text-only Chat Completions
-          compatibility endpoint, scoped lexical file retrieval, and staged vector stores. The
-          repository-local JavaScript and Python SDKs are not published packages. Other hosted
-          tools, remote file inputs and unrestricted multimodal storage are not supported. Internal
-          application endpoints remain outside the versioned API contract.
-        </p>
+        {matches.length ? (
+          <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
+            {matches.map((entry) => (
+              <li key={entry.slug} className="min-w-0">
+                <Link
+                  to="/developers/$docSlug"
+                  params={{ docSlug: entry.slug }}
+                  className="block min-h-11 rounded-lg border border-border p-4 hover:bg-muted/50"
+                >
+                  <h2 className="font-semibold">{entry.title}</h2>
+                  {entry.path && (
+                    <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                      {entry.methods?.join(" / ")} {entry.path}
+                    </p>
+                  )}
+                  <p className="mt-2 break-words text-sm text-muted-foreground">{entry.request}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm">No matching documentation. Try a route name, field or feature.</p>
+        )}
       </section>
     </PublicPageView>
   );
+}
+
+function DeveloperDoc() {
+  const doc = Route.useLoaderData();
+  if (doc.kind === "website") return <PublicWebsiteArticle item={doc.item} />;
+  return <DeveloperDirectory key={doc.slug} title={doc.title} entries={doc.entries} />;
 }

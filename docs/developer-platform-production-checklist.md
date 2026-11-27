@@ -55,7 +55,7 @@ Baseline evidence: commit 253c97a failed KovaGPT CI, verify job 140701612832, at
 - [ ] R41 — **Python SDK.** Versioned package, sync/async contracts, errors, streaming and tested examples.
 - [ ] R42 — **OpenAPI.** Complete versioned request/response schemas, auth, errors and operation coverage.
 - [ ] R43 — **Public developer pages.** Inventory all 29 required baseline routes; add every missing reference and guide.
-- [ ] R44 — **Canonical database migrations.** Materialize staged SQL and regenerate release contracts without production writes.
+- [x] R44 — **Canonical database migrations.** Materialize staged SQL and regenerate release contracts without production writes. Evidence: [8c14be3 isolated migration workflow](https://github.com/Blockigaming/KovaGPT/actions/runs/46067432818) passed canonical replay and queue/accounting regressions; all nine staged SQL files and canonical counterparts match the release inventory.
 - [ ] R45 — **Database replay and isolation.** Replay from supported baseline, two-principal isolation and rollback evidence.
 - [ ] R46 — **Provider verification.** Verify exact supported provider contracts, prices, quotas and approved test evidence.
 - [ ] R47 — **Desktop and mobile.** Real authenticated and public route checks, light/dark, keyboard and responsive behavior.

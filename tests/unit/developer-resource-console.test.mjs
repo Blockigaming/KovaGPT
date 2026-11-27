@@ -109,7 +109,9 @@ test("each supported queue operation can prepare an exact quote-bound draft with
       assert.equal(JSON.parse(quote.body).operation, operation);
       assert.equal(resourceConsoleRequiresConfirmation(section, action), false);
       assert.equal(resourceConsoleMaySpend(section, action), false);
-      const draft = JSON.parse(resourceConsoleJobDraft(section, action, raw, result, () => id, now));
+      const draft = JSON.parse(
+        resourceConsoleJobDraft(section, action, raw, result, () => id, now),
+      );
       assert.equal(draft.maximum_charge, 0);
       assert.equal(draft.currency, "EUR");
       const item = draft.items?.[0] ?? draft;
