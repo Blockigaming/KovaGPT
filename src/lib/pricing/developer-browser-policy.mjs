@@ -39,19 +39,58 @@ export function developerBrowserOrigins(raw) {
   if (new Set(origins).size !== origins.length) invalid();
   return origins;
 }
+// All navigation is explicitly selected before a quote is issued. No model-directed
+// navigation, arbitrary commands or additional origins enter the session.
+export function developerBrowserTargets(value) {
+  const first = developerBrowserUrl(value?.url);
+  const next = value?.navigate;
+  if (next === undefined) return [first];
+  if (!Array.isArray(next) || next.length < 1 || next.length > 2) invalid();
+  const targets = [first, ...next.map(developerBrowserUrl)];
+  if (
+    targets.some((url) => url.origin !== first.origin) ||
+    new Set(targets.map((url) => url.href)).size !== targets.length
+  )
+    invalid();
+  return targets;
+}
 export function developerBrowserFields(value) {
+  const targets = developerBrowserTargets(value);
   return {
-    url: developerBrowserUrl(value?.url).href,
+    url: targets[0].href,
+    ...(targets.length > 1 ? { navigate: targets.slice(1).map((url) => url.href) } : {}),
     session_seconds: BROWSER_SESSION_SECONDS,
   };
+}
+// Transport-independent sequential execution. Check authority before and after every
+// navigation. A partial or canceled plan is never returned as a completed receipt.
+export async function executeDeveloperBrowserPlan(body, { check, capture, signal }) {
+  if (!validDeveloperBrowserRequest(body)) invalid();
+  const snapshots = [];
+  for (const target of developerBrowserTargets(body)) {
+    signal?.throwIfAborted();
+    await check(target);
+    signal?.throwIfAborted();
+    const snapshot = await capture(target);
+    signal?.throwIfAborted();
+    await check(target);
+    signal?.throwIfAborted();
+    if (snapshot?.url !== target.href || typeof snapshot.text !== "string" || !snapshot.text.trim())
+      throw new Error("developer_browser_unavailable");
+    snapshots.push(snapshot);
+  }
+  return snapshots;
 }
 export function validDeveloperBrowserRequest(body) {
   try {
     return (
       body?.model === BROWSER_MODEL &&
-      Object.keys(body).length === 3 &&
+      Object.keys(body).length === (body.navigate === undefined ? 3 : 4) &&
+      Object.keys(body).every((key) =>
+        ["model", "url", "navigate", "session_seconds"].includes(key),
+      ) &&
       body.session_seconds === BROWSER_SESSION_SECONDS &&
-      developerBrowserUrl(body.url).href === body.url
+      developerBrowserTargets(body).length >= 1
     );
   } catch {
     return false;

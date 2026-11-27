@@ -14,7 +14,8 @@ type Operation =
   | "search"
   | "audio/transcriptions"
   | "audio/speech"
-  | "analysis";
+  | "analysis"
+  | "browser";
 type Model = {
   id: string;
   capability: string;
@@ -43,6 +44,7 @@ const capability: Record<Operation, string> = {
   "audio/speech": "audio_speech",
   search: "chat",
   analysis: "file_analysis",
+  browser: "cloud_browser",
 };
 
 function eligibleModel(item: Model, operation: Operation) {
@@ -274,7 +276,15 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                         ? { file_ids: analysisFileIds.trim().split(/[\s,]+/) }
                         : {}),
                     }
-                  : { model, input: prompt };
+                  : operation === "browser"
+                    ? (() => {
+                        const [url, ...navigate] = prompt
+                          .split(/\r?\n/)
+                          .map((value) => value.trim())
+                          .filter(Boolean);
+                        return { model, url, ...(navigate.length ? { navigate } : {}) };
+                      })()
+                    : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
@@ -460,6 +470,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="moderations">Moderation</option>
               <option value="search">Web search</option>
               <option value="analysis">Isolated code analysis</option>
+              <option value="browser">Cloud Browser navigation</option>
               <option value="audio/speech">Speech generation</option>
               <option value="audio/transcriptions">Audio transcription</option>
             </select>
@@ -495,7 +506,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   ? "Image prompt"
                   : operation === "search"
                     ? "Search query"
-                    : "Input"}
+                    : operation === "browser"
+                      ? "Approved HTTPS pages (one per line, up to three on the same origin)"
+                      : "Input"}
               </span>
               <Textarea
                 rows={6}

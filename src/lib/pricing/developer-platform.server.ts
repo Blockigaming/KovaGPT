@@ -45,7 +45,7 @@ import { readDeveloperComputerResponse } from "./developer-computer-policy.mjs";
 import {
   BROWSER_MODEL,
   developerBrowserReceipt,
-  developerBrowserUrl,
+  developerBrowserTargets,
 } from "./developer-browser-policy.mjs";
 import {
   assertDeveloperBrowserAuthority,
@@ -520,7 +520,8 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
     );
   }
   if (parsed.capability === "cloud_browser")
-    await assertDeveloperBrowserAuthority(identity, developerBrowserUrl(parsed.body.url));
+    for (const target of developerBrowserTargets(parsed.body))
+      await assertDeveloperBrowserAuthority(identity, target);
   if (
     parsed.body.image !== undefined &&
     (runtimeEnv("KOVA_DEVELOPER_IMAGE_EDITS_ENABLED") !== "true" ||

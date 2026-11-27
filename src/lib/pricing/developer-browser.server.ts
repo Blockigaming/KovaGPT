@@ -13,6 +13,8 @@ import {
   BROWSER_MODEL,
   developerBrowserOrigins,
   developerBrowserUrl,
+  developerBrowserTargets,
+  executeDeveloperBrowserPlan,
   validDeveloperBrowserRequest,
 } from "./developer-browser-policy.mjs";
 
@@ -106,14 +108,14 @@ export async function runDeveloperBrowser(
   callerSignal?: AbortSignal,
 ): Promise<Response> {
   if (!validDeveloperBrowserRequest(body)) throw new Error("developer_browser_invalid");
-  const url = developerBrowserUrl(body.url);
+  const [url] = developerBrowserTargets(body);
   const signal = AbortSignal.any([
     AbortSignal.timeout(45000),
     ...(callerSignal ? [callerSignal] : []),
   ]);
-  const check = async () => {
+  const check = async (target = url) => {
     signal.throwIfAborted();
-    await assertDeveloperBrowserAuthority(identity, url);
+    await assertDeveloperBrowserAuthority(identity, target);
     signal.throwIfAborted();
   };
   await check();
@@ -188,14 +190,28 @@ export async function runDeveloperBrowser(
     });
     await session.context.routeWebSocket("**/*", (socket) => socket.close());
     const tab = await runtime.createTab(sessionId, owner);
-    await runtime.openUrl(sessionId, owner, tab.id, url.href, 12000);
-    const page = runtime.sessions.get(sessionId, owner).tabs.get(tab.id)?.page;
-    if (!page || page.url() !== url.href) throw new Error("developer_browser_unavailable");
-    const text = await page.locator("body").innerText({ timeout: 2500 });
-    const title = (await page.title()).slice(0, 180);
+    const ownedSession = sessionId;
+    const snapshots = await executeDeveloperBrowserPlan(body, {
+      signal,
+      check,
+      capture: async (target) => {
+        await runtime.openUrl(ownedSession, owner, tab.id, target.href, 12000);
+        const page = runtime.sessions.get(ownedSession, owner).tabs.get(tab.id)?.page;
+        if (!page || page.url() !== target.href) throw new Error("developer_browser_unavailable");
+        const text = await page.locator("body").innerText({ timeout: 2500 });
+        return {
+          url: target.href,
+          title: (await page.title()).slice(0, 180),
+          text: text.slice(0, 10000),
+        };
+      },
+    });
+    const final = snapshots[snapshots.length - 1];
+    const page = runtime.sessions.get(ownedSession, owner).tabs.get(tab.id)?.page;
+    if (!page || page.url() !== final.url) throw new Error("developer_browser_unavailable");
     const image = await page.screenshot({ type: "jpeg", quality: 55, timeout: 3500 });
-    if (!text.trim() || image.length > 256 * 1024) throw new Error("developer_browser_unavailable");
-    await check();
+    if (image.length > 256 * 1024) throw new Error("developer_browser_unavailable");
+    await check(developerBrowserUrl(final.url));
     return Response.json({
       id: remoteId,
       model: BROWSER_MODEL,
@@ -204,9 +220,8 @@ export async function runDeveloperBrowser(
       result: {
         id: randomUUID(),
         object: "browser.snapshot",
-        url: url.href,
-        title,
-        text: text.slice(0, 10000),
+        ...final,
+        ...(snapshots.length > 1 ? { navigation: snapshots } : {}),
         screenshot: "data:image/jpeg;base64," + image.toString("base64"),
         observed_at: new Date().toISOString(),
       },

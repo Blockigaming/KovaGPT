@@ -665,6 +665,22 @@ test("browser snapshots require an approved fixed session price and a valid rece
   const h = harness({ prepared: quote, send: async () => Response.json(receipt) });
   await (await runMeteredProvider(h.options)).json();
   assert.equal(h.calls[0].outcome, "settled");
+  request.body = {
+    model: BROWSER_MODEL,
+    ...developerBrowserFields({
+      url: "https://www.example.com/",
+      navigate: ["https://www.example.com/docs"],
+    }),
+  };
+  const plan = prepareDeveloperQuote(config, request, new Date("2026-09-05"));
+  assert.equal(plan.options.usage.dimensions.browser_sessions_60s, 1);
+  assert.equal(plan.quote.maximumReservedCharge, quote.quote.maximumReservedCharge);
+  request.body.navigate = ["https://other.com/"];
+  assert.throws(
+    () => prepareDeveloperQuote(config, request, new Date("2026-09-05")),
+    /browser_contract_invalid/,
+  );
+  delete request.body.navigate;
   request.body.session_seconds = 61;
   assert.throws(() => prepareDeveloperQuote(config, request, new Date("2026-09-05")));
 });

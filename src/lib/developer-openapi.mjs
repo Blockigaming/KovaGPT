@@ -146,7 +146,21 @@ const paid = {
     screenshot: png,
     max_output_tokens: integer(1, 2048),
   }),
-  browser: obj({ model, url: { ...str(1024), format: "uri", pattern: "^https://" } }),
+  browser: obj(
+    {
+      model,
+      url: { ...str(2048), format: "uri", pattern: "^https://" },
+      navigate: {
+        type: "array",
+        minItems: 1,
+        maxItems: 2,
+        uniqueItems: true,
+        items: { ...str(2048), format: "uri", pattern: "^https://" },
+        description: "Additional distinct pages on the same approved origin.",
+      },
+    },
+    ["model", "url"],
+  ),
   "audio/transcriptions": obj({
     model,
     audio: { type: "string", pattern: "^data:audio/wav;base64," },
@@ -419,6 +433,12 @@ const output = {
   browser: open({
     id: uuid,
     object: { const: "browser.snapshot" },
+    navigation: {
+      type: "array",
+      minItems: 2,
+      maxItems: 3,
+      items: obj({ url: str(2048), title: str(180), text: str(10000) }),
+    },
     url: { type: "string", format: "uri" },
     title: { type: "string" },
     text: { type: "string" },

@@ -110,6 +110,8 @@ export interface TranscriptionInput {
 export interface BrowserSnapshotInput {
   model: string;
   url: string;
+  /** Up to two additional, distinct same-origin HTTPS pages, bound to the same quote. */
+  navigate?: string[];
 }
 export interface ComputerUseInput {
   model: string;

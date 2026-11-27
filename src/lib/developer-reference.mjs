@@ -110,8 +110,8 @@ export const DEVELOPER_ENDPOINTS = [
     "Cloud Browser snapshots",
     "browser",
     "POST",
-    "Supply model and an exact approved public HTTPS url without credentials, custom port, query or fragment. Quote browser with cloud_browser scope.",
-    "A bounded read-only session returns page text, title and a snapshot. Scripts and writes are disabled; the provider session is limited to 60 seconds. This is not a persistent or authenticated browsing session.",
+    "Supply model and an exact approved public HTTPS url without credentials, custom port, query or fragment. Optionally add navigate with up to two distinct additional pages on the same origin. Quote the complete plan with cloud_browser scope.",
+    "A bounded read-only session returns text and title for each completed page and a final screenshot. All navigation shares one session and one fixed budget; authority is rechecked throughout. Scripts and writes are disabled. This is not a persistent or authenticated browsing session.",
   ),
   endpoint(
     "computer-use",
