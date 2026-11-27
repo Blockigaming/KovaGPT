@@ -163,6 +163,9 @@ const TemporaryChatBanner = lazy(() =>
   })),
 );
 
+const focusedElement = () =>
+  document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
 function clearRetryTimer(timer: { current: number | null }) {
   if (timer.current === null) return;
   window.clearTimeout(timer.current);
@@ -533,8 +536,7 @@ function KovaGPT() {
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = useCallback((tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    settingsReturnFocusRef.current = focusedElement();
     setSettingsTab(tab);
     setSettingsOpen(true);
   }, []);
@@ -574,8 +576,7 @@ function KovaGPT() {
   const workspaceReturnFocusRef = useRef<HTMLElement | null>(null);
   const workspaceReturnUrlRef = useRef<string | undefined>(undefined);
   const openChatWorkspace = (target?: HTMLElement | null) => {
-    workspaceReturnFocusRef.current =
-      target ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    workspaceReturnFocusRef.current = target ?? focusedElement();
     workspaceReturnUrlRef.current = window.location.href;
     setWorkspaceOpen(true);
   };
@@ -889,8 +890,7 @@ function KovaGPT() {
     resultScopeRef.current = scope;
     resultDraftsRef.current.set(scope, descriptor);
     const origin = {
-      target:
-        trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null),
+      target: trigger ?? focusedElement(),
       url: window.location.href,
       scope: nextPromptScopeRef.current,
       generation: storageGenerationRef.current,
@@ -1703,8 +1703,7 @@ function KovaGPT() {
   }, [active, conversations, isStreaming, setConversations, userKey]);
 
   const openCommandPalette = useCallback((trigger?: HTMLElement) => {
-    commandReturnFocusRef.current =
-      trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    commandReturnFocusRef.current = trigger ?? focusedElement();
     setCommandOpen(true);
   }, []);
   useEffect(() => {
