@@ -41,6 +41,7 @@ export function ContinueWorking({
 export function HomeChatFrame({
   home = true,
   scrollRef,
+  bottomRef,
   heading,
   headingId,
   recentWork,
@@ -48,6 +49,7 @@ export function HomeChatFrame({
 }: {
   home?: boolean;
   scrollRef?: Ref<HTMLElement>;
+  bottomRef?: Ref<HTMLSpanElement>;
   heading: string;
   headingId?: string;
   recentWork?: ReactNode;
@@ -87,6 +89,7 @@ export function HomeChatFrame({
           {children}
         </div>
         {recentWork}
+        {bottomRef && <span ref={bottomRef} aria-hidden="true" className="-mt-px h-px shrink-0" />}
       </div>
     </section>
   );

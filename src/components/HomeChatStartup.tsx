@@ -1,4 +1,4 @@
-import { AudioLines, Mic, PanelLeft, Plus, SquarePen } from "lucide-react";
+import { AudioLines, Mic, PanelLeft, Plus } from "lucide-react";
 import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 import { HomeChatFrame } from "@/components/HomeChatFrame";
 import { TemporaryChatIcon } from "./TemporaryChatIcon";
@@ -64,9 +64,6 @@ export function HomeChatStartup() {
             <div className="kova-mobile-home-actions flex items-center gap-0.5 opacity-45">
               <span className="grid h-11 w-11 place-items-center">
                 <TemporaryChatIcon className="size-5" />
-              </span>
-              <span className="grid h-11 w-11 place-items-center">
-                <SquarePen className="size-5" />
               </span>
             </div>
           </div>

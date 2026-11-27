@@ -1,7 +1,9 @@
+import { observeElementWidth } from "@/lib/observe-element-width";
 import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
-import type { CSSProperties, ComponentType, LazyExoticComponent } from "react";
+import type { CSSProperties } from "react";
+import { ActiveChatTranscript } from "@/lib/preload-conversation-view";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
   resolveConsumerModelChoice,
@@ -101,46 +103,6 @@ const ConversationHeaderActions = lazy(() =>
 const CommandPalette = lazy(() =>
   import("@/components/CommandPalette").then((module) => ({ default: module.CommandPalette })),
 );
-/**
- * A lazy component whose chunk can be fetched before it first renders. Once the
- * chunk has loaded, React receives an already-settled thenable, so the first
- * send from Home swaps straight to the transcript instead of suspending the
- * whole pane behind the loading placeholder while the chunk downloads.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors React.lazy's own bound
-function preloadableLazy<C extends ComponentType<any>>(
-  load: () => Promise<{ default: C }>,
-): [LazyExoticComponent<C>, () => Promise<unknown>] {
-  let loaded: { default: C } | undefined;
-  let pending: Promise<{ default: C }> | undefined;
-  const preload = () =>
-    (pending ??= load().then(
-      (module) => (loaded = module),
-      (error: unknown) => {
-        pending = undefined;
-        throw error;
-      },
-    ));
-  const component = lazy(() => {
-    const ready = loaded;
-    if (!ready) return preload();
-    const settled = {
-      then(onFulfilled: (value: { default: C }) => unknown) {
-        onFulfilled(ready);
-        return settled;
-      },
-    };
-    return settled as unknown as Promise<{ default: C }>;
-  });
-  return [component, preload];
-}
-
-const [ActiveChatTranscript, preloadActiveChatTranscript] = preloadableLazy(() =>
-  import("@/components/ActiveChatTranscript").then((module) => ({
-    default: module.ActiveChatTranscript,
-  })),
-);
-
 const QuotaRejectedDraftPreview = lazy(() =>
   import("@/components/QuotaRejectedDraftPreview").then((module) => ({
     default: module.QuotaRejectedDraftPreview,
@@ -199,6 +161,9 @@ const TemporaryChatBanner = lazy(() =>
   })),
 );
 
+const focusedElement = () =>
+  document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
 function clearRetryTimer(timer: { current: number | null }) {
   if (timer.current === null) return;
   window.clearTimeout(timer.current);
@@ -248,6 +213,8 @@ import { toast } from "sonner";
 import { useTier } from "@/hooks/useTier";
 import {
   consumePrincipalHandoff,
+  contextPackHandoffPrompt,
+  workHandoffPrompt,
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   safeBrowserStorage,
@@ -259,7 +226,10 @@ type ChatRequestNotice = {
   kind: "session-expired";
   signedIn: boolean;
 };
-type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
+type AppChatContextHandoff =
+  | string
+  | { prompt: string; tool: "web_search" }
+  | { prompt: string; connector: { id: string; label: string } };
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -573,8 +543,7 @@ function KovaGPT() {
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = useCallback((tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    settingsReturnFocusRef.current = focusedElement();
     setSettingsTab(tab);
     setSettingsOpen(true);
   }, []);
@@ -614,8 +583,7 @@ function KovaGPT() {
   const workspaceReturnFocusRef = useRef<HTMLElement | null>(null);
   const workspaceReturnUrlRef = useRef<string | undefined>(undefined);
   const openChatWorkspace = (target?: HTMLElement | null) => {
-    workspaceReturnFocusRef.current =
-      target ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    workspaceReturnFocusRef.current = target ?? focusedElement();
     workspaceReturnUrlRef.current = window.location.href;
     setWorkspaceOpen(true);
   };
@@ -809,38 +777,21 @@ function KovaGPT() {
   const resizeAttachmentPane = (next: number) =>
     setAttachmentPaneRatio(Math.max(0.3, Math.min(0.7, next)));
   const wideResult = workspaceWidth >= 1000;
-  const wideResultRef = useRef(wideResult);
-  wideResultRef.current = wideResult;
   const setLayoutRatio = (next: number) => {
     const usableWidth = Math.max(workspaceWidth - 12, 840);
     const minimum = 420 / usableWidth;
     setPaneRatio(Math.max(minimum, Math.min(1 - minimum, next)));
   };
-  useEffect(() => {
+  const needsWorkspaceWidth = Boolean(result);
+  useLayoutEffect(() => {
     const element = workspaceRef.current;
-    if (!element) return;
-    let resizeFrame: number | null = null;
-    let measuredWidth = element.clientWidth;
-    const observer = new ResizeObserver(() => {
-      if (resizeFrame !== null || element.clientWidth === measuredWidth) return;
-      // A workspace width update can change descendant layout. Defer the React
-      // update until the next frame, outside ResizeObserver notification delivery.
-      resizeFrame = window.requestAnimationFrame(() => {
-        resizeFrame = null;
-        const width = element.clientWidth;
-        if (width === measuredWidth) return;
-        measuredWidth = width;
-        setWorkspaceWidth(width);
-      });
-    });
-    observer.observe(element);
-    setWorkspaceWidth(measuredWidth);
+    if (!element || !needsWorkspaceWidth) return;
+    setWorkspaceWidth(element.clientWidth);
+    return observeElementWidth(element, setWorkspaceWidth);
+  }, [needsWorkspaceWidth]);
+  useEffect(() => {
     const saved = Number(safeBrowserStorage("localStorage")?.getItem("kova-result-pane-ratio"));
     if (Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8) setPaneRatio(saved);
-    return () => {
-      observer.disconnect();
-      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
-    };
   }, []);
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem("kova-result-pane-ratio", String(paneRatio));
@@ -930,8 +881,7 @@ function KovaGPT() {
     resultScopeRef.current = scope;
     resultDraftsRef.current.set(scope, descriptor);
     const origin = {
-      target:
-        trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null),
+      target: trigger ?? focusedElement(),
       url: window.location.href,
       scope: nextPromptScopeRef.current,
       generation: storageGenerationRef.current,
@@ -1202,20 +1152,8 @@ function KovaGPT() {
       name: string;
       items: { title: string; content: string }[];
     }>("kova-active-context-pack", (pack) => {
-      if (
-        typeof pack?.name !== "string" ||
-        !Array.isArray(pack.items) ||
-        !pack.items.every(
-          (item) => typeof item?.title === "string" && typeof item?.content === "string",
-        )
-      ) {
-        throw new Error();
-      }
-      const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
-      return () =>
-        setInput(
-          `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `,
-        );
+      const prompt = contextPackHandoffPrompt(pack);
+      return () => setInput(prompt);
     });
 
     for (const key of ["kova-work-context", "kova-work-draft"]) {
@@ -1225,29 +1163,32 @@ function KovaGPT() {
         steps?: { text: string; done?: boolean; approval?: boolean }[];
         plan?: string[];
       }>(key, (task) => {
-        const steps: { text: string; done?: boolean }[] | undefined =
-          task.steps ?? task.plan?.map((text) => ({ text }));
-        if (
-          typeof task?.objective !== "string" ||
-          typeof task.context !== "string" ||
-          !Array.isArray(steps) ||
-          !steps.every((step) => typeof step?.text === "string")
-        )
-          throw new Error();
-        return () =>
-          setInput(
-            `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
-          );
+        const prompt = workHandoffPrompt(task);
+        return () => setInput(prompt);
       });
     }
 
     consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
       if (typeof appContext === "string") return () => setInput(appContext);
-      if (typeof appContext?.prompt !== "string" || appContext.tool !== "web_search")
+      if (typeof appContext?.prompt !== "string") throw new Error();
+      if ("tool" in appContext && appContext.tool === "web_search") {
+        return () => {
+          setInput(appContext.prompt);
+          setSelectedTool("web_search");
+        };
+      }
+      if (
+        !("connector" in appContext) ||
+        typeof appContext.connector?.id !== "string" ||
+        !/^[a-z][a-z0-9-]{0,63}$/.test(appContext.connector.id) ||
+        typeof appContext.connector?.label !== "string"
+      )
         throw new Error();
       return () => {
+        setActiveId(null);
+        setSelectedTool(null);
+        setPluginSelection({ owner: userKey, chat: null, value: [appContext.connector] });
         setInput(appContext.prompt);
-        setSelectedTool("web_search");
       };
     });
 
@@ -1349,7 +1290,10 @@ function KovaGPT() {
     // preview but never another kind of result. Narrow layouts keep the tap-to-open card.
     const fileResult = latestFileResult(latest);
     if (fileResult) {
-      if (wideResultRef.current && (!resultRef.current || resultRef.current.file))
+      if (
+        (workspaceRef.current?.clientWidth ?? 0) >= 1000 &&
+        (!resultRef.current || resultRef.current.file)
+      )
         openResultRef.current(fileResult);
       return;
     }
@@ -1747,8 +1691,7 @@ function KovaGPT() {
   }, [active, conversations, isStreaming, setConversations, userKey]);
 
   const openCommandPalette = useCallback((trigger?: HTMLElement) => {
-    commandReturnFocusRef.current =
-      trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    commandReturnFocusRef.current = trigger ?? focusedElement();
     setCommandOpen(true);
   }, []);
   useEffect(() => {
@@ -2685,29 +2628,6 @@ function KovaGPT() {
     [],
   );
 
-  // Fetch the transcript chunk before the first send so Home never flashes the
-  // loading placeholder in place of the message the person just sent.
-  const hasComposerText = input.trim().length > 0;
-  useEffect(() => {
-    if (!isSignedIn) return;
-    if (hasComposerText) {
-      void preloadActiveChatTranscript().catch(() => undefined);
-      return;
-    }
-    const idle = window.requestIdleCallback
-      ? window.requestIdleCallback(
-          () => void preloadActiveChatTranscript().catch(() => undefined),
-          {
-            timeout: 2500,
-          },
-        )
-      : window.setTimeout(() => void preloadActiveChatTranscript().catch(() => undefined), 1200);
-    return () => {
-      if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
-      else window.clearTimeout(idle);
-    };
-  }, [isSignedIn, hasComposerText]);
-
   useEffect(() => {
     const next = nextPromptRef.current;
     if (!next || next.status !== "ready" || isStreaming || inFlightRef.current) return;
@@ -3236,6 +3156,7 @@ function KovaGPT() {
       value={principalReady ? input : ""}
       onChange={setInput}
       onSubmit={submitComposer}
+      messageCount={isSignedIn ? (active?.messages.length ?? 0) : undefined}
       onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
       onStop={stop}
 
@@ -3321,7 +3242,9 @@ function KovaGPT() {
 
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={<div aria-hidden="true" className="kova-desktop-topbar hidden lg:block" />}
+      >
         <DesktopChatToolbar
           sidebarOpen={sidebarOpen}
           isSignedIn={isSignedIn}

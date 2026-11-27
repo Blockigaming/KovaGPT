@@ -115,10 +115,12 @@ test("dual-mode logout cannot reveal a dormant legacy session or cached Kova tok
   );
 });
 
-test("production cannot re-enable retired owned authority via stale runtime configuration", () => {
+test("production and staging cannot re-enable retired owned authority via stale runtime configuration", () => {
   for (const target of [
     { AZURE_ENVIRONMENT: "production" },
+    { AZURE_ENVIRONMENT: "staging" },
     { CONTAINER_APP_NAME: "kovagpt-prod-web" },
+    { CONTAINER_APP_NAME: "ca-kovagpt-staging" },
   ]) {
     for (const mode of ["supabase", "dual", "kova"]) {
       const effective = resolveKovaAuthMode({ ...target, KOVA_AUTH_MODE: mode });

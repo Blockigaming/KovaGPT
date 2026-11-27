@@ -1,6 +1,6 @@
 # KovaGPT connector master list
 
-The Connections directory includes the 31 requested services and seven retained services. Health includes Oura, Apple Health, and Android Health Connect. Outlook Mail uses `outlook`.
+The Connections directory includes the 30 requested services and seven retained services. Health includes Oura, Apple Health, and Android Health Connect. Outlook Mail uses `outlook`.
 
 Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service directory remains available for compatibility, but does not expand the approved master scope.
 
@@ -18,7 +18,6 @@ Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service dire
 | Google Calendar                               | `google-calendar`        | Apps                                            |
 | Google Cloud BigQuery                         | `google-bigquery`        | Apps                                            |
 | Google Drive                                  | `google-drive`           | Apps                                            |
-| HubSpot                                       | `hubspot`                | Apps                                            |
 | HyperFrames by HeyGen                         | `hyperframes-heygen`     | Apps                                            |
 | Interactive Brokers (IBKR)                    | `interactive-brokers`    | Apps                                            |
 | Linear                                        | `linear`                 | Apps                                            |
@@ -47,21 +46,21 @@ Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service dire
 
 A catalog entry alone never enables OAuth, provider calls, account access, trading, payments, or billing. Production configuration, provider eligibility, a working adapter, explicit account consent, token refresh and an end-to-end read must be verified before a connector is called live. New entries have no invented permission contracts. Generic local icons are used when verified brand assets are unavailable.
 
-| Rollout dependency                                    | Providers                                                                                                                                                                       |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dedicated Google flows                                | Gmail, Google Drive, Google Calendar                                                                                                                                            |
-| Work-app reads with provider setup and consent        | Box, Calendly, Canva, Figma, Gamma, GitHub, BigQuery, HubSpot, Linear, Microsoft Teams, Notion, OneDrive, Outlook Mail, Outlook Calendar, Salesforce, SharePoint, Slack, Stripe |
-| User credential and provider acceptance               | eToro, Granola, HyperFrames by HeyGen, Meltwater, Mixpanel, Vercel                                                                                                              |
-| Finance or health setup and consent                   | Plaid, Oura                                                                                                                                                                     |
-| Diagram file exchange                                 | Excalidraw                                                                                                                                                                      |
-| Dedicated account credentials and provider acceptance | Interactive Brokers, S&P Global, Webull, Wix                                                                                                                                    |
-| Hosted OAuth client and workspace consent             | Tana                                                                                                                                                                            |
-| Approved server configuration and user bearer token   | Custom MCP connectors                                                                                                                                                           |
-| Signing, distribution and on-device acceptance        | Apple Health, Android Health Connect                                                                                                                                            |
+| Rollout dependency                                    | Providers                                                                                                                                                              |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dedicated Google flows                                | Gmail, Google Drive, Google Calendar                                                                                                                                   |
+| Work-app reads with provider setup and consent        | Box, Calendly, Canva, Figma, Gamma, GitHub, BigQuery, Linear, Microsoft Teams, Notion, OneDrive, Outlook Mail, Outlook Calendar, Salesforce, SharePoint, Slack, Stripe |
+| User credential and provider acceptance               | eToro, Granola, HyperFrames by HeyGen, Meltwater, Mixpanel, Vercel                                                                                                     |
+| Finance or health setup and consent                   | Plaid, Oura                                                                                                                                                            |
+| Diagram file exchange                                 | Excalidraw                                                                                                                                                             |
+| Dedicated account credentials and provider acceptance | Interactive Brokers, S&P Global, Webull, Wix                                                                                                                           |
+| Hosted OAuth client and workspace consent             | Tana                                                                                                                                                                   |
+| Approved server configuration and user bearer token   | Custom MCP connectors                                                                                                                                                  |
+| Signing, distribution and on-device acceptance        | Apple Health, Android Health Connect                                                                                                                                   |
 
 For the current work-app operations and acceptance checks, see [Work app connections](work-apps.md). Each operation needs its own permission verification. A read test verifies the tested read only. Availability of a provider write scope does not by itself implement or verify a Kova write operation.
 
-On a deployment of this PR, the existing authenticated administrator endpoint `GET /api/admin/diagnostics` reports the 38 connector IDs and their deployment setup state. For blocked web connectors it lists server setting names to check. It does not return setting values, linked account data, provider responses, or proof of consent. Check the report on the intended public host so callback-origin and Tana public-client checks use that host. For web connectors marked ready for account verification, use a dedicated test account to confirm the supported operations, denial and revocation. Verify the file exchange and both native companions separately.
+On a deployment of this PR, the existing authenticated administrator endpoint `GET /api/admin/diagnostics` reports the 37 connector IDs and their deployment setup state. For blocked web connectors it lists server setting names to check. It does not return setting values, linked account data, provider responses, or proof of consent. Check the report on the intended public host so callback-origin and Tana public-client checks use that host. For web connectors marked ready for account verification, use a dedicated test account to confirm the supported operations, denial and revocation. Verify the file exchange and both native companions separately.
 
 Custom MCP connects deployment-approved HTTPS servers using user-supplied bearer credentials. Each registration identifies a reviewed read tool and can also identify an optional reviewed write tool. Changing an endpoint or tool requires linking the relevant permission again. See [Custom MCP acceptance](work-apps.md#custom-mcp-acceptance).
 

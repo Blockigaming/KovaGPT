@@ -73,7 +73,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useChatReplyActivity } from "@/hooks/useChatReplyActivity";
 import { useTier } from "@/hooks/useTier";
 import { archiveConversation, type Conversation } from "@/lib/chat-store";
-import { MobileDrawerShortcuts } from "@/components/MobileDrawerShortcuts";
 import { useOnline } from "@/hooks/use-online";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { toast } from "sonner";
@@ -109,6 +108,12 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   settings: SettingsGlyph,
   notifications: Bell,
 };
+const MobileDrawerShortcuts = lazy(() =>
+  import("@/components/MobileDrawerShortcuts").then((module) => ({
+    default: module.MobileDrawerShortcuts,
+  })),
+);
+
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({
     default: module.ChatProjectDialog,
@@ -1444,7 +1449,7 @@ export function Sidebar({
   const renderAccountMenu = (rail = false) => (
     <DropdownMenuContent
       side={rail ? "right" : "top"}
-      align="end"
+      align={rail ? "end" : "start"}
       className="kova-profile-menu"
       data-rail={rail}
     >
@@ -2167,18 +2172,20 @@ export function Sidebar({
           </div>
 
           {mobileViewport && railOwner && (
-            <MobileDrawerShortcuts
-              key={railOwner}
-              owner={railOwner}
-              shortcuts={availableShortcuts}
-              initialPins={railShortcuts}
-              icons={SHORTCUT_ICONS}
-              exploreOpen={exploreOpen}
-              onExploreOpenChange={setExploreOpen}
-              onNavigate={closeAfterMobileNavigation}
-              onOpenSettings={() => onOpenSettings()}
-              isCurrent={isOn}
-            />
+            <Suspense fallback={null}>
+              <MobileDrawerShortcuts
+                key={railOwner}
+                owner={railOwner}
+                shortcuts={availableShortcuts}
+                initialPins={railShortcuts}
+                icons={SHORTCUT_ICONS}
+                exploreOpen={exploreOpen}
+                onExploreOpenChange={setExploreOpen}
+                onNavigate={closeAfterMobileNavigation}
+                onOpenSettings={() => onOpenSettings()}
+                isCurrent={isOn}
+              />
+            </Suspense>
           )}
 
           <footer className="kova-sidebar-footer">

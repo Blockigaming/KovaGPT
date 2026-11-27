@@ -521,3 +521,26 @@ export function purgeUnscopedPrivateBrowserStorage(userKey, options = {}) {
     session: clearStorageArea(session, UNSCOPED_PRIVATE_SESSION_EXACT_KEYS, [], "session"),
   };
 }
+
+export function contextPackHandoffPrompt(pack) {
+  if (
+    typeof pack?.name !== "string" ||
+    !Array.isArray(pack.items) ||
+    !pack.items.every(
+      (item) => typeof item?.title === "string" && typeof item?.content === "string",
+    )
+  )
+    throw new Error("invalid_context_pack_handoff");
+  const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
+  return `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `;
+}
+
+export function workHandoffPrompt(task) {
+  if (typeof task?.objective !== "string" || typeof task.context !== "string")
+    throw new Error("invalid_work_handoff");
+  const steps = task.steps ?? task.plan?.map((text) => ({ text }));
+  if (!Array.isArray(steps) || !steps.every((step) => typeof step?.text === "string"))
+    throw new Error("invalid_work_handoff");
+  const plan = steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n");
+  return `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${plan}\n\nNext, help me with: `;
+}

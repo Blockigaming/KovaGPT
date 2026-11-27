@@ -27,9 +27,9 @@ function checkOpeningLayout(
   expect(first.composer.width).toBeCloseTo(width - 24, 0);
   void appShell;
   expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
+  // The greeting sits at the middle height of the screen.
   const center = first.heading.y + first.heading.height / 2;
-  const freeSpaceCenter = (first.header.y + first.header.height + first.composer.y) / 2;
-  expect(Math.abs(center - freeSpaceCenter)).toBeLessThanOrEqual(8);
+  expect(Math.abs(center - height / 2)).toBeLessThanOrEqual(8);
 }
 
 function compare(first: HomeFrame, next: HomeFrame, phase: string) {

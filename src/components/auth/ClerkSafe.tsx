@@ -18,6 +18,9 @@ import {
 } from "react";
 import {
   createContext,
+  lazy,
+  Suspense,
+  type ComponentProps,
   useCallback,
   useContext,
   useEffect,
@@ -32,7 +35,6 @@ import {
   signOutLegacySupabaseSession,
   supabase,
 } from "@/integrations/supabase/client";
-import { AuthDialog } from "@/components/auth/AuthDialog";
 import { MfaChallengeDialog } from "@/components/auth/MfaChallengeDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
@@ -78,6 +80,23 @@ import {
 } from "@/lib/kova-auth-browser";
 
 export const clerkEnabled = true;
+
+const AuthDialog = lazy(() =>
+  import("@/components/auth/AuthDialog").then((module) => ({ default: module.AuthDialog })),
+);
+
+function DeferredAuthDialog(props: ComponentProps<typeof AuthDialog>) {
+  const [opened, setOpened] = useState(props.open);
+  useEffect(() => {
+    if (props.open) setOpened(true);
+  }, [props.open]);
+  if (!props.open && !opened) return null;
+  return (
+    <Suspense fallback={null}>
+      <AuthDialog {...props} />
+    </Suspense>
+  );
+}
 
 type AuthDialogState = { open: boolean; mode: "sign-in" | "sign-up" };
 type AuthIssue = "temporarily_unavailable" | "configuration_unavailable" | null;
@@ -463,7 +482,7 @@ function KovaClerkProvider({
           </Button>
         </div>
       ) : null}
-      <AuthDialog
+      <DeferredAuthDialog
         open={isLoaded && dialog.open && !authorityPending}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
@@ -984,7 +1003,7 @@ function SupabaseClerkProvider({
           </Button>
         </div>
       ) : null}
-      <AuthDialog
+      <DeferredAuthDialog
         open={isLoaded && dialog.open && !authorityUnresolved}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}

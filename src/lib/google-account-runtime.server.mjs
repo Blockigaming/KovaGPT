@@ -102,6 +102,7 @@ export function createGoogleAccountRuntime({
         });
       }
     } else {
+      if (!conn.refresh_token) throw new Error("google_reauthorization_required");
       const requestId = crypto.randomUUID(),
         bound = pin(conn);
       const claim = await vault(userId, "claim_refresh", { ...bound, requestId });

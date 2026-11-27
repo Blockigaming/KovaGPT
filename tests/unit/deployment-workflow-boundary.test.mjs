@@ -18,6 +18,8 @@ test("staging candidate builds can publish only to the existing private package 
   assert.match(workflow, /prepare-verified-build-context\.sh/u);
   assert.match(workflow, /KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="\$PRODUCTION_PROJECT_REF"/u);
   assert.match(workflow, /KOVA_VERIFY_BROWSER_CONFIG=true/u);
+  assert.match(workflow, /VITE_KOVA_AUTH_MODE: "supabase"/u);
+  assert.doesNotMatch(workflow, /vars\.STAGING_AUTH_MODE/u);
   assert.match(workflow, /image="\$IMAGE_REPOSITORY:staging-\$SOURCE_SHA-/u);
   assert.match(workflow, /--network none/u);
   assert.match(workflow, /gh api [^\n]+--jq \.visibility\)" = private/u);
@@ -49,7 +51,7 @@ test("staging candidate builds can publish only to the existing private package 
     [
       "https://fixturestaging000000.supabase.co",
       { VITE_KOVA_AUTH_MODE: "kova", STAGING_BASE_URL: "https://kovagpt.com" },
-      /requires the verified staging app origin/u,
+      /Only Supabase Auth is supported in staging/u,
     ],
   ]) {
     const result = spawnSync("bash", ["-s"], {

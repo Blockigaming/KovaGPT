@@ -1,3 +1,4 @@
+import { observeElementWidth } from "@/lib/observe-element-width";
 import { ChatOutputTemplates } from "./ChatOutputTemplates";
 import { t } from "@/lib/localization";
 import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
@@ -94,6 +95,11 @@ import {
   type Ref,
 } from "react";
 import { toast } from "sonner";
+import { conversationLimitMessage, conversationLimitReached } from "@/lib/conversation-limits.mjs";
+import {
+  preloadActiveChatTranscript,
+  preloadConversationView,
+} from "@/lib/preload-conversation-view";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
@@ -274,6 +280,7 @@ export function ChatInput({
   onHostedModelChange,
   recommendedModelSelection = false,
   userTier = "free",
+  messageCount,
   canChangeAgent = true,
   showModelStatus = false,
   readOnlyContext,
@@ -332,6 +339,8 @@ export function ChatInput({
   onHostedModelChange?: (model: ConsumerModelId, recommended?: boolean) => void;
   recommendedModelSelection?: boolean;
   userTier?: Tier;
+  /** Messages in the open conversation; undefined when signed out. */
+  messageCount?: number;
   /** Guests use the basic agent and cannot change versions or reasoning levels. */
   canChangeAgent?: boolean;
   /** Show grounded availability information without enabling model or agent selection. */
@@ -741,6 +750,17 @@ export function ChatInput({
   };
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
+  // Signed-in users get the conversation view warmed so long chats open instantly.
+  const signedInChat = messageCount !== undefined;
+  useEffect(() => {
+    if (signedInChat) preloadConversationView();
+  }, [signedInChat]);
+  const hasComposerText = value.trim().length > 0;
+  useEffect(() => {
+    if (signedInChat && hasComposerText) {
+      void preloadActiveChatTranscript().catch(() => undefined);
+    }
+  }, [signedInChat, hasComposerText]);
   const streamingRef = useRef(isStreaming);
   streamingRef.current = isStreaming;
   const composingRef = useRef(false);
@@ -814,28 +834,11 @@ export function ChatInput({
       el.style.overflowY = contentHeight > limit ? "auto" : "hidden";
     };
     resize();
-    let width = el.getBoundingClientRect().width;
-    let resizeFrame: number | null = null;
-    const observer = new ResizeObserver(() => {
-      const nextWidth = el.getBoundingClientRect().width;
-      if (nextWidth !== width) {
-        width = nextWidth;
-        // Height writes during ResizeObserver delivery can trigger a loop error
-        // even when the next notification would be ignored by the width guard.
-        if (resizeFrame === null) {
-          resizeFrame = window.requestAnimationFrame(() => {
-            resizeFrame = null;
-            resize();
-            width = el.getBoundingClientRect().width;
-          });
-        }
-      }
-    });
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
-    };
+    if (!value) return;
+    // The shell supplies the available width. The textarea itself changes size
+    // when we measure its content, and observing it can feed that change back.
+    const shell = el.closest<HTMLElement>(".spec400-composer");
+    if (shell) return observeElementWidth(shell, resize);
   }, [value, isLoaded, user?.id, isMobileLayout, surface]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
@@ -940,6 +943,12 @@ export function ChatInput({
     if (disabled || submittingRef.current || isStreaming || pasteOffer) return;
     if (!online) return;
     if (!value.trim() && !validAttachmentInstruction) return;
+    if (messageCount !== undefined && conversationLimitReached(userTier, messageCount)) {
+      const limitMessage = conversationLimitMessage(userTier);
+      setUploadAnnouncement(limitMessage);
+      toast.error(limitMessage);
+      return;
+    }
     if (
       (fileSlotsUsed(attachments) > 0 || selectedToolRef.current === "image") &&
       !requireFileAccount()

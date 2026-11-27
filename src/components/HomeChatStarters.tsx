@@ -22,11 +22,14 @@ export function HomeWelcome({
 }) {
   const greeting = useHomeGreeting(owner, firstName, chatId);
   const homeScrollRef = useRef<HTMLElement>(null);
+  const bottomRef = useRef<HTMLSpanElement>(null);
+  const hasRecentWork = conversations.length > 0;
 
   useEffect(() => {
-    if (!home || !owner) return;
+    if (!home || !owner || !hasRecentWork) return;
     const section = homeScrollRef.current;
-    if (!section) return;
+    const bottom = bottomRef.current;
+    if (!section || !bottom) return;
     const phoneLayout = window.matchMedia(
       "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
     );
@@ -45,11 +48,14 @@ export function HomeWelcome({
       frame = null;
     };
     queueFollowLatest();
-    // Composer measurement and font loading can change the initial content height.
-    // Never write scroll geometry during ResizeObserver delivery.
-    const observer = new ResizeObserver(queueFollowLatest);
-    observer.observe(section);
-    if (section.firstElementChild) observer.observe(section.firstElementChild);
+    // Only follow when layout moves the end of the content out of view.
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) queueFollowLatest();
+      },
+      { root: section },
+    );
+    observer.observe(bottom);
     for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
       section.addEventListener(event, stopFollowing, { passive: true });
     }
@@ -60,16 +66,17 @@ export function HomeWelcome({
         section.removeEventListener(event, stopFollowing);
       }
     };
-  }, [home, owner, chatId, conversations.length]);
+  }, [home, owner, chatId, hasRecentWork]);
 
   return (
     <HomeChatFrame
       home={home}
       scrollRef={homeScrollRef}
+      bottomRef={home && owner && hasRecentWork ? bottomRef : undefined}
       headingId="chat-greeting"
       heading={greeting}
       recentWork={
-        home && conversations.length ? (
+        home && hasRecentWork ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
         ) : null
       }

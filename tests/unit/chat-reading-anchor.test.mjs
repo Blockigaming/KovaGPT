@@ -276,13 +276,22 @@ test("every transition frame and breakpoint resize preserves the cached text anc
   assert.equal(f.element.style.overflowAnchor, "auto");
 });
 
-test("resize notifications coalesce without synchronous scroll writes", () => {
+test("resize notifications coalesce without synchronous layout reads or scroll writes", () => {
   const f = fixture();
   f.readInside();
   const anchor = capture(f.element);
   const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
+  let reads = 0;
+  for (const target of f.observers[0].targets) {
+    const rect = target.getBoundingClientRect.bind(target);
+    target.getBoundingClientRect = () => {
+      reads++;
+      return rect();
+    };
+  }
   f.resized(420);
   f.resized(590);
+  assert.equal(reads, 0);
   assert.equal(f.writes.length, 0);
   assert.equal(f.frames.size, 1);
   f.flush();
@@ -325,8 +334,8 @@ test("a browser clamp scroll before ResizeObserver does not replace the pre-refl
   f.element.scrollTop = f.element.scrollTop;
   assert.notEqual(f.lineOffset(anchor), anchor.text.viewportOffset);
   f.emit("scroll");
-  assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
-  assert.equal(f.frames.size, 0);
+  assert.notEqual(f.lineOffset(anchor), anchor.text.viewportOffset);
+  assert.equal(f.frames.size, 1);
   f.resized(1024);
   f.emit("scroll");
   f.flush();
@@ -605,6 +614,7 @@ test("earlier-message growth and text-node replacement preserve the current pass
   f.element.messages[3].text.data += " earlier content".repeat(150);
   f.element.messages[23].text = { ...f.element.messages[23].text };
   f.mutated();
+  f.flush();
   const next = capture(f.element);
   assert.equal(next.messageId, anchor.messageId);
   assert.equal(next.text.signature, anchor.text.signature);

@@ -33,6 +33,7 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "@/lib/observe-element-width": { observeElementWidth() {} },
   "./ChatOutputTemplates": { ChatOutputTemplates: empty },
   "@/lib/chat-output-templates": {},
   "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
@@ -157,6 +158,8 @@ vm.runInNewContext(output, {
         "@/lib/limits",
         "@/lib/composer-keyboard.mjs",
         "sonner",
+        "@/lib/conversation-limits.mjs",
+        "@/lib/preload-conversation-view",
       ].includes(id)
     )
       return {};
