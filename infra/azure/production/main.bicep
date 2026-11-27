@@ -97,6 +97,14 @@ param voiceRealtimeEnabled bool = false
 @minValue(0)
 param voiceDailyRequestLimit int = 0
 
+@description('Optional ElevenLabs model for live streaming speech. Empty keeps the server default (Flash v2.5). Set eleven_v4_turbo only after confirming it is included in the existing provider plan.')
+@allowed([
+  ''
+  'eleven_flash_v2_5'
+  'eleven_v4_turbo'
+])
+param voiceStreamTtsModel string = ''
+
 @description('Keep billing disabled until the reviewed migration, webhook drain, account provenance, trial policy, and smoke gates pass.')
 @allowed([
   'disabled'
@@ -545,6 +553,9 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
           ], stripeSecretEnvironment, !empty(voiceCatalog) ? [{
             name: 'KOVA_VOICE_CATALOG'
             value: string(voiceCatalog)
+          }] : [], !empty(voiceStreamTtsModel) ? [{
+            name: 'KOVA_VOICE_STREAM_TTS_MODEL'
+            value: voiceStreamTtsModel
           }] : [], !empty(voiceDefaultId) ? [{
             name: 'KOVA_VOICE_DEFAULT_ID'
             value: voiceDefaultId

@@ -64,12 +64,15 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   await edge.focus();
   await edge.press("ArrowRight");
   await expect(edge).toHaveAttribute("aria-valuenow", "290");
+  // The ARIA value changes before the sidebar's width transition finishes.
+  await expect(sidebar).toHaveCSS("width", "290px");
+  await edge.hover({ position: { x: 4, y: 80 } });
   const box = await edge.boundingBox();
-  await page.mouse.move(box!.x + 4, box!.y + 80);
   await page.mouse.down();
   await page.mouse.move(box!.x + 64, box!.y + 80);
   await page.mouse.up();
   await expect(edge).toHaveAttribute("aria-valuenow", "350");
+  await expect(sidebar).toHaveCSS("width", "350px");
   await sidebar.getByText("More", { exact: true }).click();
   await sidebar.getByRole("button", { name: "Customize sidebar", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Customize sidebar" });

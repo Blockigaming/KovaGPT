@@ -4,6 +4,9 @@ export const TTS_MODEL_IDS = Object.freeze([
   "eleven_multilingual_v2",
   "eleven_v4",
 ]);
+// Models the live streaming path may use. Separate from catalog models so enabling
+// one never changes what a configured catalog voice can select.
+export const STREAM_TTS_MODEL_IDS = Object.freeze(["eleven_flash_v2_5", "eleven_v4_turbo"]);
 const PLANS = new Set(["free", "plus", "pro"]);
 // Product rule for which catalog voices each plan may use, keyed by catalog ID.
 // Free: Jessica only. Plus: Jarnathan, Jessica and Lauren. Pro: every voice.

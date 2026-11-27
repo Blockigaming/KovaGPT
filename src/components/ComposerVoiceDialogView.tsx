@@ -215,7 +215,9 @@ export function ComposerVoiceDialogView({
                 focusable="false"
               />
             )}
-            <h2 className="kova-voice-heading">{startingVoice ? "Starting Voice…" : title}</h2>
+            <h2 className={startingVoice ? "kova-voice-heading sr-only" : "kova-voice-heading"}>
+              {startingVoice ? "Starting Voice…" : title}
+            </h2>
             <DialogDescription
               className={
                 startingVoice

@@ -157,6 +157,9 @@
     },
     "voiceDefaultId": {
       "value": ""
+    },
+    "voiceStreamTtsModel": {
+      "value": ""
     }
   }
 }

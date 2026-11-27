@@ -1,3 +1,4 @@
+import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
@@ -121,6 +122,7 @@ function fixture(
     "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
     "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
+    "@/lib/voice/webaudio-sink.mjs": webAudioSink,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
         reads.push("document reader");

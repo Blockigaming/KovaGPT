@@ -147,3 +147,87 @@ export function verifyVoiceModelReceipt(
     return null;
   }
 }
+
+const MAX_SEGMENT_CHARACTERS = 1000;
+const MAX_SEGMENT_INDEX = 63;
+
+/**
+ * Sign one speakable segment while the eligible model is still streaming. The
+ * payload is bound to the owner, chat, reply, segment index and exact text, and
+ * uses a distinct version so it can never be accepted as a whole-reply receipt.
+ */
+export function issueVoiceSegmentReceipt(
+  policy,
+  { ownerId, chatId, messageId, index, text, provider, modelId } = {},
+) {
+  if (
+    !validIdentity({ ownerId, chatId, messageId, content: text }) ||
+    text.length > MAX_SEGMENT_CHARACTERS ||
+    !Number.isSafeInteger(index) ||
+    index < 0 ||
+    index > MAX_SEGMENT_INDEX ||
+    !eligibleVoiceModel(policy, { provider, modelId }) ||
+    typeof policy.secret !== "string"
+  )
+    return null;
+  const payload = {
+    v: 2,
+    p: provider,
+    m: modelId,
+    o: ownerId,
+    c: chatId,
+    i: messageId,
+    n: index,
+    h: contentDigest(text),
+  };
+  const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  return `${encoded}.${signature(policy.secret, encoded).toString("base64url")}`;
+}
+
+/** Verify a segment's exact owner, chat, reply, index and text before voice spending. */
+export function verifyVoiceSegmentReceipt(
+  policy,
+  receipt,
+  { ownerId, chatId, messageId, index, text } = {},
+) {
+  if (
+    policy?.valid !== true ||
+    typeof policy.secret !== "string" ||
+    !validIdentity({ ownerId, chatId, messageId, content: text }) ||
+    text.length > MAX_SEGMENT_CHARACTERS ||
+    typeof receipt !== "string"
+  )
+    return null;
+  const match = RECEIPT.exec(receipt);
+  if (!match) return null;
+  const [, encoded, encodedSignature] = match;
+  const supplied = Buffer.from(encodedSignature, "base64url");
+  if (
+    supplied.length !== 32 ||
+    supplied.toString("base64url") !== encodedSignature ||
+    !timingSafeEqual(supplied, signature(policy.secret, encoded))
+  )
+    return null;
+  try {
+    const bytes = Buffer.from(encoded, "base64url");
+    if (bytes.toString("base64url") !== encoded) return null;
+    const payload = JSON.parse(bytes.toString("utf8"));
+    if (
+      !payload ||
+      typeof payload !== "object" ||
+      Array.isArray(payload) ||
+      Object.keys(payload).sort().join(",") !== "c,h,i,m,n,o,p,v" ||
+      payload.v !== 2 ||
+      payload.o !== ownerId ||
+      payload.c !== chatId ||
+      payload.i !== messageId ||
+      payload.n !== index ||
+      payload.h !== contentDigest(text) ||
+      !eligibleVoiceModel(policy, { provider: payload.p, modelId: payload.m })
+    )
+      return null;
+    return { provider: payload.p, modelId: payload.m };
+  } catch {
+    return null;
+  }
+}

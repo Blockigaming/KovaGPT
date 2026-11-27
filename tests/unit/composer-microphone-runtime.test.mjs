@@ -1,3 +1,4 @@
+import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import assert from "node:assert/strict";
@@ -125,6 +126,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     "@/components/ChatGoalRow": { ChatGoalRow: "ChatGoalRow" },
     "@/lib/localization": { t: (text) => text },
     "@/lib/link-preview.mjs": linkPreview,
+    "@/lib/voice/webaudio-sink.mjs": webAudioSink,
     react,
     "lucide-react": {},
     "@/lib/consumer-model-selection.mjs": { CONSUMER_MODELS: [] },

@@ -4,11 +4,23 @@ import {
   createRequestDeadline,
   waitForPromiseWithSignal,
 } from "./ai/provider-transport.server.mjs";
-import { readVoiceCatalog, selectCatalogVoice, TTS_MODEL_IDS } from "./voice/catalog.server.mjs";
-import { verifyVoiceModelReceipt } from "./voice/openai-model-eligibility.server.mjs";
+import {
+  readVoiceCatalog,
+  selectCatalogVoice,
+  STREAM_TTS_MODEL_IDS,
+  TTS_MODEL_IDS,
+} from "./voice/catalog.server.mjs";
+import {
+  verifyVoiceModelReceipt,
+  verifyVoiceSegmentReceipt,
+} from "./voice/openai-model-eligibility.server.mjs";
 
 export const SPEECH_LIMITS = Object.freeze({
   textChars: 4000,
+  segmentChars: 1000,
+  segmentsPerTurn: 48,
+  turnTtlMs: 10 * 60 * 1000,
+  turnLedgerEntries: 500,
   audioBytes: 8 * 1024 * 1024,
   timeoutMs: 60000,
 });
@@ -91,7 +103,14 @@ export function createSpeechHandler({
   fetchImpl = fetch,
   admit,
   quota,
+  streamModelId = "eleven_flash_v2_5",
+  now = Date.now,
 }) {
+  // One spoken reply is many provider calls. Plan quota and the per-minute
+  // paid-provider buckets are charged once per authenticated reply; the ledger
+  // also stops a signed segment from being replayed or a reply from exceeding
+  // its segment and character budget.
+  const turnLedger = new Map();
   return async (request) => {
     const cancellation = new AbortController();
     const deadline = createRequestDeadline(cancellation.signal, SPEECH_LIMITS.timeoutMs, "speech");
@@ -153,7 +172,8 @@ export function createSpeechHandler({
         if (deadline.signal.aborted) throw error;
         throw fail("speech_invalid_request", error?.status === 413 ? 413 : 400);
       }
-      const direct = input?.mode === "read-aloud" || input?.mode === "live-reply";
+      const liveSegment = input?.mode === "live-segment";
+      const direct = input?.mode === "read-aloud" || input?.mode === "live-reply" || liveSegment;
       const liveReply = input?.mode === "live-reply";
       if (!direct && requestSize > 1024) throw fail("speech_invalid_request", 413);
       if (
@@ -164,11 +184,13 @@ export function createSpeechHandler({
           .filter((key) => key !== "voiceId")
           .sort()
           .join(",") !==
-          (liveReply
-            ? "chatId,contentSha256,messageId,mode,ownerId,text,voiceModelReceipt"
-            : direct
-              ? "chatId,contentSha256,messageId,mode,ownerId,text"
-              : "chatId,contentSha256,messageId,ownerId") ||
+          (liveSegment
+            ? "chatId,contentSha256,messageId,mode,ownerId,segmentIndex,segmentReceipt,text"
+            : liveReply
+              ? "chatId,contentSha256,messageId,mode,ownerId,text,voiceModelReceipt"
+              : direct
+                ? "chatId,contentSha256,messageId,mode,ownerId,text"
+                : "chatId,contentSha256,messageId,ownerId") ||
         typeof input.chatId !== "string" ||
         !ID.test(input.chatId) ||
         typeof input.messageId !== "string" ||
@@ -178,6 +200,16 @@ export function createSpeechHandler({
         throw fail("speech_invalid_request", 400);
       if (input.ownerId !== auth.userId) throw fail("speech_account_changed", 409);
       if (
+        liveSegment &&
+        (!Number.isSafeInteger(input.segmentIndex) ||
+          input.segmentIndex < 0 ||
+          input.segmentIndex >= SPEECH_LIMITS.segmentsPerTurn ||
+          typeof input.text !== "string" ||
+          input.text.length > SPEECH_LIMITS.segmentChars ||
+          typeof input.segmentReceipt !== "string")
+      )
+        throw fail("speech_invalid_request", 400);
+      if (
         input.voiceId !== undefined &&
         (typeof input.voiceId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/u.test(input.voiceId))
       )
@@ -185,12 +217,16 @@ export function createSpeechHandler({
       const settings = await wait(config(auth, input));
       // Preserve the legacy handler configuration while allowing only the
       // existing server-owned catalog models for an explicit selection.
-      const modelId = direct ? "eleven_flash_v2_5" : (settings.modelId ?? "eleven_multilingual_v2");
+      const modelId = liveSegment
+        ? streamModelId
+        : direct
+          ? "eleven_flash_v2_5"
+          : (settings.modelId ?? "eleven_multilingual_v2");
       if (
         settings.enabled !== true ||
         !settings.apiKey ||
         !/^[A-Za-z0-9_-]{1,128}$/u.test(settings.voiceId ?? "") ||
-        !TTS_MODEL_IDS.includes(modelId)
+        !(liveSegment ? STREAM_TTS_MODEL_IDS : TTS_MODEL_IDS).includes(modelId)
       )
         throw fail("speech_not_configured", 503);
       const saved = direct
@@ -202,6 +238,20 @@ export function createSpeechHandler({
       if (text.length > SPEECH_LIMITS.textChars) throw fail("speech_text_too_long", 413);
       if (direct && createHash("sha256").update(text).digest("hex") !== input.contentSha256)
         throw fail("speech_invalid_request", 400);
+      if (liveSegment) {
+        const verifiedPolicy = modelPolicy?.();
+        if (!verifiedPolicy?.valid) throw fail("speech_model_not_configured", 503);
+        if (
+          !verifyVoiceSegmentReceipt(verifiedPolicy, input.segmentReceipt, {
+            ownerId: auth.userId,
+            chatId: input.chatId,
+            messageId: input.messageId,
+            index: input.segmentIndex,
+            text,
+          })
+        )
+          throw fail("speech_model_not_eligible", 403);
+      }
       if (liveReply && (typeof saved.voiceModelReceipt !== "string" || !saved.voiceModelReceipt))
         throw fail("speech_model_not_eligible", 403);
       const policy = modelPolicy?.();
@@ -218,41 +268,87 @@ export function createSpeechHandler({
         })
       )
         throw fail("speech_model_not_eligible", 403);
-      for (const bucket of [
-        {
-          identity: `user:${auth.userId}`,
-          action: "speech_user_minute",
-          limit: 3,
-          windowSeconds: 60,
-        },
-        {
-          identity: `user:${auth.userId}`,
-          action: "speech_user_hour",
-          limit: 20,
-          windowSeconds: 3600,
-        },
-        {
-          identity: "speech:global",
-          action: "speech_global_hour",
-          limit: 100,
-          windowSeconds: 3600,
-        },
-      ]) {
-        const limit = await wait(rateLimit(bucket));
-        if (!limit.allowed) {
-          finish();
-          return json(
-            limit.status === "unavailable" ? "speech_limits_unavailable" : "speech_limit_reached",
-            limit.status === "unavailable" ? 503 : 429,
-            { "Retry-After": String(limit.retryAfter || 60) },
-          );
+      const chargeAdmission = async () => {
+        for (const bucket of [
+          {
+            identity: `user:${auth.userId}`,
+            action: "speech_user_minute",
+            limit: 3,
+            windowSeconds: 60,
+          },
+          {
+            identity: `user:${auth.userId}`,
+            action: "speech_user_hour",
+            limit: 20,
+            windowSeconds: 3600,
+          },
+          {
+            identity: "speech:global",
+            action: "speech_global_hour",
+            limit: 100,
+            windowSeconds: 3600,
+          },
+        ]) {
+          const limit = await wait(rateLimit(bucket));
+          if (!limit.allowed)
+            return json(
+              limit.status === "unavailable" ? "speech_limits_unavailable" : "speech_limit_reached",
+              limit.status === "unavailable" ? 503 : 429,
+              { "Retry-After": String(limit.retryAfter || 60) },
+            );
         }
-      }
-      await wait(revalidate(auth, deadline.signal));
-      // Every catalog voice and model spends the caller's plan-based daily voice
-      // allowance before any provider work. No voice is exempt.
-      if (quota) {
-        const denied = await wait(quota(auth, deadline.signal));
+        await wait(revalidate(auth, deadline.signal));
+        // Every catalog voice and model spends the caller's plan-based daily voice
+        // allowance before any provider work. No voice is exempt.
+        if (quota) return (await wait(quota(auth, deadline.signal))) ?? null;
+        return null;
+      };
+      let previousText;
+      if (liveSegment) {
+        const key = `${auth.userId}\u0000${input.chatId}\u0000${input.messageId}`;
+        let turn = turnLedger.get(key);
+        if (turn && turn.expires <= now()) {
+          turnLedger.delete(key);
+          turn = undefined;
+        }
+        if (!turn) {
+          while (turnLedger.size >= SPEECH_LIMITS.turnLedgerEntries)
+            turnLedger.delete(turnLedger.keys().next().value);
+          turn = {
+            expires: now() + SPEECH_LIMITS.turnTtlMs,
+            seen: new Set(),
+            chars: 0,
+            texts: new Map(),
+            admission: null,
+          };
+          const created = turn;
+          created.admission = chargeAdmission().then(
+            (denied) => {
+              if (denied) turnLedger.delete(key);
+              return denied;
+            },
+            (error) => {
+              turnLedger.delete(key);
+              throw error;
+            },
+          );
+          turnLedger.set(key, created);
+        }
+        if (turn.seen.has(input.segmentIndex)) throw fail("speech_segment_replayed", 409);
+        if (turn.chars + text.length > SPEECH_LIMITS.textChars)
+          throw fail("speech_text_too_long", 413);
+        turn.seen.add(input.segmentIndex);
+        turn.chars += text.length;
+        turn.texts.set(input.segmentIndex, text);
+        previousText = turn.texts.get(input.segmentIndex - 1);
+        const denied = await wait(turn.admission);
+        if (denied) {
+          finish();
+          return denied.clone();
+        }
+        await wait(revalidate(auth, deadline.signal));
+      } else {
+        const denied = await chargeAdmission();
         if (denied) {
           finish();
           return denied;
@@ -292,7 +388,11 @@ export function createSpeechHandler({
               "Content-Type": "application/json",
               Accept: "audio/mpeg",
             },
-            body: JSON.stringify({ text, model_id: modelId }),
+            body: JSON.stringify({
+              text,
+              model_id: modelId,
+              ...(previousText ? { previous_text: previousText } : {}),
+            }),
           },
         ),
       );
