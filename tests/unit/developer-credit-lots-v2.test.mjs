@@ -13,7 +13,7 @@ const a = "2024-02-29T12:00:00.000Z";
 const b = "2025-02-28T12:00:00.000Z";
 const now = "2024-11-15T12:00:00.000Z";
 
-async function fixture() {
+async function fixture({ paid = true } = {}) {
   const db = new PGlite();
   try {
     await db.exec(`
@@ -29,7 +29,8 @@ async function fixture() {
       create table public.developer_credit_accounts(id uuid primary key, currency text, suspended_at timestamptz);
       create table public.developer_account_owners(account_id uuid primary key,owner_id uuid,name text,created_at timestamptz default now());
       create table public.developer_credit_sharing_preferences(owner_id uuid primary key,allow_consumer_usage boolean not null default false);
-      create table public.subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid,environment text,status text,price_id text,current_period_start timestamptz,current_period_end timestamptz);
+      create table public.subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid,environment text,status text,price_id text,current_period_start timestamptz,current_period_end timestamptz,stripe_subscription_id text,stripe_customer_id text);
+      create table public.processed_stripe_events(event_id text primary key,environment text,type text,processing_status text,retryable boolean,invoice_id text,customer_id text,subscription_id text,event_created_at timestamptz);
       create table public.billing_plan_tiers(environment text,stripe_price_id text,tier text,lookup_key text);
       create function public.billing_user_plan_tier(p_owner uuid) returns text language sql stable as $$select case when exists(select 1 from public.subscriptions where user_id=p_owner and status='active') then 'pro' else 'free' end$$;
       create table public.credit_purchases(id uuid primary key,account_id uuid,credits_granted numeric);
@@ -37,13 +38,15 @@ async function fixture() {
       create table public.developer_funding_receipts(attempt_id uuid primary key,purchase_id uuid,charge_id text,reversal_amount numeric);
       grant select on public.account_deletion_fences,public.banned_users,public.developer_credit_accounts,public.developer_account_owners,
         public.developer_credit_sharing_preferences,public.subscriptions,public.billing_plan_tiers,public.credit_purchases,
-        public.developer_funding_attempts,public.developer_funding_receipts to service_role;
+        public.developer_funding_attempts,public.developer_funding_receipts,public.processed_stripe_events to service_role;
       insert into auth.users values('${owner}'),('${other}');
       insert into public.developer_credit_accounts values('${account}','USD',null),('${foreign}','USD',null);
       insert into public.developer_account_owners(account_id,owner_id,name) values('${account}','${owner}','Own'),('${foreign}','${other}','Other');
       insert into public.billing_plan_tiers values('live','price_fixture','pro','pro_monthly');
-      insert into public.subscriptions(user_id,environment,status,price_id,current_period_start,current_period_end)
-        values('${owner}','live','active','price_fixture','2024-11-01T00:00:00Z','2024-12-01T00:00:00Z');
+      insert into public.subscriptions(user_id,environment,status,price_id,current_period_start,current_period_end,stripe_subscription_id,stripe_customer_id)
+        values('${owner}','live','active','price_fixture','2024-11-01T00:00:00Z','2024-12-01T00:00:00Z','sub_fixture','cus_fixture');
+      insert into public.processed_stripe_events values('evt_first','live','invoice.paid','completed',false,'in_first','cus_fixture','sub_fixture','2024-11-01T00:01:00Z');
+      insert into public.processed_stripe_events values('evt_second','live','invoice.paid','completed',false,'in_second','cus_fixture','sub_fixture','2024-12-01T00:01:00Z');
       insert into public.credit_purchases values('${purchase}','${account}',100);
       insert into public.developer_funding_attempts values('${attempt}','${account}','paid');
       insert into public.developer_funding_receipts values('${attempt}','${purchase}','ch_fixture',0);
@@ -53,6 +56,7 @@ async function fixture() {
       account,
     ]);
     await db.exec("set role service_role");
+    if (paid) await recordInvoice(db);
     return db;
   } catch (error) {
     await db.close();
@@ -60,6 +64,20 @@ async function fixture() {
   }
 }
 const value = async (db, sql, args) => (await db.query(sql, args)).rows[0].result;
+const recordInvoice = (
+  db,
+  event = "evt_first",
+  invoice = "in_first",
+  start = "2024-11-01T00:00:00Z",
+  end = "2024-12-01T00:00:00Z",
+  customer = "cus_fixture",
+  price = "price_fixture",
+) =>
+  value(
+    db,
+    "select developer_record_paid_pro_invoice_v2($1,$2,$3,'sub_fixture',$4,$5,$6,$5,8000) result",
+    [event, invoice, customer, price, start, end],
+  );
 const refresh = (db, at = now) =>
   value(db, "select developer_refresh_pro_v2($1,$2) result", [owner, at]);
 const record = (db, time = a) =>
@@ -104,6 +122,14 @@ test("one Pro grant per non-overlapping paid period; downgrade expires unused va
       db,
       "update subscriptions set current_period_start='2024-12-01T00:00:00Z',current_period_end='2025-01-01T00:00:00Z' where user_id=$1",
       [owner],
+    );
+    assert.equal(await refresh(db, "2024-12-02T12:00:00.000Z"), null);
+    await recordInvoice(
+      db,
+      "evt_second",
+      "in_second",
+      "2024-12-01T00:00:00Z",
+      "2025-01-01T00:00:00Z",
     );
     const next = await refresh(db, "2024-12-02T12:00:00.000Z");
     assert.notEqual(next, id);
@@ -242,6 +268,27 @@ test("verified receipts are unique, calendar-year expiry does not reset, reversa
       db.query("select developer_refresh_pro_v2($1,$2)", [owner, now]),
       /permission denied/,
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("active status without matching payment cannot mint included credits", async () => {
+  const db = await fixture({ paid: false });
+  try {
+    assert.equal(await refresh(db), null);
+    await assert.rejects(recordInvoice(db, "evt_missing"), /event_required/);
+    await assert.rejects(
+      recordInvoice(db, "evt_first", "in_first", undefined, undefined, "cus_foreign"),
+      /event_required/,
+    );
+    assert.equal(await recordInvoice(db), true);
+    assert.equal(await recordInvoice(db), true);
+    const lot = await refresh(db);
+    assert.equal(await balance(db, lot), 8000);
+    await privileged(db, "update developer_paid_pro_invoices_v2 set revoked_at=now()");
+    assert.equal(await refresh(db), null);
+    assert.equal(await balance(db, lot), 0);
   } finally {
     await db.close();
   }
