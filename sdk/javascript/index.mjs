@@ -196,12 +196,16 @@ export class KovaGPT {
         if (!Number.isSafeInteger(page) || page < 0 || page > 19) fail("vector_page_invalid");
         return smallJson(await this.#request(vectorPath(id) + "&entries=true&page=" + page, { signal }), 1048576);
       },
-      retrieveEntry: async (id, entry, { signal } = {}) =>
-        smallJson(await this.#request(vectorPath(id, entry), { signal }), 1048576),
+      retrieveEntry: async (id, entry, { signal } = {}) => {
+        if (entry === undefined) fail("vector_entry_invalid");
+        return smallJson(await this.#request(vectorPath(id, entry), { signal }), 1048576);
+      },
       delete: async (id, { signal } = {}) =>
         smallJson(await this.#request(vectorPath(id), { signal, method: "DELETE" })),
-      deleteEntry: async (id, entry, { signal } = {}) =>
-        smallJson(await this.#request(vectorPath(id, entry), { signal, method: "DELETE" })),
+      deleteEntry: async (id, entry, { signal } = {}) => {
+        if (entry === undefined) fail("vector_entry_invalid");
+        return smallJson(await this.#request(vectorPath(id, entry), { signal, method: "DELETE" }));
+      },
     });
     this.files = Object.freeze({
       search: async (input, { signal } = {}) =>

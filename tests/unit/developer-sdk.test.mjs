@@ -292,6 +292,8 @@ test("vector SDK uses scoped resources, fixed operations and stable creation ide
   assert.equal(f.calls[4].method, "DELETE");
   assert.ok(f.calls.every(c => !c.headers["X-Kova-Quote"]));
   await assert.rejects(f.client.vectorStores.retrieveEntry(id, "x&other=1"), /vector_entry_invalid/);
+  await assert.rejects(f.client.vectorStores.deleteEntry(id), /vector_entry_invalid/);
+  await assert.rejects(f.client.vectorStores.retrieveEntry(id), /vector_entry_invalid/);
   assert.equal(f.calls.length, 5);
 });
 
