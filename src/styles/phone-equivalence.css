@@ -433,6 +433,10 @@
     padding-block: 0;
   }
 
+  .kova-assistant[data-keyboard-open="true"] .kova-empty-composer .spec400-composer {
+    --chat-composer-corner: 24px;
+  }
+
   .kova-assistant[data-keyboard-open="true"] .spec400-composer-content {
     display: flex;
     flex-direction: column;

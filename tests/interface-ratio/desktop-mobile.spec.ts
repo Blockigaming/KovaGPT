@@ -168,6 +168,17 @@ for (const state of states) {
               Math.abs(Number(current) - value),
               `desktop freeze: ${state.name} ${previous.selector} ${property}`,
             ).toBeLessThanOrEqual(1);
+          } else if (property === "columns" && typeof value === "string" && value.endsWith("px")) {
+            const expectedTracks = value.split(" ");
+            const currentTracks = String(current).split(" ");
+            expect(currentTracks).toHaveLength(expectedTracks.length);
+            for (const [index, track] of expectedTracks.entries()) {
+              expect(currentTracks[index]).toMatch(/^\d+(?:\.\d+)?px$/);
+              expect(
+                Number.parseFloat(currentTracks[index]),
+                `desktop freeze: ${state.name} ${previous.selector} column ${index + 1}`,
+              ).toBeCloseTo(Number.parseFloat(track), 1);
+            }
           } else
             expect(
               current,
