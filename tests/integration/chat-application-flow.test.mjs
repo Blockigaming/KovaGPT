@@ -32,6 +32,7 @@ import {
 // and provider HTTP are fixtures. No network or real credentials are available.
 const mocks = {
   "@tanstack/react-router": ["createFileRoute"],
+  "@/lib/scheduled-tasks.functions": ["persistScheduledTask"],
   "@/lib/api-auth.server": [
     "optionalUser",
     "assertNotBanned",
@@ -159,6 +160,11 @@ function fixture({
   const noop = async () => null;
   const fixture = {
     "@tanstack/react-router": { createFileRoute: () => (value) => value },
+    "@/lib/scheduled-tasks.functions": {
+      persistScheduledTask: () => {
+        throw new Error("Unexpected scheduled-task write");
+      },
+    },
     "@/lib/api-auth.server": {
       optionalUser: async () => {
         calls.push("session");

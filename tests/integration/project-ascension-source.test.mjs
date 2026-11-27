@@ -30,7 +30,7 @@ test("conversation search covers content and useful operators", async () => {
   assert.match(sidebar, /searchConversations/);
 });
 
-test("chat retirement has no archive UI or recoverable Trash path", async () => {
+test("chat archive action is mobile-only and deletion has no recoverable Trash path", async () => {
   const [settings, sidebar, chat, history, deletion, shell] = await Promise.all([
     read("src/components/SettingsDialog.tsx"),
     read("src/components/Sidebar.tsx"),
@@ -43,7 +43,10 @@ test("chat retirement has no archive UI or recoverable Trash path", async () => 
     settings,
     /aria-label="Archived chats"|Delete archived chat|<ArchivedChatsPanel/,
   );
-  assert.doesNotMatch(sidebar, /onArchive|>\s*Archive\s*</);
+  assert.match(
+    sidebar,
+    /mobileViewport && onArchived && railOwner[\s\S]*?archiveConversation\(owner, conversation\)/,
+  );
   assert.doesNotMatch(chat, /historyAction\("archive", id\)/);
   assert.match(history, /permanentlyDeleteChat\(context\.ownerId, chat, context\.current\)/);
   assert.match(shell, /permanentlyDeleteChat\(userKey, chat, current\)/);

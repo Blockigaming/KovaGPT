@@ -17,6 +17,7 @@ import {
 // Every provider, accounting, quota and connected-tool seam is observed/denied.
 const MOCKS = {
   "@tanstack/react-router": ["createFileRoute"],
+  "@/lib/scheduled-tasks.functions": ["persistScheduledTask"],
   "@/lib/api-auth.server": [
     "optionalUser",
     "assertNotBanned",
@@ -228,6 +229,11 @@ async function makeFixture(options = {}) {
   const noop = async () => null;
   const fixtures = {
     "@tanstack/react-router": { createFileRoute: () => (value) => value },
+    "@/lib/scheduled-tasks.functions": {
+      persistScheduledTask: () => {
+        throw new Error("Unexpected scheduled-task write");
+      },
+    },
     "@/lib/api-auth.server": {
       optionalUser: async () => {
         calls.push("session");

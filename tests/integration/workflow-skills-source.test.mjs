@@ -166,7 +166,10 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   );
   // Selected packages take precedence over the ordinary Free planner, whose
   // owner-scoped preferences and history must remain available without a package.
-  assert.match(planningContext, /let toolPlanningMessages[^=]*=\s*workflowSkill\s*\?/u);
+  assert.match(
+    planningContext,
+    /let toolPlanningMessages[^=]*=\s*scheduleRequest\s*\?[\s\S]*?: workflowSkill\s*\?/u,
+  );
   assert.match(planningContext, /\{ role: "user", content: lastText \}/u);
   assert.doesNotMatch(planningContext, /finalMessages\.map/u);
   assert.doesNotMatch(
