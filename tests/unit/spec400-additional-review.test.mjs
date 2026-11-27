@@ -275,8 +275,10 @@ test("all local review configurations resolve through the existing detail loader
     "@/lib/publications": {
       publicationKey: (section, slug) => `${section}/${slug}`,
       PUBLICATION_BY_KEY: new Map(),
+      PUBLICATIONS: [],
     },
     "@/components/public/PublicSite": { PublicDetailPageView: "Detail", PublicPageView: "Page" },
+    "@/components/public/MarketingShowcase": { MarketingNews: "News", PublicationVisual: "Cover" },
     "@/lib/public-website-catalog.mjs": { PUBLIC_WEBSITE_PAGE_BY_PATH: new Map() },
     "@/components/public/PublicWebsiteArticle": {
       PublicWebsiteArticle: "Website",
