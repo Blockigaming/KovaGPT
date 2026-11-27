@@ -308,9 +308,71 @@ export async function executeDeveloper(
     },
   });
 }
+const publicUsage = (row: Record<string, unknown>) => {
+  const { authoritative_usage, ...rest } = row;
+  const usage =
+    authoritative_usage && typeof authoritative_usage === "object"
+      ? (authoritative_usage as Record<string, unknown>)
+      : {};
+  const dimension = (name: string) => {
+    const value = usage[name];
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+      ? value
+      : null;
+  };
+  return {
+    ...rest,
+    input_tokens: dimension("input_tokens"),
+    cached_input_tokens: dimension("cached_input_tokens"),
+    image_input_tokens: dimension("image_input_tokens"),
+    output_tokens: dimension("output_tokens"),
+  };
+};
+async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {
+  const params = new URL(request.url).searchParams;
+  const allowed = new Set(["limit", "offset"]);
+  for (const key of params.keys()) {
+    if (!allowed.has(key) || params.getAll(key).length !== 1)
+      throw new Error("developer_input_invalid");
+  }
+  const number = (key: string, fallback: number, minimum: number, maximum: number) => {
+    const value = params.get(key);
+    if (value === null) return fallback;
+    if (!/^(0|[1-9][0-9]{0,4})$/.test(value)) throw new Error("developer_input_invalid");
+    const parsed = Number(value);
+    if (parsed < minimum || parsed > maximum) throw new Error("developer_input_invalid");
+    return parsed;
+  };
+  const limit = number("limit", 25, 1, 100);
+  const offset = number("offset", 0, 0, 10000);
+  // A bearer key may inspect only its own activity, never sibling keys or
+  // organization-wide billing records. The owner console is a separate boundary.
+  const result = await identity.db
+    .from("developer_api_requests")
+    .select(
+      "id,public_model,capability,currency,settlement_state,maximum_reserved_charge,final_customer_charge,created_at,settled_at,authoritative_usage",
+    )
+    .eq("account_id", identity.account_id)
+    .eq("project_id", identity.project_id)
+    .eq("api_key_id", identity.id)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(offset, offset + limit)
+    .abortSignal(AbortSignal.timeout(10000));
+  if (result.error || !result.data) throw new Error("developer_storage_unavailable");
+  const hasMore = result.data.length > limit;
+  return developerJson({
+    object: "list",
+    data: result.data.slice(0, limit).map(publicUsage),
+    has_more: hasMore,
+    next_offset: hasMore && offset + limit <= 10000 ? offset + limit : null,
+    amount_unit: "currency_minor_unit",
+  });
+}
 export async function handleDeveloperApi(request: Request, operation: string) {
   try {
     const identity = await authenticateDeveloper(request);
+    if (operation === "usage") return await developerKeyUsage(identity, request);
     if (operation === "models") {
       const pricing = await currentPricing(identity);
       const contracts = pricing.public_price_configuration?.contracts;
@@ -501,26 +563,6 @@ export async function handleDeveloperConsole(request: Request) {
         through.setUTCDate(through.getUTCDate() + 1);
         usageQuery = usageQuery.lt("created_at", through.toISOString());
       }
-      const publicUsage = (row: Record<string, unknown>) => {
-        const { authoritative_usage, ...rest } = row;
-        const usage =
-          authoritative_usage && typeof authoritative_usage === "object"
-            ? (authoritative_usage as Record<string, unknown>)
-            : {};
-        const dimension = (name: string) => {
-          const value = usage[name];
-          return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
-            ? value
-            : null;
-        };
-        return {
-          ...rest,
-          input_tokens: dimension("input_tokens"),
-          cached_input_tokens: dimension("cached_input_tokens"),
-          image_input_tokens: dimension("image_input_tokens"),
-          output_tokens: dimension("output_tokens"),
-        };
-      };
       if (summaryRequested || exportRequested) {
         // Fixed cutoff and stable ordering prevent new incoming requests from
         // moving the observed window. Settlement changes can still occur while

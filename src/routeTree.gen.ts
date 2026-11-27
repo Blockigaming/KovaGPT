@@ -203,6 +203,7 @@ import { Route as ApiV1ImagesRouteImport } from './routes/api/v1/images'
 import { Route as ApiV1ModelsRouteImport } from './routes/api/v1/models'
 import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
 import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
+import { Route as ApiV1UsageRouteImport } from './routes/api/v1/usage'
 import { Route as ApiWorkBrowserRouteImport } from './routes/api/work/browser'
 import { Route as ApiWorkExecutionRouteImport } from './routes/api/work/execution'
 import { Route as ApiWorkOutputRouteImport } from './routes/api/work/output'
@@ -1231,6 +1232,11 @@ const ApiV1ResponsesRoute = ApiV1ResponsesRouteImport.update({
   path: '/api/v1/responses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1UsageRoute = ApiV1UsageRouteImport.update({
+  id: '/api/v1/usage',
+  path: '/api/v1/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWorkBrowserRoute = ApiWorkBrowserRouteImport.update({
   id: '/api/work/browser',
   path: '/api/work/browser',
@@ -1617,6 +1623,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/models': typeof ApiV1ModelsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -1848,6 +1855,7 @@ export interface FileRoutesByTo {
   '/api/v1/models': typeof ApiV1ModelsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -2080,6 +2088,7 @@ export interface FileRoutesById {
   '/api/v1/models': typeof ApiV1ModelsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -2313,6 +2322,7 @@ export interface FileRouteTypes {
     | '/api/v1/models'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/usage'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2544,6 +2554,7 @@ export interface FileRouteTypes {
     | '/api/v1/models'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/usage'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2775,6 +2786,7 @@ export interface FileRouteTypes {
     | '/api/v1/models'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/usage'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2997,6 +3009,7 @@ export interface RootRouteChildren {
   ApiV1ModelsRoute: typeof ApiV1ModelsRoute
   ApiV1QuotesRoute: typeof ApiV1QuotesRoute
   ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
+  ApiV1UsageRoute: typeof ApiV1UsageRoute
   ApiWorkBrowserRoute: typeof ApiWorkBrowserRoute
   ApiWorkExecutionRoute: typeof ApiWorkExecutionRoute
   ApiWorkOutputRoute: typeof ApiWorkOutputRoute
@@ -4392,6 +4405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ResponsesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/usage': {
+      id: '/api/v1/usage'
+      path: '/api/v1/usage'
+      fullPath: '/api/v1/usage'
+      preLoaderRoute: typeof ApiV1UsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/work/browser': {
       id: '/api/work/browser'
       path: '/api/work/browser'
@@ -4948,6 +4968,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1ModelsRoute: ApiV1ModelsRoute,
   ApiV1QuotesRoute: ApiV1QuotesRoute,
   ApiV1ResponsesRoute: ApiV1ResponsesRoute,
+  ApiV1UsageRoute: ApiV1UsageRoute,
   ApiWorkBrowserRoute: ApiWorkBrowserRoute,
   ApiWorkExecutionRoute: ApiWorkExecutionRoute,
   ApiWorkOutputRoute: ApiWorkOutputRoute,

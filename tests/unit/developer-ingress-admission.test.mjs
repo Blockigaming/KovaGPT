@@ -45,7 +45,23 @@ function fixture(overrides = {}) {
     from(table) {
       state.queries.push(table);
       const query = {};
-      for (const method of ["select", "eq", "is", "gt", "abortSignal"]) query[method] = () => query;
+      for (const method of ["select", "is", "gt", "order", "range", "abortSignal"])
+        query[method] = () => query;
+      query.eq = (column, value) => {
+        if (table === "developer_api_requests") {
+          state.usageFilters ??= [];
+          state.usageFilters.push([column, value]);
+        }
+        return query;
+      };
+      if (table === "developer_api_requests") {
+        query.range = (start, end) => {
+          state.usageRange = [start, end];
+          return query;
+        };
+        query.then = (resolve) =>
+          Promise.resolve({ error: null, data: state.usageRows ?? [] }).then(resolve);
+      }
       query.maybeSingle = async () => ({
         error: null,
         data:
@@ -220,5 +236,70 @@ test("feature, origin, credential and owner fences remain in force before provid
     if (!f.state.validKey) assert.equal(f.state.admissions.length, 1);
     if (!f.state.enabled || f.state.crossSite || headers.authorization)
       assert.equal(f.state.admissions.length, 0);
+  }
+});
+
+test("bearer usage is bounded to the calling key, project and account", async () => {
+  const f = fixture({
+    usageRows: [
+      {
+        id: "request-1",
+        public_model: "kova-argon-4.6",
+        currency: "USD",
+        final_customer_charge: 1.25,
+        authoritative_usage: {
+          input_tokens: 10,
+          output_tokens: 4,
+          private_provider_detail: "must not escape",
+        },
+      },
+      { id: "request-2" },
+    ],
+  });
+  const response = await f.exports.handleDeveloperApi(
+    new Request("https://kova.test/api/v1/usage?limit=1&offset=0", {
+      headers: { authorization: `Bearer ${credential}` },
+    }),
+    "usage",
+  );
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.deepEqual(f.state.usageFilters, [
+    ["account_id", "account"],
+    ["project_id", "project"],
+    ["api_key_id", keyId],
+  ]);
+  assert.deepEqual(f.state.usageRange, [0, 1]);
+  assert.equal(result.has_more, true);
+  assert.equal(result.next_offset, 1);
+  assert.equal(result.amount_unit, "currency_minor_unit");
+  assert.equal(result.data.length, 1);
+  assert.equal(result.data[0].input_tokens, 10);
+  assert.equal(result.data[0].output_tokens, 4);
+  assert.equal(result.data[0].authoritative_usage, undefined);
+  assert.doesNotMatch(JSON.stringify(result), /must not escape/);
+  assert.equal(f.state.providerCalls, 0);
+});
+
+test("bearer usage rejects cross-account filters, duplicate and unbounded pagination", async () => {
+  for (const query of [
+    "account_id=another",
+    "project_id=another",
+    "api_key_id=another",
+    "limit=101",
+    "limit=0",
+    "limit=1&limit=2",
+    "offset=-1",
+    "offset=10001",
+  ]) {
+    const f = fixture();
+    const response = await f.exports.handleDeveloperApi(
+      new Request(`https://kova.test/api/v1/usage?${query}`, {
+        headers: { authorization: `Bearer ${credential}` },
+      }),
+      "usage",
+    );
+    assert.equal(response.status, 400, query);
+    assert.ok(!f.state.queries.includes("developer_api_requests"), query);
   }
 });
