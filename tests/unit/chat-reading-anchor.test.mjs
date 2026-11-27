@@ -276,13 +276,22 @@ test("every transition frame and breakpoint resize preserves the cached text anc
   assert.equal(f.element.style.overflowAnchor, "auto");
 });
 
-test("resize notifications coalesce without synchronous scroll writes", () => {
+test("resize notifications coalesce without synchronous layout reads or scroll writes", () => {
   const f = fixture();
   f.readInside();
   const anchor = capture(f.element);
   const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
+  let reads = 0;
+  for (const target of f.observers[0].targets) {
+    const rect = target.getBoundingClientRect.bind(target);
+    target.getBoundingClientRect = () => {
+      reads++;
+      return rect();
+    };
+  }
   f.resized(420);
   f.resized(590);
+  assert.equal(reads, 0);
   assert.equal(f.writes.length, 0);
   assert.equal(f.frames.size, 1);
   f.flush();

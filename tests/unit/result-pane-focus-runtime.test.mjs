@@ -19,13 +19,15 @@ const expressions = {};
 const visit = (node) => {
   if (
     ts.isVariableDeclaration(node) &&
-    ["scheduleResultFocus", "openResult", "closeResult"].includes(node.name.getText(ast))
+    ["focusedElement", "scheduleResultFocus", "openResult", "closeResult"].includes(
+      node.name.getText(ast),
+    )
   )
     expressions[node.name.getText(ast)] = node.initializer.getText(ast);
   ts.forEachChild(node, visit);
 };
 visit(ast);
-assert.equal(Object.keys(expressions).length, 3);
+assert.equal(Object.keys(expressions).length, 4);
 const compiled = ts.transpileModule(
   `globalThis.renderCallbacks = (result, resultReturnOrigin, nextPromptScope) => {
   ${Object.entries(expressions)
@@ -228,6 +230,17 @@ for (const unavailable of [
     assert.equal(f.document.activeElement, f.conversation);
   });
 }
+
+test("Result opening without an explicit trigger restores the previously focused element", () => {
+  const f = fixture();
+  f.document.activeElement = f.opener;
+  f.render().openResult(f.descriptor);
+  f.flush();
+  f.document.activeElement = f.close;
+  f.render().closeResult();
+  f.flush();
+  assert.equal(f.document.activeElement, f.opener);
+});
 
 test("a restored session draft without a mounted original opener closes to Conversation", () => {
   const f = fixture();

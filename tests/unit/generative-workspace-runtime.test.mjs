@@ -69,7 +69,7 @@ const routeCanvasOpener = find(
 ).initializer.expression.getText(route);
 const compiled = ts.transpileModule(
   `
-globalThis.focusedElement = ${focusedElement};
+const focusedElement = ${focusedElement};
 globalThis.bindOpenResult = (nextPromptScope) => (${openResult});
 globalThis.bindRouteCanvasOpener = () => (${routeCanvasOpener});
 globalThis.bindMessageCanvasOpener = (message, index, part) => (${widgetAttribute(message, "onOpenCanvas", "onOpenCanvas")});

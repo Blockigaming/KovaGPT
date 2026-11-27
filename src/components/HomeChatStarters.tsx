@@ -24,7 +24,7 @@ export function HomeWelcome({
   const homeScrollRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!home || !owner) return;
+    if (!home || !owner || !conversations.length) return;
     const section = homeScrollRef.current;
     if (!section) return;
     const phoneLayout = window.matchMedia(
