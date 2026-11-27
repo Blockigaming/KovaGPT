@@ -442,7 +442,10 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   }
   let conversationBinding: ConversationBinding | null = null;
   let conversationExpiresAt: number | null = null;
-  const conversation = developerConversationReference(kind, raw);
+  const conversation = developerConversationReference(
+    kind === "agent-turns" ? "responses" : kind,
+    raw,
+  );
   raw = conversation.body;
   if (conversation.reference) {
     if (!identity.capabilities.includes("chat") && !identity.capabilities.includes("streaming"))
@@ -770,6 +773,7 @@ type BatchAuthorization = {
   operation: BatchOperation;
   agentBinding: unknown;
   skillBinding: string | null;
+  conversationBinding?: ConversationBinding | null;
   runAt: number | null;
   batch: string;
   item: string;
@@ -802,7 +806,7 @@ export async function authorizeDeveloperBatchItem(
     (parsed.capability === "chat" &&
       (parsed.body.stream !== false || Number(parsed.body.max_output_tokens) > 2048)) ||
     parsed.fileBindings.length !== 0 ||
-    parsed.conversationBinding !== null ||
+    (parsed.conversationBinding !== null && item.operation !== "agent-turns") ||
     currency !== parsed.version.currency ||
     !Number.isSafeInteger(expiresAt) ||
     expiresAt <= Date.now() ||
@@ -810,12 +814,18 @@ export async function authorizeDeveloperBatchItem(
   )
     throw new Error("developer_batch_invalid");
   const runAt = item.run_at === undefined ? null : Date.parse(item.run_at);
-  if (runAt !== null && (!Number.isSafeInteger(runAt) || runAt <= Date.now() || runAt >= expiresAt))
+  const authorityExpiresAt = Math.min(expiresAt, parsed.conversationExpiresAt ?? Infinity);
+  if (
+    authorityExpiresAt <= Date.now() ||
+    (runAt !== null &&
+      (!Number.isSafeInteger(runAt) || runAt <= Date.now() || runAt >= authorityExpiresAt))
+  )
     throw new Error("developer_batch_invalid");
   const authorization: BatchAuthorization = {
     operation: item.operation,
     agentBinding: parsed.agentBinding,
     skillBinding: parsed.skillBinding,
+    conversationBinding: parsed.conversationBinding,
     runAt,
     batch,
     item: item.id,
@@ -825,7 +835,7 @@ export async function authorizeDeveloperBatchItem(
     version: quote.version,
     fingerprint: quote.fingerprint,
     maximumCharge: quote.maximumCharge,
-    expiresAt,
+    expiresAt: authorityExpiresAt,
   };
   const payload = Buffer.from(JSON.stringify(authorization)).toString("base64url");
   return {
@@ -887,6 +897,7 @@ export async function executeAuthorizedBatchItem(
     operation: authorization.operation,
     agentBinding: authorization.agentBinding,
     skillBinding: authorization.skillBinding,
+    conversationBinding: authorization.conversationBinding,
     maximumCharge: authorization.maximumCharge,
     expiresAt: Math.min(Date.now() + 120000, authorization.expiresAt),
   };

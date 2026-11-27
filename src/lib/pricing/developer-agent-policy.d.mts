@@ -4,6 +4,7 @@ export type DeveloperAgentTurn = {
   version: number;
   input: string;
   skills?: DeveloperSkillReference[];
+  conversation?: { id: string; revision: number };
 };
 export function parseDeveloperAgentRequest(
   method: string,

@@ -175,7 +175,16 @@ test("batch direct operations reject streaming, hosted tools and unbounded vecto
     { max_output_tokens: 2049 },
     { file_ids: [id] },
     { tools: [] },
-    { input: [{ role: "user", content: "Hello" }] },
+    { input: Array(17).fill({ role: "user", content: "Hello" }) },
+    {
+      input: [
+        {
+          role: "user",
+          content: [{ type: "input_image", image_url: "https://invalid.example/image.png" }],
+        },
+      ],
+    },
+    { tools: [{ type: "web_search", search_context_size: "low" }] },
   ])
     assert.throws(() => submit("responses", { ...response, ...patch }), /batch_invalid/);
   for (const patch of [{ dimensions: 1025 }, { dimensions: undefined }, { input: ["A", "B", "C"] }])
@@ -284,4 +293,42 @@ test("scheduled and batch jobs accept bounded search and isolated analysis, not 
       parse("POST", "", { ...body, items: [{ ...body.items[0], input: { ...input, tools: [] } }] }),
     );
   }
+});
+
+test("background Responses preserve strict schemas and client-owned function rounds", () => {
+  const schema = {
+    type: "object",
+    properties: { answer: { type: "string" } },
+    required: ["answer"],
+    additionalProperties: false,
+  };
+  const input = {
+    model: "kova-fast",
+    input: [
+      { role: "user", content: "Summarize" },
+      { type: "function_call", call_id: "call_1", name: "lookup", arguments: "{}" },
+      { type: "function_call_output", call_id: "call_1", output: "Example" },
+    ],
+    max_output_tokens: 100,
+    tools: [{ type: "function", name: "lookup", parameters: schema, strict: true }],
+    text: { format: { type: "json_schema", name: "answer", strict: true, schema } },
+  };
+  const body = {
+    operation: "create",
+    id,
+    currency: "USD",
+    maximum_charge: 1,
+    input,
+    quote_token: request.items[0].quote_token,
+  };
+  const parseJob = (input) =>
+    parseDeveloperBatchRequest("POST", new URLSearchParams(), { ...body, input }, "response");
+  assert.deepEqual(parseJob(input).input.items[0].input, input);
+  for (const patch of [
+    { tools: [{ ...input.tools[0], strict: false }] },
+    { input: [input.input[2]] },
+    { tools: Array(5).fill(input.tools[0]) },
+    { conversation: { id, revision: 1 } },
+  ])
+    assert.throws(() => parseJob({ ...input, ...patch }));
 });

@@ -92,8 +92,11 @@ test("each supported queue operation can prepare an exact quote-bound draft with
   };
   const operations = {
     quote: "responses",
+    quoteStructured: "responses",
+    quoteFunction: "responses",
     quoteChat: "chat/completions",
     quoteAgent: "agent-turns",
+    quoteAgentSession: "agent-turns",
     quoteModeration: "moderations",
     quoteEmbedding: "embeddings",
     quoteDecision: "decisions",
@@ -102,7 +105,7 @@ test("each supported queue operation can prepare an exact quote-bound draft with
   };
   for (const section of ["batches", "automations", "response-jobs"]) {
     for (const [action, operation] of Object.entries(operations)) {
-      if (section === "response-jobs" && action !== "quote") {
+      if (section === "response-jobs" && operation !== "responses") {
         assert.throws(() => resourceConsoleTemplate(section, action, () => id));
         continue;
       }

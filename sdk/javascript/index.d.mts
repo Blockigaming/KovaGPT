@@ -114,6 +114,13 @@ export interface AnalysisInput {
   input: string;
   max_output_tokens: number;
 }
+export type BackgroundResponsesInput = Omit<
+  ResponsesInput,
+  "conversation" | "file_ids" | "stream" | "tools" | "max_tool_calls"
+> & {
+  stream?: false;
+  tools?: FunctionTool[];
+};
 export type BatchInvocation = {
   id: string;
   quote_token: string;
@@ -128,10 +135,7 @@ export type BatchInvocation = {
   | { operation: "agent-turns"; input: AgentTurnInput }
   | {
       operation: "responses";
-      input: Pick<ResponsesInput, "model" | "max_output_tokens" | "instructions" | "reasoning"> & {
-        input: string;
-        stream?: false;
-      };
+      input: BackgroundResponsesInput;
     }
   | { operation: "moderations"; input: ModerationsInput }
   | { operation: "embeddings"; input: EmbeddingsInput & { dimensions: number } }
@@ -153,6 +157,7 @@ export interface AgentTurnInput {
   version: number;
   input: string;
   skills?: { id: string; version: number }[];
+  conversation?: { id: string; revision: number };
 }
 export interface SkillDefinition {
   name: string;
@@ -289,14 +294,7 @@ export class KovaGPT {
         currency: string;
         maximum_charge: number;
         quote_token: string;
-        input: {
-          model: string;
-          input: string;
-          max_output_tokens: number;
-          instructions?: string;
-          stream?: false;
-          reasoning?: { effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" };
-        };
+        input: BackgroundResponsesInput;
       },
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;

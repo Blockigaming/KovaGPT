@@ -58,9 +58,36 @@ export function developerBatchCapability(operation) {
 }
 function directInput(operation, value) {
   if (operation === "responses") {
-    exact(value, ["model", "input", "max_output_tokens"], ["instructions", "stream", "reasoning"]);
+    exact(
+      value,
+      ["model", "input", "max_output_tokens"],
+      [
+        "instructions",
+        "stream",
+        "reasoning",
+        "text",
+        "tools",
+        "tool_choice",
+        "parallel_tool_calls",
+      ],
+    );
+    // Native function proposals and strict structured output are supported, not
+    // hosted execution, file references or vision. Keep queued history bounded.
     if (
-      typeof value.input !== "string" ||
+      (typeof value.input !== "string" &&
+        (!Array.isArray(value.input) ||
+          value.input.length < 1 ||
+          value.input.length > 16 ||
+          value.input.some(
+            (item) =>
+              Array.isArray(item?.content) &&
+              item.content.some((part) => part?.type === "input_image"),
+          ))) ||
+      (value.tools !== undefined &&
+        (!Array.isArray(value.tools) ||
+          value.tools.length < 1 ||
+          value.tools.length > 4 ||
+          value.tools.some((tool) => tool?.type !== "function"))) ||
       value.max_output_tokens > 2048 ||
       (value.stream !== undefined && value.stream !== false)
     )
@@ -143,7 +170,7 @@ export function parseDeveloperBatchRequest(
   )
     fail();
   if (resourceKind === "response") {
-    // A response job is one non-streaming, explicitly authorized text invocation.
+    // A response job is one non-streaming, explicitly authorized bounded invocation.
     if (params.has("item_id")) fail();
     if (method === "POST" && body?.operation === "create") {
       exact(body, ["operation", "id", "currency", "maximum_charge", "input", "quote_token"]);

@@ -26,8 +26,27 @@ const quoteOperation = (label, operation, input) => ({
   fields: { input },
   path: "/api/v1/quotes",
 });
-const queueQuotes = {
+const answerSchema = {
+  type: "object",
+  properties: { answer: { type: "string" } },
+  required: ["answer"],
+  additionalProperties: false,
+};
+const responseQuotes = {
   quote: quoteResponse,
+  quoteStructured: quoteOperation("Get structured response quote", "responses", {
+    ...responseInput,
+    text: { format: { type: "json_schema", name: "answer", strict: true, schema: answerSchema } },
+  }),
+  quoteFunction: quoteOperation("Get function proposal quote", "responses", {
+    ...responseInput,
+    tools: [{ type: "function", name: "lookup", strict: true, parameters: answerSchema }],
+    tool_choice: "auto",
+    parallel_tool_calls: false,
+  }),
+};
+const queueQuotes = {
+  ...responseQuotes,
   quoteChat: quoteOperation("Get chat completion quote", "chat/completions", {
     model: "",
     messages: [{ role: "user", content: "" }],
@@ -38,6 +57,12 @@ const queueQuotes = {
     agent_id: "",
     version: 1,
     input: "",
+  }),
+  quoteAgentSession: quoteOperation("Get agent session quote", "agent-turns", {
+    agent_id: "",
+    version: 1,
+    input: "",
+    conversation: { id: "", revision: 0 },
   }),
   quoteModeration: quoteOperation("Get moderation quote", "moderations", {
     model: "",
@@ -185,11 +210,11 @@ export const developerResourceSections = Object.freeze({
   "response-jobs": {
     label: "Background responses",
     description:
-      "Quote and authorize one background text request, inspect its settled result, or cancel it while queued.",
+      "Quote and authorize a bounded background response, structured result or function proposal; inspect settled output or cancel while queued.",
     actions: {
       list,
       detail,
-      quote: quoteResponse,
+      ...responseQuotes,
       create: post("Authorize background response", "create", {
         id: "",
         currency: "USD",

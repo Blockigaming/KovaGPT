@@ -60,6 +60,14 @@ async function fixture(options = {}) {
   );
   const state = { version, registry, calls: [], contexts: [], rows: {}, queries: [] };
   const db = {
+    rpc(name, args) {
+      return {
+        abortSignal: async () =>
+          options.rpc
+            ? options.rpc(name, args)
+            : { error: { message: "unexpected_rpc" }, data: null },
+      };
+    },
     from(table) {
       let range, registryIds;
       const orders = [];
@@ -128,6 +136,7 @@ async function fixture(options = {}) {
   };
   globalThis[slot] = {
     ...state,
+    env: options.env ?? {},
     loadFiles: async (body, ids) => ({ body, bindings: [], expiresAt: null }),
     db,
     async provider(body) {
@@ -179,7 +188,8 @@ async function fixture(options = {}) {
     if (path === "@/lib/distributed-rate-limit.server")
       return "const consumeApplicationRateLimit=async()=>({allowed:true});";
     if (path === "@/lib/auth-security.mjs") return "const isCrossSiteMutation=()=>false;";
-    if (path === "@/lib/runtime-env.server") return 'const runtimeEnv=()=>"p".repeat(64);';
+    if (path === "@/lib/runtime-env.server")
+      return 'const runtimeEnv=(name)=>globalThis[Symbol.for("kova.developer-ingress-test")].env[name]??"p".repeat(64);';
     if (path === "@/lib/ai/provider.server" && options.providerUrl)
       return full.replace(JSON.stringify(path), JSON.stringify(options.providerUrl));
     if (path === "@/lib/ai/provider.server")
@@ -781,4 +791,143 @@ test("compatibility aliases use the canonical provider meter and cannot reuse a 
     /web_search_unavailable/,
   );
   assert.equal(f.state.calls.length, 1);
+});
+
+test("versioned agent sessions recheck conversation identity and revision before queued execution", async () => {
+  const id = "44444444-4444-4444-8444-444444444444";
+  const project = "55555555-5555-4555-8555-555555555555";
+  const owner = "66666666-6666-4666-8666-666666666666";
+  const batch = "77777777-7777-4777-8777-777777777777";
+  const item = "88888888-8888-4888-8888-888888888888";
+  const created_at = new Date(Date.now() - 1000).toISOString();
+  const expiresAt = Date.now() + 30000;
+  let revision = 1;
+  let foreign = false;
+  const f = await fixture({
+    env: {
+      KOVA_DEVELOPER_AGENT_SCHEMA_READY: "true",
+      KOVA_DEVELOPER_AGENTS_ENABLED: "true",
+      KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY: "true",
+      KOVA_DEVELOPER_CONVERSATIONS_ENABLED: "true",
+    },
+    rpc(name, args) {
+      assert.equal(args.p_owner, owner);
+      assert.equal(args.p_project, project);
+      assert.equal(args.p_operation, "get");
+      if (name === "manage_developer_agents_v1") {
+        assert.deepEqual(args.p_input, { id, version: 1 });
+        return {
+          data: {
+            id,
+            version: 1,
+            created_at,
+            definition: {
+              name: "Review",
+              model: "kova-fast",
+              instructions: "Summarize",
+              max_output_tokens: 100,
+            },
+          },
+          error: null,
+        };
+      }
+      assert.equal(name, "manage_developer_conversations_v1");
+      assert.deepEqual(args.p_input, { id });
+      return {
+        data: {
+          id,
+          project_id: foreign ? item : project,
+          revision,
+          created_at,
+          expires_at: new Date(expiresAt).toISOString(),
+          items: [{ id: item, role: "assistant", content: "Previous answer" }],
+        },
+        error: null,
+      };
+    },
+  });
+  const identity = { ...f.identity, project_id: project, ownerId: owner };
+  const input = { agent_id: id, version: 1, input: "Continue", conversation: { id, revision: 1 } };
+  const quote = await f.module.developerQuote(identity, "agent-turns", input);
+  assert.equal(quote.expiresAt, expiresAt);
+  const job = await f.module.authorizeDeveloperBatchItem(
+    identity,
+    batch,
+    { id: item, operation: "agent-turns", input, quote_token: quote.quoteToken },
+    "USD",
+    Date.now() + 86400000,
+  );
+  const execute = () =>
+    f.module.executeAuthorizedBatchItem(
+      identity,
+      batch,
+      item,
+      input,
+      job.authorization,
+      "USD",
+      job.maximum_ticks,
+      "agent-turns",
+      null,
+    );
+  revision = 2;
+  await assert.rejects(execute(), /conversation_conflict/);
+  revision = 1;
+  foreign = true;
+  await assert.rejects(execute(), /conversation_conflict/);
+  foreign = false;
+  assert.equal(f.state.calls.length, 0);
+  assert.equal(f.state.contexts.length, 0);
+  await execute();
+  assert.deepEqual(f.state.calls[0].input, [
+    { role: "assistant", content: "Previous answer" },
+    { role: "user", content: "Continue" },
+  ]);
+  assert.equal(f.state.calls[0].instructions, "Summarize");
+  assert.equal(f.state.contexts[0].requestKey, "batch:" + batch + ":" + item);
+});
+
+test("structured background response authorizations bind every function argument and schema byte", async () => {
+  const f = await fixture();
+  const batch = "77777777-7777-4777-8777-777777777777";
+  const item = "88888888-8888-4888-8888-888888888888";
+  const identity = { ...f.identity, project_id: batch };
+  const schema = {
+    type: "object",
+    properties: { answer: { type: "string" } },
+    required: ["answer"],
+    additionalProperties: false,
+  };
+  const input = {
+    ...f.input,
+    text: { format: { type: "json_schema", name: "answer", strict: true, schema } },
+    tools: [{ type: "function", name: "lookup", parameters: schema, strict: true }],
+  };
+  const quote = await f.module.developerQuote(identity, "responses", input);
+  const job = await f.module.authorizeDeveloperBatchItem(
+    identity,
+    batch,
+    { id: item, operation: "responses", input, quote_token: quote.quoteToken },
+    "USD",
+    Date.now() + 86400000,
+  );
+  const execute = (value) =>
+    f.module.executeAuthorizedBatchItem(
+      identity,
+      batch,
+      item,
+      value,
+      job.authorization,
+      "USD",
+      job.maximum_ticks,
+      "responses",
+      null,
+    );
+  await assert.rejects(
+    execute({ ...input, text: { format: { ...input.text.format, name: "changed" } } }),
+    /quote_changed/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  await execute(input);
+  assert.deepEqual(f.state.calls[0].text, input.text);
+  assert.deepEqual(f.state.calls[0].tools, input.tools);
 });

@@ -1,3 +1,4 @@
+import { developerConversationReference } from "./developer-conversation-policy.mjs";
 import { parseDeveloperSkillReferences } from "./developer-skill-policy.mjs";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -88,12 +89,25 @@ export function parseDeveloperAgentTurn(value) {
     "version",
     "input",
     ...(value?.skills === undefined ? [] : ["skills"]),
+    ...(value?.conversation === undefined ? [] : ["conversation"]),
   ]);
+  let conversation;
+  if (value.conversation !== undefined) {
+    try {
+      conversation = developerConversationReference("responses", {
+        input: value.input,
+        conversation: value.conversation,
+      }).reference;
+    } catch {
+      fail();
+    }
+  }
   return {
     agent_id: id(value.agent_id),
     version: integer(value.version, 1, 20),
     input: text(value.input, 16000),
     ...(value.skills === undefined ? {} : { skills: parseDeveloperSkillReferences(value.skills) }),
+    ...(conversation ? { conversation } : {}),
   };
 }
 // Only the authenticated, immutable definition determines the provider request.
@@ -107,5 +121,6 @@ export function expandDeveloperAgentTurn(turn, saved) {
     input: turn.input,
     max_output_tokens: config.max_output_tokens,
     stream: false,
+    ...(turn.conversation ? { conversation: turn.conversation } : {}),
   };
 }

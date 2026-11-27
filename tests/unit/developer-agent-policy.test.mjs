@@ -52,3 +52,20 @@ test("turn uses exact immutable profile", () => {
     assert.throws(() => parseDeveloperAgentTurn({ ...raw, ...extra }), /agent_invalid/);
   assert.throws(() => expandDeveloperAgentTurn(turn, { ...saved, version: 2 }), /agent_conflict/);
 });
+
+test("agent sessions bind an existing conversation revision without changing the agent definition", () => {
+  const raw = { agent_id: id, version: 1, input: "Continue", conversation: { id, revision: 3 } };
+  const parsed = parseDeveloperAgentTurn(raw);
+  assert.deepEqual(parsed.conversation, raw.conversation);
+  assert.deepEqual(
+    expandDeveloperAgentTurn(parsed, { id, version: 1, definition }).conversation,
+    raw.conversation,
+  );
+  for (const conversation of [
+    { id, revision: -1 },
+    { id, revision: 3, owner_id: id },
+    { id: "foreign", revision: 3 },
+    null,
+  ])
+    assert.throws(() => parseDeveloperAgentTurn({ ...raw, conversation }), /agent_invalid/);
+});

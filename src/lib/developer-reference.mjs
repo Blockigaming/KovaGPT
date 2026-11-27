@@ -158,8 +158,8 @@ export const DEVELOPER_ENDPOINTS = [
     "Agent turns",
     "agent-turns",
     "POST",
-    "Supply agent_id, version, input and optionally one to four distinct versioned skill references. Quote agent-turns.",
-    "The server loads the exact authorized definition and binds the versions to the quote. Returns a bounded native Responses result. No model-directed delegation, persistent sessions or automatic chaining is claimed.",
+    "Supply agent_id, version, input, optionally one to four distinct versioned skill references, and an optional conversation {id, revision}. Quote agent-turns.",
+    "The server loads the exact authorized definition and binds the versions to the quote. Returns a bounded native Responses result. Conversation-bound turns reuse private persisted history; append new messages explicitly. Changed revisions invalidate authorization. No model-directed delegation or automatic chaining is claimed.",
   ),
   endpoint(
     "skills",
@@ -198,7 +198,7 @@ export const DEVELOPER_ENDPOINTS = [
     "Background responses",
     "response-jobs",
     "GET POST",
-    "POST create with id, currency, maximum_charge, input and quote_token. Input is one nonstreaming text Responses request of at most 2,048 output tokens. GET id or list; POST cancel with id.",
+    "POST create with id, currency, maximum_charge, input and quote_token. Input is one nonstreaming Responses request with at most 2,048 output tokens, bounded text history, optional strict structured output or up to four client-owned function proposals. GET id or list; POST cancel with id.",
     "An exact lost-acknowledgement retry uses the original ID and identical input including quote. The worker rechecks authority and price. Only settled completed jobs expose output; in-flight work cannot be canceled by this resource.",
   ),
   endpoint(
