@@ -194,10 +194,10 @@ test("a second tab can send while the first tab stays open", async ({ page }, in
   });
   await second.goto("/");
   await waitForKovaHydration(second);
-  await expect(second.locator(".kova-composer-tray")).toHaveCSS(
-    "background-color",
-    "rgb(33, 33, 33)",
-  );
+  const workspaceColor = await second
+    .locator(".kova-chat-main")
+    .evaluate((node) => getComputedStyle(node).backgroundColor);
+  await expect(second.locator(".kova-composer-tray")).toHaveCSS("background-color", workspaceColor);
   await second.getByRole("textbox", { name: "Message KovaGPT" }).fill("Send from the second tab");
   await second.getByRole("button", { name: "Send message", exact: true }).click();
   await expect(second.getByText("Reply from the second tab.", { exact: true })).toBeVisible();
