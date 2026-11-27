@@ -155,6 +155,8 @@ vm.runInNewContext(output, {
         "@/lib/limits",
         "@/lib/composer-keyboard.mjs",
         "sonner",
+        "@/lib/conversation-limits.mjs",
+        "@/lib/preload-conversation-view",
       ].includes(id)
     )
       return {};

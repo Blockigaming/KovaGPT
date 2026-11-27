@@ -268,8 +268,6 @@ function fixture() {
     TypeError,
     safeLocale: () => "en-US",
     goalForRequest: () => undefined,
-    conversationLimitReached: () => false,
-    conversationLimitMessage: () => "",
     tier: "free",
     personalityToInstruction: () => "",
     loadPersonality: () => null,

@@ -2,13 +2,11 @@
 // fetched once, in the background, so the first message is ready immediately.
 let started = false;
 
-export const loadActiveChatTranscript = () => import("@/components/ActiveChatTranscript");
-
 export function preloadConversationView() {
   if (started || typeof window === "undefined") return;
   started = true;
   const warm = () => {
-    void loadActiveChatTranscript();
+    void import("@/components/ActiveChatTranscript");
     void import("@/components/ChatMessage");
     void import("@/components/ChatChart");
     void import("@/components/ResponseBrowserCard");
