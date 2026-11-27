@@ -85,50 +85,142 @@ const inputSchema = {
   },
   required: ["model"],
 };
-const definitions = [
-  ...developerFileTools,
+const model = { type: "string", minLength: 2, maxLength: 80 };
+const text = (maxLength: number) => ({ type: "string", minLength: 1, maxLength });
+const integer = (maximum: number) => ({ type: "integer", minimum: 1, maximum });
+const objectSchema = (properties: Record<string, unknown>, required: string[]) => ({
+  type: "object",
+  properties,
+  required,
+  additionalProperties: false,
+});
+const paidTools = [
+  { name: "kova_generate_text", operation: "responses", scope: "chat", schema: inputSchema },
   {
-    name: "kova_quote",
-    description:
-      "Create a two-minute signed maximum-price quote. This does not start generation or spend credit.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        operation: { enum: ["responses", "images", "embeddings"] },
-        input: inputSchema,
-      },
-      required: ["operation", "input"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    name: "kova_generate_image",
+    operation: "images",
+    scope: "image_generation",
+    schema: inputSchema,
   },
-  ...[
-    ["kova_generate_text", "responses", "chat"],
-    ["kova_generate_image", "images", "image_generation"],
-    ["kova_embed", "embeddings", "embeddings"],
-  ].map(([name, operation, scope]) => ({
-    name,
-    operation,
-    scope,
-    description: `Execute ${operation} with a previously accepted signed quote and a unique retry key; this spends prepaid API credit.`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        input: inputSchema,
-        quoteToken: { type: "string" },
-        requestKey: { type: "string", maxLength: 128 },
+  { name: "kova_embed", operation: "embeddings", scope: "embeddings", schema: inputSchema },
+  {
+    name: "kova_search",
+    operation: "search",
+    scope: "chat",
+    schema: objectSchema(
+      { model, query: text(8000), max_output_tokens: integer(32768), max_tool_calls: integer(3) },
+      ["model", "query", "max_output_tokens", "max_tool_calls"],
+    ),
+  },
+  {
+    name: "kova_moderate",
+    operation: "moderations",
+    scope: "moderation",
+    schema: objectSchema({ model, input: text(8000) }, ["model", "input"]),
+  },
+  {
+    name: "kova_decide",
+    operation: "decisions",
+    scope: "decisions",
+    schema: objectSchema(
+      {
+        model,
+        input: text(16000),
+        questions: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: {
+            type: "object",
+            properties: {
+              type: { enum: ["predicate", "choice", "score"] },
+              name: text(64),
+              instructions: text(2000),
+              choices: {
+                type: "array",
+                minItems: 2,
+                maxItems: 10,
+                items: objectSchema(
+                  {
+                    value: { anyOf: [{ type: "string", maxLength: 160 }, { type: "boolean" }] },
+                    description: text(500),
+                  },
+                  ["value"],
+                ),
+              },
+              levels: {
+                type: "array",
+                minItems: 2,
+                maxItems: 10,
+                items: objectSchema({ label: text(160), description: text(500) }, ["label"]),
+              },
+            },
+            required: ["type", "name", "instructions"],
+            additionalProperties: false,
+          },
+        },
       },
-      required: ["input", "quoteToken", "requestKey"],
-      additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  })),
+      ["model", "input", "questions"],
+    ),
+  },
+  {
+    name: "kova_analyze",
+    operation: "analysis",
+    scope: "file_analysis",
+    schema: objectSchema({ model, input: text(16000), max_output_tokens: integer(2048) }, [
+      "model",
+      "input",
+      "max_output_tokens",
+    ]),
+  },
+  {
+    name: "kova_agent_turn",
+    operation: "agent-turns",
+    scope: "chat",
+    schema: objectSchema(
+      { agent_id: { type: "string", format: "uuid" }, version: integer(20), input: text(16000) },
+      ["agent_id", "version", "input"],
+    ),
+  },
 ];
+function definitionsForScopes(scopes: string[]) {
+  const permitted = paidTools.filter((tool) => scopes.includes(tool.scope));
+  return [
+    ...developerFileTools.filter((tool) => scopes.includes(tool.scope)),
+    ...(permitted.length
+      ? [
+          {
+            name: "kova_quote",
+            description:
+              "Create a two-minute signed maximum-price quote for an authorized operation. This does not spend credit. Model eligibility and feature gates apply.",
+            inputSchema: objectSchema(
+              {
+                operation: { enum: permitted.map((tool) => tool.operation) },
+                input: { type: "object" },
+              },
+              ["operation", "input"],
+            ),
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+          },
+        ]
+      : []),
+    ...permitted.map(({ schema, ...tool }) => ({
+      ...tool,
+      description: `Execute ${tool.operation} with a previously accepted signed quote and a unique retry key; this spends prepaid API credit. Model eligibility and feature gates apply.`,
+      inputSchema: objectSchema({ input: schema, quoteToken: text(32768), requestKey: text(128) }, [
+        "input",
+        "quoteToken",
+        "requestKey",
+      ]),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    })),
+  ];
+}
 export async function handleDeveloperMcp(request: Request) {
   const challenge = mcpOAuthAnonymousChallenge(request);
   if (challenge) return challenge;
@@ -167,6 +259,7 @@ async function handleMcpMessage(request: Request) {
         ? new Response(null, { status: 202, headers: { "Cache-Control": "no-store" } })
         : error(-32600, "Notification unsupported");
     const params = body.params as Record<string, unknown> | undefined;
+    const definitions = definitionsForScopes(identity.capabilities);
     let result: unknown;
     if (body.method === "initialize") {
       const negotiated =
@@ -183,22 +276,41 @@ async function handleMcpMessage(request: Request) {
     } else if (body.method === "ping") result = {};
     else if (body.method === "tools/list")
       result = {
-        tools: definitions
-          .filter((tool) => !("scope" in tool) || identity.capabilities.includes(tool.scope))
-          .map(({ name, description, inputSchema, annotations }) => ({
-            name,
-            description,
-            inputSchema,
-            annotations,
-          })),
+        tools: definitions.map(({ name, description, inputSchema, annotations }) => ({
+          name,
+          description,
+          inputSchema,
+          annotations,
+        })),
       };
     else if (body.method === "tools/call") {
       const tool = definitions.find((item) => item.name === params?.name);
       const args = params?.arguments as Record<string, unknown> | undefined;
       if (!tool || !args || typeof args !== "object" || Array.isArray(args))
         return error(-32602, "Invalid tool arguments");
-      if ("scope" in tool && !identity.capabilities.includes(tool.scope))
+      if (
+        tool.name === "kova_quote" &&
+        !paidTools.some(
+          (item) => item.operation === args.operation && identity.capabilities.includes(item.scope),
+        )
+      )
         return error(-32602, "Tool scope unavailable");
+      if (!("fileOperation" in tool)) {
+        const allowed =
+          tool.name === "kova_quote"
+            ? ["operation", "input"]
+            : ["input", "quoteToken", "requestKey"];
+        if (
+          Object.keys(args).length !== allowed.length ||
+          allowed.some((key) => !Object.hasOwn(args, key))
+        )
+          return error(-32602, "Invalid tool arguments");
+        if (
+          tool.name !== "kova_quote" &&
+          (typeof args.quoteToken !== "string" || typeof args.requestKey !== "string")
+        )
+          return error(-32602, "Invalid tool arguments");
+      }
       try {
         if (
           args.input &&

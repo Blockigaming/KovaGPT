@@ -13,8 +13,8 @@ let transformed = source.replace(
  const authenticateDeveloper=async()=>{if(!state.enabled)throw new Error('developer_platform_disabled');return {capabilities:state.scopes,ownerId:"owner",project_id:"project",id:"key"};};
  const developerJson=(value,status=200)=>Response.json(value,{status});
  const developerFailure=(error)=>developerJson({error:{message:error.message}},503);
- const developerQuote=async()=>({quoteToken:'signed',maximumCharge:10});
- const executeDeveloper=async()=>{state.calls++;return Response.json({output:'text'});};
+ const developerQuote=async()=>{state.quotes=(state.quotes??0)+1;return {quoteToken:'signed',maximumCharge:10};};
+ const executeDeveloper=async(identity,operation,input,key,quote)=>{state.calls++;state.last={identity,operation,input,key,quote};return Response.json({output:'text'});};
 `,
 );
 transformed = transformed.replace(
@@ -64,7 +64,7 @@ test("MCP negotiates a supported version and exposes only authenticated key scop
   ).json();
   assert.deepEqual(
     tools.result.tools.map((item) => item.name),
-    ["kova_quote", "kova_generate_text"],
+    ["kova_quote", "kova_generate_text", "kova_search", "kova_agent_turn"],
   );
   assert.equal(
     (await handleDeveloperMcp(request({ jsonrpc: "2.0", method: "notifications/initialized" })))
@@ -157,13 +157,7 @@ test("MCP files remain hidden without consent and route scoped calls without cre
     ).json();
     assert.deepEqual(
       list.result.tools.map((tool) => tool.name),
-      [
-        "kova_list_files",
-        "kova_read_file",
-        "kova_upload_text_file",
-        "kova_delete_file",
-        "kova_quote",
-      ],
+      ["kova_list_files", "kova_read_file", "kova_upload_text_file", "kova_delete_file"],
     );
     assert.equal(
       (await (await invoke("kova_read_file", { id: "file" })).json()).result.structuredContent.id,
@@ -188,4 +182,78 @@ test("MCP OAuth bearer uses its granted scope and applies the same response wrap
     (await response.json()).result.tools.map((tool) => tool.name),
     ["kova_quote", "kova_embed"],
   );
+});
+
+test("additional MCP tools use the same scope, quote and metered execution boundary", async () => {
+  const invoke = (name, args) =>
+    handleDeveloperMcp(
+      request({ jsonrpc: "2.0", id: 10, method: "tools/call", params: { name, arguments: args } }),
+    );
+  const before = state.calls;
+  const quotes = state.quotes ?? 0;
+  try {
+    state.scopes = ["moderation", "decisions", "file_analysis"];
+    const list = await (
+      await handleDeveloperMcp(request({ jsonrpc: "2.0", id: 11, method: "tools/list" }))
+    ).json();
+    assert.deepEqual(
+      list.result.tools.map((t) => t.name),
+      ["kova_quote", "kova_moderate", "kova_decide", "kova_analyze"],
+    );
+    assert.deepEqual(list.result.tools[0].inputSchema.properties.operation.enum, [
+      "moderations",
+      "decisions",
+      "analysis",
+    ]);
+    assert.equal(
+      (await (await invoke("kova_quote", { operation: "search", input: {} })).json()).error.code,
+      -32602,
+    );
+    assert.equal(state.quotes ?? 0, quotes);
+    for (const [tool, operation, input] of [
+      ["kova_moderate", "moderations", { model: "moderation", input: "test" }],
+      ["kova_decide", "decisions", { model: "decisions", input: "test", questions: [] }],
+      ["kova_analyze", "analysis", { model: "analysis", input: "test", max_output_tokens: 10 }],
+    ]) {
+      assert.equal(
+        (await (await invoke("kova_quote", { operation, input })).json()).result.structuredContent
+          .quoteToken,
+        "signed",
+      );
+      assert.equal(
+        (await (await invoke(tool, { input, quoteToken: "signed", requestKey: "stable" })).json())
+          .result.structuredContent.output,
+        "text",
+      );
+      assert.equal(state.last.operation, operation);
+      assert.equal(state.last.identity.project_id, "project");
+      assert.deepEqual(state.last.input, input);
+      assert.equal(state.last.quote, "signed");
+    }
+    assert.equal(state.calls, before + 3);
+    assert.equal(
+      (
+        await (
+          await invoke("kova_search", { input: {}, quoteToken: "signed", requestKey: "stable" })
+        ).json()
+      ).error.code,
+      -32602,
+    );
+    assert.equal(
+      (
+        await (
+          await invoke("kova_analyze", {
+            input: {},
+            quoteToken: "signed",
+            requestKey: "stable",
+            project_id: "foreign",
+          })
+        ).json()
+      ).error.code,
+      -32602,
+    );
+    assert.equal(state.calls, before + 3);
+  } finally {
+    state.scopes = ["chat"];
+  }
 });
