@@ -83,13 +83,8 @@ export function normalizeDeveloperProInvoice(event, environment) {
 
 function processorId(value, prefix) {
   const id = typeof value === "string" ? value : value?.id;
-  return typeof id === "string" &&
-    id.length <= 200 &&
-    new RegExp(`^${prefix}_[A-Za-z0-9_]+function processorId(value, prefix) {
-  const id = typeof value === "string" ? value : value?.id;
-).test(id)
-    ? id
-    : null;
+  if (typeof id !== "string" || id.length > 200 || !id.startsWith(prefix + "_")) return null;
+  return /^[A-Za-z0-9_]+$/.test(id.slice(prefix.length + 1)) ? id : null;
 }
 
 export function developerProPaymentReference(proof, payments) {
