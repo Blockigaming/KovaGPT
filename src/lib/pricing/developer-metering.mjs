@@ -156,8 +156,8 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       request.body.max_output_tokens > contract.maximumUsage.output_tokens
     )
       fail("billing_output_unbounded");
-    // Only an explicitly reviewed, token-metered inline image is supported.
-    // Hosted tools and other media remain fail-closed.
+    // Inline images and web search require their separately approved contracts.
+    // Other hosted tools and media remain fail-closed.
     const images = Array.isArray(request.body.input)
       ? request.body.input.flatMap((item) =>
           Array.isArray(item?.content)
@@ -381,7 +381,7 @@ export function settleDeveloperQuote(prepared, actual) {
   };
 }
 
-/** Retain only top-level accounting fields; image bytes and model output are never buffered. */
+/** Retain accounting fields. Only the search meter temporarily collects bounded output metadata. */
 export function createUsageCollector(includeOutput = false) {
   const selected = new Set(["usage", "id", "status", "model"]);
   if (includeOutput) selected.add("output");
@@ -578,6 +578,10 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
           fallbackId,
           prepared.contract.expectedResponseModels,
         );
+      const requestedSearch =
+        prepared.contract.meter === "responses_search" &&
+        prepared.options.usage.dimensions.web_search_calls > 0;
+      if (requestedSearch && actual?.dimensions.web_search_calls === 0) actual = null;
       if (actual) await finalize("settled", settleDeveloperQuote(prepared, actual));
       else await finalize("uncertain");
     };

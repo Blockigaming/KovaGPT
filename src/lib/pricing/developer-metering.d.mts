@@ -24,7 +24,7 @@ export function settleDeveloperQuote(
   prepared: PreparedDeveloperQuote,
   actual: { dimensions: Record<string, number>; providerResponseId: string },
 ): Record<string, unknown>;
-export function createUsageCollector(): {
+export function createUsageCollector(includeOutput?: boolean): {
   push(text: string): void;
   value(): Record<string, unknown> | null;
 };

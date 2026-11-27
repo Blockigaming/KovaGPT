@@ -358,3 +358,88 @@ test("inline vision requires a reviewed token upper bound and cannot bypass rese
     /billing_dimensions_unsupported/,
   );
 });
+
+function searchFixture() {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  contract.provider = "openai";
+  contract.meter = "responses_search";
+  contract.searchContentAccounting = "included_in_input_tokens";
+  contract.maximumWebSearchInputTokens = 100;
+  contract.maximumUsage.web_search_calls = 3;
+  f.request.provider = "openai";
+  Object.assign(f.request.body, {
+    tools: [{ type: "web_search", search_context_size: "low" }],
+    max_tool_calls: 2,
+    tool_choice: "required",
+    stream: false,
+  });
+  for (const row of f.config.registry) row.provider = "openai";
+  f.config.registry.push({
+    ...f.config.registry[0],
+    billing_dimension: "web_search_calls",
+    unit_quantity: 1,
+    unit_price: 2,
+  });
+  return f;
+}
+
+test("hosted search reserves its separate per-call price and requires reviewed token bounds", () => {
+  const at = new Date("2026-09-05");
+  const f = searchFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(p.options.usage.dimensions.web_search_calls, 2);
+  assert.equal(p.quote.upstreamBreakdown.web_search_calls, 4);
+  for (const mutate of [
+    (v) => v.config.registry.pop(),
+    (v) => (v.request.body.max_tool_calls = 4),
+    (v) => (v.request.body.stream = true),
+    (v) => {
+      v.config.version.public_price_configuration.contracts[0].maximumWebSearchInputTokens = 1000;
+    },
+    (v) => {
+      delete v.config.version.public_price_configuration.contracts[0].searchContentAccounting;
+    },
+  ]) {
+    const bad = searchFixture();
+    mutate(bad);
+    assert.throws(() => prepareDeveloperQuote(bad.config, bad.request, at));
+  }
+  delete f.request.body.tools;
+  delete f.request.body.tool_choice;
+  delete f.request.body.max_tool_calls;
+  const plain = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(plain.options.usage.dimensions.web_search_calls, 0);
+  assert.equal(plain.quote.upstreamBreakdown.web_search_calls, undefined);
+});
+
+test("hosted search settles authoritative completed tool calls, not client estimates", async () => {
+  const f = searchFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  const call = { id: "ws_fixture", type: "web_search_call", status: "completed" };
+  const value = { ...responseValue, output: [call, { type: "message" }] };
+  const collector = createUsageCollector(true);
+  const serialized = JSON.stringify(value);
+  for (let i = 0; i < serialized.length; i += 7) collector.push(serialized.slice(i, i + 7));
+  const actual = authoritativeUsage(collector.value(), "responses_search");
+  assert.equal(actual.dimensions.web_search_calls, 1);
+  const { calls, options } = harness({ prepared: p, send: async () => Response.json(value) });
+  await (await runMeteredProvider(options)).json();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].outcome, "settled");
+  assert.equal(calls[0].result.usage.web_search_calls, 1);
+  for (const output of [
+    undefined,
+    [call, call],
+    [{ ...call, status: "failed" }],
+    [{ type: "code_interpreter_call" }],
+  ]) {
+    assert.equal(authoritativeUsage({ ...value, output }, "responses_search"), null);
+  }
+  const uncertain = harness({
+    prepared: p,
+    send: async () => Response.json({ ...value, output: [{ type: "message" }] }),
+  });
+  await (await runMeteredProvider(uncertain.options)).json();
+  assert.equal(uncertain.calls[0].outcome, "uncertain");
+});

@@ -14,6 +14,7 @@ export function parseDeveloperPlaygroundOptions(raw) {
     "tools",
     "tool_choice",
     "parallel_tool_calls",
+    "max_tool_calls",
     "file_ids",
   ];
   if (

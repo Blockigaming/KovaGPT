@@ -179,3 +179,34 @@ test("inline vision accepts one bounded PNG and rejects external URLs and unsupp
     /responses_invalid/,
   );
 });
+
+test("explicit bounded web search uses only the native nonstream hosted tool", () => {
+  const search = {
+    ...input,
+    tools: [{ type: "web_search", search_context_size: "low" }],
+    max_tool_calls: 2,
+  };
+  const value = parseDeveloperInput("responses", search);
+  assert.equal(value.capability, "chat");
+  assert.equal(value.body.store, false);
+  assert.equal(value.body.stream, false);
+  assert.equal(value.body.max_tool_calls, 2);
+  assert.equal(value.body.tool_choice, "required");
+  assert.deepEqual(value.body.tools, search.tools);
+  for (const patch of [
+    { max_tool_calls: 4 },
+    { max_tool_calls: 0 },
+    { max_tool_calls: undefined },
+    { stream: true },
+    { tool_choice: "none" },
+    { parallel_tool_calls: false },
+    { tools: [{ type: "web_search", search_context_size: "high" }] },
+    { tools: [...search.tools, tool] },
+    { tools: [{ ...search.tools[0], user_location: {} }] },
+  ]) {
+    assert.throws(
+      () => parseDeveloperInput("responses", { ...search, ...patch }),
+      /responses_invalid/,
+    );
+  }
+});

@@ -37,3 +37,17 @@ Select Streaming responses to use the approved streaming-capability model list. 
 ## Advanced Playground options
 
 Responses and streaming requests support additional JSON for instructions, strict structured outputs, client-owned function definitions, tool selection and project file IDs. The controls do not permit overriding the model, input, stream mode, token bound, reasoning effort or storage settings. All options participate in the same signed quote and server-side validation. Files exposes the project file ID for this purpose. The Playground does not execute client-defined functions itself.
+
+## Bounded hosted web search (disabled until qualified)
+
+The Responses endpoint accepts a single native web-search tool with low search context, an explicit `max_tool_calls` of 1–3 and nonstreaming execution. Use a chat-scoped key and an approved OpenAI model contract with the `responses_search` meter. For example, the additional request fields are:
+
+```json
+{
+  "tools": [{ "type": "web_search", "search_context_size": "low" }],
+  "max_tool_calls": 2,
+  "stream": false
+}
+```
+
+The server selects the required tool, rejects mixed hosted tools, and reserves the approved token and call dimensions before dispatch. A contract needs an approved `web_search_calls` price, a reviewed maximum search input bound, and evidence that search-content charges are included in the returned input-token meter. Fixed-block search pricing and unqualified Azure contracts are excluded. Only actual, uniquely identified completed search calls contribute to settlement; malformed or missing required tool evidence leaves the reservation for reconciliation. The user can supply these fields through Advanced request options. The API catalog advertises support only when a matching contract and runtime gate exist. `KOVA_DEVELOPER_WEB_SEARCH_ENABLED` remains off pending provider-specific metering verification. No upstream rates, provider calls, or payment activity were authorized by this implementation.

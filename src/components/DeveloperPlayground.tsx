@@ -453,7 +453,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   className="w-full min-w-0 font-mono text-xs"
                   value={advanced}
                   disabled={busy}
-                  placeholder={'{"instructions":"Answer concisely"}'}
+                  placeholder="Additional JSON options"
                   onChange={(event) => {
                     setAdvanced(event.target.value);
                     setDispatched(false);
@@ -462,7 +462,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 />
               </label>
               <p className="text-xs text-muted-foreground">
-                Set instructions, schemas, functions and file IDs. Your client runs functions.
+                Configure schemas, tools and files. Client code runs custom functions.
               </p>
             </details>
           )}
