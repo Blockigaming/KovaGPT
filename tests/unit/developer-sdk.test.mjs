@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { KovaGPT, KovaError, responseEvents } from "../../sdk/javascript/index.mjs";
+import { KovaGPT, KovaError, responseEvents, chatCompletionEvents } from "../../sdk/javascript/index.mjs";
 const apiKey = `kova_11111111-1111-4111-8111-111111111111_${"a".repeat(43)}`;
 const input = { model: "kova-fast", input: "hello", max_output_tokens: 100 };
 const options = { currency: "USD", maximumCharge: 10, idempotencyKey: "stable-request" };
@@ -276,4 +276,33 @@ test("image edit SDK requires an inline source and uses the quoted images contra
   assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "images", input: body });
   assert.deepEqual(JSON.parse(f.calls[1].body), body);
   assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/images");
+});
+
+test("vector SDK uses scoped resources, fixed operations and stable creation identity", async () => {
+  const id = "55555555-5555-4555-8555-555555555555";
+  const f = fixture(() => Response.json({}));
+  await f.client.vectorStores.create({ name: "index", model: "embedding", dimensions: 2 }, { idempotencyKey: "stable" });
+  await f.client.vectorStores.upsert({ store_id: id, entry_id: "item", model: "embedding", vector: [1, 0], text: "example" });
+  await f.client.vectorStores.search({ store_id: id, model: "embedding", vector: [1, 0] });
+  await f.client.vectorStores.listEntries(id, { page: 1 });
+  await f.client.vectorStores.deleteEntry(id, "item");
+  assert.deepEqual(f.calls.slice(0, 3).map(c => JSON.parse(c.body).operation), ["create", "upsert", "search"]);
+  assert.equal(f.calls[0].headers["Idempotency-Key"], "stable");
+  assert.equal(f.calls[3].url, "https://kovagpt.com/api/v1/vector-stores?id=" + id + "&entries=true&page=1");
+  assert.equal(f.calls[4].method, "DELETE");
+  assert.ok(f.calls.every(c => !c.headers["X-Kova-Quote"]));
+  await assert.rejects(f.client.vectorStores.retrieveEntry(id, "x&other=1"), /vector_entry_invalid/);
+  assert.equal(f.calls.length, 5);
+});
+
+test("chat completion stream requires both finish reason and DONE", async () => {
+  const chunk = { object: "chat.completion.chunk", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
+  const frame = "data: " + JSON.stringify(chunk) + "\n\n";
+  for (const [data, valid] of [[frame + "data: [DONE]\n\n", true], [frame, false], ["data: [DONE]\n\n", false]]) {
+    const response = new Response(data, { headers: { "Content-Type": "text/event-stream" } });
+    const collect = async () => { const result = []; for await (const event of chatCompletionEvents(response)) result.push(event); return result; };
+    if (valid) assert.deepEqual(await collect(), [chunk]);
+    else await assert.rejects(collect(), /stream_truncated/);
+    assert.equal(response.body.locked, false);
+  }
 });

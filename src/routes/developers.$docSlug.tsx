@@ -71,6 +71,12 @@ function DeveloperDoc() {
           <li>
             /api/v1/embeddings: model, text input or up to 32 text inputs, optional dimensions.
           </li>
+          <li>/api/v1/chat/completions: bounded text-only compatible chat and SSE.</li>
+          <li>/api/v1/search: quoted, gated native hosted search.</li>
+          <li>/api/v1/moderations: quoted, gated text moderation.</li>
+          <li>/api/v1/files and /api/v1/file-search: scoped text storage and lexical retrieval.</li>
+          <li>/api/v1/vector-stores: scoped vector resources and cosine retrieval; migration and activation required.</li>
+          <li>/api/v1/usage: key-scoped request history and settlement status.</li>
         </ul>
         <p>
           A changed request, expired quote, increased charge, or changed pricing version needs a new
@@ -107,7 +113,7 @@ function DeveloperDoc() {
         <p>
           The source supports bounded private text files, gated inline PNG vision and editing, gated
           hosted web search, scoped usage reads, text moderation and a text-only Chat Completions
-          compatibility endpoint. The repository-local JavaScript and Python SDKs are not published
+          compatibility endpoint, scoped lexical file retrieval, and staged vector stores. The repository-local JavaScript and Python SDKs are not published
           packages. Other hosted tools, remote file inputs and unrestricted multimodal storage are not
           supported. Internal application endpoints remain outside the versioned API contract.
         </p>

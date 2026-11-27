@@ -7,7 +7,7 @@ import re
 import time
 from urllib.parse import urlsplit
 
-__all__ = ["Client", "KovaError", "APIResponse", "response_events"]
+__all__ = ["Client", "KovaError", "APIResponse", "response_events", "chat_completion_events"]
 _OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions"))
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", re.I)
 _MODEL = re.compile(r"[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*")
@@ -93,8 +93,8 @@ class APIResponse:
             self.close()
 
 
-def response_events(response, *, maximum_event_bytes=1048576):
-    """Yield native SSE events; require an explicit terminal event on exhaustion."""
+def _stream_events(response, *, maximum_event_bytes=1048576, chat=False):
+    """Validate the chosen SSE protocol and close the connection on exit."""
     _require("text/event-stream" in response.content_type.lower(), "stream_invalid")
     _require(type(maximum_event_bytes) is int and 1 <= maximum_event_bytes <= 1048576, "limit_invalid")
     terminal = False
@@ -104,7 +104,7 @@ def response_events(response, *, maximum_event_bytes=1048576):
         while True:
             raw = response._read(maximum_event_bytes + 1, line=True)
             if not raw:
-                _require(terminal and not lines and size == 0, "stream_truncated")
+                _require(terminal and not lines and size == 0 and not chat, "stream_truncated")
                 return
             size += len(raw)
             _require(size <= maximum_event_bytes, "stream_event_too_large")
@@ -131,10 +131,28 @@ def response_events(response, *, maximum_event_bytes=1048576):
             except (ValueError, RecursionError):
                 raise KovaError("stream_event_invalid") from None
             _require(isinstance(event, dict), "stream_event_invalid")
-            terminal = event.get("type") in ("response.completed", "response.incomplete", "response.failed", "error")
+            if chat:
+                choices = event.get("choices")
+                _require(event.get("object") == "chat.completion.chunk"
+                         and isinstance(choices, list) and len(choices) == 1
+                         and isinstance(choices[0], dict) and choices[0].get("index") == 0
+                         and "finish_reason" in choices[0]
+                         and choices[0]["finish_reason"] in (None, "stop", "length", "content_filter"),
+                         "stream_event_invalid")
+                terminal = choices[0]["finish_reason"] is not None
+            else:
+                terminal = event.get("type") in ("response.completed", "response.incomplete", "response.failed", "error")
             yield event
     finally:
         response.close()
+
+
+def response_events(response, *, maximum_event_bytes=1048576):
+    return _stream_events(response, maximum_event_bytes=maximum_event_bytes)
+
+
+def chat_completion_events(response, *, maximum_event_bytes=1048576):
+    return _stream_events(response, maximum_event_bytes=maximum_event_bytes, chat=True)
 
 
 class Client:
@@ -220,6 +238,45 @@ class Client:
         key = _identifier(idempotency_key, _RETRY, "idempotency_key_required")
         return self._request("files", method="POST", body=_json_body(data, 131072),
                              headers={"Idempotency-Key": key}).json(131072)
+
+    @staticmethod
+    def _vector_path(store_id, entry=None):
+        path = "vector-stores?id=" + _identifier(store_id, _UUID, "vector_id_invalid")
+        if entry is not None:
+            path += "&entry_id=" + _identifier(entry, re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}"), "vector_entry_invalid")
+        return path
+
+    def _vector_post(self, operation, data, headers=None):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("vector-stores", method="POST",
+                             body=_json_body({**data, "operation": operation}), headers=headers).json(1048576)
+
+    def vector_create(self, data, *, idempotency_key):
+        key = _identifier(idempotency_key, _RETRY, "idempotency_key_required")
+        return self._vector_post("create", data, {"Idempotency-Key": key})
+
+    def vector_upsert(self, data):
+        return self._vector_post("upsert", data)
+
+    def vector_search(self, data):
+        return self._vector_post("search", data)
+
+    def vector_list(self):
+        return self._get("vector-stores")
+
+    def vector_retrieve(self, store_id):
+        return self._get(self._vector_path(store_id))
+
+    def vector_entries(self, store_id, *, page=0):
+        _require(type(page) is int and 0 <= page <= 19, "vector_page_invalid")
+        return self._get(self._vector_path(store_id) + f"&entries=true&page={page}")
+
+    def vector_entry(self, store_id, entry):
+        _require(entry is not None, "vector_entry_invalid")
+        return self._get(self._vector_path(store_id, entry))
+
+    def vector_delete(self, store_id, *, entry=None):
+        return self._request(self._vector_path(store_id, entry), method="DELETE").json(65536)
 
     def quote(self, operation, data):
         _require(isinstance(operation, str) and operation in _OPERATIONS, "operation_invalid")

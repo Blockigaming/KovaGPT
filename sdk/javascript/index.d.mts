@@ -117,6 +117,17 @@ export class KovaError extends Error {
   requestMayHaveStarted: boolean;
 }
 export class KovaGPT {
+  readonly vectorStores: {
+    create(input: { name: string; model: string; dimensions: number }, options: { idempotencyKey: string; signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    upsert(input: { store_id: string; entry_id: string; model: string; vector: number[]; text: string; file_id?: string }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    search(input: { store_id: string; model: string; vector: number[]; limit?: number }, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    listEntries(id: string, options?: { page?: number; signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieveEntry(id: string, entry: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    deleteEntry(id: string, entry: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+  };
   readonly files: {
     search(
       input: { query: string; file_ids: string[]; limit?: number },
@@ -219,6 +230,11 @@ export interface DeveloperFile {
   expires_at: string;
 }
 export function responseEvents(
+  response: Response,
+  options?: { maximumEventBytes?: number },
+): AsyncGenerator<Record<string, unknown>>;
+
+export function chatCompletionEvents(
   response: Response,
   options?: { maximumEventBytes?: number },
 ): AsyncGenerator<Record<string, unknown>>;

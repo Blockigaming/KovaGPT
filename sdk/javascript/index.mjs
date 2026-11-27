@@ -171,6 +171,38 @@ export class KovaGPT {
         fail("file_id_invalid");
       return id;
     };
+    const vectorPath = (id, entry) => {
+      if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
+        fail("vector_id_invalid");
+      if (entry !== undefined && (typeof entry !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(entry)))
+        fail("vector_entry_invalid");
+      return "vector-stores?id=" + id + (entry === undefined ? "" : "&entry_id=" + entry);
+    };
+    const vectorPost = async (operation, input, { signal, headers } = {}) =>
+      smallJson(await this.#request("vector-stores", {
+        input: boundedInput({ ...boundedInput(input), operation }), signal, headers,
+      }), 1048576);
+    this.vectorStores = Object.freeze({
+      create: async (input, { idempotencyKey, signal } = {}) => {
+        if (typeof idempotencyKey !== "string" || !/^[\x21-\x7e]{1,128}$/.test(idempotencyKey))
+          fail("idempotency_key_required");
+        return vectorPost("create", input, { signal, headers: { "Idempotency-Key": idempotencyKey } });
+      },
+      upsert: (input, options) => vectorPost("upsert", input, { signal: options?.signal }),
+      search: (input, options) => vectorPost("search", input, { signal: options?.signal }),
+      list: async ({ signal } = {}) => smallJson(await this.#request("vector-stores", { signal }), 1048576),
+      retrieve: async (id, { signal } = {}) => smallJson(await this.#request(vectorPath(id), { signal }), 1048576),
+      listEntries: async (id, { page = 0, signal } = {}) => {
+        if (!Number.isSafeInteger(page) || page < 0 || page > 19) fail("vector_page_invalid");
+        return smallJson(await this.#request(vectorPath(id) + "&entries=true&page=" + page, { signal }), 1048576);
+      },
+      retrieveEntry: async (id, entry, { signal } = {}) =>
+        smallJson(await this.#request(vectorPath(id, entry), { signal }), 1048576),
+      delete: async (id, { signal } = {}) =>
+        smallJson(await this.#request(vectorPath(id), { signal, method: "DELETE" })),
+      deleteEntry: async (id, entry, { signal } = {}) =>
+        smallJson(await this.#request(vectorPath(id, entry), { signal, method: "DELETE" })),
+    });
     this.files = Object.freeze({
       search: async (input, { signal } = {}) =>
         smallJson(
@@ -299,7 +331,7 @@ export class KovaGPT {
 }
 
 /** Reading stops and cancels upstream when the caller breaks or throws. */
-export async function* responseEvents(response, { maximumEventBytes = 1048576 } = {}) {
+async function* streamEvents(response, { maximumEventBytes = 1048576 } = {}, chat = false) {
   if (
     !response.ok ||
     !response.headers.get("content-type")?.includes("text/event-stream") ||
@@ -339,18 +371,22 @@ export async function* responseEvents(response, { maximumEventBytes = 1048576 } 
         } catch {
           fail("stream_event_invalid");
         }
-        if (
-          ["response.completed", "response.incomplete", "response.failed", "error"].includes(
-            event?.type,
-          )
-        )
+        if (terminal || !event || typeof event !== "object" || Array.isArray(event))
+          fail("stream_event_invalid");
+        if (chat) {
+          if (event.object !== "chat.completion.chunk" || !Array.isArray(event.choices) ||
+              event.choices.length !== 1 || event.choices[0]?.index !== 0 ||
+              ![null, "stop", "length", "content_filter"].includes(event.choices[0].finish_reason))
+            fail("stream_event_invalid");
+          terminal = event.choices[0].finish_reason !== null;
+        } else if (["response.completed", "response.incomplete", "response.failed", "error"].includes(event.type))
           terminal = true;
         yield event;
       }
       if (new TextEncoder().encode(buffer).length > maximumEventBytes)
         fail("stream_event_too_large");
       if (done) {
-        if (buffer.trim() || !terminal) fail("stream_truncated");
+        if (buffer.trim() || !terminal || chat) fail("stream_truncated");
         return;
       }
     }
@@ -358,4 +394,12 @@ export async function* responseEvents(response, { maximumEventBytes = 1048576 } 
     await reader.cancel().catch(() => {});
     reader.releaseLock();
   }
+}
+
+export function responseEvents(response, options) {
+  return streamEvents(response, options);
+}
+
+export function chatCompletionEvents(response, options) {
+  return streamEvents(response, options, true);
 }

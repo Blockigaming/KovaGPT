@@ -4,7 +4,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from kovagpt import Client, KovaError, response_events
+from kovagpt import Client, KovaError, response_events, chat_completion_events
 
 KEY = "kova_11111111-1111-4111-8111-111111111111_" + "a" * 43
 ID = "55555555-5555-4555-8555-555555555555"
@@ -127,6 +127,35 @@ class SDKTests(unittest.TestCase):
             self.assertEqual(json.loads(self.calls[-2][2]), {"operation": operation, "input": body})
             self.assertEqual(self.calls[-1][1], "/api/v1/" + operation)
             self.assertEqual(json.loads(self.calls[-1][2]), body)
+
+    def test_vectors_scoped_crud_no_inference(self):
+        self.responses.extend(FakeResponse({}) for _ in range(5))
+        self.client.vector_create({"name": "index", "model": "embedding", "dimensions": 2}, idempotency_key="stable")
+        self.client.vector_upsert({"store_id": ID, "entry_id": "item", "model": "embedding", "vector": [1, 0], "text": "example"})
+        self.client.vector_search({"store_id": ID, "model": "embedding", "vector": [1, 0]})
+        self.client.vector_entries(ID, page=1)
+        self.client.vector_delete(ID, entry="item")
+        self.assertEqual([json.loads(call[2])["operation"] for call in self.calls[:3]], ["create", "upsert", "search"])
+        self.assertEqual(self.calls[0][3]["Idempotency-Key"], "stable")
+        self.assertEqual(self.calls[3][1], "/api/v1/vector-stores?id=" + ID + "&entries=true&page=1")
+        self.assertEqual(self.calls[4][:2], ("DELETE", "/api/v1/vector-stores?id=" + ID + "&entry_id=item"))
+        self.assertTrue(all("X-Kova-Quote" not in call[3] for call in self.calls))
+        with self.assertRaisesRegex(KovaError, "vector_entry_invalid"):
+            self.client.vector_entry(ID, "x&other=1")
+        self.assertEqual(len(self.calls), 5)
+
+    def test_chat_stream_requires_finish_and_done(self):
+        chunk = {"object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+        frame = ("data: " + json.dumps(chunk) + "\n\n").encode()
+        for data, valid in [(frame + b"data: [DONE]\n\n", True), (frame, False), (b"data: [DONE]\n\n", False)]:
+            self.responses.append(FakeResponse(data, content_type="text/event-stream"))
+            response = self.client.execute("chat/completions", {}, quote=quote(), **BUDGET)
+            if valid:
+                self.assertEqual(list(chat_completion_events(response)), [chunk])
+            else:
+                with self.assertRaisesRegex(KovaError, "stream_truncated"):
+                    list(chat_completion_events(response))
+            self.assertTrue(response.closed)
 
     def test_invalid_origin_and_unsafe_key(self):
         for url in ("http://kovagpt.com", "https://x:y@kovagpt.com", "https://kovagpt.com/path"):
