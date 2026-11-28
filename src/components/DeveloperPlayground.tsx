@@ -14,6 +14,7 @@ type Operation =
   | "moderations"
   | "search"
   | "audio/transcriptions"
+  | "audio/translations"
   | "audio/speech"
   | "analysis"
   | "browser"
@@ -43,6 +44,7 @@ const capability: Record<Operation, string> = {
   embeddings: "embeddings",
   moderations: "moderation",
   "audio/transcriptions": "audio_transcription",
+  "audio/translations": "audio_translation",
   "audio/speech": "audio_speech",
   search: "chat",
   analysis: "file_analysis",
@@ -76,6 +78,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [maxOutput, setMaxOutput] = useState("256");
   const realtimeSession = useRef<RealtimeSession | null>(null);
   const [sessionId, setSessionId] = useState("");
+  const [translationLanguage, setTranslationLanguage] = useState("en");
   const [realtimeOutput, setRealtimeOutput] = useState<"text" | "audio">("text");
   const [realtimeInput, setRealtimeInput] = useState<"text" | "audio">("text");
   const [maxSearchCalls, setMaxSearchCalls] = useState("1");
@@ -219,7 +222,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const acceptsImage = textOperation && selectedModel?.inlineImageInput === true;
   const acceptsEdit = operation === "images" && selectedModel?.imageEdits === true;
   const acceptsAudio =
-    operation === "audio/transcriptions" || (operation === "realtime" && realtimeInput === "audio");
+    operation === "audio/transcriptions" ||
+    operation === "audio/translations" ||
+    (operation === "realtime" && realtimeInput === "audio");
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
@@ -244,14 +249,19 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             },
           ];
       }
-      if (acceptsAudio && operation === "realtime") {
+      if (acceptsAudio && (operation === "realtime" || operation === "audio/translations")) {
+        const translation = operation === "audio/translations";
         if (
           !mediaFile ||
-          mediaFile.size < 4800 ||
-          mediaFile.size > 240000 ||
-          mediaFile.size % 2 !== 0
+          mediaFile.size < (translation ? 9600 : 4800) ||
+          mediaFile.size > (translation ? 480000 : 240000) ||
+          mediaFile.size % (translation ? 9600 : 2) !== 0
         )
-          throw new Error("Select raw PCM16 mono audio at 24 kHz (0.1–5 seconds).");
+          throw new Error(
+            translation
+              ? "Select raw PCM16 mono audio at 24 kHz (0.2–10 seconds in 200 ms frames)."
+              : "Select raw PCM16 mono audio at 24 kHz (0.1–5 seconds).",
+          );
         const bytes = new Uint8Array(await mediaFile.arrayBuffer());
         let binary = "";
         for (let offset = 0; offset < bytes.length; offset += 16384)
@@ -292,28 +302,30 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   output_modality: realtimeOutput,
                   max_output_tokens: Number(maxOutput),
                 }
-              : acceptsAudio
-                ? { model, audio: sourceAudio }
-                : operation === "audio/speech"
-                  ? { model, input: prompt, voice: "default", response_format: "mp3" }
-                  : operation === "analysis"
-                    ? {
-                        model,
-                        input: prompt,
-                        max_output_tokens: Number(maxOutput),
-                        ...(analysisFileIds.trim()
-                          ? { file_ids: analysisFileIds.trim().split(/[\s,]+/) }
-                          : {}),
-                      }
-                    : operation === "browser"
-                      ? (() => {
-                          const [url, ...navigate] = prompt
-                            .split(/\r?\n/)
-                            .map((value) => value.trim())
-                            .filter(Boolean);
-                          return { model, url, ...(navigate.length ? { navigate } : {}) };
-                        })()
-                      : { model, input: prompt };
+              : operation === "audio/translations"
+                ? { model, audio: sourceAudio, target_language: translationLanguage }
+                : acceptsAudio
+                  ? { model, audio: sourceAudio }
+                  : operation === "audio/speech"
+                    ? { model, input: prompt, voice: "default", response_format: "mp3" }
+                    : operation === "analysis"
+                      ? {
+                          model,
+                          input: prompt,
+                          max_output_tokens: Number(maxOutput),
+                          ...(analysisFileIds.trim()
+                            ? { file_ids: analysisFileIds.trim().split(/[\s,]+/) }
+                            : {}),
+                        }
+                      : operation === "browser"
+                        ? (() => {
+                            const [url, ...navigate] = prompt
+                              .split(/\r?\n/)
+                              .map((value) => value.trim())
+                              .filter(Boolean);
+                            return { model, url, ...(navigate.length ? { navigate } : {}) };
+                          })()
+                        : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
@@ -426,7 +438,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         }
       } else result = await request(accepted.operation, controller, accepted.requestBody, headers);
       if (!mounted.current || controller.signal.aborted) return;
-      if (accepted.operation === "realtime") {
+      if (accepted.operation === "realtime" || accepted.operation === "audio/translations") {
         const value = record(result);
         if (!["completed", "incomplete"].includes(String(value.status)))
           throw new Error("Realtime response did not complete. Check Logs before retrying.");
@@ -463,7 +475,11 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             binary += String.fromCharCode(...wave.subarray(offset, offset + 16384));
           setAudio(`data:audio/wav;base64,${btoa(binary)}`);
           setOutput(
-            typeof value.transcript === "string" ? value.transcript : "AI-generated audio.",
+            typeof value.transcript === "string"
+              ? value.transcript
+              : typeof value.text === "string"
+                ? value.text
+                : "AI-generated audio.",
           );
         } else setOutput(typeof value.text === "string" ? value.text : "No text output.");
         if (value.status === "incomplete")
@@ -589,6 +605,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="audio/speech">Speech generation</option>
               <option value="realtime">Native Realtime turn</option>
               <option value="audio/transcriptions">Audio transcription</option>
+              <option value="audio/translations">Native audio translation</option>
             </select>
           </label>
           <label className="block space-y-1 text-sm">
@@ -729,17 +746,54 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               />
             </label>
           )}
+          {operation === "audio/translations" && (
+            <label className="block space-y-1 text-sm">
+              <span>Target language</span>
+              <select
+                value={translationLanguage}
+                disabled={busy}
+                onChange={(event) => {
+                  setTranslationLanguage(event.target.value);
+                  setDispatched(false);
+                  resetQuote();
+                }}
+                className="w-full rounded-md border bg-background p-2"
+              >
+                {Object.entries({
+                  en: "English",
+                  es: "Spanish",
+                  fr: "French",
+                  de: "German",
+                  it: "Italian",
+                  pt: "Portuguese",
+                  ja: "Japanese",
+                  ko: "Korean",
+                  zh: "Chinese",
+                }).map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {acceptsAudio && (
             <label className="block min-w-0 space-y-1 text-sm">
               <span>
                 {operation === "realtime"
                   ? "Raw PCM16 recording (24 kHz mono, 0.1–5 seconds)"
-                  : "WAV recording (16 kHz mono PCM, 0.1–20 seconds)"}
+                  : operation === "audio/translations"
+                    ? "Raw PCM16 (24 kHz mono, 0.2–10 seconds, exact 200 ms frames)"
+                    : "WAV recording (16 kHz mono PCM, 0.1–20 seconds)"}
               </span>
               <Input
                 ref={mediaInput}
                 type="file"
-                accept={operation === "realtime" ? ".pcm,.raw" : ".wav,audio/wav,audio/x-wav"}
+                accept={
+                  operation === "realtime" || operation === "audio/translations"
+                    ? ".pcm,.raw"
+                    : ".wav,audio/wav,audio/x-wav"
+                }
                 disabled={busy}
                 onChange={(event) => {
                   setMediaFile(event.target.files?.[0] ?? null);
@@ -748,7 +802,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 }}
               />
               <p className="text-xs text-muted-foreground">
-                Only submit recordings you have permission to transcribe.
+                Only submit recordings you have permission to process.
               </p>
             </label>
           )}

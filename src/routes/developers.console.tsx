@@ -61,6 +61,7 @@ const CSV_FIELDS = [
   "moderation_requests",
   "transcription_seconds",
   "speech_character_credits",
+  "translation_seconds",
   "realtime_text_input_tokens",
   "realtime_cached_text_tokens",
   "realtime_audio_input_tokens",
@@ -95,6 +96,7 @@ type ConsoleData = {
   transcriptionEnabled?: boolean;
   speechEnabled?: boolean;
   realtimeEnabled?: boolean;
+  translationEnabled?: boolean;
   decisionsEnabled?: boolean;
   analysisEnabled?: boolean;
   computerEnabled?: boolean;
@@ -1289,6 +1291,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "audio_transcription",
                     "audio_speech",
                     "realtime",
+                    "audio_translation",
                   ]
                     .filter(
                       (scope) =>
@@ -1299,7 +1302,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         (scope !== "cloud_browser" || data?.browserEnabled) &&
                         (scope !== "audio_transcription" || data?.transcriptionEnabled) &&
                         (scope !== "audio_speech" || data?.speechEnabled) &&
-                        (scope !== "realtime" || data?.realtimeEnabled),
+                        (scope !== "realtime" || data?.realtimeEnabled) &&
+                        (scope !== "audio_translation" || data?.translationEnabled),
                     )
                     .map((scope) => (
                       <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
@@ -1548,6 +1552,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "audio_transcription",
                     "audio_speech",
                     "realtime",
+                    "audio_translation",
                   ].map((item) => (
                     <option key={item} value={item}>
                       {item}

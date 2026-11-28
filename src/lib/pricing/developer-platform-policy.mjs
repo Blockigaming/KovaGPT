@@ -11,6 +11,7 @@ import {
   developerTranscriptionFields,
   TRANSCRIPTION_BODY_LIMIT,
 } from "./developer-transcription-policy.mjs";
+import { developerTranslationFields } from "./developer-translation-policy.mjs";
 import { developerRealtimeFields } from "./developer-realtime-policy.mjs";
 import { developerSpeechFields } from "./developer-speech-policy.mjs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -30,6 +31,7 @@ export const DEVELOPER_SCOPES = Object.freeze([
   "audio_transcription",
   "audio_speech",
   "realtime",
+  "audio_translation",
   "files",
 ]);
 export function developerUuid(value) {
@@ -76,6 +78,20 @@ export function parseDeveloperInput(kind, input) {
     if (new TextEncoder().encode(JSON.stringify(body)).length > TRANSCRIPTION_BODY_LIMIT)
       fail("developer_input_too_large");
     return { body, capability: "audio_transcription", publicModel: input.model };
+  }
+  if (kind === "audio/translations") {
+    if (
+      typeof input.model !== "string" ||
+      input.model.length < 2 ||
+      input.model.length > 80 ||
+      !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+    )
+      fail("developer_model_invalid");
+    return {
+      body: { model: input.model, ...developerTranslationFields(input) },
+      capability: "audio_translation",
+      publicModel: input.model,
+    };
   }
   if (kind === "realtime") {
     if (

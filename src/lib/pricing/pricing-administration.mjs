@@ -6,6 +6,7 @@ import { TRANSCRIPTION_MODEL } from "./developer-transcription-policy.mjs";
 
 import { SPEECH_MODEL } from "./developer-speech-policy.mjs";
 
+import { TRANSLATION_MODEL, TRANSLATION_ACCOUNTING } from "./developer-translation-policy.mjs";
 import { REALTIME_MODEL, REALTIME_DIMENSIONS } from "./developer-realtime-policy.mjs";
 
 const fail = (code) => {
@@ -35,6 +36,7 @@ const meters = {
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
   realtime_tokens: REALTIME_DIMENSIONS,
+  translation_duration: ["translation_seconds"],
   speech_character_credits: ["speech_character_credits"],
   transcription_duration: ["transcription_seconds"],
   browser_sessions: ["browser_sessions_60s"],
@@ -205,6 +207,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "maximumAnalysisInputTokens",
         "maximumComputerInputTokens",
         "searchContentAccounting",
+        "translationAccounting",
       ]) ||
       !["azure_openai", "openai", "browserbase", "elevenlabs"].includes(c.provider) ||
       !text(c.upstreamModel) ||
@@ -231,6 +234,15 @@ export function validatePricingProposal(raw, now = Date.now()) {
       fail("image_bounds_invalid");
     const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "translation_duration") {
+      if (
+        c.upstreamModel !== TRANSLATION_MODEL ||
+        c.translationAccounting !== TRANSLATION_ACCOUNTING
+      )
+        fail("contract_invalid");
+      delete body.input;
+      Object.assign(body, { audio: Buffer.alloc(9600).toString("base64"), target_language: "en" });
+    }
     if (c.meter === "realtime_tokens") {
       if (c.upstreamModel !== REALTIME_MODEL) fail("contract_invalid");
       Object.assign(body, { input: "test", output_modality: "text", max_output_tokens: 1 });

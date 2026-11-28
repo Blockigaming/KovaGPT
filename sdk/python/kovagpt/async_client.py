@@ -163,7 +163,7 @@ class AsyncClient:
 
     async def run(self, operation, data, *, currency, maximum_charge, idempotency_key):
         self._client._budget(currency, maximum_charge, idempotency_key)
-        limit = 1048576 if operation in ("audio/transcriptions", "realtime") else 65536
+        limit = 1048576 if operation in ("audio/transcriptions", "audio/translations", "realtime") else 65536
         snapshot = json.loads(_json_body(data, limit))
         # Separate awaits are essential: canceling during a quote must not later
         # advance into paid execution in the background thread.
@@ -221,7 +221,7 @@ _INFERENCE = {
     "responses": "responses", "chat_completions": "chat/completions", "search": "search",
     "images": "images", "embeddings": "embeddings", "agent_turn": "agent-turns",
     "browser_snapshot": "browser", "computer_use": "computer-use", "analysis": "analysis",
-    "decisions": "decisions", "transcriptions": "audio/transcriptions", "speech": "audio/speech", "realtime": "realtime", "moderations": "moderations",
+    "decisions": "decisions", "transcriptions": "audio/transcriptions", "translate_audio": "audio/translations", "speech": "audio/speech", "realtime": "realtime", "moderations": "moderations",
 }
 
 

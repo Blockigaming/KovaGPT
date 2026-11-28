@@ -25,6 +25,7 @@ export function parseDeveloperInput(
     | "cloud_browser"
     | "audio_transcription"
     | "audio_speech"
-    | "realtime";
+    | "realtime"
+    | "audio_translation";
   publicModel: string;
 };

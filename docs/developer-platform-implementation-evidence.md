@@ -6,8 +6,8 @@ Implementation: I = supported source implementation covers the named requirement
 
 ## Counts
 
-- Implemented: 22; partial: 69; missing: 9. Total 100.
-- Verification: 6 targeted requirement-level tested; 1 prior CI verified; 77 narrower evidence; 16 unverified. Total 100.
+- Implemented: 23; partial: 68; missing: 9. Total 100.
+- Verification: 7 targeted requirement-level tested; 1 prior CI verified; 76 narrower evidence; 16 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
@@ -25,6 +25,7 @@ Implementation: I = supported source implementation covers the named requirement
 - Latest MCP batch: 31 focused Node tests passing (MCP, MCP files, OAuth transport, developer platform ingress and file search); shared scope and rate checks, revoked-scope denial and redacted terminal errors.
 - Native Realtime batch: 80 focused Node tests and 11 database/canonical tests passed; final SDK/contract regression subset 35 Node tests passed; Python SDK 30 tests passed. No live provider calls. Canonical history forward-extension inventory now pins exact new migration hashes; immutable historical proposal rejection test passed.
 - Realtime session lifecycle: 43 focused protocol, SDK, contract and canonical migration tests; 14 session/database tests (3 protocol tests overlap); 30 Python tests; immutable historical proposal rejection passed. Exact runtime build and provider smoke test pending.
+- Native translation: 53 focused Node tests, 32 route/ingress/identity tests and 31 Python tests passed; fixture-only provider transport. Translation usage derives from submitted frames after graceful close, not a provider invoice. Activation requires explicit approved accounting and provider validation.
 - Tests listed without a pass count identify existing regression fixtures, not an assertion that every fixture was rerun on this snapshot. No real paid provider calls were made. Superseded 1c3632e full CI canceled; f9a4323 workflows had not registered at observation.
 
 ## Requirement ledger
@@ -41,7 +42,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R08 | P | F | Owned text attachments and bounded images exist; general document extraction and format coverage incomplete. |
 | R09 | P | F | Generation and edit policies/meters exist; model-specific streaming not complete. |
 | R10 | I | F | Embeddings route, bounded batch inputs and dimension checks; dc071f1 SDK/policy tests. |
-| R11 | P | F | 8fec7aa speech/transcription, f9a4323 recorded transcript translation workflow; native audio translation and complete consent lifecycle not finished. |
+| R11 | I | T | Bounded native speech, transcription and audio translation with scoped access, preapproved synthetic voice (no cloning), permission notice, exact-frame duration quote, graceful-close accounting and failure settlement. Live provider validation and owner approval of translation accounting remain activation gates; no live provider invoice receipt. |
 | R12 | I | T | Native provider turns plus authenticated multi-turn WebSocket session gateway, durable single-redemption credentials, project/key fences, up to eight independently quoted turns, provisional events, cancellation/expiry and cleanup, JS socket client, Python grant lifecycle, Playground and OpenAPI. Provider socket is per turn; continuous microphone streaming and persistent upstream conversation state are not supported. Real Nitro socket and provider qualification remain release gates. |
 | R13 | I | F | Search route, bounded calls, source receipts and metering; dc071f1 queue tests. Provider verification remains open separately. |
 | R14 | P | F | be68daf research-runs and f9a4323 reviewed planner/preparation/synthesis; no autonomous server orchestration yet. |

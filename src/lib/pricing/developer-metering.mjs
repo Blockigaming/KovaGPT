@@ -39,6 +39,15 @@ import {
   validDeveloperRealtimeRequest,
 } from "./developer-realtime-policy.mjs";
 
+import {
+  TRANSLATION_MODEL,
+  TRANSLATION_ACCOUNTING,
+  TRANSLATION_MAX_SECONDS,
+  validDeveloperTranslationRequest,
+  developerTranslationSeconds,
+  developerTranslationReceipt,
+} from "./developer-translation-policy.mjs";
+
 const fail = (code) => {
   throw new PricingUnavailableError(code);
 };
@@ -60,6 +69,7 @@ const dimensionsByMeter = {
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
   realtime_tokens: REALTIME_DIMENSIONS,
+  translation_duration: ["translation_seconds"],
   speech_character_credits: ["speech_character_credits"],
   transcription_duration: ["transcription_seconds"],
   browser_sessions: ["browser_sessions_60s"],
@@ -112,6 +122,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   const dimensions = dimensionsByMeter[contract.meter];
   const moderationMeter = contract.meter === "moderation_requests";
   const transcriptionMeter = contract.meter === "transcription_duration";
+  const translationMeter = contract.meter === "translation_duration";
   const realtimeMeter = contract.meter === "realtime_tokens";
   const speechMeter = contract.meter === "speech_character_credits";
   const browserMeter = contract.meter === "browser_sessions";
@@ -148,6 +159,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     !transcriptionMeter &&
     !speechMeter &&
     !realtimeMeter &&
+    !translationMeter &&
     !browserMeter &&
     new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
       (decisionsMeter
@@ -168,6 +180,19 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
+  if (
+    translationMeter !== (request.capability === "audio_translation") ||
+    (translationMeter &&
+      (request.provider !== "openai" ||
+        contract.translationAccounting !== TRANSLATION_ACCOUNTING ||
+        !validDeveloperTranslationRequest(request.body) ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== TRANSLATION_MODEL ||
+        contract.maximumUsage.translation_seconds < 1 ||
+        contract.maximumUsage.translation_seconds > TRANSLATION_MAX_SECONDS ||
+        developerTranslationSeconds(request.body) > contract.maximumUsage.translation_seconds))
+  )
+    fail("billing_translation_contract_invalid");
   if (
     realtimeMeter !== (request.capability === "realtime") ||
     (realtimeMeter &&
@@ -453,11 +478,13 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     currency: version.currency,
     usage: {
       capability: request.capability,
-      dimensions: speechMeter
-        ? { speech_character_credits: Buffer.byteLength(request.body.input) }
-        : searchMeter
-          ? { ...contract.maximumUsage, web_search_calls: search?.max_tool_calls ?? 0 }
-          : contract.maximumUsage,
+      dimensions: translationMeter
+        ? { translation_seconds: developerTranslationSeconds(request.body) }
+        : speechMeter
+          ? { speech_character_credits: Buffer.byteLength(request.body.input) }
+          : searchMeter
+            ? { ...contract.maximumUsage, web_search_calls: search?.max_tool_calls ?? 0 }
+            : contract.maximumUsage,
     },
     allowances: version.allowance_configuration,
     pricingVersion: { id: version.id, status: version.status, marginFloor: version.margin_floor },
@@ -527,6 +554,9 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   } else if (meter === "browser_sessions") {
     if (!developerBrowserReceipt(response)) return null;
     dimensions = { browser_sessions_60s: 1 };
+  } else if (meter === "translation_duration") {
+    dimensions = developerTranslationReceipt(response);
+    if (!dimensions) return null;
   } else if (meter === "realtime_tokens") {
     dimensions = developerRealtimeUsage(response);
     if (!dimensions) return null;
@@ -813,6 +843,12 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
         prepared.contract.meter === "speech_character_credits" &&
         actual?.dimensions.speech_character_credits >
           prepared.options.usage.dimensions.speech_character_credits
+      )
+        actual = null;
+      if (
+        prepared.contract.meter === "translation_duration" &&
+        actual?.dimensions.translation_seconds !==
+          prepared.options.usage.dimensions.translation_seconds
       )
         actual = null;
       if (

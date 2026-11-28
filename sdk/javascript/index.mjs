@@ -14,6 +14,7 @@ const operations = new Set([
   "computer-use",
   "browser",
   "audio/transcriptions",
+  "audio/translations",
   "audio/speech",
   "realtime",
 ]);
@@ -44,7 +45,9 @@ function budget(value) {
     fail("budget_required");
 }
 function operationBodyLimit(kind) {
-  return ["audio/transcriptions", "realtime"].includes(kind) ? 1048576 : 65536;
+  return ["audio/transcriptions", "audio/translations", "realtime"].includes(kind)
+    ? 1048576
+    : 65536;
 }
 function boundedInput(value, maximumBytes = 65536) {
   let encoded;
@@ -429,6 +432,7 @@ export class KovaGPT {
         create: (input, options) => this.run("audio/transcriptions", input, options),
       }),
       translations: Object.freeze({
+        native: (input, options) => this.run("audio/translations", input, options),
         create: async (input, options) => this.run("responses", translationRequest(input), options),
       }),
     });

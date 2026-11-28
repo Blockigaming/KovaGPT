@@ -165,6 +165,11 @@ const paid = {
     model,
     audio: { type: "string", pattern: "^data:audio/wav;base64," },
   }),
+  "audio/translations": obj({
+    model,
+    audio: { ...str(640000), contentEncoding: "base64" },
+    target_language: choices("en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh"),
+  }),
   realtime: union(
     obj({
       model,
@@ -447,6 +452,20 @@ const output = {
     generated: { const: true },
     usage: open({ speech_character_credits: { type: "integer", minimum: 0 } }),
   }),
+  "audio/translations": open({
+    id: str(256),
+    model,
+    status: { const: "completed" },
+    target_language: str(2),
+    text: { type: "string" },
+    audio: { type: "string", contentEncoding: "base64" },
+    format: { const: "pcm16" },
+    sample_rate: { const: 24000 },
+    usage: open({
+      translation_seconds: { type: "number", minimum: 0.2, maximum: 10 },
+      accounting: { const: "closed_input_frames" },
+    }),
+  }),
   "audio/transcriptions": open({
     id: str(256),
     model,
@@ -531,6 +550,7 @@ const usageRow = open({
       "moderation_requests",
       "transcription_seconds",
       "speech_character_credits",
+      "translation_seconds",
       "realtime_text_input_tokens",
       "realtime_cached_text_tokens",
       "realtime_audio_input_tokens",

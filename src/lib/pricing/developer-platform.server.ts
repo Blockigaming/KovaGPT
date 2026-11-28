@@ -41,6 +41,7 @@ import {
   REALTIME_DIMENSIONS,
   runDeveloperRealtime,
 } from "./developer-realtime-policy.mjs";
+import { TRANSLATION_MODEL, runDeveloperTranslation } from "./developer-translation-policy.mjs";
 import { TRANSCRIPTION_BODY_LIMIT } from "./developer-transcription-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
 import { developerChatCompletion } from "./developer-chat-compat.mjs";
@@ -168,6 +169,13 @@ function developerTranscriptionEnabled() {
     return false;
   const config = getAiProviderConfig("audio_transcription");
   return config.configured && config.capabilities?.includes("audio_transcription") === true;
+}
+function developerTranslationEnabled() {
+  return (
+    runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") === "true" &&
+    runtimeEnv("KOVA_DEVELOPER_TRANSLATION_ENABLED") === "true" &&
+    Boolean(runtimeEnv("OPENAI_API_KEY"))
+  );
 }
 function developerRealtimeEnabled() {
   return (
@@ -517,15 +525,22 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   );
   parsed.body = files.body;
   const version = await currentPricing(identity);
-  const providerConfig = ["cloud_browser", "audio_speech", "realtime"].includes(parsed.capability)
+  const providerConfig = [
+    "cloud_browser",
+    "audio_speech",
+    "realtime",
+    "audio_translation",
+  ].includes(parsed.capability)
     ? null
     : getAiProviderConfig(parsed.capability as ProviderCapability);
   const provider =
     parsed.capability === "audio_speech"
       ? "elevenlabs"
-      : parsed.capability === "realtime"
+      : ["realtime", "audio_translation"].includes(parsed.capability)
         ? "openai"
         : (providerConfig?.provider ?? "browserbase");
+  if (parsed.capability === "audio_translation" && !developerTranslationEnabled())
+    throw new Error("developer_translation_unavailable");
   if (parsed.capability === "realtime" && !developerRealtimeEnabled())
     throw new Error("developer_realtime_unavailable");
   if (parsed.capability === "audio_speech") {
@@ -583,9 +598,13 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
       ? BROWSER_MODEL
       : parsed.capability === "audio_speech"
         ? SPEECH_MODEL
-        : parsed.capability === "realtime"
-          ? REALTIME_MODEL
-          : providerModelId(contract.upstreamModel, parsed.capability as ProviderCapability);
+        : parsed.capability === "audio_translation"
+          ? TRANSLATION_MODEL
+          : parsed.capability === "realtime"
+            ? REALTIME_MODEL
+            : providerModelId(contract.upstreamModel, parsed.capability as ProviderCapability);
+  if (parsed.capability === "audio_translation" && contract.upstreamModel !== TRANSLATION_MODEL)
+    throw new Error("developer_translation_unavailable");
   if (parsed.capability === "realtime" && contract.upstreamModel !== REALTIME_MODEL)
     throw new Error("developer_realtime_unavailable");
   if (parsed.capability === "audio_speech" && contract.upstreamModel !== SPEECH_MODEL)
@@ -752,6 +771,22 @@ export async function executeDeveloper(
         });
       if (kind === "computer-use") return developerComputerUse(parsed.body, { signal });
       if (kind === "analysis") return developerAnalysis(parsed.body, { signal });
+      if (kind === "audio/translations")
+        return meterProviderRequest({
+          provider: "openai",
+          capability: "audio_translation",
+          body: parsed.body,
+          signal,
+          send: async () => {
+            const { WebSocket: ProviderWebSocket } = await import("undici");
+            return runDeveloperTranslation(parsed.body, {
+              apiKey: runtimeEnv("OPENAI_API_KEY"),
+              signal,
+              connect: (url, headers) =>
+                new ProviderWebSocket(url, { headers }) as unknown as WebSocket,
+            });
+          },
+        });
       if (kind === "realtime")
         return meterProviderRequest({
           provider: "openai",
@@ -800,7 +835,12 @@ export async function executeDeveloper(
     await response.body?.cancel().catch(() => {});
     throw new Error("developer_provider_unavailable");
   }
-  if (kind === "audio/transcriptions" || kind === "audio/speech" || kind === "realtime") {
+  if (
+    kind === "audio/transcriptions" ||
+    kind === "audio/speech" ||
+    kind === "realtime" ||
+    kind === "audio/translations"
+  ) {
     const receipt = await response.json();
     return developerJson({ ...receipt, model: parsed.publicModel });
   }
@@ -1020,6 +1060,12 @@ const publicUsage = (row: Record<string, unknown>) => {
       usage.transcription_seconds > 0
         ? usage.transcription_seconds
         : null,
+    translation_seconds:
+      typeof usage.translation_seconds === "number" &&
+      Number.isFinite(usage.translation_seconds) &&
+      usage.translation_seconds > 0
+        ? usage.translation_seconds
+        : null,
     speech_character_credits: dimension("speech_character_credits"),
     ...Object.fromEntries(REALTIME_DIMENSIONS.map((key) => [key, dimension(key)])),
     container_1g_sessions: dimension("container_1g_sessions"),
@@ -1113,10 +1159,12 @@ export async function developerModels(identity: DeveloperIdentity, request: Requ
               ? developerBrowserEnabled() && entry.provider === "browserbase"
               : entry.capability === "audio_speech"
                 ? developerSpeechEnabled() && entry.provider === "elevenlabs"
-                : entry.capability === "realtime"
-                  ? developerRealtimeEnabled() && entry.provider === "openai"
-                  : entry.provider ===
-                    getAiProviderConfig(entry.capability as ProviderCapability).provider),
+                : entry.capability === "audio_translation"
+                  ? developerTranslationEnabled() && entry.provider === "openai"
+                  : entry.capability === "realtime"
+                    ? developerRealtimeEnabled() && entry.provider === "openai"
+                    : entry.provider ===
+                      getAiProviderConfig(entry.capability as ProviderCapability).provider),
         )
         .map(
           (entry: {
@@ -1187,7 +1235,10 @@ export async function handleDeveloperApi(request: Request, operation: string) {
     if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
       throw new Error("developer_json_required");
     const limit =
-      operation === "quotes" || operation === "audio/transcriptions" || operation === "realtime"
+      operation === "quotes" ||
+      operation === "audio/transcriptions" ||
+      operation === "realtime" ||
+      operation === "audio/translations"
         ? TRANSCRIPTION_BODY_LIMIT
         : 65536;
     const body = await readBoundedJsonObject(request, limit, request.signal);
@@ -1195,6 +1246,7 @@ export async function handleDeveloperApi(request: Request, operation: string) {
       operation === "quotes" &&
       body.operation !== "audio/transcriptions" &&
       body.operation !== "realtime" &&
+      body.operation !== "audio/translations" &&
       Buffer.byteLength(JSON.stringify(body)) > 65536
     )
       throw new Error("developer_input_too_large");
@@ -1306,6 +1358,7 @@ export async function handleDeveloperConsole(request: Request) {
           transcriptionEnabled: developerTranscriptionEnabled(),
           speechEnabled: developerSpeechEnabled(),
           realtimeEnabled: developerRealtimeEnabled(),
+          translationEnabled: developerTranslationEnabled(),
           decisionsEnabled: developerDecisionsEnabled(),
           analysisEnabled: developerAnalysisEnabled(),
           computerEnabled: developerComputerEnabled(),
@@ -1458,6 +1511,7 @@ export async function handleDeveloperConsole(request: Request) {
         transcriptionEnabled: developerTranscriptionEnabled(),
         speechEnabled: developerSpeechEnabled(),
         realtimeEnabled: developerRealtimeEnabled(),
+        translationEnabled: developerTranslationEnabled(),
         decisionsEnabled: developerDecisionsEnabled(),
         analysisEnabled: developerAnalysisEnabled(),
         computerEnabled: developerComputerEnabled(),
@@ -1564,6 +1618,7 @@ export async function handleDeveloperConsole(request: Request) {
           (body.scopes.includes("audio_transcription") && !developerTranscriptionEnabled()) ||
           (body.scopes.includes("audio_speech") && !developerSpeechEnabled()) ||
           (body.scopes.includes("realtime") && !developerRealtimeEnabled()) ||
+          (body.scopes.includes("audio_translation") && !developerTranslationEnabled()) ||
           (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
           (body.scopes.includes("file_analysis") && !developerAnalysisEnabled()) ||
           (body.scopes.includes("computer_use") && !developerComputerEnabled()) ||

@@ -177,7 +177,8 @@ async function fixture(options = {}) {
       path === "./developer-conversation-policy.mjs" ||
       path === "./developer-transcription-policy.mjs" ||
       path === "./developer-speech-policy.mjs" ||
-      path === "./developer-realtime-policy.mjs"
+      path === "./developer-realtime-policy.mjs" ||
+      path === "./developer-translation-policy.mjs"
     )
       return full.replace(
         JSON.stringify(path),

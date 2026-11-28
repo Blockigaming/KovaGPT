@@ -671,3 +671,18 @@ test("Realtime SDK binds native text or audio to exact quotes and stable retry k
   assert.deepEqual(JSON.parse(f.calls[1].body), body);
   assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/realtime");
 });
+
+test("native audio translation binds exact recording and language to dedicated quote", async () => {
+  const f = fixture();
+  const input = {
+    model: "kova-translate",
+    audio: Buffer.alloc(96000).toString("base64"),
+    target_language: "es",
+  };
+  await assert.rejects(f.client.audio.translations.native(input, {}), /budget_required/);
+  assert.equal(f.calls.length, 0);
+  await f.client.audio.translations.native(input, options);
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "audio/translations", input });
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/audio/translations");
+  assert.deepEqual(JSON.parse(f.calls[1].body), input);
+});

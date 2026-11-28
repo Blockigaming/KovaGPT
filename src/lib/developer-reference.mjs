@@ -103,7 +103,15 @@ export const DEVELOPER_ENDPOINTS = [
     "audio/transcriptions",
     "POST",
     "Supply model and audio as a canonical base64 PCM WAV data URI: mono, 16 kHz, 16-bit, 0.1–20 seconds. Quote audio/transcriptions.",
-    "The audio_transcription scope and approved duration receipt are required. Submit only recordings you may process; translation and live audio are not implemented here.",
+    "The audio_transcription scope and approved duration receipt are required. Submit only recordings you may process; native translation uses the separate audio/translations endpoint.",
+  ),
+  endpoint(
+    "audio-translation",
+    "Native audio translation",
+    "audio/translations",
+    "POST",
+    "Quote model, target_language (en, es, fr, de, it, pt, ja, ko, zh) and canonical base64 raw PCM16 mono at 24 kHz, 0.2–10 seconds in exact 200 ms frames. Returns translated text and PCM16 audio.",
+    "Requires audio_translation scope and an approved closed_input_frames duration accounting contract. A graceful native provider close confirms completion; usage is application-observed input duration, not a provider invoice. Provider qualification and explicit activation remain required. Only submit recordings you may process.",
   ),
   endpoint(
     "decisions",

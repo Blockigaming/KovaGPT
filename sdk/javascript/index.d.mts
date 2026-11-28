@@ -12,6 +12,7 @@ export type Operation =
   | "computer-use"
   | "browser"
   | "audio/transcriptions"
+  | "audio/translations"
   | "audio/speech"
   | "realtime";
 export type RealtimeInput = {
@@ -103,12 +104,18 @@ export type OperationInput =
   | ComputerUseInput
   | BrowserSnapshotInput
   | TranscriptionInput
+  | NativeTranslationInput
   | SpeechInput;
 export interface SpeechInput {
   model: string;
   input: string;
   voice: "default";
   response_format?: "mp3";
+}
+export interface NativeTranslationInput {
+  model: string;
+  audio: string;
+  target_language: "en" | "es" | "fr" | "de" | "it" | "pt" | "ja" | "ko" | "zh";
 }
 export interface TranscriptionInput {
   model: string;
@@ -225,6 +232,7 @@ export interface DeveloperUsage {
   moderation_requests: number | null;
   transcription_seconds: number | null;
   speech_character_credits: number | null;
+  translation_seconds: number | null;
   realtime_text_input_tokens: number | null;
   realtime_cached_text_tokens: number | null;
   realtime_audio_input_tokens: number | null;
@@ -542,8 +550,9 @@ export class KovaGPT {
   readonly audio: {
     speech: { create(input: SpeechInput, options: Budget): Promise<Response> };
     transcriptions: { create(input: TranscriptionInput, options: Budget): Promise<Response> };
-    /** A separate, metered Responses translation of a completed transcription, not a native live audio endpoint. */
     translations: {
+      native(input: NativeTranslationInput, options: Budget): Promise<Response>;
+      /** Separate metered Responses translation of a completed transcription. */
       create(
         input: {
           model: string;
