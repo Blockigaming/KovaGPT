@@ -4,6 +4,7 @@ import {
   createAckCache,
   createAcknowledgmentPolicy,
   ackClipUrl,
+  ACK_VARIANTS,
 } from "../../src/lib/voice/acknowledgments.mjs";
 import {
   createStreamingVoicePlayback,
@@ -131,6 +132,7 @@ test("no acknowledgment when the reply arrives before the delay, and the real au
   h.playback.begin();
   await h.advance(300);
   h.playback.segment(seg(0));
+  await h.flush();
   await h.advance(1500);
   await h.advance(2000);
   assert.deepEqual(h.writes, [3]);
@@ -466,4 +468,133 @@ test("listening resumes after a spoken reply, speaking over Kova interrupts, and
     readBytes("src/components/ChatInput.tsx", "utf8"),
     /if \(next === "voice"\) primeVoiceAudio\(\)/u,
   );
+});
+
+test("an acknowledgment without signed reply segments falls back instead of completing the turn", async () => {
+  const h = harness();
+  h.playback.begin();
+  await h.advance(1500);
+  assert.deepEqual(h.writes, [16000]);
+  h.sinkEvents.onPlaying();
+  assert.equal(h.playback.finish(), false);
+  assert.equal(h.playback.active, false);
+  assert.equal(h.disposed, 1);
+  h.sinkEvents.onEnded();
+  assert.equal(h.ended, 0);
+});
+
+test("acknowledgments rotate among variants for the same voice and cache each file", async () => {
+  const urls = [];
+  const cache = createAckCache({
+    fetchImpl: async (url) => {
+      urls.push(url);
+      const size = url.includes("look-more") ? 32000 : url.includes("check-details") ? 48000 : 16000;
+      return new Response(new Uint8Array(size), { headers: { "Content-Type": "audio/mpeg" } });
+    },
+  });
+  const sizes = [];
+  for (let i = 0; i <= ACK_VARIANTS.search.length; i++)
+    sizes.push((await cache.get("jessica", "search")).bytes.byteLength);
+  assert.deepEqual(sizes.slice(0, 3), [16000, 32000, 48000]);
+  assert.equal(sizes.at(-1), sizes[0]);
+  assert.deepEqual(
+    urls,
+    ACK_VARIANTS.search.map((entry) => `/voice-acks/jessica/${entry.id}.mp3`),
+  );
+  assert.equal(ackClipUrl("jessica", "search", 99), null);
+  assert.equal(ackClipUrl("jessica", "__proto__"), null);
+});
+
+test("missing alternatives fall back to the existing clip without switching voices", async () => {
+  const urls = [];
+  const cache = createAckCache({
+    fetchImpl: async (url) => {
+      urls.push(url);
+      return url.endsWith("/check.mp3")
+        ? new Response(new Uint8Array(16000), { headers: { "Content-Type": "audio/mpeg" } })
+        : new Response(null, { status: 404 });
+    },
+  });
+  for (let i = 0; i < 3; i++)
+    assert.equal((await cache.get("lauren", "search")).bytes.byteLength, 16000);
+  assert.equal(urls.length, 3);
+  assert.ok(urls.every((url) => url.startsWith("/voice-acks/lauren/")));
+});
+
+test("the expanded acknowledgment catalog has exactly 59 distinct phrases and valid asset IDs", () => {
+  const entries = Object.values(ACK_VARIANTS).flat();
+  assert.equal(entries.length, 59);
+  assert.equal(new Set(entries.map((entry) => entry.id)).size, 59);
+  assert.equal(new Set(entries.map((entry) => entry.text)).size, 59);
+  assert.deepEqual(Object.values(ACK_VARIANTS).map((entries) => entries.length), [21, 20, 18]);
+  for (const entry of entries) {
+    assert.match(entry.id, /^[a-z0-9-]+$/u);
+    assert.ok(entry.text.length <= 48);
+  }
+});
+
+test("warming a voice fetches only the three original clips, not all 59 alternatives", async () => {
+  const urls = [];
+  const cache = createAckCache({
+    fetchImpl: async (url) => {
+      urls.push(url);
+      return new Response(new Uint8Array(16000), { headers: { "Content-Type": "audio/mpeg" } });
+    },
+  });
+  await cache.warm("jessica");
+  assert.deepEqual(urls, [
+    "/voice-acks/jessica/check.mp3",
+    "/voice-acks/jessica/think.mp3",
+    "/voice-acks/jessica/moment.mp3",
+  ]);
+});
+
+test("a delayed TTS response can receive one acknowledgment after signed text arrives", async () => {
+  let resolveSpeech;
+  const h = harness({
+    fetchImpl: () => new Promise((resolve) => { resolveSpeech = resolve; }),
+  });
+  h.playback.begin();
+  h.playback.segment(seg(0));
+  await h.flush();
+  assert.equal(h.writes.length, 0);
+  await h.advance(1500);
+  assert.deepEqual(h.writes, [16000]);
+  resolveSpeech(
+    new Response(new Uint8Array([1, 2, 3]), { headers: { "Content-Type": "audio/mpeg" } }),
+  );
+  await h.flush();
+  assert.deepEqual(h.writes, [16000, 3]);
+  await h.advance(5000);
+  assert.deepEqual(h.writes, [16000, 3]);
+  h.playback.stop();
+});
+
+test("a PCM-capable sink requests raw audio but leaves prerecorded MP3 on the compressed path", async () => {
+  const writes = [];
+  const playback = createStreamingVoicePlayback({
+    ownerId: "owner-1",
+    voiceId: "jessica",
+    createSink: () => ({
+      async write() { assert.fail("PCM must not enter the MP3 decoder"); },
+      async writePcm(bytes) { writes.push(bytes.byteLength); },
+      async segmentEnd() { writes.push("segmentEnd"); },
+      async end() { writes.push("end"); },
+      dispose() {},
+    }),
+    fetchImpl: async (_url, init) => {
+      assert.equal(init.headers.Accept, "audio/pcm");
+      assert.equal(JSON.parse(init.body).voiceId, "jessica");
+      return new Response(new Uint8Array(3840), {
+        headers: { "Content-Type": "audio/pcm; rate=24000" },
+      });
+    },
+  });
+  playback.begin();
+  playback.segment(seg(0));
+  playback.finish();
+  for (let i = 0; i < 50 && !writes.includes("end"); i++)
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(writes, [3840, "segmentEnd", "end"]);
+  playback.stop();
 });

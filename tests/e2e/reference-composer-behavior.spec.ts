@@ -123,3 +123,28 @@ test("the primary Voice action restores focus and typing changes only the primar
   await expect(page.locator("html")).not.toHaveAttribute("data-unexpected-microphone-request");
   expect(chatRequests).toBe(0);
 });
+
+for (const theme of ["light", "dark"] as const) {
+  test(`${theme}: phone composer actions maintain a consistent bottom inset`, async ({ page }) => {
+    test.skip(page.viewportSize()!.width >= 768, "Phone-width composer");
+    await fixture(page, theme, true, true);
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    const composer = page.locator(".spec400-composer");
+    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    await expect(input).toBeEnabled();
+    const checkInset = async (testId: string) => {
+      const action = page.getByTestId(testId);
+      await expect(action).toBeVisible();
+      const bounds = (await composer.boundingBox())!;
+      const button = (await action.boundingBox())!;
+      const bottomInset = bounds.y + bounds.height - button.y - button.height;
+      expect(bottomInset).toBeGreaterThanOrEqual(8);
+      expect(bottomInset).toBeLessThanOrEqual(12);
+      expect(button.height).toBeGreaterThanOrEqual(44);
+    };
+    await checkInset("voice-button");
+    await input.fill("A message");
+    await checkInset("send-button");
+  });
+}

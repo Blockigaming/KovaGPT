@@ -11,6 +11,7 @@ export function createStreamingVoicePlayback(options: {
     onError: () => void;
   }) => {
     write(bytes: Uint8Array): Promise<void>;
+    writePcm?(bytes: Uint8Array): Promise<void>;
     segmentEnd?(): Promise<void>;
     end(): Promise<void>;
     dispose(): void;

@@ -314,6 +314,9 @@ export function ComposerVoiceDialog({
   const selectedVoice = useRef("");
   const defaultVoice = useRef("");
   const voiceSessionActive = useRef(false);
+  // The owned chat request and audio playback may overlap. A UI phase is not
+  // a request-ownership boundary.
+  const voiceChatRequest = useRef<AbortController | null>(null);
   const voicePlayback = useRef<{ stop(): void } | null>(null);
   const bargeIn = useRef<{ stop(): void } | null>(null);
   const bargeInGeneration = useRef(0);
@@ -361,6 +364,7 @@ export function ComposerVoiceDialog({
     // resources. A late getUserMedia result must immediately stop its own tracks.
     generation.current += 1;
     voiceSessionActive.current = false;
+    voiceChatRequest.current = null;
     if (current.current.mode === "voice") current.current.onVoicePlaybackProgress?.(null);
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
@@ -406,7 +410,10 @@ export function ComposerVoiceDialog({
       value.open &&
       !value.disabled &&
       (!value.isStreaming ||
-        (value.mode === "voice" && voiceSessionActive.current && phaseRef.current === "chat")) &&
+        (value.mode === "voice" &&
+          voiceSessionActive.current &&
+          voiceChatRequest.current !== null &&
+          !voiceChatRequest.current.signal.aborted)) &&
       value.userId === scope.userId &&
       value.contextKey === scope.contextKey
     );
@@ -473,6 +480,10 @@ export function ComposerVoiceDialog({
           const selection = preferredVoice(scope.userId, voices, defaultId);
           selectedVoice.current = selection;
           setSelectedVoiceId(selection);
+          // Warm only static, same-voice acknowledgment assets in parallel
+          // with microphone startup. No paid provider request is made here.
+          if (mode === "voice" && selection && result.conversation === true)
+            void ackCache.warm(selection).catch(() => undefined);
           setCapabilities({
             voices,
             defaultVoiceId: defaultId,
@@ -608,7 +619,9 @@ export function ComposerVoiceDialog({
     if (
       mode === "voice" &&
       isStreaming &&
-      (!voiceSessionActive.current || phaseRef.current !== "chat")
+      (!voiceSessionActive.current ||
+        !voiceChatRequest.current ||
+        voiceChatRequest.current.signal.aborted)
     )
       cancelOperation();
   }, [mode, isStreaming, cancelOperation]);
@@ -706,6 +719,8 @@ export function ComposerVoiceDialog({
       ownerId: scope.userId,
       voiceId: scope.voiceId,
       fetchImpl: authFetch,
+      // Every turn can receive a delayed acknowledgment, including greetings.
+      // The playback engine suppresses it if actual answer audio is ready.
       ackCache,
       tracker: latencyTracker,
       // MediaSource streams MP3 where available; otherwise (iPhone) segments are
@@ -773,6 +788,7 @@ export function ComposerVoiceDialog({
     updatePhase("chat");
     setVoiceLog((log) => [...log.slice(-49), { speaker: "You", text, at: Date.now() }]);
     const controller = beginRequest(120_000);
+    voiceChatRequest.current = controller;
     let abortListener: (() => void) | undefined;
     let streaming: ReturnType<typeof startStreamingSpeech> | null = null;
     let handedOff = false;
@@ -816,6 +832,12 @@ export function ComposerVoiceDialog({
         handedOff = true;
         return;
       }
+      // Stop the acknowledgment's monitor before starting the fallback.
+      // It must never interrupt or restart listening during the actual reply.
+      if (streaming) {
+        stopBargeInMonitor();
+        if (voicePlayback.current === streaming.playback) voicePlayback.current = null;
+      }
       streaming = null;
       updatePhase("synthesizing");
       let ended = false;
@@ -824,7 +846,13 @@ export function ComposerVoiceDialog({
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
         createSink: (options) =>
-          createBrowserSpeechSink({
+          (realtime &&
+          !supportsStreamingMp3() &&
+          typeof window !== "undefined" &&
+          (typeof window.AudioContext !== "undefined" ||
+            "webkitAudioContext" in window)
+            ? createWebAudioSegmentSink
+            : createBrowserSpeechSink)({
             ...options,
             onLevel: updateGlow,
             onProgress: (elapsed, duration) => {
@@ -965,6 +993,7 @@ export function ComposerVoiceDialog({
       );
     } finally {
       if (abortListener) controller.signal.removeEventListener("abort", abortListener);
+      if (voiceChatRequest.current === controller) voiceChatRequest.current = null;
       finishRequest(controller);
       if (!handedOff && streaming) {
         if (voicePlayback.current === streaming.playback) voicePlayback.current = null;

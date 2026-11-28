@@ -86,6 +86,7 @@ export function createStreamingVoicePlayback({
   let ackAudibleAt = null;
   let ackDurationMs = 0;
   let realDispatched = false;
+  let realAudioReady = false;
   let substantiveMarked = false;
   let sinkPlaying = false;
   let writeChain = Promise.resolve();
@@ -117,10 +118,10 @@ export function createStreamingVoicePlayback({
     // Otherwise onPlaying reports it, because no acknowledgment is ahead of it.
   };
 
-  const write = (bytes) => {
+  const write = (bytes, pcm = false) => {
     writeChain = writeChain.then(() => {
       if (!live) return;
-      return sink.write(bytes);
+      return pcm ? sink.writePcm(bytes) : sink.write(bytes);
     });
     return writeChain;
   };
@@ -147,10 +148,9 @@ export function createStreamingVoicePlayback({
           void response.body?.cancel().catch(() => undefined);
           throw new Error(STATUS_CODES[response.status] ?? "speech_unavailable");
         }
-        if (
-          !response.body ||
-          response.headers.get("content-type")?.split(";", 1)[0] !== "audio/mpeg"
-        )
+        const mediaType = response.headers.get("content-type")?.split(";", 1)[0];
+        const pcm = mediaType === "audio/pcm" && typeof sink.writePcm === "function";
+        if (!response.body || (!pcm && mediaType !== "audio/mpeg"))
           throw new Error("speech_unavailable");
         item.reader = response.body.getReader();
         let total = 0;
@@ -160,8 +160,17 @@ export function createStreamingVoicePlayback({
           if (done) break;
           total += value.byteLength;
           if (total > MAX_BYTES) throw new Error("speech_unavailable");
+          if (!value.byteLength) continue;
+          // A signed segment is only text authorization. TTS/network latency
+          // can still leave the user waiting; suppress fillers on actual audio.
+          if (!realAudioReady) {
+            realAudioReady = true;
+            policy.realSpeechStarted();
+            clearTimer(timer);
+            timer = null;
+          }
           if (!wroteAnything) wroteAnything = true;
-          await write(value);
+          await write(value, pcm);
           if (nextWrite === 0) markSubstantive();
         }
         if (!total) throw new Error("speech_unavailable");
@@ -204,7 +213,11 @@ export function createStreamingVoicePlayback({
           method: "POST",
           credentials: "same-origin",
           cache: "no-store",
-          headers: { "Content-Type": "application/json", "X-Kova-Owner": ownerId },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Kova-Owner": ownerId,
+            ...(typeof sink?.writePcm === "function" ? { Accept: "audio/pcm" } : {}),
+          },
           body: JSON.stringify(body),
           signal: controller.signal,
         });
@@ -223,15 +236,21 @@ export function createStreamingVoicePlayback({
   const fireAcknowledgment = async () => {
     timer = null;
     const kind = policy.due();
-    if (!kind || !live || realDispatched || !ackCache) return;
+    if (!kind || !live || realAudioReady || !ackCache) return;
     const clip = await ackCache.get(voiceId, kind);
-    // Real speech may have been dispatched while the clip loaded; then skip it.
-    if (!clip || !live || realDispatched || wroteAnything) return;
+    // Real audio may have arrived while the clip loaded; then skip it.
+    if (!clip || !live || realAudioReady || wroteAnything) return;
     wroteAnything = true;
     ackDurationMs = clip.durationMs;
     ackAudibleAt = now();
-    await write(clip.bytes).catch(() => undefined);
-    await segmentEnd().catch(() => undefined);
+    // Queue the complete clip as one operation. A reply arriving during the
+    // write must not append its bytes before the acknowledgment boundary.
+    writeChain = writeChain.then(async () => {
+      if (!live) return;
+      await sink.write(clip.bytes);
+      if (live) await sink.segmentEnd?.();
+    });
+    await writeChain.catch(() => undefined);
   };
 
   const stop = (silent = true) => {
@@ -265,6 +284,7 @@ export function createStreamingVoicePlayback({
       wroteAnything = false;
       ackAudibleAt = null;
       realDispatched = false;
+      realAudioReady = false;
       substantiveMarked = false;
       sinkPlaying = false;
       writeChain = Promise.resolve();
@@ -295,17 +315,12 @@ export function createStreamingVoicePlayback({
     /** A search or extended-reasoning delay was detected for this turn. */
     delay(kind) {
       policy.reason(kind);
-      if (live && timer && !realDispatched) arm();
+      if (live && timer && !realAudioReady) arm();
     },
     /** One signed segment from the chat stream; speaks as soon as bytes arrive. */
     segment({ chatId, messageId, index, text, receipt }) {
       if (!live || closed) return;
-      if (!realDispatched) {
-        realDispatched = true;
-        policy.realSpeechStarted();
-        clearTimer(timer);
-        timer = null;
-      }
+      realDispatched = true;
       const item = { chatId, messageId, index, text, receipt, response: null, reader: null };
       segments[index] = item;
       queue.push(item);
@@ -315,14 +330,9 @@ export function createStreamingVoicePlayback({
     finish() {
       if (!live) return false;
       closed = true;
-      if (!segments.length && ackAudibleAt !== null) {
-        // Only the acknowledgment was heard (the reply had nothing speakable): let it finish.
-        ended = true;
-        void writeChain.then(() => live && sink.end());
-        return true;
-      }
       if (!segments.length) {
-        // Nothing spoken or heard: let the caller fall back.
+        // An acknowledgment is not the answer. Stop it and let the caller
+        // synthesize the authenticated complete reply instead.
         stop(false);
         onState("idle");
         return false;

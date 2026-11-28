@@ -41,6 +41,9 @@ export async function listenForVoiceTurn({
       model_id: "scribe_v2_realtime",
       audio_format: "pcm_16000",
       commit_strategy: "vad",
+      // Explicit endpointing instead of waiting for the provider's default
+      // silence interval. Retain provider VAD and committed transcripts.
+      vad_silence_threshold_secs: "0.8",
     }).toString();
 
     const connection = new WebSocket(url);

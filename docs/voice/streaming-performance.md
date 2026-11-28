@@ -53,22 +53,42 @@ Each segment is sent with the previous segment as `previous_text` so intonation 
 
 ## Acknowledgments
 
-Clips "Let me check that.", "Let me think about that." and "Give me a moment." are generated once per
-configured voice and served as static files from `/voice-acks/<voiceId>/`:
+The catalog contains 59 distinct phrases per configured voice: 21 search, 20 reasoning and 18
+general delay acknowledgments. This includes "Let me look more into that." Clips rotate within
+the selected voice, never across voices. The original nine files are retained until the owner
+generates the expanded catalog. Only the three original clips are preloaded per voice; each turn
+loads at most one alternative and its original same-voice fallback, preventing a burst of requests
+when new assets are missing. With the current three voices, the full catalog requires 177 recordings.
+
+Run the generator in an authorized environment with the existing catalog configured. Preview first;
+it makes no provider calls. The printed character count covers all missing or unverified clips.
 
 ```sh
-ELEVENLABS_API_KEY=... KOVA_VOICE_CATALOG='<production catalog JSON>' node scripts/generate-voice-acks.mjs
+node scripts/generate-voice-acks.mjs
+# Only after reviewing the preview and authorizing the character budget:
+KOVA_ACK_GENERATION_MAX_CHARACTERS=<reviewed-count> node scripts/generate-voice-acks.mjs --generate
 ```
 
-The generated `public/voice-acks/` clips (all nine) are committed. They are fetched once per session and cached in memory. A missing clip is
-skipped silently. Policy (`acknowledgments.mjs`):
+Set ELEVENLABS_API_KEY through the existing secure environment, never a committed file. The generator
+uses only ElevenLabs, records model, phrase, voice fingerprint and MP3 SHA-256, and skips matching
+previously generated assets. Commit the resulting files and manifest to the PR. The nine legacy MP3s
+have only length/duration metadata; their origin cannot be independently certified from that manifest.
+Policy (`acknowledgments.mjs`):
 
 - Search/tool step known: clip due 450 ms after end of speech. Extended-reasoning mode: 600 ms.
 - Unknown reason: only if the reply is truly late (1500 ms).
-- At most one per turn; never once real speech has been dispatched; they go through the same sink as the reply,
-  so they can never overlap it.
+- At most one per turn, including greetings when they are slow; once real audio bytes arrive, no new
+  acknowledgment may begin. Signed text alone does not imply audio is available. Both use the same sink
+  so they never overlap. Chat request ownership remains valid while acknowledgment or reply audio plays.
 
 ## Experience
+
+Realtime Scribe VAD uses an explicit 0.8-second silence threshold instead of the provider's
+1.5-second documented default. This reduces the configured endpointing wait by 0.7 seconds;
+physical-device testing must check that normal pauses are not cut short. The first complete spoken
+sentence can be emitted at eight characters rather than twenty, while the minimum opening-clause
+length remains twenty. Static acknowledgment warmup runs alongside microphone startup, not on the
+reply's critical path. These are configuration/implementation changes, not measured live latency.
 
 - One glow stays visible through connecting, listening, thinking, searching and speaking (breathing while
   not audio-driven, audio-reactive while listening and speaking).
@@ -93,7 +113,10 @@ model and TTS latencies (labelled synthetic; use it for regressions, not as prod
 ## Known limits
 
 - iOS Safari has no MP3 `MediaSource`, so it uses a Web Audio segment sink (`webaudio-sink.mjs`): the
-  AudioContext is unlocked inside the mic/voice tap, each segment is decoded as it completes and scheduled
-  gaplessly. Playback starts per segment, not per chunk. Untested on a physical iOS device here.
+  AudioContext is unlocked inside the mic/voice tap. Signed live segments negotiate raw 24 kHz PCM and
+  schedule 80 ms blocks without waiting for compressed segment completion. Cached acknowledgments
+  and older MP3 responses remain supported in the same ordered queue. The per-instance speech handler
+  is reused so signed segments share reply admission instead of recharging quota. No production
+  latency or provider-format compatibility has been measured on a physical iOS device yet.
 - Barge-in thresholds are conservative and untested on physical speakers/headsets here.
 - `firstSubstantive` after an acknowledgment is estimated from the clip length.

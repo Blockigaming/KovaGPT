@@ -17,8 +17,11 @@ const streamModel = () => {
   return configured && STREAM_TTS_MODEL_IDS.includes(configured) ? configured : "eleven_flash_v2_5";
 };
 
+// Keep the bounded per-reply admission ledger across segment HTTP requests.
+// Construct lazily so runtime configuration is available on first use.
+let speechHandler: ReturnType<typeof createSpeechHandler> | undefined;
 const speechPost = () =>
-  createSpeechHandler({
+  (speechHandler ??= createSpeechHandler({
     streamModelId: streamModel(),
     authenticate: requireVerifiedUser,
     rateLimit: consumeApplicationRateLimit,
@@ -45,7 +48,7 @@ const speechPost = () =>
     config: async (auth, input) =>
       speechConfiguration(runtimeEnv, await getCallerTier(auth), input.voiceId),
     modelPolicy: () => voiceModelPolicy(runtimeEnv),
-  });
+  }));
 
 export const Route = createFileRoute("/api/speech")({
   server: {

@@ -3,7 +3,8 @@
 // can apply natural pauses and intonation. The first segment is cut early (at a
 // clause boundary) to minimise time to first audio; later ones prefer full
 // sentences so prosody is not chopped up.
-const FIRST_MIN = 20;
+const FIRST_SENTENCE_MIN = 8;
+const FIRST_CLAUSE_MIN = 20;
 const SENTENCE_MIN = 48;
 const CLAUSE_MIN = 110;
 const HARD_MAX = 420;
@@ -26,7 +27,7 @@ export function speakableText(raw) {
 
 function boundary(text, first) {
   // Find the earliest acceptable cut at or after the minimum for this segment.
-  const sentenceMin = first ? FIRST_MIN : SENTENCE_MIN;
+  const sentenceMin = first ? FIRST_SENTENCE_MIN : SENTENCE_MIN;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     const next = text[i + 1];
@@ -38,7 +39,14 @@ function boundary(text, first) {
       if (ch === "." && ABBREVIATIONS.test(text.slice(0, end))) continue;
       return end;
     }
-    if (first && ",;:—–".includes(ch) && next !== undefined && /\s/u.test(next)) return end;
+    if (
+      first &&
+      end >= FIRST_CLAUSE_MIN &&
+      ",;:—–".includes(ch) &&
+      next !== undefined &&
+      /\s/u.test(next)
+    )
+      return end;
     if (
       !first &&
       end >= CLAUSE_MIN &&
