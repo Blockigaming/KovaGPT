@@ -104,3 +104,36 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
     transition: none;
   }
 }
+
+/* Remove decorative hairlines from floating surfaces without shifting their
+   layout. Keep shadows, internal dividers, input boundaries and focus rings. */
+:is(
+  [data-slot="popover-content"],
+  [data-slot="tooltip-content"],
+  [data-slot="menu-content"],
+  [data-slot="select-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="sheet-content"],
+  [data-slot="command-palette-content"],
+  [data-slot="developer-console"],
+  [data-radix-menu-content],
+  [data-kova-dialog-surface],
+  [data-sonner-toast],
+  .kova-profile-menu
+) {
+  border-color: transparent !important;
+}
+
+:is(
+  button[data-slot="button"],
+  a[data-slot="button"],
+  [data-sonner-toast] button,
+  [data-slot="menu-content"] button,
+  [data-slot="popover-content"] button,
+  [data-slot="dialog-content"] button,
+  [data-slot="alert-dialog-content"] button,
+  [data-slot="sheet-content"] button
+):not(:focus-visible) {
+  border-color: transparent !important;
+}
