@@ -53,15 +53,24 @@ Each segment is sent with the previous segment as `previous_text` so intonation 
 
 ## Acknowledgments
 
-Clips "Let me check that.", "Let me think about that." and "Give me a moment." are generated once per
-configured voice and served as static files from `/voice-acks/<voiceId>/`:
+Each of three delay categories has three phrases, including "Let me look more into that." Clips are rotated
+within the selected voice, never across voices. The original nine files are retained until the owner
+generates the expanded catalog. Missing variants fall back to available same-voice clips.
+
+Run the generator in an authorized environment with the existing catalog configured. Preview first;
+it makes no provider calls. The printed character count covers all missing or unverified clips.
 
 ```sh
-ELEVENLABS_API_KEY=... KOVA_VOICE_CATALOG='<production catalog JSON>' node scripts/generate-voice-acks.mjs
+node scripts/generate-voice-acks.mjs
+# Only after reviewing the preview and authorizing the character budget:
+KOVA_ACK_GENERATION_MAX_CHARACTERS=<reviewed-count> node scripts/generate-voice-acks.mjs --generate
 ```
 
-The generated `public/voice-acks/` clips (all nine) are committed. They are fetched once per session and cached in memory. A missing clip is
-skipped silently. Policy (`acknowledgments.mjs`):
+Set ELEVENLABS_API_KEY through the existing secure environment, never a committed file. The generator
+uses only ElevenLabs, records model, phrase, voice fingerprint and MP3 SHA-256, and skips matching
+previously generated assets. Commit the resulting files and manifest to the PR. The nine legacy MP3s
+have only length/duration metadata; their origin cannot be independently certified from that manifest.
+Policy (`acknowledgments.mjs`):
 
 - Search/tool step known: clip due 450 ms after end of speech. Extended-reasoning mode: 600 ms.
 - Unknown reason: only if the reply is truly late (1500 ms).

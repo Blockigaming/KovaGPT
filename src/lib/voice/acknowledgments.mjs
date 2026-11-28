@@ -6,14 +6,33 @@ export const ACK_KINDS = Object.freeze({
   reasoning: { id: "think", text: "Let me think about that." },
   generic: { id: "moment", text: "Give me a moment." },
 });
+// Each reason has its original clip and two natural alternatives. Keep the
+// original IDs stable for deployed assets and older clients.
+export const ACK_VARIANTS = Object.freeze({
+  search: Object.freeze([
+    ACK_KINDS.search,
+    { id: "look-more", text: "Let me look more into that." },
+    { id: "check-details", text: "I'll check a few more details." },
+  ]),
+  reasoning: Object.freeze([
+    ACK_KINDS.reasoning,
+    { id: "work-through", text: "Let me work through that." },
+    { id: "consider", text: "I'm considering the details." },
+  ]),
+  generic: Object.freeze([
+    ACK_KINDS.generic,
+    { id: "one-moment", text: "One moment." },
+    { id: "working", text: "I'm working on it." },
+  ]),
+});
 // A known search or reasoning delay gets feedback within the one-second target.
 // With no known cause a reply is only "late" much later, so the generic clip
 // waits; this keeps acknowledgments from delaying replies that were about to start.
 export const ACK_DELAYS_MS = Object.freeze({ search: 450, reasoning: 600, generic: 1500 });
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/u;
 
-export function ackClipUrl(voiceId, kind) {
-  const entry = ACK_KINDS[kind];
+export function ackClipUrl(voiceId, kind, variant = 0) {
+  const entry = Object.hasOwn(ACK_VARIANTS, kind) ? ACK_VARIANTS[kind][variant] : undefined;
   if (!entry || !SAFE_ID.test(voiceId ?? "")) return null;
   return `/voice-acks/${voiceId}/${entry.id}.mp3`;
 }
@@ -52,8 +71,9 @@ export function createAcknowledgmentPolicy({ delays = ACK_DELAYS_MS } = {}) {
 /** In-memory cache of the static clips; a missing clip is remembered and skipped. */
 export function createAckCache({ fetchImpl = fetch } = {}) {
   const clips = new Map();
-  const load = (voiceId, kind) => {
-    const url = ackClipUrl(voiceId, kind);
+  const cursors = new Map();
+  const load = (voiceId, kind, variant = 0) => {
+    const url = ackClipUrl(voiceId, kind, variant);
     if (!url) return Promise.resolve(null);
     if (!clips.has(url))
       clips.set(
@@ -75,8 +95,29 @@ export function createAckCache({ fetchImpl = fetch } = {}) {
     return clips.get(url);
   };
   return {
-    get: load,
-    /** Preload every clip for a voice when a Voice session starts. */
-    warm: (voiceId) => Promise.all(Object.keys(ACK_KINDS).map((kind) => load(voiceId, kind))),
+    async get(voiceId, kind) {
+      if (!ackClipUrl(voiceId, kind)) return null;
+      const variants = ACK_VARIANTS[kind];
+      const key = voiceId + ":" + kind;
+      const start = cursors.get(key) ?? 0;
+      // Rotate only through playable files for this exact selected voice.
+      // A missing alternative falls back to another clip, never another voice.
+      for (let offset = 0; offset < variants.length; offset++) {
+        const index = (start + offset) % variants.length;
+        const clip = await load(voiceId, kind, index);
+        if (clip) {
+          cursors.set(key, (index + 1) % variants.length);
+          return clip;
+        }
+      }
+      return null;
+    },
+    /** Preload all variants once for a voice; missing files are cached too. */
+    warm: (voiceId) =>
+      Promise.all(
+        Object.entries(ACK_VARIANTS).flatMap(([kind, variants]) =>
+          variants.map((_, index) => load(voiceId, kind, index)),
+        ),
+      ),
   };
 }

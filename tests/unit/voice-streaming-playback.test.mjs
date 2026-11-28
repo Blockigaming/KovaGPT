@@ -480,3 +480,39 @@ test("an acknowledgment without signed reply segments falls back instead of comp
   h.sinkEvents.onEnded();
   assert.equal(h.ended, 0);
 });
+
+test("acknowledgments rotate among variants for the same voice and cache each file", async () => {
+  const urls = [];
+  const cache = createAckCache({
+    fetchImpl: async (url) => {
+      urls.push(url);
+      const size = url.includes("look-more") ? 32000 : url.includes("check-details") ? 48000 : 16000;
+      return new Response(new Uint8Array(size), { headers: { "Content-Type": "audio/mpeg" } });
+    },
+  });
+  const sizes = [];
+  for (let i = 0; i < 4; i++) sizes.push((await cache.get("jessica", "search")).bytes.byteLength);
+  assert.deepEqual(sizes, [16000, 32000, 48000, 16000]);
+  assert.deepEqual(urls, [
+    "/voice-acks/jessica/check.mp3",
+    "/voice-acks/jessica/look-more.mp3",
+    "/voice-acks/jessica/check-details.mp3",
+  ]);
+  assert.equal(ackClipUrl("jessica", "search", 99), null);
+  assert.equal(ackClipUrl("jessica", "__proto__"), null);
+});
+
+test("missing alternatives fall back to the existing clip without switching voices", async () => {
+  const urls = [];
+  const cache = createAckCache({
+    fetchImpl: async (url) => {
+      urls.push(url);
+      return url.endsWith("/check.mp3")
+        ? new Response(new Uint8Array(16000), { headers: { "Content-Type": "audio/mpeg" } })
+        : new Response(null, { status: 404 });
+    },
+  });
+  for (let i = 0; i < 3; i++) assert.equal((await cache.get("lauren", "search")).bytes.byteLength, 16000);
+  assert.equal(urls.length, 3);
+  assert.ok(urls.every((url) => url.startsWith("/voice-acks/lauren/")));
+});
