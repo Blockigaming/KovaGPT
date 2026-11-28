@@ -81,7 +81,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R39 | P | F | Funding/payment event handling; live receipts, refunds/disputes and reconciliation not fully qualified. |
 | R40 | P | F | Versioned JS package, declarations and streaming; f9a4323 26 SDK tests. Missing families still lack SDK parity. |
 | R41 | P | F | Versioned Python sync/async package; f9a4323 29 tests. Missing families still lack SDK parity. |
-| R42 | P | F | 1c3632e OpenAPI for 27 current routes; d6de895 updated browser contract; complete response schema and missing route parity pending. |
+| R42 | P | F | 1c3632e OpenAPI for 27 current routes; d6de895 updated browser contract; method/status-specific agent, skill, conversation, vector-store, webhook and response-job response contracts with three focused schema assertions executed in isolated JS. Remaining response schemas and missing route parity pending. |
 | R43 | P | F | 43a29aa searchable reference and guides; 29 baseline routes and full content inventory not reconciled. |
 | R44 | I | C | Accepted on frozen checklist; 8c14be3 isolated migration run 46067432818 and be68daf run 46070676725; current branch SQL unchanged since successful be68daf replay except speech scope migration, which needs exact-head qualification. |
 | R45 | P | F | Isolated replay passed be68daf; two-principal fixtures exist; exact current schema replay and rollback evidence incomplete. |

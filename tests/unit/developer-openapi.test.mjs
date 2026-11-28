@@ -75,3 +75,50 @@ test("research contract describes distinct autonomous and reviewed envelopes and
   assert.deepEqual(run.properties.mode.enum, ["autonomous", "queries"]);
   assert.ok(run.properties.items.items.properties.citations);
 });
+
+test("versioned resource responses distinguish definitions, summaries and deletion receipts", () => {
+  const schema = (route, method, status = 200) =>
+    spec.paths["/api/v1/" + route][method].responses[status].content["application/json"].schema;
+  for (const [route, kind] of [["agents", "agent"], ["skills", "skill"]]) {
+    const detail = schema(route, "post", 201);
+    assert.equal(detail.properties.object.const, kind + ".definition");
+    assert.deepEqual(schema(route, "post"), detail);
+    assert.deepEqual(schema(route, "get").oneOf[1], detail);
+    assert.equal(detail.additionalProperties, false);
+    assert.equal(detail.properties.owner_id, undefined);
+    assert.equal(schema(route, "delete").properties.deleted.const, true);
+    const summary = schema(route, "get").oneOf[0].properties.data.items;
+    assert.equal(summary.properties.definition, undefined);
+    assert.equal(summary.properties.version.maximum, 20);
+  }
+});
+
+test("conversation and vector mutations document their distinct resource receipts", () => {
+  const schema = (route, method, status = 200) =>
+    spec.paths["/api/v1/" + route][method].responses[status].content["application/json"].schema;
+  const conversation = schema("conversations", "post", 201);
+  assert.equal(conversation.properties.items.maxItems, 100);
+  assert.equal(conversation.properties.revision.maximum, 200);
+  assert.equal(schema("conversations", "post").oneOf[1].properties.deleted.const, true);
+  const vector = schema("vector-stores", "get").oneOf;
+  assert.equal(vector[2].properties.data.maxItems, 25);
+  assert.equal(vector[3].properties.embedding.maxItems, 1536);
+  assert.equal(schema("vector-stores", "post").oneOf[0].properties.embedding, undefined);
+  assert.equal(schema("vector-stores", "post").oneOf[2].properties.search_type.const, "cosine");
+});
+
+test("webhook secrets are mutation-only and completed response jobs require settled output", () => {
+  const webhook = spec.paths["/api/v1/webhooks"];
+  const schema = (operation, status = 200) =>
+    operation.responses[status].content["application/json"].schema;
+  assert.equal(schema(webhook.get).anyOf[2].properties.signing_secret, undefined);
+  assert.ok(schema(webhook.post, 201).required.includes("signing_secret"));
+  assert.ok(schema(webhook.post).required.includes("signing_secret"));
+  assert.equal(schema(webhook.post, 202).properties.signing_secret, undefined);
+  assert.equal(schema(webhook.post, 202).properties.status.enum.includes("pending"), true);
+  const job = schema(spec.paths["/api/v1/response-jobs"].post, 202).oneOf;
+  assert.equal(job[0].properties.settlement_state.const, "settled");
+  assert.equal(job[0].properties.output.type, "object");
+  assert.equal(job[1].properties.output.type, "null");
+  assert.equal(job[1].properties.status.enum.includes("completed"), false);
+});

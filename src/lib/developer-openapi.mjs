@@ -677,6 +677,199 @@ output["mcp-connections"] = union(
   }),
 );
 output["research-runs"] = union(researchRun, list(open({ id: uuid }, ["id"])));
+// Resource responses are method-specific: retrieval does not disclose mutation-only
+// secrets, and a deletion receipt is not interchangeable with a resource definition.
+const dateTime = { type: "string", format: "date-time" };
+const nullableDateTime = { ...dateTime, type: ["string", "null"] };
+const nullableUuid = { ...uuid, type: ["string", "null"] };
+const deletedResource = obj({ id: uuid, deleted: { const: true } });
+const resourceList = (item) =>
+  obj({ object: { const: "list" }, data: { type: "array", items: item } });
+const versionedFields = { id: uuid, version: integer(1, 20), created_at: dateTime };
+const versionedOutput = (kind, summary, definition) => {
+  const detail = obj({
+    object: { const: kind + ".definition" },
+    ...versionedFields,
+    project_id: uuid,
+    definition,
+  });
+  return {
+    get: union(resourceList(obj({ ...versionedFields, ...summary })), detail),
+    post: detail,
+    created: detail,
+    delete: deletedResource,
+  };
+};
+const agentFields = {
+  name: str(160),
+  model,
+  instructions: str(8000),
+  max_output_tokens: integer(1, 8192),
+};
+const skillFields = { name: str(160), description: str(512), instructions: str(4000) };
+const conversationItemResponse = obj({ id: uuid, role, content: str(8192) });
+const conversationFields = {
+  project_id: uuid,
+  id: uuid,
+  title: str(160),
+  revision,
+  created_at: dateTime,
+  updated_at: dateTime,
+  expires_at: dateTime,
+};
+const conversationDetail = obj({
+  object: { const: "conversation" },
+  ...conversationFields,
+  items: arr(conversationItemResponse, 100, 0),
+});
+const conversationItemEnvelope = obj({
+  object: { const: "conversation.item" },
+  conversation_id: uuid,
+  revision,
+  item: conversationItemResponse,
+});
+const conversationItemDeleted = obj({
+  conversation_id: uuid,
+  revision,
+  id: uuid,
+  deleted: { const: true },
+});
+const vectorStoreFields = {
+  id: uuid,
+  project_id: uuid,
+  name: str(80),
+  model,
+  dimensions: integer(1, 1536),
+  created_at: dateTime,
+  expires_at: dateTime,
+};
+const vectorStoreDetail = obj({ object: { const: "vector_store" }, ...vectorStoreFields });
+const vectorEntryFields = {
+  entry_id: vectorEntry.entry_id,
+  file_id: nullableUuid,
+  content: str(2048),
+  created_at: dateTime,
+  updated_at: dateTime,
+};
+const vectorEntryDetail = {
+  object: { const: "vector_entry" },
+  store_id: uuid,
+  ...vectorEntryFields,
+};
+const vectorEntryMutation = obj(vectorEntryDetail);
+const vectorEntryPage = obj({
+  object: { const: "list" },
+  data: arr(obj(vectorEntryFields), 25, 0),
+  page: integer(0, 19),
+  has_more: boolean,
+});
+const vectorSearchResult = obj({
+  object: { const: "list" },
+  search_type: { const: "cosine" },
+  data: arr(
+    obj({
+      entry_id: vectorEntry.entry_id,
+      file_id: nullableUuid,
+      content: str(2048),
+      score: { type: "number", minimum: -1, maximum: 1 },
+    }),
+    20,
+    0,
+  ),
+});
+const webhookStatus = choices("pending", "leased", "delivered", "failed");
+const webhookFields = {
+  project_id: uuid,
+  id: uuid,
+  api_key_id: uuid,
+  url: { ...str(1024), format: "uri" },
+  events: arr(choices("request.settled", "request.rejected"), 2),
+  generation: integer(1, 1000),
+  created_at: dateTime,
+};
+const webhookEndpoint = obj({ object: { const: "webhook.endpoint" }, ...webhookFields });
+const webhookSecretEndpoint = obj({
+  object: { const: "webhook.endpoint" },
+  ...webhookFields,
+  signing_secret: str(160),
+});
+const webhookDelivery = obj({
+  id: uuid,
+  event_type: choices("request.settled", "request.rejected", "webhook.test"),
+  status: webhookStatus,
+  attempts: integer(0, 5),
+  http_status: { ...integer(100, 599), type: ["integer", "null"] },
+  created_at: dateTime,
+  finished_at: nullableDateTime,
+});
+const responseJobStatus = choices("queued", "running", "completed", "uncertain", "canceled");
+const responseJobFields = {
+  object: { const: "response.job" },
+  id: uuid,
+  finished_at: nullableDateTime,
+  request_id: nullableUuid,
+  final_customer_charge: amount,
+};
+const responseJob = union(
+  obj({
+    ...responseJobFields,
+    status: { const: "completed" },
+    settlement_state: { const: "settled" },
+    output: nativeObject,
+  }),
+  obj({
+    ...responseJobFields,
+    status: choices("queued", "running", "uncertain", "canceled"),
+    settlement_state: { type: ["string", "null"] },
+    output: { type: "null" },
+  }),
+);
+const resourceOutputs = {
+  agents: versionedOutput("agent", { name: agentFields.name, model }, obj(agentFields)),
+  skills: versionedOutput(
+    "skill",
+    { name: skillFields.name, description: skillFields.description },
+    obj(skillFields),
+  ),
+  conversations: {
+    get: union(resourceList(obj(conversationFields)), conversationDetail, conversationItemEnvelope),
+    post: union(conversationItemEnvelope, conversationItemDeleted),
+    created: conversationDetail,
+    delete: deletedResource,
+  },
+  "vector-stores": {
+    get: union(
+      resourceList(obj(vectorStoreFields)),
+      vectorStoreDetail,
+      vectorEntryPage,
+      obj({ ...vectorEntryDetail, embedding: arr({ type: "number" }, 1536) }),
+    ),
+    post: union(vectorEntryMutation, resourceList(vectorEntryMutation), vectorSearchResult),
+    created: vectorStoreDetail,
+    delete: union(deletedResource, obj({ entry_id: vectorEntry.entry_id, deleted: { const: true } })),
+  },
+  webhooks: {
+    // An empty list is valid for either endpoints or delivery history.
+    get: {
+      anyOf: [resourceList(obj(webhookFields)), resourceList(webhookDelivery), webhookEndpoint],
+    },
+    post: webhookSecretEndpoint,
+    created: webhookSecretEndpoint,
+    accepted: obj({ id: uuid, status: webhookStatus }),
+    delete: deletedResource,
+  },
+  "response-jobs": {
+    get: union(
+      responseJob,
+      resourceList(
+        obj({ id: uuid, created_at: dateTime, expires_at: dateTime,
+          status: responseJobStatus, finished_at: nullableDateTime }),
+      ),
+    ),
+    post: responseJob,
+    accepted: responseJob,
+  },
+};
 const error = obj({ error: open({ code: str(128), message: str(1024) }) });
 const header = (name, schema, required, description) => ({
   name,
@@ -726,7 +919,9 @@ export function developerOpenApi() {
             "Stable retry key; required for paid execution, uploads and vector store creation.",
           ),
         );
+      const resource = resourceOutputs[key];
       const schema =
+        resource?.[method.toLowerCase()] ??
         output[key] ??
         open(
           {
@@ -769,18 +964,22 @@ export function developerOpenApi() {
           "conversations",
           "agents",
           "skills",
+          "webhooks",
           "realtime-sessions",
           "browser-sessions",
         ].includes(key)
       )
-        responses["201"] = { description: "Resource created.", content };
+        responses["201"] = {
+          description: "Resource created.",
+          content: resource?.created ? json(resource.created) : content,
+        };
       if (
         method === "POST" &&
         ["batches", "automations", "research-runs", "response-jobs", "webhooks"].includes(key)
       )
         responses["202"] = {
           description: "Accepted for asynchronous work; not proof of completion or settlement.",
-          content,
+          content: resource?.accepted ? json(resource.accepted) : content,
         };
       const requestBody =
         method === "POST" ? { required: true, content: json(bodies[key]) } : undefined;
