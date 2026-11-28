@@ -325,14 +325,12 @@ function ProjectChatPage() {
     setSending(true);
 
     let assistant = "";
-    let assistantFollowups: string[] = [];
     let responseCompleted = false;
     let browserRejected = false;
     let assistantSources: ResponseSource[] | undefined;
     const responseMessage = (): ProjectChatMessage => ({
       role: "assistant",
       content: assistant,
-      ...(assistantFollowups.length ? { followups: assistantFollowups } : {}),
       ...(assistantSources ? { sources: assistantSources } : {}),
     });
     try {
@@ -340,7 +338,6 @@ function ProjectChatPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Kova-Response-Followups": "1",
           "Idempotency-Key": crypto.randomUUID(),
         },
         signal: controller.signal,
@@ -383,7 +380,7 @@ function ProjectChatPage() {
           }
         },
       });
-      ({ content: assistant, followups: assistantFollowups } = extractResponseFollowups(assistant));
+      assistant = extractResponseFollowups(assistant).content;
       responseCompleted = true;
     } catch (error) {
       if (isCurrent() && !isAbortError(error)) {

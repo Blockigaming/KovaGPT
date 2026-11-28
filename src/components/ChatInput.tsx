@@ -1,4 +1,5 @@
 import { observeElementWidth } from "@/lib/observe-element-width";
+import HomeAutocompleteHost from "@/components/HomeAutocompleteHost";
 import { ChatOutputTemplates } from "./ChatOutputTemplates";
 import { t } from "@/lib/localization";
 import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
@@ -297,6 +298,7 @@ export function ChatInput({
   onPluginContextsChange,
   showResources = true,
   savedConversations = [],
+  homeSuggestions = false,
   surface = "conversation",
   viewportManaged = false,
   focusOnHomeStartup,
@@ -364,6 +366,7 @@ export function ChatInput({
   /** The welcome tray disappears once a conversation has messages. */
   showResources?: boolean;
   savedConversations?: readonly Conversation[];
+  homeSuggestions?: boolean;
   /** Controls whether the desktop add menu opens below the centered composer or above a docked one. */
   surface?: "empty" | "conversation";
   viewportManaged?: boolean;
@@ -2513,6 +2516,14 @@ export function ChatInput({
             voiceReturnUrlRef.current,
           );
         }}
+      />
+      <HomeAutocompleteHost
+        anchor={composerAnchorRef}
+        owner={isLoaded ? (user?.id ?? null) : null}
+        draft={value}
+        conversations={user ? savedConversations : []}
+        personalize={homeSuggestions}
+        onPick={onChange}
       />
       <div
         ref={composerAnchorRef}

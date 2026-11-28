@@ -15,7 +15,6 @@ import {
   DAILY_UPLOAD_LIMIT_BY_TIER,
 } from "@/lib/modes";
 import { GENERATIVE_UI_INSTRUCTIONS } from "@/lib/generative-ui.mjs";
-import { RESPONSE_FOLLOWUP_INSTRUCTIONS } from "@/lib/response-followups.mjs";
 import {
   COMPACT_INTERACTIVE_UI_INSTRUCTIONS,
   INTERACTIVE_UI_INSTRUCTIONS,
@@ -1710,9 +1709,6 @@ export const Route = createFileRoute("/api/chat")({
                     (useRichInteractiveCatalog
                       ? INTERACTIVE_UI_INSTRUCTIONS
                       : COMPACT_INTERACTIVE_UI_INSTRUCTIONS) +
-                    (request.headers.get("X-Kova-Response-Followups") === "1"
-                      ? RESPONSE_FOLLOWUP_INSTRUCTIONS
-                      : "") +
                     "\n\n" +
                     CREATOR_INSTRUCTION +
                     buildUserContextBlock(personalContext ?? {}) +

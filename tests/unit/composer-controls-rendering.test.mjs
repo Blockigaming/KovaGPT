@@ -47,6 +47,7 @@ const closedSurfaces = {
       React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),
   },
   "@/components/ComposerVoiceDialog": { ComposerVoiceDialog: empty },
+  "@/components/HomeAutocompleteHost": { default: empty },
   "@/components/ui/ExpandViewIcon": { ExpandViewIcon: empty },
   "@/components/ComposerUploadAllowance": { ComposerUploadAllowance: empty },
   "@/components/ComposerContextPanel": { ComposerContextPanel: empty },

@@ -5,6 +5,8 @@ import { waitForKovaHydration } from "./hydration";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: review home, navigation and routable Appearance`, async ({ page }, info) => {
+    // Measure settled geometry, not intermediate sidebar animation frames.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await installAuthenticatedFixture(page);
     await page.addInitScript((mode) => {
       localStorage.setItem("kova-theme-mode", mode);

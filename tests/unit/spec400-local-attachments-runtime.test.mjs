@@ -206,6 +206,7 @@ function fixture(
     "ComposerPluginList",
   ])
     modules[`@/components/${name}`] = { [name]: name };
+  modules["@/components/HomeAutocompleteHost"] = { default: () => null };
   modules["@/components/ComposerPluginList"].useComposerPluginConnections = () => ({});
   modules["@/lib/conversation-limits.mjs"] = {};
   modules["@/lib/preload-conversation-view"] = {};

@@ -3195,6 +3195,7 @@ function KovaGPT() {
       showChooseProject
       showResources={!chatStarted}
       savedConversations={userKey && principalReady ? conversations : []}
+      homeSuggestions={settingsReady && settings.rememberAcross && !tempChat}
       onOpenChatContext={active ? openChatWorkspace : undefined}
       chatRulesActive={chatRulesActive}
       onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}

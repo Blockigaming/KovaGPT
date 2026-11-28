@@ -35,17 +35,12 @@ test("only terminal metadata is removed from a finished answer", () => {
     assert.deepEqual(extractResponseFollowups(content), { content, followups: [] });
   }
 });
-test("suggestion buttons submit the next turn through the shared response handler", () => {
+test("response followups are retired without disabling interactive response actions", () => {
   const source = readFileSync("src/components/ChatMessage.tsx", "utf8");
-  assert.match(source, /onClick=\{\(\) => onFollowUp\(suggestion\)\}/);
-  const route = readFileSync("src/routes/index.tsx", "utf8");
-  assert.match(route, /const clearComposer =\s*!preserveDraft/);
-  assert.match(route, /onFollowUp=\{[\s\S]*?void send\(\s*prompt/);
-});
-test("suggestions stay absent for streaming/failed/stopped and keep mobile wrapping", () => {
-  const source = readFileSync("src/components/ChatMessage.tsx", "utf8");
-  assert.match(source, /!streaming &&\s*!message.generationStatus/);
-  assert.match(source, /aria-label="Suggested follow-ups"/);
-  const css = readFileSync("src/components/response-output-blocks.css", "utf8");
-  assert.match(css, /\.kova-response-followups span \{[\s\S]*?overflow-wrap: anywhere/);
+  assert.doesNotMatch(source, /kova-response-followups|normalizeResponseFollowups/);
+  assert.match(source, /const submitInteractive = onFollowUp/);
+  const route = readFileSync("src/routes/api/chat.ts", "utf8");
+  assert.doesNotMatch(route, /RESPONSE_FOLLOWUP_INSTRUCTIONS|X-Kova-Response-Followups/);
+  const headers = readFileSync("src/lib/chat-summary-snapshot.mjs", "utf8");
+  assert.doesNotMatch(headers, /X-Kova-Response-Followups/);
 });
