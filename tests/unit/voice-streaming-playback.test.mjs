@@ -569,3 +569,32 @@ test("a delayed TTS response can receive one acknowledgment after signed text ar
   assert.deepEqual(h.writes, [16000, 3]);
   h.playback.stop();
 });
+
+test("a PCM-capable sink requests raw audio but leaves prerecorded MP3 on the compressed path", async () => {
+  const writes = [];
+  const playback = createStreamingVoicePlayback({
+    ownerId: "owner-1",
+    voiceId: "jessica",
+    createSink: () => ({
+      async write() { assert.fail("PCM must not enter the MP3 decoder"); },
+      async writePcm(bytes) { writes.push(bytes.byteLength); },
+      async segmentEnd() { writes.push("segmentEnd"); },
+      async end() { writes.push("end"); },
+      dispose() {},
+    }),
+    fetchImpl: async (_url, init) => {
+      assert.equal(init.headers.Accept, "audio/pcm");
+      assert.equal(JSON.parse(init.body).voiceId, "jessica");
+      return new Response(new Uint8Array(3840), {
+        headers: { "Content-Type": "audio/pcm; rate=24000" },
+      });
+    },
+  });
+  playback.begin();
+  playback.segment(seg(0));
+  playback.finish();
+  for (let i = 0; i < 50 && !writes.includes("end"); i++)
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(writes, [3840, "segmentEnd", "end"]);
+  playback.stop();
+});

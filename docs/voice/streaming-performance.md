@@ -113,7 +113,10 @@ model and TTS latencies (labelled synthetic; use it for regressions, not as prod
 ## Known limits
 
 - iOS Safari has no MP3 `MediaSource`, so it uses a Web Audio segment sink (`webaudio-sink.mjs`): the
-  AudioContext is unlocked inside the mic/voice tap, each segment is decoded as it completes and scheduled
-  gaplessly. Playback starts per segment, not per chunk. Untested on a physical iOS device here.
+  AudioContext is unlocked inside the mic/voice tap. Signed live segments negotiate raw 24 kHz PCM and
+  schedule 80 ms blocks without waiting for compressed segment completion. Cached acknowledgments
+  and older MP3 responses remain supported in the same ordered queue. The per-instance speech handler
+  is reused so signed segments share reply admission instead of recharging quota. No production
+  latency or provider-format compatibility has been measured on a physical iOS device yet.
 - Barge-in thresholds are conservative and untested on physical speakers/headsets here.
 - `firstSubstantive` after an acknowledgment is estimated from the clip length.

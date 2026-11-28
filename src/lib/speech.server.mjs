@@ -173,6 +173,11 @@ export function createSpeechHandler({
         throw fail("speech_invalid_request", error?.status === 413 ? 413 : 400);
       }
       const liveSegment = input?.mode === "live-segment";
+      // Only the signed live-segment path negotiates raw PCM. Existing saved
+      // replies, read-aloud and older clients retain their MP3 contract.
+      const pcm = liveSegment && request.headers.get("accept") === "audio/pcm";
+      const outputFormat = pcm ? "pcm_24000" : "mp3_44100_128";
+      const outputType = pcm ? "audio/pcm" : "audio/mpeg";
       const direct = input?.mode === "read-aloud" || input?.mode === "live-reply" || liveSegment;
       const liveReply = input?.mode === "live-reply";
       if (!direct && requestSize > 1024) throw fail("speech_invalid_request", 413);
@@ -319,21 +324,19 @@ export function createSpeechHandler({
             seen: new Set(),
             chars: 0,
             texts: new Map(),
+            voiceId: settings.voiceId,
+            modelId,
             admission: null,
           };
           const created = turn;
-          created.admission = chargeAdmission().then(
-            (denied) => {
-              if (denied) turnLedger.delete(key);
-              return denied;
-            },
-            (error) => {
-              turnLedger.delete(key);
-              throw error;
-            },
-          );
+          // Preserve a denial for this reply too: concurrent segments cannot
+          // repeatedly reserve quota after a rate-limit or plan rejection.
+          created.admission = chargeAdmission();
+          void created.admission.catch(() => undefined);
           turnLedger.set(key, created);
         }
+        if (turn.voiceId !== settings.voiceId || turn.modelId !== modelId)
+          throw fail("speech_invalid_voice", 409);
         if (turn.seen.has(input.segmentIndex)) throw fail("speech_segment_replayed", 409);
         if (turn.chars + text.length > SPEECH_LIMITS.textChars)
           throw fail("speech_text_too_long", 413);
@@ -376,7 +379,7 @@ export function createSpeechHandler({
       // Use the configured provider endpoint and server-owned voice catalog.
       const upstream = await wait(
         fetchImpl(
-          `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(settings.voiceId)}/stream?output_format=mp3_44100_128`,
+          `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(settings.voiceId)}/stream?output_format=${outputFormat}`,
           {
             method: "POST",
             redirect: "error",
@@ -386,7 +389,7 @@ export function createSpeechHandler({
             headers: {
               "xi-api-key": settings.apiKey,
               "Content-Type": "application/json",
-              Accept: "audio/mpeg",
+              Accept: outputType,
             },
             body: JSON.stringify({
               text,
@@ -396,10 +399,13 @@ export function createSpeechHandler({
           },
         ),
       );
+      const mediaType = upstream.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
       if (
         !upstream.ok ||
         !upstream.body ||
-        upstream.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "audio/mpeg"
+        (pcm
+          ? mediaType !== "audio/pcm" && mediaType !== "application/octet-stream"
+          : mediaType !== "audio/mpeg")
       ) {
         void upstream.body?.cancel().catch(() => undefined);
         throw fail(
@@ -448,7 +454,7 @@ export function createSpeechHandler({
       });
       return new Response(body, {
         headers: {
-          "Content-Type": "audio/mpeg",
+          "Content-Type": pcm ? "audio/pcm; rate=24000" : "audio/mpeg",
           "Cache-Control": "private, no-store",
           "X-Content-Type-Options": "nosniff",
           "X-Accel-Buffering": "no",

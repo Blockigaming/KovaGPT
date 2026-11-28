@@ -9,6 +9,7 @@ export function createWebAudioSegmentSink(options: {
   onProgress?: (elapsed: number, duration: number) => void;
 }): {
   write(bytes: Uint8Array): Promise<void>;
+  writePcm?(bytes: Uint8Array): Promise<void>;
   segmentEnd(): Promise<void>;
   end(): Promise<void>;
   dispose(): void;

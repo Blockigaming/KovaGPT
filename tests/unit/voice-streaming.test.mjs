@@ -253,3 +253,30 @@ test("early sentence segmentation does not cut a short opening clause or decimal
   assert.deepEqual(s.push("5 volts. "), ["Sure, the value is 3.5 volts."]);
   assert.deepEqual(s.flush(), []);
 });
+
+test("signed live segments negotiate 24 kHz PCM without changing the selected ElevenLabs voice", async () => {
+  const f = fixture({
+    fetchImpl: async (url, init) => {
+      assert.match(url, /\/mockVoice\/stream\?output_format=pcm_24000$/u);
+      assert.equal(init.headers.Accept, "audio/pcm");
+      assert.equal(JSON.parse(init.body).model_id, "eleven_flash_v2_5");
+      return new Response(new Uint8Array([0, 0, 1, 0]), {
+        headers: { "Content-Type": "audio/pcm" },
+      });
+    },
+  });
+  const request = new Request("https://kova.test/api/speech", {
+    method: "POST",
+    headers: {
+      origin: "https://kova.test",
+      "Content-Type": "application/json",
+      Accept: "audio/pcm",
+    },
+    body: JSON.stringify(segmentBody(0, "Hello there.")),
+  });
+  const response = await f.handler(request);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "audio/pcm; rate=24000");
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), new Uint8Array([0, 0, 1, 0]));
+  assert.equal(f.calls.quota, 1);
+});

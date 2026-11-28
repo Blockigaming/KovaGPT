@@ -19,8 +19,9 @@ function installAudio({ decodeFails = false } = {}) {
       this.state = "running";
       return Promise.resolve();
     }
-    createBuffer() {
-      return {};
+    createBuffer(_channels, length, rate) {
+      const samples = new Float32Array(length);
+      return { duration: length / rate, getChannelData: () => samples };
     }
     createAnalyser() {
       return {
@@ -165,5 +166,28 @@ test("whole-reply fallback decodes buffered MP3 at end and waits for actual play
   assert.equal(e.playing, 1);
   assert.equal(e.ended, 0);
   sources.at(-1).onended();
+  assert.equal(e.ended, 1);
+});
+
+test("PCM starts before the segment ends and preserves incomplete samples between network chunks", async () => {
+  const { createWebAudioSegmentSink } = await load();
+  const { log, sources } = installAudio();
+  const { e, options } = events();
+  const sink = createWebAudioSegmentSink(options);
+  await sink.writePcm(new Uint8Array(3839));
+  await settle();
+  assert.equal(e.playing, 0);
+  await sink.writePcm(new Uint8Array([0, 0, 128]));
+  await settle();
+  assert.equal(e.playing, 1);
+  assert.equal(log.decoded.length, 0, "PCM never invokes compressed audio decoding");
+  assert.equal(sources.length, 1);
+  await sink.segmentEnd();
+  await sink.end();
+  assert.equal(sources.length, 2);
+  assert.equal(sources[1].buffer.getChannelData(0)[0], -1);
+  assert.equal(e.ended, 0);
+  sources[0].onended();
+  sources[1].onended();
   assert.equal(e.ended, 1);
 });

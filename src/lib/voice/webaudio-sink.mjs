@@ -3,6 +3,8 @@
 // not started from a tap). Each spoken segment is decoded as soon as it has
 // fully arrived and scheduled back-to-back on one AudioContext, so speech still
 // starts at the first segment instead of waiting for the whole reply.
+// Signed live segments can also use 24 kHz mono PCM to play without waiting
+// for complete compressed audio. Prerecorded MP3s use the same output queue.
 let sharedContext = null;
 
 const contextClass = () => globalThis.AudioContext ?? globalThis.webkitAudioContext;
@@ -54,6 +56,9 @@ export function createWebAudioSegmentSink({
   output.fftSize = 256;
   output.connect(context.destination);
   let chunks = [];
+  let pcmTail = new Uint8Array(0);
+  const PCM_RATE = 24000;
+  const PCM_BLOCK_BYTES = 3840; // 80 ms, signed 16-bit mono
   let decoding = Promise.resolve();
   let nextStart = 0;
   let firstStart = null;
@@ -89,10 +94,10 @@ export function createWebAudioSegmentSink({
       context.decodeAudioData(copy, resolve, reject);
     });
 
-  const schedule = async (bytes) => {
-    const audio = await decode(bytes);
+  const scheduleAudio = async (audio) => {
     if (disposed || signal.aborted) return;
     if (context.state !== "running") await context.resume?.().catch(() => undefined);
+    if (disposed || signal.aborted) return;
     const source = context.createBufferSource();
     source.buffer = audio;
     source.connect(output);
@@ -114,14 +119,50 @@ export function createWebAudioSegmentSink({
     }
   };
 
+  const enqueue = (makeAudio) => {
+    decoding = decoding
+      .then(async () => {
+        if (!disposed && !signal.aborted) await scheduleAudio(await makeAudio());
+      })
+      .catch(() => {
+        if (!disposed && !signal.aborted) onError();
+      });
+  };
+  const enqueuePcm = (bytes) => {
+    enqueue(() => {
+      const audio = context.createBuffer(1, bytes.byteLength / 2, PCM_RATE);
+      const samples = audio.getChannelData(0);
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      for (let i = 0; i < samples.length; i++) samples[i] = view.getInt16(i * 2, true) / 32768;
+      return audio;
+    });
+  };
+
   return {
     async write(bytes) {
       signal.throwIfAborted();
       chunks.push(bytes);
     },
-    /** One complete MP3 (a segment or an acknowledgment) has been written. */
+    async writePcm(bytes) {
+      signal.throwIfAborted();
+      const joined = new Uint8Array(pcmTail.byteLength + bytes.byteLength);
+      joined.set(pcmTail);
+      joined.set(bytes, pcmTail.byteLength);
+      let offset = 0;
+      while (joined.byteLength - offset >= PCM_BLOCK_BYTES) {
+        enqueuePcm(joined.slice(offset, offset + PCM_BLOCK_BYTES));
+        offset += PCM_BLOCK_BYTES;
+      }
+      pcmTail = joined.slice(offset);
+    },
+    /** Finish either a compressed clip or the final short PCM block. */
     async segmentEnd() {
       signal.throwIfAborted();
+      if (pcmTail.byteLength) {
+        if (pcmTail.byteLength % 2 !== 0) throw new Error("speech_invalid_pcm");
+        enqueuePcm(pcmTail);
+        pcmTail = new Uint8Array(0);
+      }
       if (!chunks.length) return;
       const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
       const joined = new Uint8Array(total);
@@ -132,11 +173,7 @@ export function createWebAudioSegmentSink({
       }
       chunks = [];
       // Decode in order so segments are scheduled in order.
-      decoding = decoding
-        .then(() => schedule(joined))
-        .catch(() => {
-          if (!disposed && !signal.aborted) onError();
-        });
+      enqueue(() => decode(joined));
     },
     async end() {
       signal.throwIfAborted();
@@ -167,6 +204,7 @@ export function createWebAudioSegmentSink({
         // Already disconnected.
       }
       chunks = [];
+      pcmTail = new Uint8Array(0);
     },
   };
 }

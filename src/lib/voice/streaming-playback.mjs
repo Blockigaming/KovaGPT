@@ -118,10 +118,10 @@ export function createStreamingVoicePlayback({
     // Otherwise onPlaying reports it, because no acknowledgment is ahead of it.
   };
 
-  const write = (bytes) => {
+  const write = (bytes, pcm = false) => {
     writeChain = writeChain.then(() => {
       if (!live) return;
-      return sink.write(bytes);
+      return pcm ? sink.writePcm(bytes) : sink.write(bytes);
     });
     return writeChain;
   };
@@ -148,10 +148,9 @@ export function createStreamingVoicePlayback({
           void response.body?.cancel().catch(() => undefined);
           throw new Error(STATUS_CODES[response.status] ?? "speech_unavailable");
         }
-        if (
-          !response.body ||
-          response.headers.get("content-type")?.split(";", 1)[0] !== "audio/mpeg"
-        )
+        const mediaType = response.headers.get("content-type")?.split(";", 1)[0];
+        const pcm = mediaType === "audio/pcm" && typeof sink.writePcm === "function";
+        if (!response.body || (!pcm && mediaType !== "audio/mpeg"))
           throw new Error("speech_unavailable");
         item.reader = response.body.getReader();
         let total = 0;
@@ -171,7 +170,7 @@ export function createStreamingVoicePlayback({
             timer = null;
           }
           if (!wroteAnything) wroteAnything = true;
-          await write(value);
+          await write(value, pcm);
           if (nextWrite === 0) markSubstantive();
         }
         if (!total) throw new Error("speech_unavailable");
@@ -214,7 +213,11 @@ export function createStreamingVoicePlayback({
           method: "POST",
           credentials: "same-origin",
           cache: "no-store",
-          headers: { "Content-Type": "application/json", "X-Kova-Owner": ownerId },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Kova-Owner": ownerId,
+            ...(typeof sink?.writePcm === "function" ? { Accept: "audio/pcm" } : {}),
+          },
           body: JSON.stringify(body),
           signal: controller.signal,
         });
