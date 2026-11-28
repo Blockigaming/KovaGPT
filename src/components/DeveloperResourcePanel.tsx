@@ -7,6 +7,7 @@ import {
   resourceConsoleJobDraft,
   resourceConsoleKey,
   resourceConsoleMaySpend,
+  resourceConsoleMcpDraft,
   resourceConsolePromptDraft,
   resourceConsoleFollowups,
   resourceConsoleRequest,
@@ -96,6 +97,20 @@ export function DeveloperResourcePanel({
     retry.current = null;
   };
 
+  const mcpInput =
+    section === "mcp-connections" && action === "invoke" ? record(JSON.parse(input)) : {};
+  const prepareMcp = (row: Row) => {
+    try {
+      setInput(resourceConsoleMcpDraft(row));
+      setAction("invoke");
+      setConfirmed(false);
+      setResult(null);
+      setError("");
+      retry.current = null;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Tool unavailable.");
+    }
+  };
   const promptInput = section === "prompts" ? record(JSON.parse(input)) : {};
   const promptDefinition = record(promptInput.definition);
   const changePromptInput = (fields: Row) => {
@@ -363,24 +378,56 @@ export function DeveloperResourcePanel({
               )}
             </div>
           )}
-          {section !== "prompts" && Object.keys(config.actions[action].fields).length > 0 && (
-            <label className="block space-y-1 text-sm">
-              <span>Request fields (JSON)</span>
-              <Textarea
-                className="min-w-0 font-mono text-xs"
-                rows={9}
-                spellCheck={false}
-                disabled={busy}
-                value={input}
-                onChange={(event) => {
-                  setInput(event.target.value);
-                  setConfirmed(false);
-                  setResult(null);
-                  setError("");
-                }}
-              />
-            </label>
+          {section === "mcp-connections" && action === "invoke" && (
+            <div className="space-y-3">
+              <label className="block space-y-1 text-sm">
+                Delegated grant
+                <Input readOnly value={String(mcpInput.id ?? "")} />
+              </label>
+              <label className="block space-y-1 text-sm">
+                Read tool
+                <Input readOnly value={String(mcpInput.tool ?? "")} />
+              </label>
+              <label className="block space-y-1 text-sm">
+                Query
+                <Textarea
+                  rows={4}
+                  maxLength={300}
+                  value={String(mcpInput.query ?? "")}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setInput(JSON.stringify({ ...mcpInput, query: event.target.value }, null, 2));
+                    setConfirmed(false);
+                    setResult(null);
+                    setError("");
+                  }}
+                />
+              </label>
+              <Button variant="outline" disabled={busy} onClick={() => selectAction("list")}>
+                Return to tool discovery
+              </Button>
+            </div>
           )}
+          {section !== "prompts" &&
+            section !== "mcp-connections" &&
+            Object.keys(config.actions[action].fields).length > 0 && (
+              <label className="block space-y-1 text-sm">
+                <span>Request fields (JSON)</span>
+                <Textarea
+                  className="min-w-0 font-mono text-xs"
+                  rows={9}
+                  spellCheck={false}
+                  disabled={busy}
+                  value={input}
+                  onChange={(event) => {
+                    setInput(event.target.value);
+                    setConfirmed(false);
+                    setResult(null);
+                    setError("");
+                  }}
+                />
+              </label>
+            )}
           {maySpend && action === "create" && (
             <p className="text-xs text-muted-foreground">
               Get a quote for each exact input first. Supply the signed quote token and a positive
@@ -471,20 +518,36 @@ export function DeveloperResourcePanel({
                 >
                   <div className="min-w-0">
                     <p className="break-words text-sm font-medium">
-                      {String(row.name ?? row.title ?? row.id ?? "Resource")}
+                      {String(row.tool_name ?? row.name ?? row.title ?? row.id ?? "Resource")}
                     </p>
                     <p className="break-all text-xs text-muted-foreground">
                       {String(row.id ?? "")}
                     </p>
                   </div>
-                  {typeof row.id === "string" && (
+                  {section === "mcp-connections" && (
+                    <div className="min-w-0 text-xs text-muted-foreground break-words">
+                      {String(row.server_id ?? "")} · Expires {String(row.expires_at ?? "Unknown")}{" "}
+                      · Read only
+                    </div>
+                  )}
+                  {section === "mcp-connections" ? (
                     <Button
                       variant="outline"
-                      disabled={busy}
-                      onClick={() => selectAction("detail", String(row.id))}
+                      disabled={busy || !enabled || !token}
+                      onClick={() => prepareMcp(row)}
                     >
-                      Inspect
+                      Prepare read
                     </Button>
+                  ) : (
+                    typeof row.id === "string" && (
+                      <Button
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => selectAction("detail", String(row.id))}
+                      >
+                        Inspect
+                      </Button>
+                    )
                   )}
                 </li>
               ))}

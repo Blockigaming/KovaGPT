@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for request traces, console navigation and public status on base 9d55bb409c10c63d29e9134f2a1714ab43dc09c2, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for scoped MCP discovery and skill lifecycle views on base 53243069a458d13c7ee0ec19d1dd154f005a1c3b, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 42; partial: 51; missing: 7. Total 100.
-- Verification: 26 targeted requirement-level tested; 1 prior CI verified; 61 narrower evidence; 12 unverified. Total 100.
+- Implemented: 43; partial: 50; missing: 7. Total 100.
+- Verification: 27 targeted requirement-level tested; 1 prior CI verified; 60 narrower evidence; 12 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Skills and integration views: 16 focused Node checks and TS/TSX syntax transpilation passed. Version-bound skill actions, scoped MCP grant refresh and confirmed revocation, discover-only preparation of active reviewed read grants with read-only binding, bounded query and separate explicit external-read confirmation. Fixed nonexistent MCP detail operation; no external dispatch or spending. R59 source coverage; browser and approved provider qualification remain pending.
 
 - Console navigation, traces and service status: 33 focused Node checks and TS/TSX syntax transpilation passed. Owner-scoped request lookup and redacted measurements, stored timeline, capped project/service outcome sample, request-history deep links, selected account credits and truthful current-page count. Credential-free public liveness, platform readiness and authentication-gate checks distinguish unavailable, degraded and unknown; provider health and uptime are not asserted. R51/R62/R86 source coverage; authenticated and responsive browser qualification and full CI pending. No provider calls or spending.
 
@@ -113,7 +115,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R56 | I | F | DeveloperFilesPanel and vector-store resource CRUD/index controls; dc071f1 and resource-console tests. |
 | R57 | I | F | Batch/background Responses resource controls with explicit quote submission, status and cancellation; d1e5243 console/policy tests. |
 | R58 | P | F | Browser Playground and analysis exist; no persistent container/browser lifecycle UI. |
-| R59 | P | F | Skills controls and DeveloperMcpAccess; full outbound connection management/discovery missing. |
+| R59 | I | T | Skill version lifecycle and response-bound drafts; project-scoped reviewed MCP grant/revoke/refresh, discovery and structured confirmed read invocation, with stale and malformed grants rejected. Focused policy and console tests passed. No arbitrary servers or writes. |
 | R60 | I | T | Schedule, pause, resume, cancel and item history; endpoint create, test, rotate, delete and delivery history; manual pending retry binds original event and attempt count without resetting the cap. Response-bound console actions retain confirmation and existing spend checks; JS/Python SDK and database/console fixtures passed. |
 | R61 | I | T | Owner-scoped UTC time series, account/project/key/model/service/status filters, pagination, redacted rows, independently measured totals for all existing meters, complete filtered CSV including isolated container/browser counts. Focused analytics tests passed; browser qualification pending. |
 | R62 | I | T | Owner-fenced request trace with recorded timestamps and meters, capped project/service outcomes, public service checks and explicit unknown provider health. Redaction and foreign-account denial tests passed. |

@@ -1,3 +1,4 @@
+import { parseDeveloperSkillRequest } from "./developer-skill-policy.mjs";
 import { parseDeveloperPromptRequest } from "./developer-prompt-policy.mjs";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -378,6 +379,21 @@ export function resourceConsolePromptDraft(action, result) {
   return JSON.stringify(parsed.input, null, 2);
 }
 
+export function resourceConsoleMcpDraft(row, now = Date.now()) {
+  if (
+    row?.read_only !== true ||
+    typeof row.id !== "string" ||
+    !uuid.test(row.id) ||
+    typeof row.tool_name !== "string" ||
+    !/^[A-Za-z0-9_.-]{1,128}$/.test(row.tool_name) ||
+    typeof row.expires_at !== "string" ||
+    !Number.isFinite(Date.parse(row.expires_at)) ||
+    Date.parse(row.expires_at) <= now
+  )
+    throw new Error("Discover an active delegated read tool first.");
+  return JSON.stringify({ id: row.id, tool: row.tool_name, query: "", approved: true }, null, 2);
+}
+
 export function resourceConsoleFollowups(section, action, raw, result, randomId) {
   const choices = [];
   const add = (next, fields) => {
@@ -386,6 +402,31 @@ export function resourceConsoleFollowups(section, action, raw, result, randomId)
     choices.push({ action: next, label: descriptor(section, next).label, draft });
   };
   const id = result?.id;
+  if (
+    section === "skills" &&
+    result?.object === "skill.definition" &&
+    typeof id === "string" &&
+    uuid.test(id) &&
+    Number.isSafeInteger(result.version) &&
+    result.version >= 1 &&
+    result.version <= 20
+  ) {
+    add("version", { id, version: result.version });
+    if (action !== "version" && result.version < 20) {
+      try {
+        const parsed = parseDeveloperSkillRequest("POST", new URLSearchParams(), {
+          operation: "update",
+          id,
+          expected_version: result.version,
+          definition: result.definition,
+        });
+        add("update", parsed.input);
+      } catch {
+        /* An invalid response must never draft an update. */
+      }
+    }
+    add("delete", { id });
+  }
   if (
     section === "webhooks" &&
     result?.object === "webhook.endpoint" &&
@@ -479,6 +520,22 @@ export function resourceConsoleRequest(section, action, raw) {
   )
     throw new Error("Use exactly the fields in the request template.");
   let path = config.path ?? "/api/v1/" + section;
+  if (
+    section === "mcp-connections" &&
+    action === "invoke" &&
+    (typeof input.id !== "string" ||
+      !uuid.test(input.id) ||
+      typeof input.tool !== "string" ||
+      !/^[A-Za-z0-9_.-]{1,128}$/.test(input.tool) ||
+      typeof input.query !== "string" ||
+      !input.query.trim() ||
+      input.query.length > 300 ||
+      /[\u0000-\u001f\u007f]/u.test(input.query) ||
+      input.approved !== true)
+  )
+    throw new Error(
+      "Select a delegated read tool and enter a nonempty query of up to 300 characters.",
+    );
   if (config.method === "POST") {
     const body = JSON.stringify({ operation: config.operation, ...input });
     return { method: config.method, path, body };

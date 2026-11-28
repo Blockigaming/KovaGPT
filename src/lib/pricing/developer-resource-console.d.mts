@@ -33,6 +33,7 @@ export function resourceConsolePromptDraft(
   action: "version" | "update" | "delete",
   result: unknown,
 ): string;
+export function resourceConsoleMcpDraft(row: unknown, now?: number): string;
 export function resourceConsoleFollowups(
   section: string,
   action: string,

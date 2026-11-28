@@ -33,7 +33,8 @@ export function DeveloperMcpConnectionsPanel({
     [keyId, setKey] = useState(""),
     [approved, setApproved] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [revoking, setRevoking] = useState<string | null>(null);
   const active = useRef<AbortController | null>(null);
   const load = useCallback(
     async (signal: AbortSignal) => {
@@ -50,9 +51,21 @@ export function DeveloperMcpConnectionsPanel({
   );
   useEffect(() => {
     const controller = new AbortController();
-    load(controller.signal).catch(() => {
-      if (!controller.signal.aborted) setError("MCP connection grants are unavailable.");
-    });
+    active.current = controller;
+    setBusy(true);
+    setData(null);
+    setApproved(false);
+    setRevoking(null);
+    load(controller.signal)
+      .catch(() => {
+        if (!controller.signal.aborted) setError("MCP connection grants are unavailable.");
+      })
+      .finally(() => {
+        if (active.current === controller) {
+          active.current = null;
+          if (!controller.signal.aborted) setBusy(false);
+        }
+      });
     return () => {
       controller.abort();
       active.current?.abort();
@@ -84,6 +97,25 @@ export function DeveloperMcpConnectionsPanel({
       }
     }
   }
+  async function refresh() {
+    if (active.current) return;
+    const controller = new AbortController();
+    active.current = controller;
+    setBusy(true);
+    setError("");
+    setApproved(false);
+    setRevoking(null);
+    try {
+      await load(controller.signal);
+    } catch {
+      if (!controller.signal.aborted) setError("MCP connection grants are unavailable.");
+    } finally {
+      if (active.current === controller) {
+        active.current = null;
+        if (!controller.signal.aborted) setBusy(false);
+      }
+    }
+  }
   const account = data?.accounts.find((row) => row.id === accountId);
   return (
     <section className="space-y-4 rounded-xl border p-5">
@@ -94,7 +126,11 @@ export function DeveloperMcpConnectionsPanel({
           most 24 hours. No secret or write access is shared.
         </p>
       </div>
+      <Button variant="outline" disabled={busy} onClick={() => void refresh()}>
+        Refresh grants
+      </Button>
       {error && <p role="alert">{error}</p>}
+      {!data && !error && <p role="status">Loading connection grants…</p>}
       {data && !data.enabled && (
         <p role="status">New grants are disabled. Existing grants can still be revoked.</p>
       )}
@@ -187,15 +223,28 @@ export function DeveloperMcpConnectionsPanel({
                   · Key {row.api_key_id}
                 </div>
               </div>
-              {!row.revoked_at && (
-                <Button
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void mutate("revoke_mcp_read", { id: row.id })}
-                >
-                  Revoke
-                </Button>
-              )}
+              {!row.revoked_at &&
+                (revoking === row.id ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        setRevoking(null);
+                        void mutate("revoke_mcp_read", { id: row.id });
+                      }}
+                    >
+                      Confirm revocation
+                    </Button>
+                    <Button variant="ghost" disabled={busy} onClick={() => setRevoking(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" disabled={busy} onClick={() => setRevoking(row.id)}>
+                    Revoke
+                  </Button>
+                ))}
             </div>
           ))}
         </>

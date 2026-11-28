@@ -5,6 +5,7 @@ import {
   resourceConsoleJobDraft,
   resourceConsoleKey,
   resourceConsoleMaySpend,
+  resourceConsoleMcpDraft,
   resourceConsolePromptDraft,
   resourceConsoleFollowups,
   resourceConsoleRequest,
@@ -287,4 +288,58 @@ test("webhook and schedule responses prepare scoped followups without dispatch o
     ).map((x) => x.action),
     ["item"],
   );
+});
+
+test("MCP discovery drafts only live reviewed read grants and requires a bounded confirmed query", () => {
+  const now = Date.parse("2026-11-28T12:00:00Z");
+  const row = {
+    id,
+    tool_name: "search",
+    read_only: true,
+    expires_at: new Date(now + 60000).toISOString(),
+  };
+  const draft = JSON.parse(resourceConsoleMcpDraft(row, now));
+  assert.deepEqual(draft, { id, tool: "search", query: "", approved: true });
+  for (const invalid of [
+    { ...row, read_only: false },
+    { ...row, tool_name: "../write" },
+    { ...row, expires_at: new Date(now).toISOString() },
+    { ...row, id: "bad" },
+  ])
+    assert.throws(() => resourceConsoleMcpDraft(invalid, now));
+  const send = (value) =>
+    resourceConsoleRequest("mcp-connections", "invoke", JSON.stringify(value));
+  assert.throws(() => send(draft));
+  assert.throws(() => send({ ...draft, query: "x".repeat(301) }));
+  assert.throws(() => send({ ...draft, query: "read", approved: false }));
+  assert.deepEqual(JSON.parse(send({ ...draft, query: "read" }).body), { ...draft, query: "read" });
+  assert.equal(resourceConsoleRequiresConfirmation("mcp-connections", "invoke"), true);
+});
+
+test("skill lifecycle drafts exact revisions from the retrieved definition", () => {
+  const definition = {
+    name: "Skill",
+    description: "Description",
+    instructions: "Use scoped data.",
+  };
+  const result = { object: "skill.definition", id, version: 3, definition };
+  const actions = resourceConsoleFollowups("skills", "detail", "{}", result, () => id);
+  assert.deepEqual(
+    actions.map((item) => item.action),
+    ["version", "update", "delete"],
+  );
+  assert.deepEqual(JSON.parse(actions[1].draft), { id, definition, expected_version: 3 });
+  assert.deepEqual(
+    resourceConsoleFollowups("skills", "version", "{}", result, () => id).map(
+      (item) => item.action,
+    ),
+    ["version", "delete"],
+  );
+  assert.deepEqual(
+    resourceConsoleFollowups("skills", "detail", "{}", { ...result, version: 20 }, () => id).map(
+      (item) => item.action,
+    ),
+    ["version", "delete"],
+  );
+  assert.equal(resourceConsoleRequiresConfirmation("skills", "update"), true);
 });
