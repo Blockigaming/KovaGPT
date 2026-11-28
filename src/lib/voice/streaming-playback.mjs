@@ -230,8 +230,14 @@ export function createStreamingVoicePlayback({
     wroteAnything = true;
     ackDurationMs = clip.durationMs;
     ackAudibleAt = now();
-    await write(clip.bytes).catch(() => undefined);
-    await segmentEnd().catch(() => undefined);
+    // Queue the complete clip as one operation. A reply arriving during the
+    // write must not append its bytes before the acknowledgment boundary.
+    writeChain = writeChain.then(async () => {
+      if (!live) return;
+      await sink.write(clip.bytes);
+      if (live) await sink.segmentEnd?.();
+    });
+    await writeChain.catch(() => undefined);
   };
 
   const stop = (silent = true) => {
@@ -315,14 +321,9 @@ export function createStreamingVoicePlayback({
     finish() {
       if (!live) return false;
       closed = true;
-      if (!segments.length && ackAudibleAt !== null) {
-        // Only the acknowledgment was heard (the reply had nothing speakable): let it finish.
-        ended = true;
-        void writeChain.then(() => live && sink.end());
-        return true;
-      }
       if (!segments.length) {
-        // Nothing spoken or heard: let the caller fall back.
+        // An acknowledgment is not the answer. Stop it and let the caller
+        // synthesize the authenticated complete reply instead.
         stop(false);
         onState("idle");
         return false;

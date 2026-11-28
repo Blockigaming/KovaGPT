@@ -140,8 +140,13 @@ export function createWebAudioSegmentSink({
     },
     async end() {
       signal.throwIfAborted();
-      endRequested = true;
+      // The whole-reply fallback supplies a single complete MP3 and calls
+      // end() without segmentEnd(). Flush it before closing the sink.
+      await this.segmentEnd();
       await decoding;
+      if (disposed || signal.aborted) return;
+      // Do not report completion while the last segment is still decoding.
+      endRequested = true;
       finishIfDone();
     },
     dispose() {

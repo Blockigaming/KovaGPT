@@ -467,3 +467,16 @@ test("listening resumes after a spoken reply, speaking over Kova interrupts, and
     /if \(next === "voice"\) primeVoiceAudio\(\)/u,
   );
 });
+
+test("an acknowledgment without signed reply segments falls back instead of completing the turn", async () => {
+  const h = harness();
+  h.playback.begin();
+  await h.advance(1500);
+  assert.deepEqual(h.writes, [16000]);
+  h.sinkEvents.onPlaying();
+  assert.equal(h.playback.finish(), false);
+  assert.equal(h.playback.active, false);
+  assert.equal(h.disposed, 1);
+  h.sinkEvents.onEnded();
+  assert.equal(h.ended, 0);
+});

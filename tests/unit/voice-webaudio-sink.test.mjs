@@ -152,3 +152,18 @@ test("a decode failure is reported once as a playback error", async () => {
   assert.equal(e.errors, 1);
   assert.equal(e.playing, 0);
 });
+
+test("whole-reply fallback decodes buffered MP3 at end and waits for actual playback", async () => {
+  const { createWebAudioSegmentSink } = await load();
+  const { log, sources } = installAudio();
+  const { e, options } = events();
+  const sink = createWebAudioSegmentSink(options);
+  await sink.write(new Uint8Array(3));
+  await sink.write(new Uint8Array(5));
+  await sink.end();
+  assert.deepEqual(log.decoded, [8]);
+  assert.equal(e.playing, 1);
+  assert.equal(e.ended, 0);
+  sources.at(-1).onended();
+  assert.equal(e.ended, 1);
+});

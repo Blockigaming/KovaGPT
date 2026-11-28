@@ -81,13 +81,13 @@
     --composer-action-inset: 8px;
     --chat-composer-corner: 21px;
     min-height: 0 !important;
-    padding: 10px 8px 6px;
+    padding: 10px var(--composer-action-inset) var(--composer-action-inset);
     gap: 2px;
     border-radius: var(--chat-composer-corner);
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
     --chat-composer-corner: 26px;
-    padding-block: 5px;
+    padding-block: 5px var(--composer-action-inset);
   }
   .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     min-height: 0 !important;

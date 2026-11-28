@@ -700,13 +700,19 @@ export function ComposerVoiceDialog({
   // Starts speaking as soon as the first signed segment arrives, in parallel with
   // generation. The exact model, reasoning effort and limits are decided by the chat
   // request and server; nothing here selects or downgrades them.
-  const startStreamingSpeech = (scope: OperationScope) => {
+  const startStreamingSpeech = (scope: OperationScope, text: string) => {
     let words = 0;
     const playback = createStreamingVoicePlayback({
       ownerId: scope.userId,
       voiceId: scope.voiceId,
       fetchImpl: authFetch,
-      ackCache,
+      // A greeting needs an answer, not a prerecorded status update. Leave
+      // longer turns and actual tool delays eligible for acknowledgments.
+      ackCache: /^(?:hi|hey|hello|good\s+(?:morning|afternoon|evening)|how\s+are\s+you)[\s!?.]*$/iu.test(
+        text.trim(),
+      )
+        ? undefined
+        : ackCache,
       tracker: latencyTracker,
       // MediaSource streams MP3 where available; otherwise (iPhone) segments are
       // decoded and scheduled with Web Audio on a context unlocked by the tap.
@@ -783,7 +789,7 @@ export function ComposerVoiceDialog({
         if (controller.signal.aborted) abortListener();
       });
       // Live (hands-free) turns speak while the reply is still being generated.
-      if (realtime && scope.userId) streaming = startStreamingSpeech(scope);
+      if (realtime && scope.userId) streaming = startStreamingSpeech(scope, text);
       const reply = await Promise.race([
         submit(text, controller.signal, realtime, streaming?.events),
         aborted,
@@ -816,6 +822,12 @@ export function ComposerVoiceDialog({
         handedOff = true;
         return;
       }
+      // Stop the acknowledgment's monitor before starting the fallback.
+      // It must never interrupt or restart listening during the actual reply.
+      if (streaming) {
+        stopBargeInMonitor();
+        if (voicePlayback.current === streaming.playback) voicePlayback.current = null;
+      }
       streaming = null;
       updatePhase("synthesizing");
       let ended = false;
@@ -824,7 +836,13 @@ export function ComposerVoiceDialog({
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
         createSink: (options) =>
-          createBrowserSpeechSink({
+          (realtime &&
+          !supportsStreamingMp3() &&
+          typeof window !== "undefined" &&
+          (typeof window.AudioContext !== "undefined" ||
+            "webkitAudioContext" in window)
+            ? createWebAudioSegmentSink
+            : createBrowserSpeechSink)({
             ...options,
             onLevel: updateGlow,
             onProgress: (elapsed, duration) => {
