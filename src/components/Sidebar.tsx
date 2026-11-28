@@ -19,7 +19,7 @@ import {
   Archive,
   Brain,
   Bell,
-  Inbox,
+  Mail,
   PanelLeft,
   ArrowLeft,
   MessageSquare,
@@ -105,7 +105,7 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   memory: Brain,
   settings: SettingsGlyph,
   notifications: Bell,
-  inbox: Inbox,
+  inbox: Mail,
 };
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({

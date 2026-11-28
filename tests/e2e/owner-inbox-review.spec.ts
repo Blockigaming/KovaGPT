@@ -57,7 +57,9 @@ for (const theme of ["dark", "light"] as const) {
         listInboxAccounts: [account],
         listInboxMessages: {
           messages: body.includes("trash")
-            ? trashed ? [email] : []
+            ? trashed
+              ? [email]
+              : []
             : messages.filter((item) => !trashed || item.id !== email.id),
           next: null,
         },

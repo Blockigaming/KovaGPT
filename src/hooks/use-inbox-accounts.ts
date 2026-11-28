@@ -22,7 +22,12 @@ export function useInboxAccounts(owner: string | null | undefined, refreshKey = 
       try {
         const accounts = await list({ data: { owner } });
         if (active && request === revision && current.current === owner)
-          setState({ owner, accounts: Array.isArray(accounts) ? accounts : [], loading: false, error: false });
+          setState({
+            owner,
+            accounts: Array.isArray(accounts) ? accounts : [],
+            loading: false,
+            error: false,
+          });
       } catch {
         if (active && request === revision && current.current === owner)
           setState({ owner, accounts: [], loading: false, error: true });

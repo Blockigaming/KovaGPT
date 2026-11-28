@@ -1,18 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  Bell,
-  Inbox,
-  Mail,
-  MailOpen,
-  RefreshCw,
-  Reply,
-  Search,
-  Send,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Bell, Check, Mail, RefreshCw, Search, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -87,17 +76,27 @@ function OwnerInbox({ owner }: { owner: string }) {
         <Mail aria-hidden="true" />
         <h2>Connect your email</h2>
         <p>Inbox is available when an eligible Gmail or Outlook account is connected.</p>
-        <Link to="/apps" className="underline">Open Connections</Link>
+        <Link to="/apps" className="underline">
+          Open Connections
+        </Link>
       </section>
     );
   return (
     <>
       <div className="kova-inbox-controls">
         <div role="group" aria-label="Mail folders" className="kova-inbox-folders">
-          <button type="button" aria-pressed={folder === "inbox"} onClick={() => setFolder("inbox")}>
-            <Inbox aria-hidden="true" /> Inbox
+          <button
+            type="button"
+            aria-pressed={folder === "inbox"}
+            onClick={() => setFolder("inbox")}
+          >
+            <Mail aria-hidden="true" /> Inbox
           </button>
-          <button type="button" aria-pressed={folder === "trash"} onClick={() => setFolder("trash")}>
+          <button
+            type="button"
+            aria-pressed={folder === "trash"}
+            onClick={() => setFolder("trash")}
+          >
             <Trash2 aria-hidden="true" /> Trash
           </button>
         </div>
@@ -105,7 +104,9 @@ function OwnerInbox({ owner }: { owner: string }) {
           <span className="sr-only">Mail account</span>
           <select value={account.id} onChange={(event) => setSelected(event.target.value)}>
             {accounts.map((item) => (
-              <option key={item.id} value={item.id}>{item.label} · {item.provider === "gmail" ? "Gmail" : "Outlook"}</option>
+              <option key={item.id} value={item.id}>
+                {item.label} · {item.provider === "gmail" ? "Gmail" : "Outlook"}
+              </option>
             ))}
           </select>
         </label>
@@ -172,7 +173,9 @@ function Mailbox({
     let active = true;
     setLoading(true);
     setError("");
-    void list({ data: { owner, account: account.id, provider: account.provider, folder, cursor: null } })
+    void list({
+      data: { owner, account: account.id, provider: account.provider, folder, cursor: null },
+    })
       .then((page) => {
         if (!active) return;
         setMessages(page.messages);
@@ -181,8 +184,12 @@ function Mailbox({
       .catch(() => {
         if (active) setError("Messages could not be loaded. Refresh Inbox or check Connections.");
       })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [owner, account.id, account.provider, folder, list, refresh]);
 
   useEffect(() => {
@@ -205,11 +212,14 @@ function Mailbox({
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void load();
     }, 60_000);
-    return () => { active = false; window.clearInterval(interval); };
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [folder, notifications, refresh]);
 
   const changeUnread = (id: string, unread: boolean) => {
-    setMessages((previous) => previous.map((item) => item.id === id ? { ...item, unread } : item));
+    setMessages((previous) => previous.map((item) => (item.id === id ? { ...item, unread } : item)));
     setOpened((previous) =>
       previous?.kind === "mail" && previous.message.id === id
         ? { kind: "mail", message: { ...previous.message, unread } }
@@ -239,10 +249,12 @@ function Mailbox({
       if (row.kind === "notice") {
         setOpened(row);
         if (!row.notice.readAt) {
-          const result = await markNoticeRead({ data: { ids: [row.notice.id], source: row.notice.source } });
+          const result = await markNoticeRead({
+            data: { ids: [row.notice.id], source: row.notice.source },
+          });
           if (!mounted.current || !result.ok) return;
           const notice = { ...row.notice, readAt: new Date().toISOString() };
-          setNotices((previous) => previous.map((item) => item.id === notice.id ? notice : item));
+          setNotices((previous) => previous.map((item) => (item.id === notice.id ? notice : item)));
           setOpened({ kind: "notice", notice });
         }
         return;
@@ -251,14 +263,18 @@ function Mailbox({
       if (!mounted.current) return;
       setOpened({ kind: "mail", message });
       if (message.unread && account.canModify && folder === "inbox") {
-        const result = await update({ data: { ...target, id: message.id, action: "read", confirmed: true } });
+        const result = await update({
+          data: { ...target, id: message.id, action: "read", confirmed: true },
+        });
         if (mounted.current && result.ok) changeUnread(message.id, false);
       }
     });
   }
   function mutate(message: InboxMessage, action: "read" | "unread" | "trash" | "restore") {
     void run(async () => {
-      const result = await update({ data: { ...target, id: message.id, action, confirmed: true } });
+      const result = await update({
+        data: { ...target, id: message.id, action, confirmed: true },
+      });
       if (!mounted.current || !result.ok) return;
       if (action === "read" || action === "unread") {
         changeUnread(message.id, action === "unread");
@@ -272,7 +288,9 @@ function Mailbox({
   function send(message: InboxMessage) {
     if (!draft.trim()) return;
     void run(async () => {
-      const result = await reply({ data: { ...target, id: message.id, body: draft, confirmed: true } });
+      const result = await reply({
+        data: { ...target, id: message.id, body: draft, confirmed: true },
+      });
       if (!mounted.current || !result.sent) return;
       setDraft("");
       toast.success("Email sent");
@@ -294,34 +312,66 @@ function Mailbox({
     ...messages.map((message): Row => ({ kind: "mail", message })),
     ...(folder === "inbox" ? notices.map((notice): Row => ({ kind: "notice", notice })) : []),
   ];
-  const unread = (row: Row) => row.kind === "mail" ? row.message.unread : !row.notice.readAt;
-  const date = (row: Row) => row.kind === "mail" ? row.message.date : row.notice.createdAt;
+  const unread = (row: Row) => (row.kind === "mail" ? row.message.unread : !row.notice.readAt);
+  const date = (row: Row) => (row.kind === "mail" ? row.message.date : row.notice.createdAt);
   const visible = rows
     .filter((row) => {
-      const text = row.kind === "mail"
-        ? `${row.message.from} ${row.message.subject} ${row.message.preview}`
-        : `KovaGPT ${row.notice.title} ${row.notice.preview}`;
+      const text =
+        row.kind === "mail"
+          ? `${row.message.from} ${row.message.subject} ${row.message.preview}`
+          : `KovaGPT ${row.notice.title} ${row.notice.preview}`;
       return text.toLowerCase().includes(search.toLowerCase());
     })
-    .sort((a, b) => (unreadFirst ? Number(unread(b)) - Number(unread(a)) : 0) || date(b).localeCompare(date(a)));
+    .sort(
+      (a, b) =>
+        (unreadFirst ? Number(unread(b)) - Number(unread(a)) : 0) ||
+        date(b).localeCompare(date(a)),
+    );
 
   return (
     <section className="kova-inbox-panel" data-density={compact ? "compact" : "comfortable"}>
-      {error && <p role="alert" className="kova-inbox-error">{error}</p>}
-      {noticeError && <p role="status" className="kova-inbox-error">Kova notifications are temporarily unavailable.</p>}
+      {error && (
+        <p role="alert" className="kova-inbox-error">
+          {error}
+        </p>
+      )}
+      {noticeError && (
+        <p role="status" className="kova-inbox-error">
+          Kova notifications are temporarily unavailable.
+        </p>
+      )}
       {opened ? (
         <article className="kova-inbox-detail">
           <div className="kova-inbox-toolbar">
-            <Button variant="ghost" disabled={busy} onClick={() => { setOpened(null); setDraft(""); }}>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                setOpened(null);
+                setDraft("");
+              }}
+            >
               <ArrowLeft aria-hidden="true" /> Back
             </Button>
             {opened.kind === "mail" && account.canModify && (
               <>
-                <Button variant="ghost" disabled={busy} onClick={() => mutate(opened.message, opened.message.unread ? "read" : "unread")}>
-                  {opened.message.unread ? <MailOpen aria-hidden="true" /> : <Mail aria-hidden="true" />}
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => mutate(opened.message, opened.message.unread ? "read" : "unread")}
+                >
+                  {opened.message.unread ? (
+                    <Check aria-hidden="true" />
+                  ) : (
+                    <Mail aria-hidden="true" />
+                  )}
                   Mark {opened.message.unread ? "read" : "unread"}
                 </Button>
-                <Button variant="ghost" disabled={busy} onClick={() => mutate(opened.message, folder === "trash" ? "restore" : "trash")}>
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => mutate(opened.message, folder === "trash" ? "restore" : "trash")}
+                >
                   <Trash2 aria-hidden="true" /> {folder === "trash" ? "Restore" : "Move to Trash"}
                 </Button>
               </>
@@ -332,35 +382,85 @@ function Mailbox({
               <h2>{opened.notice.title}</h2>
               <p className="kova-inbox-meta">KovaGPT · {formatDate(opened.notice.createdAt)}</p>
               <p className="kova-inbox-body">{opened.notice.preview}</p>
-              <Link to="/notifications" className="underline">View notifications</Link>
+              <Link to="/notifications" className="underline">
+                View notifications
+              </Link>
             </>
           ) : (
             <>
               <h2>{opened.message.subject}</h2>
-              <p className="kova-inbox-meta">{opened.message.from} · {formatDate(opened.message.date)}</p>
-              <p className="kova-inbox-body">{opened.message.body || opened.message.preview || "No plain-text body available."}</p>
-              {folder === "inbox" && (
-                account.canReply ? (
-                  <form className="kova-inbox-reply" onSubmit={(event) => { event.preventDefault(); send(opened.message); }}>
-                    <label htmlFor="kova-inbox-reply"><Reply aria-hidden="true" /> Reply to sender</label>
-                    <textarea id="kova-inbox-reply" value={draft} maxLength={20_000} onChange={(event) => setDraft(event.target.value)} placeholder="Write a reply…" disabled={busy} />
-                    <Button type="submit" disabled={busy || !draft.trim()}><Send aria-hidden="true" /> Send</Button>
+              <p className="kova-inbox-meta">
+                {opened.message.from} · {formatDate(opened.message.date)}
+              </p>
+              <p className="kova-inbox-body">
+                {opened.message.body || opened.message.preview || "No plain-text body available."}
+              </p>
+              {folder === "inbox" &&
+                (account.canReply ? (
+                  <form
+                    className="kova-inbox-reply"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      send(opened.message);
+                    }}
+                  >
+                    <label htmlFor="kova-inbox-reply">Reply to sender</label>
+                    <textarea
+                      id="kova-inbox-reply"
+                      value={draft}
+                      maxLength={20_000}
+                      onChange={(event) => setDraft(event.target.value)}
+                      placeholder="Write a reply…"
+                      disabled={busy}
+                    />
+                    <Button type="submit" disabled={busy || !draft.trim()}>
+                      <Send aria-hidden="true" /> Send
+                    </Button>
                   </form>
                 ) : (
-                  <p className="kova-inbox-meta">Enable send permission in <Link to="/apps" className="underline">Connections</Link> to reply.</p>
-                )
+                  <p className="kova-inbox-meta">
+                    Enable send permission in{" "}
+                    <Link to="/apps" className="underline">
+                      Connections
+                    </Link>{" "}
+                    to reply.
+                  </p>
+                ))}
+              {!account.canModify && (
+                <p className="kova-inbox-meta">
+                  Read/unread and Trash changes require mailbox write permission in Connections.
+                </p>
               )}
-              {!account.canModify && <p className="kova-inbox-meta">Read/unread and Trash changes require mailbox write permission in Connections.</p>}
             </>
           )}
         </article>
       ) : (
         <>
           <div className="kova-inbox-toolbar">
-            <label className="kova-inbox-search"><Search aria-hidden="true" /><input aria-label="Search loaded messages" placeholder="Search mail" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
-            <Button variant="ghost" size="icon" aria-label="Refresh inbox" disabled={busy || loading} onClick={() => setRefresh((value) => value + 1)}><RefreshCw aria-hidden="true" /></Button>
+            <label className="kova-inbox-search">
+              <Search aria-hidden="true" />
+              <input
+                aria-label="Search loaded messages"
+                placeholder="Search mail"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </label>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Refresh inbox"
+              disabled={busy || loading}
+              onClick={() => setRefresh((value) => value + 1)}
+            >
+              <RefreshCw aria-hidden="true" />
+            </Button>
           </div>
-          {loading ? <p role="status" className="kova-inbox-empty">Loading messages…</p> : (
+          {loading ? (
+            <p role="status" className="kova-inbox-empty">
+              Loading messages…
+            </p>
+          ) : (
             <>
               <ul className="kova-inbox-list">
                 {visible.map((row) => {
@@ -371,18 +471,40 @@ function Mailbox({
                   const preview = isMail ? row.message.preview : row.notice.preview;
                   return (
                     <li key={`${row.kind}:${id}`} data-unread={unread(row)}>
-                      <button type="button" className="kova-inbox-row" onClick={() => open(row)} disabled={busy}>
-                        <span className="kova-inbox-row-icon">{isMail ? unread(row) ? <Mail /> : <MailOpen /> : <Bell />}</span>
+                      <button
+                        type="button"
+                        className="kova-inbox-row"
+                        onClick={() => open(row)}
+                        disabled={busy}
+                      >
+                        <span className="kova-inbox-row-icon">
+                          {isMail ? unread(row) ? <Mail /> : <Check /> : <Bell />}
+                        </span>
                         <span className="kova-inbox-sender">{sender}</span>
-                        <span className="kova-inbox-summary"><span>{subject}</span>{showPreview && preview && <small>{preview}</small>}</span>
+                        <span className="kova-inbox-summary">
+                          <span>{subject}</span>
+                          {showPreview && preview && <small>{preview}</small>}
+                        </span>
                         <time>{formatDate(date(row))}</time>
                       </button>
                     </li>
                   );
                 })}
               </ul>
-              {!visible.length && !error && <p className="kova-inbox-empty">{search ? "No matching loaded messages." : folder === "trash" ? "Trash is empty." : "Your inbox is empty."}</p>}
-              {next && <Button variant="ghost" disabled={busy} onClick={loadMore}>Load more messages</Button>}
+              {!visible.length && !error && (
+                <p className="kova-inbox-empty">
+                  {search
+                    ? "No matching loaded messages."
+                    : folder === "trash"
+                      ? "Trash is empty."
+                      : "Your inbox is empty."}
+                </p>
+              )}
+              {next && (
+                <Button variant="ghost" disabled={busy} onClick={loadMore}>
+                  Load more messages
+                </Button>
+              )}
             </>
           )}
         </>
@@ -393,5 +515,7 @@ function Mailbox({
 
 function formatDate(value: string) {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }

@@ -4,10 +4,7 @@ import { Buffer } from "node:buffer";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  canReadConnection,
-  hasConnectionScopes,
-} from "@/integrations/connection-flows.mjs";
+import { canReadConnection, hasConnectionScopes } from "@/integrations/connection-flows.mjs";
 import {
   renewListedOAuthAccounts,
   type ConnectorDatabase,
@@ -91,7 +88,8 @@ export const listInboxAccounts = createServerFn({ method: "GET" })
           id: account.id,
           provider: "gmail",
           label: account.email || "Gmail",
-          canModify: enabled && account.scopes.includes("https://www.googleapis.com/auth/gmail.modify"),
+          canModify:
+            enabled && account.scopes.includes("https://www.googleapis.com/auth/gmail.modify"),
           canReply: enabled && account.has.gmailWrite,
         });
       }
@@ -131,7 +129,11 @@ async function access(target: Target, operation: Operation) {
       token,
       verify: async () => {
         const current = await getGoogleExecutionBinding(owner, account);
-        await assertLockdownAllows(supabaseAdmin, owner, write ? "connector_write" : "connector_read");
+        await assertLockdownAllows(
+          supabaseAdmin,
+          owner,
+          write ? "connector_write" : "connector_read",
+        );
         if (
           current.grantId !== binding.grantId ||
           current.connectionId !== account ||
@@ -146,7 +148,9 @@ async function access(target: Target, operation: Operation) {
   const lookup = () =>
     db()
       .from("integration_linked_accounts")
-      .select("id,provider_id,account_label,status,granted_scopes,token_expires_at,updated_at,access_token_ciphertext,deleted_at")
+      .select(
+        "id,provider_id,account_label,status,granted_scopes,token_expires_at,updated_at,access_token_ciphertext,deleted_at",
+      )
       .eq("owner_id", owner)
       .eq("id", account)
       .eq("provider_id", "microsoft")
@@ -154,7 +158,8 @@ async function access(target: Target, operation: Operation) {
       .is("deleted_at", null)
       .maybeSingle();
   const { data: row, error } = await lookup();
-  const scope = operation === "modify" ? "Mail.ReadWrite" : operation === "reply" ? "Mail.Send" : "Mail.Read";
+  const scope =
+    operation === "modify" ? "Mail.ReadWrite" : operation === "reply" ? "Mail.Send" : "Mail.Read";
   if (
     error ||
     !row ||
@@ -168,7 +173,11 @@ async function access(target: Target, operation: Operation) {
     token,
     verify: async () => {
       const { data: current, error: currentError } = await lookup();
-      await assertLockdownAllows(supabaseAdmin, owner, write ? "connector_write" : "connector_read");
+      await assertLockdownAllows(
+        supabaseAdmin,
+        owner,
+        write ? "connector_write" : "connector_read",
+      );
       if (
         currentError ||
         !current ||
@@ -200,7 +209,9 @@ async function request(auth: Access, url: string, method = "GET", body?: object)
   });
   if (!response.ok) {
     await response.body?.cancel().catch(() => {});
-    throw new Error("Mail provider did not confirm the request. Check your account before retrying.");
+    throw new Error(
+      "Mail provider did not confirm the request. Check your account before retrying.",
+    );
   }
   return response;
 }
@@ -350,15 +361,20 @@ export const readInboxMessage = createServerFn({ method: "GET" })
     const id = encodeURIComponent(data.id);
     return data.provider === "gmail"
       ? gmailMessage((await json(auth, `${gmail}/messages/${id}?format=full`)) as GmailRecord, true)
-      : graphMessage((await json(auth, `${graph}/messages/${id}?$select=${graphFields},body`)) as GraphRecord, true);
+      : graphMessage(
+          (await json(auth, `${graph}/messages/${id}?$select=${graphFields},body`)) as GraphRecord,
+          true,
+        );
   });
 
 export const updateInboxMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(messageInput.extend({
-    action: z.enum(["read", "unread", "trash", "restore"]),
-    confirmed: z.literal(true),
-  }))
+  .inputValidator(
+    messageInput.extend({
+      action: z.enum(["read", "unread", "trash", "restore"]),
+      confirmed: z.literal(true),
+    }),
+  )
   .handler(async ({ context, data }) => {
     checkOwner(data.owner, context.userId);
     const auth = await access(data, "modify");
@@ -367,16 +383,22 @@ export const updateInboxMessage = createServerFn({ method: "POST" })
     const url = `${base}/messages/${id}`;
     let response: Response;
     if (data.provider === "gmail") {
-      response = data.action === "trash" || data.action === "restore"
-        ? await request(auth, `${url}/${data.action === "trash" ? "trash" : "untrash"}`, "POST")
-        : await request(auth, `${url}/modify`, "POST",
-            data.action === "read" ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] });
+      response =
+        data.action === "trash" || data.action === "restore"
+          ? await request(auth, `${url}/${data.action === "trash" ? "trash" : "untrash"}`, "POST")
+          : await request(
+              auth,
+              `${url}/modify`,
+              "POST",
+              data.action === "read" ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] },
+            );
     } else {
-      response = data.action === "trash" || data.action === "restore"
-        ? await request(auth, `${url}/move`, "POST", {
-            destinationId: data.action === "trash" ? "deleteditems" : "inbox",
-          })
-        : await request(auth, url, "PATCH", { isRead: data.action === "read" });
+      response =
+        data.action === "trash" || data.action === "restore"
+          ? await request(auth, `${url}/move`, "POST", {
+              destinationId: data.action === "trash" ? "deleteditems" : "inbox",
+            })
+          : await request(auth, url, "PATCH", { isRead: data.action === "read" });
     }
     await response.body?.cancel().catch(() => {});
     return { ok: true };
@@ -384,10 +406,12 @@ export const updateInboxMessage = createServerFn({ method: "POST" })
 
 export const replyInboxMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(messageInput.extend({
-    body: z.string().trim().min(1).max(20_000),
-    confirmed: z.literal(true),
-  }))
+  .inputValidator(
+    messageInput.extend({
+      body: z.string().trim().min(1).max(20_000),
+      confirmed: z.literal(true),
+    }),
+  )
   .handler(async ({ context, data }) => {
     checkOwner(data.owner, context.userId);
     const auth = await access(data, "reply");
@@ -420,17 +444,19 @@ export const replyInboxMessage = createServerFn({ method: "POST" })
       throw new Error("This email has an unsupported reply address or thread. Reply in Gmail.");
     const replySubject = /^re:/iu.test(subject) ? subject : `Re: ${subject}`;
     const encodedSubject = `=?UTF-8?B?${Buffer.from(replySubject).toString("base64")}?=`;
-    const raw = Buffer.from([
-      `To: ${address}`,
-      `Subject: ${encodedSubject}`,
-      `In-Reply-To: ${messageId}`,
-      `References: ${messageId}`,
-      "MIME-Version: 1.0",
-      "Content-Type: text/plain; charset=UTF-8",
-      "Content-Transfer-Encoding: base64",
-      "",
-      Buffer.from(data.body).toString("base64").match(/.{1,76}/gu)?.join("\r\n") || "",
-    ].join("\r\n")).toString("base64url");
+    const raw = Buffer.from(
+      [
+        `To: ${address}`,
+        `Subject: ${encodedSubject}`,
+        `In-Reply-To: ${messageId}`,
+        `References: ${messageId}`,
+        "MIME-Version: 1.0",
+        "Content-Type: text/plain; charset=UTF-8",
+        "Content-Transfer-Encoding: base64",
+        "",
+        Buffer.from(data.body).toString("base64").match(/.{1,76}/gu)?.join("\r\n") || "",
+      ].join("\r\n"),
+    ).toString("base64url");
     const result = await json(auth, `${gmail}/messages/send`, "POST", {
       raw,
       threadId: message.threadId,

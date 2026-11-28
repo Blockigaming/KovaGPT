@@ -104,7 +104,8 @@ export function settingsSearchHint(item, query, description = "", topics = "") {
     ...(ALIASES[item.v] ?? "").split(" "),
   ];
   return (
-    candidates.find((candidate) => settingsSearchParts(candidate, query).some((part) => part.match)) ||
-    description
+    candidates.find((candidate) =>
+      settingsSearchParts(candidate, query).some((part) => part.match),
+    ) || description
   );
 }
