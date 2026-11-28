@@ -113,6 +113,8 @@ export async function recoverDeveloperBilling(): Promise<number> {
     await rpc<number>("expire_developer_vector_stores_v1", { p_limit: 100 });
   if (runtimeEnv("KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY") === "true")
     await rpc<number>("expire_developer_conversations_v1", { p_limit: 100 });
+  if (runtimeEnv("KOVA_DEVELOPER_REALTIME_SESSION_SCHEMA_READY") === "true")
+    await rpc<number>("expire_developer_realtime_sessions_v1", { p_limit: 100 });
   await rpc<number>("expire_discovery_usage", { p_limit: 100 });
   const administrators = (runtimeEnv("KOVA_ADMIN_USER_IDS") ?? "")
     .split(",")

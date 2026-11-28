@@ -277,6 +277,7 @@ const batch = (scheduled, research = false) => {
 };
 const bodies = {
   ...paid,
+  "realtime-sessions": obj({ origin: { ...str(512), format: "uri", pattern: "^https://" } }, []),
   quotes: union(...Object.entries(paid).map(([operation, input]) => op(operation, { input }))),
   files: obj({
     filename: { ...str(125), pattern: "^[A-Za-z0-9][A-Za-z0-9._ -]{0,119}\\.(txt|md|csv|json)$" },
@@ -332,6 +333,7 @@ const bodies = {
   ),
 };
 const query = {
+  "realtime-sessions": { id: uuid },
   models: { id: model },
   usage: { id: uuid, limit: integer(1, 100), offset: integer(0, 10000) },
   files: { id: uuid, page: integer(0, 4) },
@@ -358,6 +360,31 @@ const open = (properties, required = Object.keys(properties)) => ({
 });
 const list = (data) => open({ object: { const: "list" }, data: { type: "array", items: data } });
 const output = {
+  "realtime-sessions": open(
+    {
+      object: { const: "realtime.session" },
+      id: uuid,
+      state: choices("issued", "connected", "closed"),
+      redeem_by: str(80),
+      expires_at: str(80),
+      turns: integer(0, 8),
+      maximum_turns: { const: 8 },
+      transport: { const: "/api/developer/realtime/socket" },
+      protocol: { const: "kova.realtime.v1" },
+      client_secret: str(90),
+    },
+    [
+      "object",
+      "id",
+      "state",
+      "redeem_by",
+      "expires_at",
+      "turns",
+      "maximum_turns",
+      "transport",
+      "protocol",
+    ],
+  ),
   quotes: obj({
     quoteToken,
     pricingVersion: str(160),
@@ -555,7 +582,7 @@ export function developerOpenApi() {
             name,
             in: "query",
             schema,
-            required: method === "DELETE" && name === "id",
+            required: (method === "DELETE" || key === "realtime-sessions") && name === "id",
           });
       }
       if (method === "POST" && paid[key])
@@ -613,7 +640,14 @@ export function developerOpenApi() {
         };
       if (
         method === "POST" &&
-        ["files", "vector-stores", "conversations", "agents", "skills"].includes(key)
+        [
+          "files",
+          "vector-stores",
+          "conversations",
+          "agents",
+          "skills",
+          "realtime-sessions",
+        ].includes(key)
       )
         responses["201"] = { description: "Resource created.", content };
       if (

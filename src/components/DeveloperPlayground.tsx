@@ -1,3 +1,4 @@
+import { connectRealtimeSession, type RealtimeSession } from "../../sdk/javascript/realtime.mjs";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
+  const realtimeSession = useRef<RealtimeSession | null>(null);
+  const [sessionId, setSessionId] = useState("");
   const [realtimeOutput, setRealtimeOutput] = useState<"text" | "audio">("text");
   const [realtimeInput, setRealtimeInput] = useState<"text" | "audio">("text");
   const [maxSearchCalls, setMaxSearchCalls] = useState("1");
@@ -98,6 +101,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     return () => {
       mounted.current = false;
       active.current?.abort();
+      realtimeSession.current?.close();
     };
   }, []);
 
@@ -110,7 +114,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   };
 
   const fetchRequest = async (
-    path: "models" | "quotes" | Operation,
+    path: "models" | "quotes" | "realtime-sessions" | Operation,
     controller: AbortController,
     body?: string,
     headers?: Record<string, string>,
@@ -137,7 +141,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   };
 
   const request = async (
-    path: "models" | "quotes" | Operation,
+    path: "models" | "quotes" | "realtime-sessions" | Operation,
     controller: AbortController,
     body?: string,
     headers?: Record<string, string>,
@@ -313,7 +317,18 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
-      const result = record(await request("quotes", controller, quoteBody));
+      const session = operation === "realtime" ? realtimeSession.current : null;
+      if (session?.closed) throw new Error("Realtime session expired. Open a new session.");
+      const closeOnAbort = () => session?.close();
+      controller.signal.addEventListener("abort", closeOnAbort, { once: true });
+      let result: Record<string, unknown>;
+      try {
+        result = record(
+          session ? await session.quote(input) : await request("quotes", controller, quoteBody),
+        );
+      } finally {
+        controller.signal.removeEventListener("abort", closeOnAbort);
+      }
       if (
         typeof result.quoteToken !== "string" ||
         typeof result.currency !== "string" ||
@@ -384,7 +399,32 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         }
         return;
       }
-      const result = await request(accepted.operation, controller, accepted.requestBody, headers);
+      const session = accepted.operation === "realtime" ? realtimeSession.current : null;
+      if (session?.closed) throw new Error("Realtime session expired. Open a new session.");
+      let result: unknown;
+      if (session && !session.closed) {
+        let preview = "";
+        const cancel = () => session.close();
+        controller.signal.addEventListener("abort", cancel, { once: true });
+        try {
+          result = await session.execute(JSON.parse(accepted.requestBody), {
+            quoteToken: accepted.quoteToken,
+            requestKey: accepted.requestKey,
+            onEvent: (event) => {
+              if (
+                event.type === "turn.delta" &&
+                event.kind === "text" &&
+                typeof event.delta === "string"
+              ) {
+                preview += event.delta;
+                if (mounted.current) setOutput(preview);
+              }
+            },
+          });
+        } finally {
+          controller.signal.removeEventListener("abort", cancel);
+        }
+      } else result = await request(accepted.operation, controller, accepted.requestBody, headers);
       if (!mounted.current || controller.signal.aborted) return;
       if (accepted.operation === "realtime") {
         const value = record(result);
@@ -488,6 +528,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               disabled={busy || !enabled}
               value={key}
               onChange={(event) => {
+                realtimeSession.current?.close();
+                realtimeSession.current = null;
+                setSessionId("");
                 setKey(event.target.value);
                 setModels([]);
                 setModel("");
@@ -520,6 +563,11 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               disabled={busy}
               onChange={(event) => {
                 const next = event.target.value as Operation;
+                if (next !== "realtime") {
+                  realtimeSession.current?.close();
+                  realtimeSession.current = null;
+                  setSessionId("");
+                }
                 setOperation(next);
                 setModel(models.find((item) => eligibleModel(item, next))?.id ?? "");
                 setEffort("");
@@ -603,7 +651,57 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 </select>
               </label>
               <p className="text-xs text-muted-foreground sm:col-span-2">
-                One quoted native provider turn. No persistent live microphone session.
+                Each turn requires its own quote and explicit payment confirmation. Open an optional
+                five-minute session for up to eight independent turns with streamed events. No
+                continuous microphone access.
+              </p>
+              <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+                <Button
+                  variant="outline"
+                  disabled={busy || !key.trim()}
+                  onClick={() => {
+                    realtimeSession.current?.close();
+                    realtimeSession.current = null;
+                    setSessionId("");
+                    resetQuote();
+                    setDispatched(false);
+                    void perform(async (controller) => {
+                      const grant = await request(
+                        "realtime-sessions",
+                        controller,
+                        JSON.stringify({ origin: window.location.origin }),
+                      );
+                      const session = await connectRealtimeSession(grant, {
+                        baseURL: window.location.origin,
+                        signal: controller.signal,
+                      });
+                      realtimeSession.current = session;
+                      setSessionId(session.id);
+                    });
+                  }}
+                >
+                  Open Realtime session
+                </Button>
+                {sessionId && (
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      realtimeSession.current?.close();
+                      realtimeSession.current = null;
+                      setSessionId("");
+                      resetQuote();
+                      setDispatched(false);
+                    }}
+                  >
+                    Close session
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                {sessionId
+                  ? "Session opened. If it expires, open a new session."
+                  : "Request-scoped mode"}
               </p>
             </div>
           )}
@@ -831,7 +929,14 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               Get price quote
             </Button>
             {busy && (
-              <Button variant="outline" onClick={() => active.current?.abort()}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  realtimeSession.current?.cancel();
+                  realtimeSession.current?.close();
+                  active.current?.abort();
+                }}
+              >
                 Cancel request
               </Button>
             )}

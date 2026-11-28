@@ -1,3 +1,7 @@
+export function withDeveloperRealtimeEvents<T>(
+  emit: (event: Record<string, unknown>) => void,
+  action: () => T,
+): T;
 export const REALTIME_MODEL: string;
 export const REALTIME_DIMENSIONS: readonly string[];
 export function developerRealtimeFields(input: unknown): Record<string, unknown>;

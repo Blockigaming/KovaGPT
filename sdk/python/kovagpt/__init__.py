@@ -732,6 +732,15 @@ class Client:
     def decisions(self, data, **budget):
         return self.run("decisions", data, **budget)
 
+    def realtime_session_create(self, data=None):
+        return self._request("realtime-sessions", method="POST", body=_json_body({} if data is None else data, 2048)).json(65536)
+
+    def realtime_session_retrieve(self, session_id):
+        return self._get("realtime-sessions?id=" + _identifier(session_id, _UUID, "realtime_id_invalid"))
+
+    def realtime_session_close(self, session_id):
+        return self._request("realtime-sessions?id=" + _identifier(session_id, _UUID, "realtime_id_invalid"), method="DELETE").json(65536)
+
     def realtime(self, data, **budget):
         return self.run("realtime", data, **budget)
 

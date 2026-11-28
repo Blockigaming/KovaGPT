@@ -206,6 +206,7 @@ import { Route as ApiV1AnalysisRouteImport } from './routes/api/v1/analysis'
 import { Route as ApiV1AutomationsRouteImport } from './routes/api/v1/automations'
 import { Route as ApiV1BatchesRouteImport } from './routes/api/v1/batches'
 import { Route as ApiV1ResponseJobsRouteImport } from './routes/api/v1/response-jobs'
+import { Route as ApiV1RealtimeSessionsRouteImport } from './routes/api/v1/realtime-sessions'
 import { Route as ApiV1RealtimeRouteImport } from './routes/api/v1/realtime'
 import { Route as ApiV1ResearchRunsRouteImport } from './routes/api/v1/research-runs'
 import { Route as ApiV1ConversationsRouteImport } from './routes/api/v1/conversations'
@@ -1269,6 +1270,11 @@ const ApiV1ResponseJobsRoute = ApiV1ResponseJobsRouteImport.update({
   path: '/api/v1/response-jobs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1RealtimeSessionsRoute = ApiV1RealtimeSessionsRouteImport.update({
+  id: '/api/v1/realtime-sessions',
+  path: '/api/v1/realtime-sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1RealtimeRoute = ApiV1RealtimeRouteImport.update({
   id: '/api/v1/realtime',
   path: '/api/v1/realtime',
@@ -1758,6 +1764,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
   '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
+  '/api/v1/realtime-sessions': typeof ApiV1RealtimeSessionsRoute
   '/api/v1/realtime': typeof ApiV1RealtimeRoute
   '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
@@ -2012,6 +2019,7 @@ export interface FileRoutesByTo {
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
   '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
+  '/api/v1/realtime-sessions': typeof ApiV1RealtimeSessionsRoute
   '/api/v1/realtime': typeof ApiV1RealtimeRoute
   '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
@@ -2267,6 +2275,7 @@ export interface FileRoutesById {
   '/api/v1/automations': typeof ApiV1AutomationsRoute
   '/api/v1/batches': typeof ApiV1BatchesRoute
   '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
+  '/api/v1/realtime-sessions': typeof ApiV1RealtimeSessionsRoute
   '/api/v1/realtime': typeof ApiV1RealtimeRoute
   '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
@@ -2523,6 +2532,7 @@ export interface FileRouteTypes {
     | '/api/v1/automations'
     | '/api/v1/batches'
     | '/api/v1/response-jobs'
+    | '/api/v1/realtime-sessions'
     | '/api/v1/realtime'
     | '/api/v1/research-runs'
     | '/api/v1/conversations'
@@ -2777,6 +2787,7 @@ export interface FileRouteTypes {
     | '/api/v1/automations'
     | '/api/v1/batches'
     | '/api/v1/response-jobs'
+    | '/api/v1/realtime-sessions'
     | '/api/v1/realtime'
     | '/api/v1/research-runs'
     | '/api/v1/conversations'
@@ -3031,6 +3042,7 @@ export interface FileRouteTypes {
     | '/api/v1/automations'
     | '/api/v1/batches'
     | '/api/v1/response-jobs'
+    | '/api/v1/realtime-sessions'
     | '/api/v1/realtime'
     | '/api/v1/research-runs'
     | '/api/v1/conversations'
@@ -3276,6 +3288,7 @@ export interface RootRouteChildren {
   ApiV1AutomationsRoute: typeof ApiV1AutomationsRoute
   ApiV1BatchesRoute: typeof ApiV1BatchesRoute
   ApiV1ResponseJobsRoute: typeof ApiV1ResponseJobsRoute
+  ApiV1RealtimeSessionsRoute: typeof ApiV1RealtimeSessionsRoute
   ApiV1RealtimeRoute: typeof ApiV1RealtimeRoute
   ApiV1ResearchRunsRoute: typeof ApiV1ResearchRunsRoute
   ApiV1ConversationsRoute: typeof ApiV1ConversationsRoute
@@ -4712,6 +4725,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ResponseJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/realtime-sessions': {
+      id: '/api/v1/realtime-sessions'
+      path: '/api/v1/realtime-sessions'
+      fullPath: '/api/v1/realtime-sessions'
+      preLoaderRoute: typeof ApiV1RealtimeSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/realtime': {
       id: '/api/v1/realtime'
       path: '/api/v1/realtime'
@@ -5411,6 +5431,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1AutomationsRoute: ApiV1AutomationsRoute,
   ApiV1BatchesRoute: ApiV1BatchesRoute,
   ApiV1ResponseJobsRoute: ApiV1ResponseJobsRoute,
+  ApiV1RealtimeSessionsRoute: ApiV1RealtimeSessionsRoute,
   ApiV1RealtimeRoute: ApiV1RealtimeRoute,
   ApiV1ResearchRunsRoute: ApiV1ResearchRunsRoute,
   ApiV1ConversationsRoute: ApiV1ConversationsRoute,

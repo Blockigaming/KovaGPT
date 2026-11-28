@@ -1,3 +1,4 @@
+export { connectRealtimeSession, type RealtimeSession } from "./realtime.mjs";
 export type Operation =
   | "responses"
   | "images"
@@ -237,7 +238,17 @@ export class KovaError extends Error {
   requestMayHaveStarted: boolean;
 }
 export class KovaGPT {
-  readonly realtime: { create(input: RealtimeInput, options: Budget): Promise<Response> };
+  readonly realtime: {
+    create(input: RealtimeInput, options: Budget): Promise<Response>;
+    sessions: {
+      create(
+        input?: { origin?: string },
+        options?: { signal?: AbortSignal },
+      ): Promise<Record<string, unknown>>;
+      retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+      close(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    };
+  };
   readonly decisions: { create(input: DecisionInput, options: Budget): Promise<Response> };
   readonly analysis: { create(input: AnalysisInput, options: Budget): Promise<Response> };
   readonly computerUse: { propose(input: ComputerUseInput, options: Budget): Promise<Response> };

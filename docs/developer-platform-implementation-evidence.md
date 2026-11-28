@@ -6,8 +6,8 @@ Implementation: I = supported source implementation covers the named requirement
 
 ## Counts
 
-- Implemented: 21; partial: 70; missing: 9. Total 100.
-- Verification: 5 targeted requirement-level tested; 1 prior CI verified; 78 narrower evidence; 16 unverified. Total 100.
+- Implemented: 22; partial: 69; missing: 9. Total 100.
+- Verification: 6 targeted requirement-level tested; 1 prior CI verified; 77 narrower evidence; 16 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
@@ -24,6 +24,7 @@ Implementation: I = supported source implementation covers the named requirement
 - f9a4323: 26 Node SDK tests and 29 Python SDK tests passing (developer-sdk.test.mjs and sdk/python unittest suite).
 - Latest MCP batch: 31 focused Node tests passing (MCP, MCP files, OAuth transport, developer platform ingress and file search); shared scope and rate checks, revoked-scope denial and redacted terminal errors.
 - Native Realtime batch: 80 focused Node tests and 11 database/canonical tests passed; final SDK/contract regression subset 35 Node tests passed; Python SDK 30 tests passed. No live provider calls. Canonical history forward-extension inventory now pins exact new migration hashes; immutable historical proposal rejection test passed.
+- Realtime session lifecycle: 43 focused protocol, SDK, contract and canonical migration tests; 14 session/database tests (3 protocol tests overlap); 30 Python tests; immutable historical proposal rejection passed. Exact runtime build and provider smoke test pending.
 - Tests listed without a pass count identify existing regression fixtures, not an assertion that every fixture was rerun on this snapshot. No real paid provider calls were made. Superseded 1c3632e full CI canceled; f9a4323 workflows had not registered at observation.
 
 ## Requirement ledger
@@ -41,7 +42,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R09 | P | F | Generation and edit policies/meters exist; model-specific streaming not complete. |
 | R10 | I | F | Embeddings route, bounded batch inputs and dimension checks; dc071f1 SDK/policy tests. |
 | R11 | P | F | 8fec7aa speech/transcription, f9a4323 recorded transcript translation workflow; native audio translation and complete consent lifecycle not finished. |
-| R12 | P | F | Native upstream WebSocket, POST /api/v1/realtime, one quoted bounded text/audio turn with token-modality receipts, abort/cleanup, SDKs, console and schema implemented. Tests use simulated provider events. Full-duplex multi-turn ingress and persistent session accounting are not implemented. |
+| R12 | I | T | Native provider turns plus authenticated multi-turn WebSocket session gateway, durable single-redemption credentials, project/key fences, up to eight independently quoted turns, provisional events, cancellation/expiry and cleanup, JS socket client, Python grant lifecycle, Playground and OpenAPI. Provider socket is per turn; continuous microphone streaming and persistent upstream conversation state are not supported. Real Nitro socket and provider qualification remain release gates. |
 | R13 | I | F | Search route, bounded calls, source receipts and metering; dc071f1 queue tests. Provider verification remains open separately. |
 | R14 | P | F | be68daf research-runs and f9a4323 reviewed planner/preparation/synthesis; no autonomous server orchestration yet. |
 | R15 | P | F | Versioned agents and explicit revision-bound turns, d1e5243; orchestration and hosted tool lifecycle incomplete. |
@@ -49,7 +50,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R17 | P | F | d6de895 bounded multi-page read-only Browserbase session; interactive persistent lifecycle missing. |
 | R18 | P | F | computer-use proposal contract and safety review; authorized isolated action execution not complete. |
 | R19 | P | F | 095b037 file-backed isolated analysis; persistent files and hosted shell not complete. |
-| R20 | M | N | No public persistent container lifecycle; temporary analysis container is not equivalent. |
+| R20 | M | N | No public persistent container lifecycle. Provider containers refresh idle expiry on access and current pricing is duration-based with a five-minute minimum. Existing fixed isolated invocation meter cannot authorize indefinite reuse. Need approved time-based price contract and authoritative billed-duration/cleanup receipts (or separately approved hard-lifetime runner infrastructure). See https://developers.openai.com/api/docs/guides/tools-code-interpreter and https://openai.com/api/pricing/. |
 | R21 | I | F | Decisions route and bounded typed receipts, developer-decisions-policy; dc071f1 queued policy and SDK tests. |
 | R22 | P | F | 016b836 multipart form upload and private text file CRUD/retention; resumable upload completion/cancel lifecycle missing. |
 | R23 | I | F | file-search, developer-file-search-policy and project file ownership; scoped text retrieval with sources. |

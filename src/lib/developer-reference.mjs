@@ -82,6 +82,14 @@ export const DEVELOPER_ENDPOINTS = [
     "Opens a native provider WebSocket server-side for one bounded turn, returns text or base64 PCM16 audio and validated usage, and closes the connection. Separate text, audio and cached-token pricing requires approval. This is a request-scoped turn, not an interactive multi-turn WebSocket proxy.",
   ),
   endpoint(
+    "realtime-sessions",
+    "Realtime sessions",
+    "realtime-sessions",
+    "GET POST DELETE",
+    "POST optional exact HTTPS origin; GET or DELETE require the session id. A single-use grant expires in 30 seconds and establishes a five-minute WebSocket session.",
+    "Connect to /api/developer/realtime/socket using kova.realtime.v1; authenticate in the first frame, then quote and explicitly authorize each turn. Up to eight independent turns, one at a time, with provisional streamed deltas, cancellation and close. No provider credentials or continuous microphone access. Each turn uses a separately bounded provider connection.",
+  ),
+  endpoint(
     "audio-speech",
     "Speech generation",
     "audio/speech",

@@ -462,8 +462,8 @@ test("v2 key issuance accepts every supported scope and rejects malformed scopes
     const a = await account(db);
     await manage(db, "issue_key", keyInput(a, { scopes: DEVELOPER_SCOPES }));
     assert.deepEqual(
-      (await db.query("select capabilities from developer_billing_keys where id=$1", [key]))
-        .rows[0].capabilities,
+      (await db.query("select capabilities from developer_billing_keys where id=$1", [key])).rows[0]
+        .capabilities,
       DEVELOPER_SCOPES,
     );
     for (const scopes of [[null], ["chat", "chat"], [["chat"]], { scope: "chat" }])
@@ -491,6 +491,60 @@ test("v2 key issuance accepts every supported scope and rejects malformed scopes
       (await db.query("select count(*)::int n from developer_billing_keys")).rows[0].n,
       1,
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("Realtime grants are project scoped, single redemption, fenced and revocable", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const a = await account(db);
+    await manage(db, "issue_key", keyInput(a, { scopes: ["realtime"] }));
+    const grant = id(20),
+      connection = id(21),
+      turn = id(22);
+    const rpc = async (op, input, g = grant) =>
+      (
+        await db.query("select public.manage_developer_realtime_sessions_v1($1,$2,$3) result", [
+          op,
+          g,
+          input,
+        ])
+      ).rows[0].result;
+    const binding = { owner_id: owner, api_key_id: key, project_id: a.projectId };
+    const issue = { ...binding, grant_digest: "b".repeat(64), origin: "https://example.com" };
+    const claim = {
+      grant_digest: issue.grant_digest,
+      origin: issue.origin,
+      connection_id: connection,
+    };
+    assert.equal((await rpc("issue", issue)).state, "issued");
+    await assert.rejects(rpc("get", { ...binding, owner_id: other }), /not_found/);
+    await assert.rejects(rpc("claim", { ...claim, origin: null }), /not_found/);
+    await assert.rejects(rpc("claim", { ...claim, grant_digest: "c".repeat(64) }), /not_found/);
+    assert.equal((await rpc("claim", claim)).state, "connected");
+    await assert.rejects(rpc("claim", claim), /not_found/);
+    const turnBinding = { connection_id: connection, turn_id: turn };
+    for (let i = 0; i < 8; i++) {
+      assert.equal((await rpc("begin", turnBinding)).turns, i + 1);
+      await assert.rejects(rpc("begin", turnBinding), /conflict/);
+      await assert.rejects(rpc("finish", { ...turnBinding, turn_id: id(23) }), /conflict/);
+      await rpc("finish", turnBinding);
+    }
+    await assert.rejects(rpc("begin", turnBinding), /conflict/);
+    await manage(db, "revoke_key", { accountId: a.accountId, keyId: key });
+    await assert.rejects(rpc("check", { connection_id: connection }), /scope_required/);
+    assert.equal((await rpc("disconnect", { connection_id: connection })).state, "closed");
+    await db.exec("reset role;set role authenticated");
+    await assert.rejects(
+      db.query("select * from public.developer_realtime_sessions_v1"),
+      /permission denied/,
+    );
+    await assert.rejects(rpc("get", binding), /permission denied/);
   } finally {
     await db.close();
   }

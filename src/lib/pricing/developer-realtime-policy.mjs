@@ -1,3 +1,11 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const eventContextKey = Symbol.for("kovagpt.developer-realtime-events");
+const eventContext = (globalThis[eventContextKey] ??= new AsyncLocalStorage());
+export function withDeveloperRealtimeEvents(emit, action) {
+  return eventContext.run(emit, action);
+}
+
 // Bounded native Realtime session. No upstream credentials, socket URLs, or
 // arbitrary client events are exposed. An accepted request funds exactly one turn.
 export const REALTIME_MODEL = "gpt-realtime-2.1";
@@ -124,6 +132,7 @@ export async function runDeveloperRealtime(
     fail("developer_realtime_unavailable");
   const lifetime = AbortSignal.any([AbortSignal.timeout(timeoutMs), ...(signal ? [signal] : [])]);
   lifetime.throwIfAborted();
+  const emit = eventContext.getStore();
   const socket = connect(`wss://api.openai.com/v1/realtime?model=${REALTIME_MODEL}`, {
     Authorization: `Bearer ${apiKey}`,
   });
@@ -270,6 +279,15 @@ export async function runDeveloperRealtime(
             transcript += value.delta;
           }
           if (Buffer.byteLength(text) + Buffer.byteLength(transcript) > 65536) return abort();
+          emit?.({
+            kind:
+              value.type === "response.output_audio.delta"
+                ? "audio"
+                : value.type === "response.output_text.delta"
+                  ? "text"
+                  : "transcript",
+            delta: value.delta,
+          });
         } else if (value.type === "response.done") {
           if (stage !== "active" || value.response?.id !== responseId) return error();
           const receipt = {

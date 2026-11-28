@@ -4805,15 +4805,23 @@
       "order": 231,
       "filename": "20261127205018_developer_workspace_v2.sql",
       "timestamp": "20261127205018",
-      "sha256": "ea594a5c9bd4a4d0d1ce6cc4a361655f326e46f2e53bf509ca0c9c1c64e52ed6",
-      "tables": ["developer_credit_sharing_preferences"],
-      "functions": ["manage_developer_workspace_v2", "manage_developer_workspace"],
-      "destructive": false,
+      "sha256": "0f64a6620a07f8a8148f9c1c0a039738e67f243bee126655fda21b05720fa597",
+      "tables": ["developer_credit_sharing_preferences", "developer_realtime_sessions_v1"],
+      "functions": [
+        "manage_developer_workspace_v2",
+        "manage_developer_workspace",
+        "manage_developer_realtime_sessions_v1",
+        "expire_developer_realtime_sessions_v1"
+      ],
+      "destructive": true,
       "dataBackfill": true,
       "reversible": false,
-      "rls": ["developer_credit_sharing_preferences"],
+      "rls": ["developer_credit_sharing_preferences", "developer_realtime_sessions_v1"],
       "policies": [],
-      "indexes": []
+      "indexes": [
+        "developer_realtime_sessions_owner_v1_idx",
+        "developer_realtime_sessions_expiry_v1_idx"
+      ]
     },
     {
       "order": 232,

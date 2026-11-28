@@ -1,3 +1,4 @@
+export { connectRealtimeSession } from "./realtime.mjs";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const operations = new Set([
@@ -407,6 +408,18 @@ export class KovaGPT {
     });
     this.realtime = Object.freeze({
       create: (input, options) => this.run("realtime", input, options),
+      sessions: Object.freeze({
+        create: async (input = {}, { signal } = {}) =>
+          smallJson(
+            await this.#request("realtime-sessions", { input: boundedInput(input, 2048), signal }),
+          ),
+        retrieve: async (id, { signal } = {}) =>
+          smallJson(await this.#request(`realtime-sessions?id=${fileId(id)}`, { signal })),
+        close: async (id, { signal } = {}) =>
+          smallJson(
+            await this.#request(`realtime-sessions?id=${fileId(id)}`, { signal, method: "DELETE" }),
+          ),
+      }),
     });
     this.audio = Object.freeze({
       speech: Object.freeze({
