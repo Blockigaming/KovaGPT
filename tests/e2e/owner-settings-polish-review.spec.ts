@@ -10,6 +10,20 @@ for (const theme of ["dark", "light"] as const) {
     test.skip(!["desktop-1440x900", "phone-390x844"].includes(info.project.name));
     test.setTimeout(90_000);
     await coreFixture(page, theme, "pro");
+    await page.route("**/api/work/browser?scope=permissions&**", (route) =>
+      route.fulfill({
+        json: {
+          rules: { sites: [{ origin: "https://example.com", access: "ask" }] },
+          readiness: {
+            available: true,
+            origins: ["https://example.com"],
+            siteRulesEnforced: true,
+            publicWeb: true,
+            chatAvailable: true,
+          },
+        },
+      }),
+    );
     const capture = async (name: string) => {
       await page.screenshot({
         path: info.outputPath(`${theme}-${name}.png`),
@@ -64,6 +78,7 @@ for (const theme of ["dark", "light"] as const) {
 
     const browser = await open("cloud-browser");
     const rule = browser.getByLabel("Rule", { exact: true });
+    await expect(rule).toBeEnabled();
     await rule.scrollIntoViewIfNeeded();
     expect((await rule.boundingBox())!.width).toBeGreaterThanOrEqual(100);
     await capture("cloud-browser-rule");
@@ -73,7 +88,7 @@ for (const theme of ["dark", "light"] as const) {
       const tab = billing.getByRole("tab", { name, exact: true });
       await tab.click();
       await expect(tab).toHaveAttribute("aria-selected", "true");
-      await expect(tab).toHaveCSS("border-top-left-radius", "999px");
+      await expect(tab).toHaveCSS("border-top-left-radius", "9999px");
       await capture(`subscriptions-${name.toLowerCase()}`);
     }
 

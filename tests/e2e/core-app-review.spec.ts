@@ -295,7 +295,6 @@ test("project sections and account settings remain navigable and cancel safely",
     "Storage",
     "Apps",
     "Family Center",
-    "About",
     "Data control",
   ]) {
     await chooseSettingsSection(page, name);

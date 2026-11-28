@@ -473,10 +473,10 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
 /* Selected billing section remains a visible pill in both themes. */
 .kova-billing-workspace .kova-billing-tabs,
 .kova-billing-workspace .kova-billing-tabs [role="tab"] {
-  border-radius: 999px;
+  border-radius: var(--kova-radius-button);
 }
 .kova-billing-workspace .kova-billing-tabs [role="tab"][data-state="active"] {
-  border-radius: 999px;
+  border-radius: var(--kova-radius-button);
   background: color-mix(in srgb, var(--foreground) 12%, var(--background));
   color: var(--foreground);
 }
