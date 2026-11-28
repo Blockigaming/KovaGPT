@@ -314,6 +314,9 @@ export function ComposerVoiceDialog({
   const selectedVoice = useRef("");
   const defaultVoice = useRef("");
   const voiceSessionActive = useRef(false);
+  // The owned chat request and audio playback may overlap. A UI phase is not
+  // a request-ownership boundary.
+  const voiceChatRequest = useRef<AbortController | null>(null);
   const voicePlayback = useRef<{ stop(): void } | null>(null);
   const bargeIn = useRef<{ stop(): void } | null>(null);
   const bargeInGeneration = useRef(0);
@@ -361,6 +364,7 @@ export function ComposerVoiceDialog({
     // resources. A late getUserMedia result must immediately stop its own tracks.
     generation.current += 1;
     voiceSessionActive.current = false;
+    voiceChatRequest.current = null;
     if (current.current.mode === "voice") current.current.onVoicePlaybackProgress?.(null);
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
@@ -406,7 +410,10 @@ export function ComposerVoiceDialog({
       value.open &&
       !value.disabled &&
       (!value.isStreaming ||
-        (value.mode === "voice" && voiceSessionActive.current && phaseRef.current === "chat")) &&
+        (value.mode === "voice" &&
+          voiceSessionActive.current &&
+          voiceChatRequest.current !== null &&
+          !voiceChatRequest.current.signal.aborted)) &&
       value.userId === scope.userId &&
       value.contextKey === scope.contextKey
     );
@@ -608,7 +615,9 @@ export function ComposerVoiceDialog({
     if (
       mode === "voice" &&
       isStreaming &&
-      (!voiceSessionActive.current || phaseRef.current !== "chat")
+      (!voiceSessionActive.current ||
+        !voiceChatRequest.current ||
+        voiceChatRequest.current.signal.aborted)
     )
       cancelOperation();
   }, [mode, isStreaming, cancelOperation]);
@@ -700,19 +709,15 @@ export function ComposerVoiceDialog({
   // Starts speaking as soon as the first signed segment arrives, in parallel with
   // generation. The exact model, reasoning effort and limits are decided by the chat
   // request and server; nothing here selects or downgrades them.
-  const startStreamingSpeech = (scope: OperationScope, text: string) => {
+  const startStreamingSpeech = (scope: OperationScope) => {
     let words = 0;
     const playback = createStreamingVoicePlayback({
       ownerId: scope.userId,
       voiceId: scope.voiceId,
       fetchImpl: authFetch,
-      // A greeting needs an answer, not a prerecorded status update. Leave
-      // longer turns and actual tool delays eligible for acknowledgments.
-      ackCache: /^(?:hi|hey|hello|good\s+(?:morning|afternoon|evening)|how\s+are\s+you)[\s!?.]*$/iu.test(
-        text.trim(),
-      )
-        ? undefined
-        : ackCache,
+      // Every turn can receive a delayed acknowledgment, including greetings.
+      // The playback engine suppresses it if actual answer audio is ready.
+      ackCache,
       tracker: latencyTracker,
       // MediaSource streams MP3 where available; otherwise (iPhone) segments are
       // decoded and scheduled with Web Audio on a context unlocked by the tap.
@@ -779,6 +784,7 @@ export function ComposerVoiceDialog({
     updatePhase("chat");
     setVoiceLog((log) => [...log.slice(-49), { speaker: "You", text, at: Date.now() }]);
     const controller = beginRequest(120_000);
+    voiceChatRequest.current = controller;
     let abortListener: (() => void) | undefined;
     let streaming: ReturnType<typeof startStreamingSpeech> | null = null;
     let handedOff = false;
@@ -789,7 +795,7 @@ export function ComposerVoiceDialog({
         if (controller.signal.aborted) abortListener();
       });
       // Live (hands-free) turns speak while the reply is still being generated.
-      if (realtime && scope.userId) streaming = startStreamingSpeech(scope, text);
+      if (realtime && scope.userId) streaming = startStreamingSpeech(scope);
       const reply = await Promise.race([
         submit(text, controller.signal, realtime, streaming?.events),
         aborted,
@@ -983,6 +989,7 @@ export function ComposerVoiceDialog({
       );
     } finally {
       if (abortListener) controller.signal.removeEventListener("abort", abortListener);
+      if (voiceChatRequest.current === controller) voiceChatRequest.current = null;
       finishRequest(controller);
       if (!handedOff && streaming) {
         if (voicePlayback.current === streaming.playback) voicePlayback.current = null;

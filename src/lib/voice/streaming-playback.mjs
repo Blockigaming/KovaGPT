@@ -86,6 +86,7 @@ export function createStreamingVoicePlayback({
   let ackAudibleAt = null;
   let ackDurationMs = 0;
   let realDispatched = false;
+  let realAudioReady = false;
   let substantiveMarked = false;
   let sinkPlaying = false;
   let writeChain = Promise.resolve();
@@ -160,6 +161,15 @@ export function createStreamingVoicePlayback({
           if (done) break;
           total += value.byteLength;
           if (total > MAX_BYTES) throw new Error("speech_unavailable");
+          if (!value.byteLength) continue;
+          // A signed segment is only text authorization. TTS/network latency
+          // can still leave the user waiting; suppress fillers on actual audio.
+          if (!realAudioReady) {
+            realAudioReady = true;
+            policy.realSpeechStarted();
+            clearTimer(timer);
+            timer = null;
+          }
           if (!wroteAnything) wroteAnything = true;
           await write(value);
           if (nextWrite === 0) markSubstantive();
@@ -223,10 +233,10 @@ export function createStreamingVoicePlayback({
   const fireAcknowledgment = async () => {
     timer = null;
     const kind = policy.due();
-    if (!kind || !live || realDispatched || !ackCache) return;
+    if (!kind || !live || closed || realAudioReady || !ackCache) return;
     const clip = await ackCache.get(voiceId, kind);
-    // Real speech may have been dispatched while the clip loaded; then skip it.
-    if (!clip || !live || realDispatched || wroteAnything) return;
+    // Real audio may have arrived while the clip loaded; then skip it.
+    if (!clip || !live || closed || realAudioReady || wroteAnything) return;
     wroteAnything = true;
     ackDurationMs = clip.durationMs;
     ackAudibleAt = now();
@@ -271,6 +281,7 @@ export function createStreamingVoicePlayback({
       wroteAnything = false;
       ackAudibleAt = null;
       realDispatched = false;
+      realAudioReady = false;
       substantiveMarked = false;
       sinkPlaying = false;
       writeChain = Promise.resolve();
@@ -301,17 +312,12 @@ export function createStreamingVoicePlayback({
     /** A search or extended-reasoning delay was detected for this turn. */
     delay(kind) {
       policy.reason(kind);
-      if (live && timer && !realDispatched) arm();
+      if (live && timer && !realAudioReady) arm();
     },
     /** One signed segment from the chat stream; speaks as soon as bytes arrive. */
     segment({ chatId, messageId, index, text, receipt }) {
       if (!live || closed) return;
-      if (!realDispatched) {
-        realDispatched = true;
-        policy.realSpeechStarted();
-        clearTimer(timer);
-        timer = null;
-      }
+      realDispatched = true;
       const item = { chatId, messageId, index, text, receipt, response: null, reader: null };
       segments[index] = item;
       queue.push(item);

@@ -77,8 +77,9 @@ Policy (`acknowledgments.mjs`):
 
 - Search/tool step known: clip due 450 ms after end of speech. Extended-reasoning mode: 600 ms.
 - Unknown reason: only if the reply is truly late (1500 ms).
-- At most one per turn; never once real speech has been dispatched; they go through the same sink as the reply,
-  so they can never overlap it.
+- At most one per turn, including greetings when they are slow; once real audio bytes arrive, no new
+  acknowledgment may begin. Signed text alone does not imply audio is available. Both use the same sink
+  so they never overlap. Chat request ownership remains valid while acknowledgment or reply audio plays.
 
 ## Experience
 

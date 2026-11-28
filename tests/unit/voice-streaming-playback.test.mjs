@@ -132,6 +132,7 @@ test("no acknowledgment when the reply arrives before the delay, and the real au
   h.playback.begin();
   await h.advance(300);
   h.playback.segment(seg(0));
+  await h.flush();
   await h.advance(1500);
   await h.advance(2000);
   assert.deepEqual(h.writes, [3]);
@@ -546,4 +547,25 @@ test("warming a voice fetches only the three original clips, not all 59 alternat
     "/voice-acks/jessica/think.mp3",
     "/voice-acks/jessica/moment.mp3",
   ]);
+});
+
+test("a delayed TTS response can receive one acknowledgment after signed text arrives", async () => {
+  let resolveSpeech;
+  const h = harness({
+    fetchImpl: () => new Promise((resolve) => { resolveSpeech = resolve; }),
+  });
+  h.playback.begin();
+  h.playback.segment(seg(0));
+  await h.flush();
+  assert.equal(h.writes.length, 0);
+  await h.advance(1500);
+  assert.deepEqual(h.writes, [16000]);
+  resolveSpeech(
+    new Response(new Uint8Array([1, 2, 3]), { headers: { "Content-Type": "audio/mpeg" } }),
+  );
+  await h.flush();
+  assert.deepEqual(h.writes, [16000, 3]);
+  await h.advance(5000);
+  assert.deepEqual(h.writes, [16000, 3]);
+  h.playback.stop();
 });

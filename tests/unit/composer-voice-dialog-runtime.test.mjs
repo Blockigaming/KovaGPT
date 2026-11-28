@@ -172,9 +172,9 @@ function fixture(initial = {}, options = {}) {
       content: "A completed reply.",
     },
     onTranscript: (value) => submitted.push(value),
-    onVoiceSubmit: (value, signal) => {
+    onVoiceSubmit: (value, signal, realtime, events) => {
       const pending = deferred();
-      voiceSubmissions.push({ value, signal, ...pending });
+      voiceSubmissions.push({ value, signal, realtime, events, ...pending });
       return pending.promise;
     },
     onOpenChange: (value) => closed.push(value),
@@ -318,7 +318,7 @@ function fixture(initial = {}, options = {}) {
     "@/lib/voice/acknowledgments.mjs": { createAckCache },
     "@/lib/voice/barge-in.mjs": { createBargeInDetector },
     "@/lib/voice/streaming-playback.mjs": {
-      createStreamingVoicePlayback,
+      createStreamingVoicePlayback: options.streamingPlayback ?? createStreamingVoicePlayback,
       parseVoiceSegment,
       predictedDelay,
     },
@@ -326,7 +326,7 @@ function fixture(initial = {}, options = {}) {
     "@/lib/voice/webaudio-sink.mjs": {
       createWebAudioSegmentSink,
       primeVoiceAudio,
-      supportsStreamingMp3,
+      supportsStreamingMp3: options.streamingPlayback ? () => true : supportsStreamingMp3,
     },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
@@ -1899,4 +1899,68 @@ test("canceling inline dictation rejects late microphone access and stops all ac
   assert.equal(f.requests.length, 1, "cancelled capture cannot upload audio");
   assert.deepEqual(f.closed, [false]);
   f.unmount();
+});
+
+test("a slow greeting can play an acknowledgment and signed reply while its own chat stream is active", async () => {
+  let fireAck;
+  const f = fixture(
+    { mode: "voice", autoStartVoice: true },
+    {
+      async listenForVoiceTurn({ onListening }) {
+        onListening();
+        return "Hello?";
+      },
+      streamingPlayback: (opts) =>
+        createStreamingVoicePlayback({
+          ...opts,
+          ackCache: {
+            async get() {
+              return { bytes: new Uint8Array([1, 2, 3]), durationMs: 200 };
+            },
+          },
+          setTimer(fn) {
+            fireAck = fn;
+            return 1;
+          },
+          clearTimer() {},
+        }),
+    },
+  );
+  try {
+    await f.ready({ ...configured, realtime: true });
+    assert.equal(f.voiceSubmissions.length, 1);
+    const submission = f.voiceSubmissions[0];
+    assert.equal(submission.realtime, true);
+    assert.equal(submission.value, "Hello?");
+    await f.update({ isStreaming: true });
+    fireAck();
+    await f.flush();
+    const sink = f.playbackSinks[0];
+    assert.equal(sink.writes.length, 1, "slow greetings may receive feedback");
+    assert.equal(submission.signal.aborted, false);
+    submission.events.onStream({
+      kind: "voice_segment",
+      chatId: "chat-a",
+      messageId: "new-voice-assistant",
+      index: 0,
+      text: "Hi, how can I help you today?",
+      receipt: "a".repeat(20) + "." + "b".repeat(43),
+    });
+    const speech = await waitForRequest(f, 2);
+    assert.equal(speech.url, "/api/speech");
+    assert.equal(JSON.parse(speech.init.body).mode, "live-segment");
+    speech.resolve(
+      new Response(new Uint8Array([4, 5, 6]), { headers: { "content-type": "audio/mpeg" } }),
+    );
+    await f.flush();
+    assert.equal(sink.writes.length, 2, "substantive speech starts before chat completes");
+    submission.resolve(savedVoiceReply({ content: "Hi, how can I help you today?" }));
+    await f.flush();
+    assert.equal(sink.ended, 1, "speaking does not invalidate the owned chat request");
+    assert.equal(submission.signal.aborted, false);
+    assert.equal(f.requests.length, 2, "no duplicate whole-reply synthesis");
+    await f.update({ isStreaming: false });
+  } finally {
+    f.unmount();
+  }
 });
