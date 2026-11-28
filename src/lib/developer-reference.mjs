@@ -312,13 +312,13 @@ export const DEVELOPER_GUIDES = [
   guide(
     "rate-limits",
     "Rate limits",
-    "Treat HTTP 429 as throttling. Follow Retry-After when returned; use bounded concurrency and keep a stable logical request identifier.",
-    "A quote does not override a quota, credit balance, key scope or budget. Retry reads carefully; do not automatically retry ambiguous paid work with a new idempotency key.",
+    "HTTP 429 indicates an exhausted rate window. REST and WebSocket upgrade throttles return Retry-After: 60 (a conservative full window). A limiter outage returns 503; do not treat that as authorization.",
+    "A quote does not override a quota, credit balance, key scope or budget. All current ingress and resource request windows are 60 seconds. The per-request, daily, monthly and concurrent limits apply at account, project and key levels; configured concurrency is 1–8. Retry reads after the delay; never replay ambiguous paid work with a new key.",
   ),
   guide(
     "errors",
     "Errors and troubleshooting",
-    "Read the structured error.code and HTTP status. Invalid input must be corrected; unauthorized or forbidden requests require credential and scope review. A missing resource may be inaccessible rather than nonexistent.",
+    "Read the structured error.code and HTTP status rather than arbitrary text. Invalid input must be corrected; unauthorized or forbidden requests require credential and scope review. A missing resource may be inaccessible rather than nonexistent.",
     "When a quote expires or input changes, obtain a new quote before any new dispatch. For timeouts and server errors, inspect existing request or job status and contact support with sanitized identifiers, never credentials.",
   ),
   guide(
@@ -454,6 +454,58 @@ export function developerReferencePage(entry) {
     sections: [
       { title: "Request and integration", body: entry.request, points: [] },
       { title: "Behavior and limits", body: entry.behavior, points: [] },
+      ...(entry.slug === "rate-limits"
+        ? [
+            {
+              title: "Request windows",
+              body: "Each figure is requests per 60 seconds; all applicable fences apply together. These are source-enforced ceilings, not a throughput guarantee.",
+              points: [
+                "Authentication per client and authenticated ingress per key: 120 each.",
+                "Conversations, agent definitions, skills, prompts and file search: 30 per key for each family.",
+                "Vector stores and webhooks: 20 per key for each family. Uploads: 60 per key.",
+                "Batches (including response jobs and research) and automations: 10 per key per group.",
+                "Reviewed MCP: 10 per key, and remote reads 20 per owner.",
+                "Realtime and browser session REST: 12 per key per kind; socket opening 20 per client per kind; socket quotes 30 and turns 16 per key per kind.",
+                "Browser Computer Use proposals 12 and approved turns 8 per key. Socket connections are also bounded to 32 per instance per kind.",
+                "Owner console and owner file operations: 60 per owner. Funding requests: 20 per owner.",
+              ],
+            },
+            {
+              title: "Budget and retry behavior",
+              body: "No SDK automatically retries. JavaScript KovaError.retryAfter and Python KovaError.retry_after expose bounded numeric delays. Socket messages after upgrade do not carry HTTP headers; consult the error event and close state.",
+              points: [
+                "Limit concurrency in the account, project and key controls; a rejected reservation must not dispatch.",
+                "For 429 on discovery, wait at least Retry-After before issuing another read.",
+                "For an uncertain paid request, inspect original usage or job ID. Only retry the same logical operation with the original idempotency key and a valid quote after reconciling it.",
+              ],
+            },
+          ]
+        : []),
+      ...(entry.slug === "errors"
+        ? [
+            {
+              title: "HTTP errors and recovery",
+              body: "The server maps stable developer error categories into HTTP responses. The following are concrete emitted examples; unspecified service failures are deliberately redacted.",
+              points: [
+                "400 developer_input_invalid or developer_idempotency_key_required: correct the request; use a stable idempotency key for paid work.",
+                "401 developer_unauthorized: check the server-side key, expiry and revocation. 403 developer_scope_required or developer_owner_required: review the project and granted scope.",
+                "404 developer_request_not_found or developer_prompt_not_found: check the original ID and project; do not assume a foreign resource is nonexistent.",
+                "409 developer_quote_expired, developer_quote_changed, developer_idempotency_conflict or developer_upload_quota_exceeded: retrieve original state; obtain a new quote only when safe, never blindly reissue a new paid request.",
+                "413 developer_input_too_large: reduce the request within the documented bound. 429 developer_rate_limit: wait at least Retry-After.",
+                "503 developer_rate_unavailable, developer_pricing_unavailable, developer_settlement_unavailable or developer_unavailable: stop and inspect current state; no success or refund is implied.",
+              ],
+            },
+            {
+              title: "Recover an ambiguous request",
+              body: "A server error, disconnected stream or SDK transport_failed can occur after dispatch. JavaScript requestMayHaveStarted and Python request_may_have_started flag uncertain paid work; neither proves a debit occurred.",
+              points: [
+                "Retain the original stable idempotency key and any server request or job UUID.",
+                "GET /api/v1/usage?id=<request UUID> returns a key-scoped settlement record if the ID is known; otherwise use the bounded usage list or the owner Logs view. For background work retrieve the original job.",
+                "Only a settled result or authoritative reconciliation establishes the outcome. Escalate unresolved holds using the support guide; never send the key, request body or signing secret.",
+              ],
+            },
+          ]
+        : []),
     ],
     related: [
       { label: "Search developer documentation", to: "/developers/docs" },

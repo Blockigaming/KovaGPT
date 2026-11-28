@@ -1,3 +1,5 @@
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { developerRateError } from "./developer-http-errors.mjs";
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import {
@@ -31,6 +33,14 @@ export async function handleDeveloperUploads(request: Request) {
         runtimeEnv("KOVA_DEVELOPER_FILES_ENABLED") !== "true")
     )
       throw new Error("developer_upload_unavailable");
+    const rate = await consumeApplicationRateLimit({
+      identity: `developer:${identity.id}`,
+      action: "developer_uploads",
+      limit: 60,
+      windowSeconds: 60,
+    });
+    const rateError = developerRateError(rate);
+    if (rateError) throw rateError;
     const result = await identity.db
       .rpc("manage_developer_uploads_v1", {
         p_owner: identity.ownerId,

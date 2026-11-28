@@ -19,12 +19,13 @@ const operations = new Set([
   "realtime",
 ]);
 export class KovaError extends Error {
-  constructor(code, status = 0, requestMayHaveStarted = false) {
+  constructor(code, status = 0, requestMayHaveStarted = false, retryAfter = null) {
     super(code);
     this.name = "KovaError";
     this.code = code;
     this.status = status;
     this.requestMayHaveStarted = requestMayHaveStarted;
+    this.retryAfter = retryAfter;
   }
 }
 const fail = (code) => {
@@ -974,7 +975,10 @@ export class KovaGPT {
       } catch {
         /* Never expose arbitrary response bodies or transport errors. */
       }
-      throw new KovaError(code, response.status, generation && response.status >= 500);
+      const retry = response.headers.get("Retry-After");
+      const retryAfter =
+        response.status === 429 && /^(?:[1-9][0-9]{0,3})$/.test(retry ?? "") ? Number(retry) : null;
+      throw new KovaError(code, response.status, generation && response.status >= 500, retryAfter);
     }
     return response;
   }

@@ -1,3 +1,4 @@
+import { developerRateError, developerRetryHeaders } from "./developer-http-errors.mjs";
 import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { runtimeEnv } from "@/lib/runtime-env.server";
@@ -30,7 +31,11 @@ const options = { timeout: 10000, maxNetworkRetries: 0 };
 const json = (data: unknown, status = 200) =>
   Response.json(data, {
     status,
-    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...developerRetryHeaders(status),
+    },
   });
 function database() {
   const url = runtimeEnv("SUPABASE_URL"),
@@ -226,7 +231,9 @@ export async function handleDeveloperFunding(request: Request) {
     limit: 20,
     windowSeconds: 60,
   });
-  if (!rate.allowed) return json({ error: "developer_rate_limit" }, 429);
+  const error = developerRateError(rate);
+  if (error)
+    return json({ error: error.message }, error.message === "developer_rate_limit" ? 429 : 503);
   try {
     const db = database(),
       enabled = runtimeEnv("KOVA_DEVELOPER_PAYMENTS_ENABLED") === "true";

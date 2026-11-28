@@ -1,3 +1,8 @@
+import {
+  developerHttpError,
+  developerRateError,
+  developerRetryHeaders,
+} from "./developer-http-errors.mjs";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createClient } from "@supabase/supabase-js";
@@ -119,44 +124,15 @@ function equal(a: string, b: string) {
 export const developerJson = (value: unknown, status = 200) =>
   Response.json(value, {
     status,
-    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...developerRetryHeaders(status),
+    },
   });
 export function developerFailure(error: unknown) {
-  const bodyCode = error instanceof Error && "code" in error ? error.code : null;
-  if (bodyCode === "request_too_large")
-    return developerJson(
-      { error: { code: "developer_input_too_large", message: "request too large" } },
-      413,
-    );
-  if (
-    ["invalid_content_length", "invalid_utf8", "invalid_json", "invalid_request_body"].includes(
-      String(bodyCode),
-    )
-  )
-    return developerJson(
-      { error: { code: "developer_input_invalid", message: "invalid request body" } },
-      400,
-    );
-  const code =
-    error instanceof Error && /^developer_[a-z_]+$/.test(error.message)
-      ? error.message
-      : "developer_unavailable";
-  return developerJson(
-    { error: { code, message: code.replaceAll("_", " ") } },
-    /unauthorized/.test(code)
-      ? 401
-      : /scope|owner_required/.test(code)
-        ? 403
-        : /not_found/.test(code)
-          ? 404
-          : /conflict|quote_expired|quote_changed|quota_exceeded/.test(code)
-            ? 409
-            : /invalid|required|too_large/.test(code)
-              ? 400
-              : /rate_limit/.test(code)
-                ? 429
-                : 503,
-  );
+  const { status, code, message } = developerHttpError(error);
+  return developerJson({ error: { code, message } }, status);
 }
 function developerModerationEnabled() {
   if (runtimeEnv("KOVA_DEVELOPER_MODERATION_ENABLED") !== "true") return false;
@@ -366,7 +342,8 @@ export async function handleDeveloperAgentDefinitions(request: Request) {
       limit: 30,
       windowSeconds: 60,
     });
-    if (!rate.allowed) throw new Error("developer_rate_limit");
+    const rateError = developerRateError(rate);
+    if (rateError) throw rateError;
     if (
       request.method === "POST" &&
       request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
@@ -429,7 +406,8 @@ export async function handleDeveloperSkills(request: Request) {
       limit: 30,
       windowSeconds: 60,
     });
-    if (!rate.allowed) throw new Error("developer_rate_limit");
+    const rateError = developerRateError(rate);
+    if (rateError) throw rateError;
     if (
       request.method === "POST" &&
       request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
@@ -492,7 +470,8 @@ export async function handleDeveloperPrompts(request: Request) {
       limit: 30,
       windowSeconds: 60,
     });
-    if (!rate.allowed) throw new Error("developer_rate_limit");
+    const rateError = developerRateError(rate);
+    if (rateError) throw rateError;
     if (
       request.method === "POST" &&
       request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
@@ -1285,7 +1264,8 @@ export async function executeDeveloperFileSearch(
     limit: 30,
     windowSeconds: 60,
   });
-  if (!rate.allowed) throw new Error("developer_rate_limit");
+  const rateError = developerRateError(rate);
+  if (rateError) throw rateError;
   signal?.throwIfAborted();
   const files = await readDeveloperFileRecords(identity, input.fileIds);
   signal?.throwIfAborted();
@@ -1361,7 +1341,8 @@ export async function handleDeveloperConsole(request: Request) {
     limit: 60,
     windowSeconds: 60,
   });
-  if (!rate.allowed) return developerJson({ error: "developer_rate_limit" }, 429);
+  const rateError = developerRateError(rate);
+  if (rateError) return developerFailure(rateError);
   const db = developerDatabase();
   const workspaceV2 = runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") === "true";
   try {

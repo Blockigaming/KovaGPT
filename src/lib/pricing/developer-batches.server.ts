@@ -1,3 +1,4 @@
+import { developerRateError } from "./developer-http-errors.mjs";
 import { createHash } from "node:crypto";
 import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
@@ -80,7 +81,8 @@ export async function handleDeveloperBatches(
       limit: 10,
       windowSeconds: 60,
     });
-    if (!rate.allowed) throw new Error("developer_rate_limit");
+    const rateError = developerRateError(rate);
+    if (rateError) throw rateError;
     if (
       request.method === "POST" &&
       request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"

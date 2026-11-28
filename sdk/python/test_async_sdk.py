@@ -37,6 +37,13 @@ class AsyncSDKTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.mock.stop)
         self.client = AsyncClient(KEY)
 
+    async def test_throttle_delay_is_exposed_without_retry(self):
+        self.responses.append(FakeResponse({"error": {"code": "developer_rate_limit"}}, status=429, retry_after="60"))
+        with self.assertRaises(KovaError) as failure:
+            await self.client.models()
+        self.assertEqual(failure.exception.retry_after, 60)
+        self.assertEqual(len(self.calls), 1)
+
     async def test_resumable_upload_resource(self):
         self.responses.extend([FakeResponse({"id": ID}), FakeResponse({"id": ID})])
         await self.client.upload_append({"id": ID, "offset": 0, "data": "YQ=="})

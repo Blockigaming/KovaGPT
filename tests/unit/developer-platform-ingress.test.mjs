@@ -157,6 +157,8 @@ async function fixture(options = {}) {
   source = source.replace(/import\s*\{[^}]+\}\s*from\s*"([^"]+)";/g, (full, path) => {
     if (path === "node:crypto") return full;
     if (
+      path === "./developer-http-errors.mjs" ||
+      path === "./developer-prompt-policy.mjs" ||
       path === "./developer-metering.mjs" ||
       path === "./developer-platform-policy.mjs" ||
       path === "./pricing-administration.mjs" ||
@@ -192,7 +194,7 @@ async function fixture(options = {}) {
     if (path === "@/lib/api-auth.server")
       return 'const requireVerifiedUser=async()=>({userId:globalThis[Symbol.for("kova.developer-ingress-test")].owner});';
     if (path === "@/lib/distributed-rate-limit.server")
-      return "const consumeApplicationRateLimit=async()=>({allowed:true});";
+      return 'const consumeApplicationRateLimit=async()=>({allowed:true,status:"allowed"});';
     if (path === "@/lib/auth-security.mjs") return "const isCrossSiteMutation=()=>false;";
     if (path === "@/lib/runtime-env.server")
       return 'const runtimeEnv=(name)=>globalThis[Symbol.for("kova.developer-ingress-test")].env[name]??"p".repeat(64);';
@@ -206,6 +208,10 @@ async function fixture(options = {}) {
       return 'const withDeveloperBilling=(identity,callback)=>globalThis[Symbol.for("kova.developer-ingress-test")].billing(identity,callback),meterProviderRequest=async()=>{throw Error("developer_browser_unavailable")};';
     return "";
   });
+  source = source.replaceAll(
+    'await import("./developer-mcp-connections.server")',
+    "({ developerMcpReadEnabled: () => false })",
+  );
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;

@@ -58,7 +58,7 @@ test("all existing public developer pages remain addressable and every reference
     const page = developerReferencePage(entry);
     assert.equal(page.indexable, false);
     assert.equal(robotsDirectiveForRoute(page.path), "noindex, follow", page.path);
-    assert.equal(page.sections.length, 2);
+    assert.ok(page.sections.length >= 2);
     assert.ok(entry.request.length > 85 && entry.behavior.length > 85, entry.slug);
     assert.ok(!bodies.has(entry.request + entry.behavior), entry.slug);
     bodies.add(entry.request + entry.behavior);
@@ -77,4 +77,20 @@ test("documentation search finds methods, paths and actual request fields withou
   assert.ok(search("chat/completions max_completion_tokens").includes("chat-completions"));
   assert.ok(search("file_ids Unicode").includes("file-search"));
   assert.deepEqual(search("not-a-real-contract-132"), []);
+});
+
+test("error and rate guides expose recovery examples and enforceable windows", () => {
+  const errors = developerReferencePage(DEVELOPER_REFERENCE_BY_SLUG.get("errors"));
+  const limits = developerReferencePage(DEVELOPER_REFERENCE_BY_SLUG.get("rate-limits"));
+  assert.ok(
+    errors.sections.some((section) =>
+      section.points.some((point) => point.includes("/api/v1/usage?id=")),
+    ),
+  );
+  assert.ok(
+    limits.sections.some((section) =>
+      section.points.some((point) => point.includes("Uploads: 60 per key")),
+    ),
+  );
+  assert.ok(limits.sections.some((section) => section.body.includes("retry_after")));
 });

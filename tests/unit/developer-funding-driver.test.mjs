@@ -133,7 +133,7 @@ async function fixture() {
       return 'const requireVerifiedUser=async()=>({userId:globalThis[Symbol.for("kova.funding-test")].state.owner});';
     if (path === "@/lib/auth-security.mjs") return "const isCrossSiteMutation=()=>false;";
     if (path === "@/lib/distributed-rate-limit.server")
-      return "const consumeApplicationRateLimit=async()=>({allowed:true});";
+      return 'const consumeApplicationRateLimit=async()=>({allowed:true,status:"allowed"});';
     return "";
   });
   const compiled = ts.transpileModule(source, {

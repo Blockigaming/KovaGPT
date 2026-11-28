@@ -5,6 +5,8 @@ import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import { consumeOpenAiAdmission } from "../../src/lib/ai/openai-admission.server.mjs";
+import * as httpErrors from "../../src/lib/pricing/developer-http-errors.mjs";
+import * as usageSummary from "../../src/lib/pricing/developer-usage-summary.mjs";
 import { parseDeveloperCredential } from "../../src/lib/pricing/developer-platform-policy.mjs";
 import { readBoundedJsonObject } from "../../src/lib/bounded-json.server.mjs";
 
@@ -126,6 +128,8 @@ function fixture(overrides = {}) {
         assert.fail("developer authentication must not use the short-window RPC limiter"),
     },
     "./developer-platform-policy.mjs": { parseDeveloperCredential },
+    "./developer-http-errors.mjs": httpErrors,
+    "./developer-usage-summary.mjs": usageSummary,
     "@/lib/chat-ingress.server.mjs": { resolveAnonymousClientKey: () => "synthetic-client" },
     "@/lib/auth-security.mjs": { isCrossSiteMutation: () => state.crossSite },
     "@/lib/account-identity.server.mjs": {
@@ -206,6 +210,7 @@ test("denied minute admission fails before key lookup or provider dispatch witho
       const f = fixture({ admission: { [action]: decision } });
       const response = await f.exports.handleDeveloperApi(f.request(), "responses");
       assert.equal(response.status, decision === "limited" ? 429 : 503);
+      assert.equal(response.headers.get("Retry-After"), decision === "limited" ? "60" : null);
       assert.equal(
         (await response.json()).error.code,
         decision === "limited" ? "developer_rate_limit" : "developer_rate_unavailable",

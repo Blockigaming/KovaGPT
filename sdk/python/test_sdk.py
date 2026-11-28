@@ -20,12 +20,13 @@ def quote(**extra):
 
 
 class FakeResponse(io.BytesIO):
-    def __init__(self, value, status=200, content_type="application/json"):
+    def __init__(self, value, status=200, content_type="application/json", retry_after=None):
         super().__init__(value if isinstance(value, bytes) else json.dumps(value).encode())
         self.status, self.content_type = status, content_type
+        self.retry_after = retry_after
 
     def getheader(self, name, default=None):
-        return self.content_type if name == "Content-Type" else default
+        return self.content_type if name == "Content-Type" else self.retry_after if name == "Retry-After" else default
 
 
 class WebhookVerificationTests(unittest.TestCase):
@@ -57,6 +58,15 @@ class WebhookVerificationTests(unittest.TestCase):
 
 
 class SDKTests(unittest.TestCase):
+    def test_throttle_delay_is_exposed_without_retry(self):
+        self.responses.append(FakeResponse({"error": {"code": "developer_rate_limit"}}, status=429, retry_after="60"))
+        with self.assertRaises(KovaError) as failure:
+            self.client.models()
+        self.assertEqual(failure.exception.retry_after, 60)
+        self.assertEqual(failure.exception.status, 429)
+        self.assertEqual(len(self.calls), 1)
+
+
     def test_resumable_upload_lifecycle(self):
         self.responses.extend(FakeResponse({"id": ID}) for _ in range(6))
         self.client.upload_create({"id": ID, "filename": "a.txt", "mime_type": "text/plain", "total_bytes": 1, "sha256": "a" * 64})

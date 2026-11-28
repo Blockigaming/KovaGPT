@@ -791,3 +791,25 @@ test("resumable upload SDK exposes the six non-metered lifecycle calls", async (
   await assert.rejects(f.client.uploads.retrieve("../other"), /upload_id_invalid/);
   assert.equal(f.calls.length, 6);
 });
+
+test("429 exposes the bounded Retry-After without replaying a request", async () => {
+  const f = fixture(() =>
+    Response.json(
+      { error: { code: "developer_rate_limit" } },
+      { status: 429, headers: { "Retry-After": "60" } },
+    ),
+  );
+  await assert.rejects(
+    f.client.models(),
+    (error) =>
+      error instanceof KovaError &&
+      error.status === 429 &&
+      error.retryAfter === 60 &&
+      !error.requestMayHaveStarted,
+  );
+  assert.equal(f.calls.length, 1);
+  const invalid = fixture(() =>
+    Response.json({}, { status: 429, headers: { "Retry-After": "bad" } }),
+  );
+  await assert.rejects(invalid.client.models(), (error) => error.retryAfter === null);
+});

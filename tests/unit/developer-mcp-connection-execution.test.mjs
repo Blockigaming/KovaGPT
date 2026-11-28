@@ -12,7 +12,7 @@ const approvedMcpServers=()=>new Map([["reviewed",{url:"https://reviewed.example
 const unpackKeyCredential=()=>({serverId:"reviewed",bindingHash:"a".repeat(43),apiKey:"private-token"});
 const decryptCredential=async()=>"encrypted-payload";
 const runtimeEnv=()=>state.enabled?"true":"false";
-const consumeApplicationRateLimit=async()=>({allowed:state.allowed});
+const consumeApplicationRateLimit=async()=>({allowed:state.allowed,status:state.allowed?"allowed":"limited"});
 const assertLockdownAllows=async()=>{};
 const developerUuid=(value)=>{if(typeof value!=="string"||!value)throw Error("developer_id_invalid");return value;};
 const developerEnabled=()=>state.enabled;
@@ -25,7 +25,10 @@ const db={rpc:(name,args)=>({abortSignal:async()=>{state.calls.push(args);if(arg
 export const identity={db,id:"key",ownerId:"owner",project_id:"project",capabilities:["mcp_read"]};
 const readMcpConnection=async(id,query,credential,fetchImpl,before,transport,signal)=>{signal.throwIfAborted();await before();if(state.change){state.revoked=true;}await before();state.dispatched++;return {results:[{id:"1",title:"MCP read result",snippet:"private-token returned",url:null}],limited:false};};
 `;
-const transformed = stateSource + source.replace(/^import\s+[\s\S]*?from\s+"[^"]+";\n/gm, "");
+const transformed =
+  `import { developerRateError } from ${JSON.stringify(new URL("../../src/lib/pricing/developer-http-errors.mjs", import.meta.url).href)};\n` +
+  stateSource +
+  source.replace(/^import\s+[\s\S]*?from\s+"[^"]+";\n/gm, "");
 const compiled = ts.transpileModule(transformed, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;

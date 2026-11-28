@@ -20,11 +20,12 @@ _QUOTE = re.compile(r"[A-Za-z0-9_-]+\.[a-f0-9]{64}")
 
 
 class KovaError(Exception):
-    def __init__(self, code, status=0, request_may_have_started=False):
+    def __init__(self, code, status=0, request_may_have_started=False, retry_after=None):
         super().__init__(code)
         self.code = code
         self.status = status
         self.request_may_have_started = request_may_have_started
+        self.retry_after = retry_after
 
 
 def _require(condition, code):
@@ -64,6 +65,8 @@ class APIResponse:
         self._paid = paid
         self.status = response.status
         self.content_type = response.getheader("Content-Type", "")
+        retry = response.getheader("Retry-After", "")
+        self.retry_after = int(retry) if self.status == 429 and isinstance(retry, str) and re.fullmatch(r"[1-9][0-9]{0,3}", retry) else None
         self.closed = False
 
     def close(self):
@@ -339,7 +342,7 @@ class Client:
             pass
         finally:
             response.close()
-        raise KovaError(code, response.status, paid and response.status >= 500)
+        raise KovaError(code, response.status, paid and response.status >= 500, response.retry_after)
 
     def _get(self, path):
         return self._request(path).json(1024 * 1024)

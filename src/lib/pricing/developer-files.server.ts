@@ -1,3 +1,4 @@
+import { developerRateError } from "./developer-http-errors.mjs";
 import { createHash } from "node:crypto";
 import { requireVerifiedUser } from "@/lib/api-auth.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
@@ -51,7 +52,8 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
         limit: 60,
         windowSeconds: 60,
       });
-      if (!rate.allowed) throw new Error("developer_rate_limit");
+      const rateError = developerRateError(rate);
+      if (rateError) throw rateError;
     } else {
       const identity = await authenticateDeveloper(request);
       if (!identity.capabilities.includes("files")) throw new Error("developer_scope_required");

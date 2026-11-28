@@ -1,3 +1,4 @@
+import { developerRateError, developerRetryHeaders } from "./developer-http-errors.mjs";
 import { defineWebSocketHandler } from "nitro";
 import { enforceAzureProductionOriginBoundary } from "@/lib/origin-boundary.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
@@ -20,7 +21,10 @@ export function developerSocketHandler(kind: "realtime" | "browser" = "realtime"
   const sockets = new Map<string, ReturnType<typeof createDeveloperRealtimeSocket>>();
   const MAX_LOCAL_CONNECTIONS = 32;
   const deny = (status: number) =>
-    new Response(null, { status, headers: { "Cache-Control": "no-store" } });
+    new Response(null, {
+      status,
+      headers: { "Cache-Control": "no-store", ...developerRetryHeaders(status) },
+    });
   return defineWebSocketHandler({
     async upgrade(request) {
       try {
@@ -45,7 +49,8 @@ export function developerSocketHandler(kind: "realtime" | "browser" = "realtime"
           limit: 20,
           windowSeconds: 60,
         });
-        if (!rate.allowed) return deny(429);
+        const error = developerRateError(rate);
+        if (error) return deny(error.message === "developer_rate_limit" ? 429 : 503);
         return {
           headers: { "Sec-WebSocket-Protocol": protocol },
         };

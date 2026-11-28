@@ -40,7 +40,7 @@ async function fixture(modulePath = "developer-files.server.ts") {
     if (path === "@/lib/api-auth.server")
       return `const requireVerifiedUser=async()=>({userId:'${owner}'});`;
     if (path === "@/lib/distributed-rate-limit.server")
-      return "const consumeApplicationRateLimit=async()=>({allowed:true});";
+      return 'const consumeApplicationRateLimit=async()=>({allowed:true,status:"allowed"});';
     if (path === "@/lib/runtime-env.server")
       return 'const runtimeEnv=()=>globalThis[Symbol.for("kova.developer-files-tests")].state.enabled?"true":"false";';
     if (path === "./developer-platform.server")

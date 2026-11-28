@@ -1,3 +1,4 @@
+import { developerRateError } from "./developer-http-errors.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
@@ -78,8 +79,10 @@ async function session(
   return { data, db };
 }
 async function rate(identity: string, action: string, limit: number) {
-  if (!(await consumeApplicationRateLimit({ identity, action, limit, windowSeconds: 60 })).allowed)
-    throw Error("developer_rate_limit");
+  const error = developerRateError(
+    await consumeApplicationRateLimit({ identity, action, limit, windowSeconds: 60 }),
+  );
+  if (error) throw error;
 }
 function publicSession(data: Record<string, unknown>, kind: SessionKind) {
   return {

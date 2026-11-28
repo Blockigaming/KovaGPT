@@ -1,3 +1,4 @@
+import { developerRateError } from "./developer-http-errors.mjs";
 import { approvedMcpServers } from "@/integrations/approved-mcp-servers.server.mjs";
 import { unpackKeyCredential } from "@/integrations/key-connection-credential.server.mjs";
 import { decryptCredential } from "@/integrations/credential-vault.server";
@@ -129,7 +130,8 @@ export async function executeDeveloperMcpConnection(
     limit: 10,
     windowSeconds: 60,
   });
-  if (!rate.allowed) fail("developer_rate_limit");
+  const rateError = developerRateError(rate);
+  if (rateError) throw rateError;
   const rpc = (op: string, data: Record<string, unknown>) =>
     manage(identity.db, identity.ownerId, identity.project_id, identity.id, op, data, signal);
   if (operation === "list") {
@@ -184,7 +186,8 @@ export async function executeDeveloperMcpConnection(
     limit: 20,
     windowSeconds: 60,
   });
-  if (!ownerRate.allowed) fail("developer_rate_limit");
+  const ownerRateError = developerRateError(ownerRate);
+  if (ownerRateError) throw ownerRateError;
   const beforeRequest = async () => {
     signal.throwIfAborted();
     if (!developerMcpReadEnabled()) fail("developer_mcp_connection_unavailable");

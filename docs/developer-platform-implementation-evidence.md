@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for model discovery and usage dimensions on base ae0b0f25bff40a2b69554b5a56b2a4273d1080d9, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for error and rate-limit contracts on base dfb196cb9795e04c44df77b7468039458a4bedcb, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 32; partial: 60; missing: 8. Total 100.
-- Verification: 16 targeted requirement-level tested; 1 prior CI verified; 68 narrower evidence; 15 unverified. Total 100.
+- Implemented: 34; partial: 58; missing: 8. Total 100.
+- Verification: 18 targeted requirement-level tested; 1 prior CI verified; 66 narrower evidence; 15 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Error and rate-limit contracts: 103 focused Node tests and 39 Python SDK tests passed. Stable sanitized error mapping, distributed limiter exhaustion vs outage, conservative REST Retry-After, both SDKs expose delay without automatic paid retry, documented source ceilings and recovery examples. Funding driver fixture needs the unavailable Stripe package; full CI pending. R82/R84 source coverage. No provider calls or spending.
 
 - Model discovery and usage: 26 focused Node tests passed; TS/TSX syntax transpilation passed. Project-key-scoped model eligibility replaces static consumer labels; filter by capability and search aliases, inspect contract features. Every existing authoritative public meter appears in filtered summaries and CSV, with zero distinguished from unmeasured and independent currency totals. R37/R54/R61 source coverage; authenticated browser/build qualification and full CI pending. No provider calls or spending.
 
@@ -128,9 +130,9 @@ Implementation: I = supported source implementation covers the named requirement
 | R79 | P | N | Changelog content exists; complete version history and source links incomplete. |
 | R80 | P | N | Migration guidance exists; all supported upgrade paths and validation missing. |
 | R81 | P | N | Lifecycle guidance exists; verified complete deprecation notices not established. |
-| R82 | P | F | SDK errors and retry guidance exist; complete error code/recovery example index pending. |
+| R82 | I | T | Sanitized public error mapping, SDK retry metadata, documented status/code and request-ID recovery examples; focused ingress and SDK tests. |
 | R83 | P | F | Key/MCP OAuth docs and tenant boundaries; service-account lifecycle absent. |
-| R84 | P | F | Limits/budget semantics documented; full current service concurrency and Retry-After matrix pending. |
+| R84 | I | T | Source-backed service and concurrency matrix, budget/quote semantics, fail-closed rate limits and Retry-After in REST/OpenAPI and SDKs; focused tests. |
 | R85 | P | F | Private files and scope/retention docs; complete capability-specific privacy/security disclosures pending. |
 | R86 | M | N | No verified measured developer service-status surface. |
 | R87 | P | N | Support entry and FAQ content exist; complete actionable developer incident-reporting guidance pending. |

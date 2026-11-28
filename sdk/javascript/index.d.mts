@@ -258,6 +258,7 @@ export class KovaError extends Error {
   code: string;
   status: number;
   requestMayHaveStarted: boolean;
+  retryAfter: number | null;
 }
 export class KovaGPT {
   readonly realtime: {

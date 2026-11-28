@@ -1006,6 +1006,16 @@ export function developerOpenApi() {
       for (const status of ["400", "401", "403", "404", "409", "413", "429", "503"])
         responses[status] = {
           description: "Request rejected or service unavailable; inspect the structured error.",
+          ...(status === "429"
+            ? {
+                headers: {
+                  "Retry-After": {
+                    schema: { type: "integer", const: 60 },
+                    description: "Conservative retry delay in seconds; no automatic replay.",
+                  },
+                },
+              }
+            : {}),
           content: json(error),
         };
       if (

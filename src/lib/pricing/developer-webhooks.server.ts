@@ -1,3 +1,4 @@
+import { developerRateError } from "./developer-http-errors.mjs";
 import { Resolver } from "node:dns/promises";
 import { request as httpsRequest } from "node:https";
 import { checkServerIdentity } from "node:tls";
@@ -50,7 +51,8 @@ export async function handleDeveloperWebhooks(request: Request) {
       limit: 20,
       windowSeconds: 60,
     });
-    if (!rate.allowed) throw new Error("developer_rate_limit");
+    const rateError = developerRateError(rate);
+    if (rateError) throw rateError;
     if (
       request.method === "POST" &&
       request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
