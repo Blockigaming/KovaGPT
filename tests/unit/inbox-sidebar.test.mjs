@@ -37,12 +37,14 @@ test("mailbox mutations require modify permission, not a read-only Google grant"
 
 test("Inbox is gated by active mail connections and uses connector actions outside chat", () => {
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
-  const server = readFileSync("src/lib/inbox.functions.ts", "utf8");
+  const rpc = readFileSync("src/lib/inbox.functions.ts", "utf8");
+  const server = readFileSync("src/lib/inbox.server.ts", "utf8");
   const route = readFileSync("src/routes/inbox.tsx", "utf8");
   assert.match(sidebar, /shortcut\.id !== "inbox" \|\| inboxAccounts\.accounts\.length > 0/);
   assert.match(server, /checkOwner\(data.owner, context.userId\)/);
   assert.match(server, /connectorWriteAllowed\(owner, provider, account\)/);
-  assert.match(server, /confirmed: z.literal\(true\)/);
+  assert.match(rpc, /confirmed: z.literal\(true\)/);
+  assert.doesNotMatch(rpc, /from .*\.server["\']/);
   assert.match(route, /if \(!mounted.current \|\| !result.sent\) return/);
   assert.doesNotMatch(route, /chat\/send|onSendMessage|useChatController/);
 });
