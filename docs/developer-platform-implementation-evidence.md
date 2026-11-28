@@ -1,6 +1,6 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for scoped MCP discovery and skill lifecycle views on base 53243069a458d13c7ee0ec19d1dd154f005a1c3b, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for explicit public API response contracts on base 8c8aed7beb0c7bc00998eeebe0d91bc2c0999641, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
@@ -11,6 +11,8 @@ Implementation: I = supported source implementation covers the named requirement
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Explicit response contracts: 14 OpenAPI/reference tests and three PostgreSQL fixture tests passed. No generic success fallback; actual file and queue receipts checked for required and undeclared fields and enums. Session secrets are creation-only. Provider-native nested schemas and unimplemented API families remain outstanding; R42 remains partial.
 
 - Skills and integration views: 16 focused Node checks and TS/TSX syntax transpilation passed. Version-bound skill actions, scoped MCP grant refresh and confirmed revocation, discover-only preparation of active reviewed read grants with read-only binding, bounded query and separate explicit external-read confirmation. Fixed nonexistent MCP detail operation; no external dispatch or spending. R59 source coverage; browser and approved provider qualification remain pending.
 
@@ -98,7 +100,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R39 | P | F | Funding/payment event handling; live receipts, refunds/disputes and reconciliation not fully qualified. |
 | R40 | P | F | Versioned JS package, declarations and streaming; f9a4323 26 SDK tests. Missing families still lack SDK parity. |
 | R41 | P | F | Versioned Python sync/async package; f9a4323 29 tests. Missing families still lack SDK parity. |
-| R42 | P | F | 1c3632e OpenAPI for 27 current routes; d6de895 updated browser contract; method/status-specific agent, skill, conversation, vector-store, webhook and response-job response contracts with three focused schema assertions executed in isolated JS. Remaining response schemas and missing route parity pending. |
+| R42 | P | F | 1c3632e OpenAPI for 27 current routes; d6de895 updated browser contract; method/status-specific agent, skill, conversation, vector-store, webhook and response-job response contracts with three focused schema assertions executed in isolated JS. All currently registered public methods now have explicit top-level success contracts; file, batch and automation receipts checked against database fixtures. Provider-native nested schema and missing API family parity remain pending. |
 | R43 | P | F | 43a29aa searchable reference and guides; 29 baseline routes and full content inventory not reconciled. |
 | R44 | I | C | Accepted on frozen checklist; 8c14be3 isolated migration run 46067432818 and be68daf run 46070676725; current branch SQL unchanged since successful be68daf replay except speech scope migration, which needs exact-head qualification. |
 | R45 | P | F | Isolated replay passed be68daf; two-principal fixtures exist; exact current schema replay and rollback evidence incomplete. |

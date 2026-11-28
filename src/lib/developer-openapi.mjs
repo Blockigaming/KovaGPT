@@ -408,58 +408,7 @@ const open = (properties, required = Object.keys(properties)) => ({
   required,
   additionalProperties: true,
 });
-const list = (data) => open({ object: { const: "list" }, data: { type: "array", items: data } });
 const output = {
-  "browser-sessions": open(
-    {
-      object: { const: "browser.session" },
-      id: uuid,
-      state: choices("issued", "connected", "closed"),
-      redeem_by: str(80),
-      expires_at: str(80),
-      turns: integer(0, 1),
-      maximum_turns: { const: 1 },
-      transport: { const: "/api/developer/browser/socket" },
-      protocol: { const: "kova.browser.v1" },
-      client_secret: str(90),
-    },
-    [
-      "object",
-      "id",
-      "state",
-      "redeem_by",
-      "expires_at",
-      "turns",
-      "maximum_turns",
-      "transport",
-      "protocol",
-    ],
-  ),
-  "realtime-sessions": open(
-    {
-      object: { const: "realtime.session" },
-      id: uuid,
-      state: choices("issued", "connected", "closed"),
-      redeem_by: str(80),
-      expires_at: str(80),
-      turns: integer(0, 8),
-      maximum_turns: { const: 8 },
-      transport: { const: "/api/developer/realtime/socket" },
-      protocol: { const: "kova.realtime.v1" },
-      client_secret: str(90),
-    },
-    [
-      "object",
-      "id",
-      "state",
-      "redeem_by",
-      "expires_at",
-      "turns",
-      "maximum_turns",
-      "transport",
-      "protocol",
-    ],
-  ),
   quotes: obj({
     quoteToken,
     pricingVersion: str(160),
@@ -467,16 +416,21 @@ const output = {
     maximumCharge: { type: "number", minimum: 0 },
     expiresAt: { type: "integer" },
   }),
-  models: list(
-    open({
-      id: model,
-      capability: str(80),
-      reasoning_efforts: { type: "array", items: effort },
-      web_search: boolean,
-      inline_image_input: boolean,
-      image_edits: boolean,
-    }),
-  ),
+  models: obj({
+    object: { const: "list" },
+    pricingVersion: str(160),
+    data: {
+      type: "array",
+      items: obj({
+        id: model,
+        capability: str(80),
+        reasoning_efforts: { type: "array", items: effort },
+        web_search: boolean,
+        inline_image_input: boolean,
+        image_edits: boolean,
+      }),
+    },
+  }),
   responses: open(
     { id: str(256), model, status: str(64), output: { type: "array", items: nativeObject } },
     ["id", "model", "output"],
@@ -674,29 +628,6 @@ const researchRun = open({
     4,
   ),
 });
-output["mcp-connections"] = union(
-  list(
-    open({
-      id: uuid,
-      server_id: str(48),
-      tool_name: str(128),
-      expires_at: str(64),
-      read_only: { const: true },
-    }),
-  ),
-  open({
-    object: { const: "mcp.read_result" },
-    id: uuid,
-    tool: str(128),
-    results: arr(
-      open({ id: str(32), title: str(128), snippet: str(2000), url: { type: "null" } }),
-      10,
-      0,
-    ),
-    limited: { type: "boolean" },
-  }),
-);
-output["research-runs"] = union(researchRun, list(open({ id: uuid }, ["id"])));
 // Resource responses are method-specific: retrieval does not disclose mutation-only
 // secrets, and a deletion receipt is not interchangeable with a resource definition.
 const dateTime = { type: "string", format: "date-time" };
@@ -859,7 +790,143 @@ const uploadReceipt = obj({
   created_at: { type: "string", format: "date-time" },
   expires_at: { type: "string", format: "date-time" },
 });
+const fileFields = {
+  id: uuid,
+  project_id: uuid,
+  filename: str(125),
+  mime_type: choices("text/plain", "text/markdown", "text/csv", "application/json"),
+  byte_size: integer(1, 32768),
+  content_digest: { type: "string", pattern: "^[a-f0-9]{64}$" },
+  created_at: dateTime,
+  expires_at: dateTime,
+};
+const filePage = obj({
+  data: arr(obj(fileFields), 25, 0),
+  page: integer(0, 4),
+  hasMore: boolean,
+  maximumFiles: { const: 100 },
+  maximumBytes: { const: 2097152 },
+});
+const sessionOutput = (kind, turns) => {
+  const fields = {
+    object: { const: kind + ".session" },
+    id: uuid,
+    state: choices("issued", "connected", "closed"),
+    redeem_by: dateTime,
+    expires_at: dateTime,
+    turns: integer(0, turns),
+    maximum_turns: { const: turns },
+    transport: { const: "/api/developer/" + kind + "/socket" },
+    protocol: { const: "kova." + kind + ".v1" },
+  };
+  const receipt = obj(fields);
+  return {
+    get: receipt,
+    delete: receipt,
+    post: obj({ ...fields, client_secret: str(90) }),
+    created: obj({ ...fields, client_secret: str(90) }),
+  };
+};
+const batchFields = (kind) => ({
+  project_id: uuid,
+  id: uuid,
+  api_key_id: uuid,
+  currency,
+  resource_kind: { const: kind },
+  paused_at: nullableDateTime,
+  maximum_ticks: integer(1, 100000000000000),
+  created_at: dateTime,
+  expires_at: dateTime,
+  canceled_at: nullableDateTime,
+});
+const batchItemState = choices("queued", "running", "completed", "uncertain", "canceled");
+const batchItemFields = {
+  id: uuid,
+  ordinal: integer(1, 8),
+  operation_kind: choices(...Object.keys(batchInputs)),
+  state: batchItemState,
+  maximum_ticks: integer(1, 100000000000000),
+  run_at: nullableDateTime,
+  finished_at: nullableDateTime,
+};
+const batchSettlement = {
+  request_id: nullableUuid,
+  settlement_state: { type: ["string", "null"] },
+  final_customer_charge: amount,
+};
+const batchItemReceiptFields = {
+  object: { const: "batch.item" },
+  project_id: uuid,
+  batch_id: uuid,
+  ...batchItemFields,
+  input: nativeObject,
+  request_group: { type: "string", pattern: "^[a-f0-9]{64}$" },
+  output: { type: ["object", "null"] },
+  ...batchSettlement,
+};
+const batchItemReceipt = obj(
+  batchItemReceiptFields,
+  Object.keys(batchItemReceiptFields).filter((key) => !Object.hasOwn(batchSettlement, key)),
+);
+const batchOutput = (kind) => {
+  const fields = { object: { const: "batch" }, ...batchFields(kind) };
+  const receipt = obj(fields);
+  const canceled = obj({ id: uuid, canceled_at: dateTime });
+  const mutations = [receipt, canceled];
+  if (kind === "automation") mutations.push(obj({ id: uuid, paused_at: nullableDateTime }));
+  return {
+    get: union(
+      resourceList(obj(batchFields(kind))),
+      obj({
+        ...fields,
+        items: { type: "array", items: obj({ ...batchItemFields, ...batchSettlement }) },
+      }),
+      batchItemReceipt,
+    ),
+    post: union(...mutations),
+    accepted: receipt,
+  };
+};
+const mcpTool = obj({
+  id: uuid,
+  server_id: str(48),
+  tool_name: str(128),
+  expires_at: dateTime,
+  read_only: { const: true },
+});
+const mcpResult = obj({
+  object: { const: "mcp.read_result" },
+  id: uuid,
+  tool: str(128),
+  results: arr(
+    obj({
+      id: str(32),
+      title: str(128),
+      snippet: { type: "string", maxLength: 2000 },
+      url: { type: "null" },
+    }),
+    10,
+    0,
+  ),
+  limited: boolean,
+});
 const resourceOutputs = {
+  files: {
+    get: union(filePage, obj({ ...fileFields, content: str(32768) })),
+    post: obj(fileFields),
+    created: obj(fileFields),
+    delete: deletedResource,
+  },
+  batches: batchOutput("batch"),
+  automations: batchOutput("automation"),
+  "mcp-connections": { get: resourceList(mcpTool), post: mcpResult },
+  "research-runs": {
+    get: union(researchRun, resourceList(obj(batchFields("research")))),
+    post: researchRun,
+    accepted: researchRun,
+  },
+  "browser-sessions": sessionOutput("browser", 1),
+  "realtime-sessions": sessionOutput("realtime", 8),
   uploads: {
     get: union(resourceList(uploadReceipt), uploadReceipt),
     post: uploadReceipt,
@@ -973,19 +1040,8 @@ export function developerOpenApi() {
           ),
         );
       const resource = resourceOutputs[key];
-      const schema =
-        resource?.[method.toLowerCase()] ??
-        output[key] ??
-        open(
-          {
-            id: uuid,
-            object: str(80),
-            status: str(80),
-            data: { type: "array", items: nativeObject },
-            deleted: boolean,
-          },
-          [],
-        );
+      const schema = resource?.[method.toLowerCase()] ?? output[key];
+      if (!schema) throw new Error("Missing response schema for " + method + " " + key);
       const content = json(schema);
       if (["responses", "chat/completions"].includes(key))
         content["text/event-stream"] = {
@@ -1046,6 +1102,8 @@ export function developerOpenApi() {
           description: "Accepted for asynchronous work; not proof of completion or settlement.",
           content: resource?.accepted ? json(resource.accepted) : content,
         };
+      if (method === "POST" && ["files", "browser-sessions", "realtime-sessions"].includes(key))
+        delete responses[200];
       const requestBody =
         method === "POST" ? { required: true, content: json(bodies[key]) } : undefined;
       if (requestBody && key === "files")

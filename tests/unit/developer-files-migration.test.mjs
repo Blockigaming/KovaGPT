@@ -2,6 +2,29 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
+import { developerOpenApi } from "../../src/lib/developer-openapi.mjs";
+const spec = developerOpenApi();
+const receiptSchema = (route, method, status = 200) =>
+  spec.paths["/api/v1/" + route][method].responses[status].content["application/json"].schema;
+function receiptFields(schema, value) {
+  if (schema.type === "object") {
+    assert.ok(value && typeof value === "object" && !Array.isArray(value));
+    for (const key of schema.required ?? [])
+      assert.ok(Object.hasOwn(value, key), `Missing receipt field: ${key}`);
+    for (const [key, field] of Object.entries(value)) {
+      if (schema.additionalProperties === false)
+        assert.ok(Object.hasOwn(schema.properties, key), `Undocumented receipt field: ${key}`);
+      if (schema.properties?.[key]) receiptFields(schema.properties[key], field);
+    }
+  }
+  if (schema.type === "array") {
+    assert.ok(Array.isArray(value));
+    for (const item of value) receiptFields(schema.items, item);
+  }
+  if (Object.hasOwn(schema, "const")) assert.equal(value, schema.const);
+  if (schema.enum) assert.ok(schema.enum.includes(value), `Unexpected receipt value: ${value}`);
+}
+
 const id = (n) => `${String(n).padStart(8, "0")}-1111-4111-8111-111111111111`;
 const owner = id(1),
   other = id(2),
@@ -69,6 +92,9 @@ test("private text files are immutable, scoped, secret-free in export and actual
   const f = await fixture();
   try {
     const created = await f.file("create", upload());
+    receiptFields(receiptSchema("files", "post", 201), created);
+    receiptFields(receiptSchema("files", "get").oneOf[0], await f.file("list", { page: 0 }));
+    receiptFields(receiptSchema("files", "get").oneOf[1], await f.file("get", { id: created.id }));
     assert.equal(created.byte_size, 5);
     assert.equal(created.content, undefined);
     assert.equal((await f.file("get", { id: created.id })).content, "hello");
@@ -906,7 +932,10 @@ test("batch leases, aggregate maximums, cancellation and isolation", async () =>
       items: [item(first, "b"), item(second, "c")],
     };
     await assert.rejects(run("create", { ...input, maximum_ticks: 199 }), /batch_budget_invalid/);
-    assert.equal((await run("create", input)).id, batch);
+    const created = await run("create", input);
+    receiptFields(receiptSchema("batches", "post", 202), created);
+    receiptFields(receiptSchema("batches", "get").oneOf[0], await run("list", {}));
+    assert.equal(created.id, batch);
     assert.equal((await run("create", input)).id, batch);
     await assert.rejects(
       run("create", { ...input, request_digest: "d".repeat(64) }),
@@ -918,8 +947,13 @@ test("batch leases, aggregate maximums, cancellation and isolation", async () =>
     const claimed = await claim();
     assert.equal(claimed.item.id, first);
     assert.equal(await claim(), null);
-    await run("cancel", { id: batch });
+    receiptFields(receiptSchema("batches", "post").oneOf[1], await run("cancel", { id: batch }));
     const state = await run("get", { id: batch });
+    receiptFields(receiptSchema("batches", "get").oneOf[1], state);
+    receiptFields(
+      receiptSchema("batches", "get").oneOf[2],
+      await run("get_item", { id: batch, item_id: first }),
+    );
     assert.deepEqual(
       state.items.map((item) => item.state),
       ["running", "canceled"],
@@ -1005,7 +1039,9 @@ test("scheduled automations are separately scoped and respect due time and pause
       ]),
       /batch_not_found/,
     );
-    assert.ok((await run("pause", { id: batch })).paused_at);
+    const paused = await run("pause", { id: batch });
+    receiptFields(receiptSchema("automations", "post").oneOf[2], paused);
+    assert.ok(paused.paused_at);
     await f.db.query(
       "update developer_batch_items_v1 set run_at=now()-interval '1 second' where id=$1",
       [item],

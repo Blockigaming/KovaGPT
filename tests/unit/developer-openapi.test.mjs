@@ -126,3 +126,74 @@ test("webhook secrets are mutation-only and completed response jobs require sett
   assert.equal(job[1].properties.output.type, "null");
   assert.equal(job[1].properties.status.enum.includes("completed"), false);
 });
+
+test("every public method has a non-generic success schema and mutation-only session credentials", () => {
+  for (const methods of Object.values(spec.paths))
+    for (const operation of Object.values(methods)) {
+      const successes = Object.entries(operation.responses).filter(([status]) =>
+        /^2[0-9]{2}$/.test(status),
+      );
+      assert.ok(successes.length);
+      for (const [, response] of successes) {
+        const schema = response.content["application/json"].schema;
+        assert.ok(
+          schema.required?.length || schema.oneOf?.length || schema.anyOf?.length,
+          operation.operationId,
+        );
+      }
+    }
+  for (const kind of ["browser", "realtime"]) {
+    const route = spec.paths["/api/v1/" + kind + "-sessions"];
+    for (const method of ["get", "delete"])
+      assert.equal(
+        route[method].responses[200].content["application/json"].schema.properties.client_secret,
+        undefined,
+      );
+    assert.equal(route.post.responses[200], undefined);
+    assert.ok(
+      route.post.responses[201].content["application/json"].schema.required.includes(
+        "client_secret",
+      ),
+    );
+  }
+  assert.ok(
+    spec.paths["/api/v1/models"].get.responses[200].content[
+      "application/json"
+    ].schema.required.includes("pricingVersion"),
+  );
+});
+
+test("file, batch, automation and MCP receipts reflect their separate operations", () => {
+  const schema = (route, method, status = 200) =>
+    spec.paths["/api/v1/" + route][method].responses[status].content["application/json"].schema;
+  assert.equal(schema("files", "get").oneOf[0].properties.maximumBytes.const, 2097152);
+  assert.equal(schema("files", "get").oneOf[0].properties.data.maxItems, 25);
+  assert.equal(schema("files", "get").oneOf[1].properties.content.maxLength, 32768);
+  assert.equal(schema("files", "post", 201).properties.content, undefined);
+  assert.equal(schema("files", "delete").properties.deleted.const, true);
+  for (const [route, kind] of [
+    ["batches", "batch"],
+    ["automations", "automation"],
+  ]) {
+    const [list, detail, item] = schema(route, "get").oneOf;
+    assert.equal(list.properties.data.items.properties.resource_kind.const, kind);
+    assert.equal(detail.properties.items.items.properties.authorization, undefined);
+    assert.equal(item.properties.lease_token, undefined);
+    assert.equal(item.properties.authorization, undefined);
+    assert.equal(schema(route, "post", 202).properties.resource_kind.const, kind);
+    assert.ok(schema(route, "post").oneOf[1].required.includes("canceled_at"));
+  }
+  assert.equal(
+    schema("automations", "post").oneOf[2].properties.paused_at.type.includes("null"),
+    true,
+  );
+  assert.equal(
+    schema("mcp-connections", "get").properties.data.items.properties.read_only.const,
+    true,
+  );
+  assert.equal(schema("mcp-connections", "post").properties.object.const, "mcp.read_result");
+  assert.equal(
+    schema("research-runs", "get").oneOf[1].properties.data.items.properties.resource_kind.const,
+    "research",
+  );
+});
