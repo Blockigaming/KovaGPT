@@ -37,6 +37,13 @@ class AsyncSDKTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.mock.stop)
         self.client = AsyncClient(KEY)
 
+    async def test_resumable_upload_resource(self):
+        self.responses.extend([FakeResponse({"id": ID}), FakeResponse({"id": ID})])
+        await self.client.upload_append({"id": ID, "offset": 0, "data": "YQ=="})
+        await self.client.upload_complete(ID)
+        self.assertEqual([json.loads(c[2])["operation"] for c in self.calls], ["append", "complete"])
+        self.assertTrue(all(c.closed.is_set() for c in self.connections))
+
     async def test_saved_prompt_resource(self):
         definition = {"name": "Example", "description": "Saved text", "prompt": "Summarize"}
         self.responses.extend([FakeResponse({"id": ID}), FakeResponse({"id": ID})])

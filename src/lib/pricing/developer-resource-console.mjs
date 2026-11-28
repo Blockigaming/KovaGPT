@@ -128,6 +128,25 @@ export const developerResourceSections = Object.freeze({
       delete: remove,
     },
   },
+  uploads: {
+    label: "Uploads",
+    description:
+      "Resume private text uploads. Append base64 chunks at the reported byte offset, then verify and complete or cancel.",
+    actions: {
+      list,
+      detail,
+      create: post("Create upload", "create", {
+        id: "",
+        filename: "",
+        mime_type: "text/plain",
+        total_bytes: 1,
+        sha256: "",
+      }),
+      append: post("Append part", "append", { id: "", offset: 0, data: "" }),
+      complete: post("Complete upload", "complete", { id: "" }),
+      cancel: post("Cancel upload", "cancel", { id: "" }),
+    },
+  },
   prompts: {
     label: "Prompts",
     description: "Create, inspect, revise and delete private saved prompts.",
@@ -327,7 +346,7 @@ export function resourceConsoleTemplate(section, action, randomId) {
   if (operation === "create" && Object.hasOwn(value, "id")) value.id = randomId();
   if (operation === "create" && Array.isArray(value.items))
     for (const item of value.items) item.id = randomId();
-  if (operation === "append") value.item.id = randomId();
+  if (operation === "append" && value.item) value.item.id = randomId();
   if (operation === "test") value.event_id = randomId();
   return JSON.stringify(value, null, 2);
 }

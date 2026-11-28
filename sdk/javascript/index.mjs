@@ -604,6 +604,29 @@ export class KovaGPT {
       delete: async (id, { signal } = {}) =>
         smallJson(await this.#request(promptPath(id), { method: "DELETE", signal })),
     });
+    const uploadPost = async (operation, input, { signal } = {}) =>
+      smallJson(
+        await this.#request("uploads", {
+          input: boundedInput({ ...boundedInput(input), operation }, 16384),
+          signal,
+        }),
+        65536,
+      );
+    this.uploads = Object.freeze({
+      create: (input, options) => uploadPost("create", input, options),
+      append: (input, options) => uploadPost("append", input, options),
+      complete: (id, options) => uploadPost("complete", { id }, options),
+      cancel: (id, options) => uploadPost("cancel", { id }, options),
+      list: async ({ signal } = {}) => smallJson(await this.#request("uploads", { signal }), 65536),
+      retrieve: async (id, { signal } = {}) => {
+        if (
+          typeof id !== "string" ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+        )
+          fail("upload_id_invalid");
+        return smallJson(await this.#request("uploads?id=" + id, { signal }), 65536);
+      },
+    });
     const webhookPath = (id, deliveries = false) => {
       if (
         typeof id !== "string" ||

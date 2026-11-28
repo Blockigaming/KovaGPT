@@ -342,6 +342,22 @@ const bodies = {
   agents: definition(
     obj({ name: str(160), model, instructions: str(8000), max_output_tokens: integer(1, 8192) }),
   ),
+  uploads: union(
+    op("create", {
+      id: uuid,
+      filename: str(124),
+      mime_type: choices("text/plain", "text/markdown", "text/csv", "application/json"),
+      total_bytes: integer(1, 32768),
+      sha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
+    }),
+    op("append", {
+      id: uuid,
+      offset: integer(0, 32767),
+      data: { type: "string", minLength: 4, maxLength: 10924, contentEncoding: "base64" },
+    }),
+    op("complete", { id: uuid }),
+    op("cancel", { id: uuid }),
+  ),
   prompts: definition(obj({ name: str(160), description: str(512), prompt: str(4000) })),
   skills: definition(obj({ name: str(160), description: str(512), instructions: str(4000) })),
   webhooks: union(
@@ -377,6 +393,7 @@ const query = {
   conversations: { id: uuid, item_id: uuid },
   agents: { id: uuid, version: integer(1, 20) },
   prompts: { id: uuid, version: integer(1, 20) },
+  uploads: { id: uuid },
   skills: { id: uuid, version: integer(1, 20) },
   webhooks: { id: uuid, deliveries: { const: "true" } },
   batches: { id: uuid, item_id: uuid },
@@ -826,7 +843,27 @@ const responseJob = union(
     output: { type: "null" },
   }),
 );
+const uploadReceipt = obj({
+  object: { const: "upload" },
+  id: uuid,
+  project_id: uuid,
+  filename: str(124),
+  mime_type: choices("text/plain", "text/markdown", "text/csv", "application/json"),
+  total_bytes: integer(1, 32768),
+  sha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
+  received_bytes: integer(0, 32768),
+  part_count: integer(0, 64),
+  state: choices("pending", "completed", "canceled"),
+  file_id: nullableUuid,
+  created_at: { type: "string", format: "date-time" },
+  expires_at: { type: "string", format: "date-time" },
+});
 const resourceOutputs = {
+  uploads: {
+    get: union(resourceList(uploadReceipt), uploadReceipt),
+    post: uploadReceipt,
+    created: uploadReceipt,
+  },
   agents: versionedOutput("agent", { name: agentFields.name, model }, obj(agentFields)),
   prompts: versionedOutput(
     "prompt",
@@ -980,6 +1017,7 @@ export function developerOpenApi() {
           "agents",
           "skills",
           "prompts",
+          "uploads",
           "webhooks",
           "realtime-sessions",
           "browser-sessions",

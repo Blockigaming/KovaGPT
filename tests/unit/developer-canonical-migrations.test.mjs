@@ -19,6 +19,7 @@ test("developer migration sources are canonical, ordered and included in the rel
     "developer_batches_v1.sql",
     "developer_mcp_connections_v1.sql",
     "developer_prompts_v1.sql",
+    "developer_uploads_v1.sql",
   ];
   const files = await readdir(canonical);
   const manifest = JSON.parse(

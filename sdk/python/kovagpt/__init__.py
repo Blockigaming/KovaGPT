@@ -563,6 +563,28 @@ class Client:
     def prompt_delete(self, prompt_id):
         return self._request(self._prompt_path(prompt_id), method="DELETE").json(65536)
 
+    def _upload_post(self, operation, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("uploads", method="POST", body=_json_body({**data, "operation": operation}, 16384)).json(65536)
+
+    def upload_create(self, data):
+        return self._upload_post("create", data)
+
+    def upload_append(self, data):
+        return self._upload_post("append", data)
+
+    def upload_complete(self, upload_id):
+        return self._upload_post("complete", {"id": _identifier(upload_id, _UUID, "upload_id_invalid")})
+
+    def upload_cancel(self, upload_id):
+        return self._upload_post("cancel", {"id": _identifier(upload_id, _UUID, "upload_id_invalid")})
+
+    def upload_list(self):
+        return self._get("uploads")
+
+    def upload_retrieve(self, upload_id):
+        return self._get("uploads?id=" + _identifier(upload_id, _UUID, "upload_id_invalid"))
+
     @staticmethod
     def _webhook_path(endpoint_id, deliveries=False):
         return "webhooks?id=" + _identifier(endpoint_id, _UUID, "webhook_id_invalid") + ("&deliveries=true" if deliveries else "")

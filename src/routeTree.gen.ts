@@ -224,6 +224,7 @@ import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
 import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
 import { Route as ApiV1SearchRouteImport } from './routes/api/v1/search'
 import { Route as ApiV1SkillsRouteImport } from './routes/api/v1/skills'
+import { Route as ApiV1UploadsRouteImport } from './routes/api/v1/uploads'
 import { Route as ApiV1UsageRouteImport } from './routes/api/v1/usage'
 import { Route as ApiV1VectorStoresRouteImport } from './routes/api/v1/vector-stores'
 import { Route as ApiV1WebhooksRouteImport } from './routes/api/v1/webhooks'
@@ -1364,6 +1365,11 @@ const ApiV1SkillsRoute = ApiV1SkillsRouteImport.update({
   path: '/api/v1/skills',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1UploadsRoute = ApiV1UploadsRouteImport.update({
+  id: '/api/v1/uploads',
+  path: '/api/v1/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1UsageRoute = ApiV1UsageRouteImport.update({
   id: '/api/v1/usage',
   path: '/api/v1/usage',
@@ -1806,6 +1812,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/skills': typeof ApiV1SkillsRoute
+  '/api/v1/uploads': typeof ApiV1UploadsRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
   '/api/v1/webhooks': typeof ApiV1WebhooksRoute
@@ -2065,6 +2072,7 @@ export interface FileRoutesByTo {
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/skills': typeof ApiV1SkillsRoute
+  '/api/v1/uploads': typeof ApiV1UploadsRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
   '/api/v1/webhooks': typeof ApiV1WebhooksRoute
@@ -2325,6 +2333,7 @@ export interface FileRoutesById {
   '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/v1/search': typeof ApiV1SearchRoute
   '/api/v1/skills': typeof ApiV1SkillsRoute
+  '/api/v1/uploads': typeof ApiV1UploadsRoute
   '/api/v1/usage': typeof ApiV1UsageRoute
   '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
   '/api/v1/webhooks': typeof ApiV1WebhooksRoute
@@ -2586,6 +2595,7 @@ export interface FileRouteTypes {
     | '/api/v1/responses'
     | '/api/v1/search'
     | '/api/v1/skills'
+    | '/api/v1/uploads'
     | '/api/v1/usage'
     | '/api/v1/vector-stores'
     | '/api/v1/webhooks'
@@ -2845,6 +2855,7 @@ export interface FileRouteTypes {
     | '/api/v1/responses'
     | '/api/v1/search'
     | '/api/v1/skills'
+    | '/api/v1/uploads'
     | '/api/v1/usage'
     | '/api/v1/vector-stores'
     | '/api/v1/webhooks'
@@ -3104,6 +3115,7 @@ export interface FileRouteTypes {
     | '/api/v1/responses'
     | '/api/v1/search'
     | '/api/v1/skills'
+    | '/api/v1/uploads'
     | '/api/v1/usage'
     | '/api/v1/vector-stores'
     | '/api/v1/webhooks'
@@ -3354,6 +3366,7 @@ export interface RootRouteChildren {
   ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
   ApiV1SearchRoute: typeof ApiV1SearchRoute
   ApiV1SkillsRoute: typeof ApiV1SkillsRoute
+  ApiV1UploadsRoute: typeof ApiV1UploadsRoute
   ApiV1UsageRoute: typeof ApiV1UsageRoute
   ApiV1VectorStoresRoute: typeof ApiV1VectorStoresRoute
   ApiV1WebhooksRoute: typeof ApiV1WebhooksRoute
@@ -4903,6 +4916,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1SkillsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/uploads': {
+      id: '/api/v1/uploads'
+      path: '/api/v1/uploads'
+      fullPath: '/api/v1/uploads'
+      preLoaderRoute: typeof ApiV1UploadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/usage': {
       id: '/api/v1/usage'
       path: '/api/v1/usage'
@@ -5529,6 +5549,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1ResponsesRoute: ApiV1ResponsesRoute,
   ApiV1SearchRoute: ApiV1SearchRoute,
   ApiV1SkillsRoute: ApiV1SkillsRoute,
+  ApiV1UploadsRoute: ApiV1UploadsRoute,
   ApiV1UsageRoute: ApiV1UsageRoute,
   ApiV1VectorStoresRoute: ApiV1VectorStoresRoute,
   ApiV1WebhooksRoute: ApiV1WebhooksRoute,

@@ -667,6 +667,7 @@ const PUBLIC_REVIEW_PATHS = Object.freeze([
       "agent-turns",
       "skills",
       "prompts",
+      "uploads",
       "webhooks",
       "batches",
       "automations",

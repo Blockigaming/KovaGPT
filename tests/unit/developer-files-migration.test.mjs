@@ -1002,3 +1002,79 @@ test("scheduled automations are separately scoped and respect due time and pause
     await f.db.close();
   }
 });
+
+test("resumable uploads validate byte offsets and digest, erase temporary data, and retain scoped receipts", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_uploads_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input = {}, user = owner) =>
+      (
+        await f.db.query("select manage_developer_uploads_v1($1,$2,$3,$4,$5) result", [
+          user,
+          key,
+          f.account.projectId,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
+    const bytes = Buffer.from("café\n");
+    const sha256 = Buffer.from(await crypto.subtle.digest("SHA-256", bytes)).toString("hex");
+    const metadata = {
+      id: id(81),
+      filename: "note.txt",
+      mime_type: "text/plain",
+      total_bytes: bytes.length,
+      sha256,
+    };
+    assert.equal((await run("create", metadata)).received_bytes, 0);
+    assert.equal((await run("create", metadata)).id, metadata.id);
+    await assert.rejects(run("create", { ...metadata, total_bytes: 7 }), /idempotency_conflict/);
+    await assert.rejects(run("get", { id: metadata.id }, other), /scope_required/);
+    await assert.rejects(
+      run("append", { id: metadata.id, offset: 1, data: "YQ==" }),
+      /offset_conflict/,
+    );
+    const part = { id: metadata.id, offset: 0, data: bytes.subarray(0, 4).toString("base64") };
+    assert.equal((await run("append", part)).received_bytes, 4);
+    assert.equal((await run("append", part)).part_count, 1);
+    await assert.rejects(run("append", { ...part, data: "YQ==" }), /idempotency_conflict/);
+    await assert.rejects(run("complete", { id: metadata.id }), /digest_conflict/);
+    await run("append", { id: metadata.id, offset: 4, data: bytes.subarray(4).toString("base64") });
+    const receipt = await run("complete", { id: metadata.id });
+    assert.equal(receipt.state, "completed");
+    assert.equal((await run("complete", { id: metadata.id })).file_id, receipt.file_id);
+    assert.equal((await f.file("get", { id: receipt.file_id })).content, "café\n");
+    assert.equal(receipt.payload, undefined);
+    assert.equal(
+      (await f.db.query("select payload from developer_uploads_v1 where id=$1", [metadata.id]))
+        .rows[0].payload,
+      null,
+    );
+    await assert.rejects(run("cancel", { id: metadata.id }), /state_conflict/);
+    const canceled = { ...metadata, id: id(82) };
+    await run("create", canceled);
+    await run("append", { ...part, id: canceled.id });
+    assert.equal((await run("cancel", { id: canceled.id })).state, "canceled");
+    assert.equal((await run("cancel", { id: canceled.id })).state, "canceled");
+    await assert.rejects(run("complete", { id: canceled.id }), /state_conflict/);
+    assert.equal((await run("list")).data.length, 2);
+    assert.equal(
+      (
+        await f.db.query(
+          "select count(*)::int n from developer_upload_export_records_v1 where payload_base64 is not null",
+        )
+      ).rows[0].n,
+      0,
+    );
+    await f.db.exec(
+      "update developer_uploads_v1 set created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour'",
+    );
+    assert.equal((await f.db.query("select expire_developer_uploads_v1(100) n")).rows[0].n, 2);
+    await assert.rejects(run("get", { id: metadata.id }), /not_found/);
+    assert.equal((await f.file("get", { id: receipt.file_id })).content, "café\n");
+  } finally {
+    await f.db.close();
+  }
+});

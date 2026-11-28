@@ -57,6 +57,21 @@ class WebhookVerificationTests(unittest.TestCase):
 
 
 class SDKTests(unittest.TestCase):
+    def test_resumable_upload_lifecycle(self):
+        self.responses.extend(FakeResponse({"id": ID}) for _ in range(6))
+        self.client.upload_create({"id": ID, "filename": "a.txt", "mime_type": "text/plain", "total_bytes": 1, "sha256": "a" * 64})
+        self.client.upload_append({"id": ID, "offset": 0, "data": "YQ=="})
+        self.client.upload_retrieve(ID)
+        self.client.upload_list()
+        self.client.upload_complete(ID)
+        self.client.upload_cancel(ID)
+        self.assertEqual([c[0] for c in self.calls], ["POST", "POST", "GET", "GET", "POST", "POST"])
+        self.assertEqual([json.loads(c[2])["operation"] for c in self.calls if c[2]], ["create", "append", "complete", "cancel"])
+        self.assertTrue(all("/api/v1/uploads" in c[1] for c in self.calls))
+        with self.assertRaisesRegex(KovaError, "upload_id_invalid"):
+            self.client.upload_retrieve("../other")
+        self.assertEqual(len(self.calls), 6)
+
     def test_saved_prompt_lifecycle(self):
         definition = {"name": "Example", "description": "Saved text", "prompt": "Summarize"}
         self.responses.extend(FakeResponse({"id": ID}) for _ in range(5))

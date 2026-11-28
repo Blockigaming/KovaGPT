@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for saved prompts on base d18e67687fbed1770eb5e758101ad41746895fcb, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for resumable uploads on base 2da44babfcef22165a6c26d408155a1c7e2c9781, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 28; partial: 64; missing: 8. Total 100.
-- Verification: 12 targeted requirement-level tested; 1 prior CI verified; 72 narrower evidence; 15 unverified. Total 100.
+- Implemented: 29; partial: 63; missing: 8. Total 100.
+- Verification: 13 targeted requirement-level tested; 1 prior CI verified; 71 narrower evidence; 15 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Resumable uploads: dedicated bounded byte-chunk lifecycle, SHA-256 and UTF-8 validation, idempotent completion into the existing private-file quota, cancellation erasure, one-hour expiry and maintenance, scoped SDK and console operations. 48 focused Node checks, one PGlite lifecycle test, 37 Python SDK tests and 12 canonical-history/migration checks passed; database references verified. Canonical version uses observed UTC time; full isolated Supabase replay and browser qualification remain pending. Upload gates remain off.
 
 - Saved prompts: exact-head source bundle and pinned offline test kit recovered and checksum-verified. Dedicated versioned SQL resource, project/key fences, structured console controls, JS and sync/async Python SDK, OpenAPI and public guide. 63 Node tests (including 13 PostgreSQL fixture tests), 35 Python SDK tests, 12 canonical-history and migration inventory tests passed; expanded cross-project and erasure fixture rerun passed. Canonical SQL version uses the observed UTC clock; exact migration replay in full isolated Supabase and browser qualification still pending. Both activation flags remain off.
 
@@ -64,7 +66,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R19 | P | F | 095b037 file-backed isolated analysis; bounded cleanup of identified containers on rejected receipts; persistent files, durable cleanup recovery and hosted shell not complete. |
 | R20 | M | N | No public persistent container lifecycle. Provider containers refresh idle expiry on access and current pricing is duration-based with a five-minute minimum. Existing fixed isolated invocation meter cannot authorize indefinite reuse. Need approved time-based price contract and authoritative billed-duration/cleanup receipts (or separately approved hard-lifetime runner infrastructure). See https://developers.openai.com/api/docs/guides/tools-code-interpreter and https://openai.com/api/pricing/. |
 | R21 | I | F | Decisions route and bounded typed receipts, developer-decisions-policy; dc071f1 queued policy and SDK tests. |
-| R22 | P | F | 016b836 multipart form upload and private text file CRUD/retention; resumable upload completion/cancel lifecycle missing. |
+| R22 | I | T | 016b836 multipart form upload and private text file CRUD/retention; bounded resumable byte uploads now support create, append, list, retrieve, digest-verified completion, cancellation, quota and expiry. Focused policy, database, SDK and console tests passed. |
 | R23 | I | F | file-search, developer-file-search-policy and project file ownership; scoped text retrieval with sources. |
 | R24 | I | T | dc071f1 atomic vector upsert batches, CRUD, cosine retrieval and rollback; vector-policy and files-migration. |
 | R25 | I | T | Owner-delegated reviewed MCP read grants (up to 24h), key/project/credential/config binding, discovery, approval, invocation, revocation, SDK/console/API and hosted tools. Database and mocked dispatch tests pass; approved live server/provider qualification pending. No arbitrary servers or writes. |

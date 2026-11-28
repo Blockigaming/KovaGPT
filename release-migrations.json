@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 241,
-  "latest": "20261128114651_developer_prompts_v1.sql",
+  "count": 242,
+  "latest": "20261128115506_developer_uploads_v1.sql",
   "migrations": [
     {
       "order": 1,
@@ -5032,6 +5032,20 @@
       "rls": ["developer_prompt_versions_v1"],
       "policies": [],
       "indexes": ["developer_prompt_versions_owner_v1_idx"]
+    },
+    {
+      "order": 242,
+      "filename": "20261128115506_developer_uploads_v1.sql",
+      "timestamp": "20261128115506",
+      "sha256": "4ed6b5ac7f692266d743bf4155c2b38f840dda404133eb9edb761fa2358f5840",
+      "tables": ["developer_uploads_v1"],
+      "functions": ["manage_developer_uploads_v1", "expire_developer_uploads_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_uploads_v1"],
+      "policies": [],
+      "indexes": ["developer_uploads_owner_v1_idx", "developer_uploads_expiry_v1_idx"]
     }
   ]
 }

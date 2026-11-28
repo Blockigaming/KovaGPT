@@ -210,6 +210,14 @@ export const DEVELOPER_ENDPOINTS = [
     "The server loads the exact authorized definition and binds the versions to the quote. Returns a bounded native Responses result. Conversation-bound turns reuse private persisted history; append new messages explicitly. Changed revisions invalidate authorization. No model-directed delegation or automatic chaining is claimed.",
   ),
   endpoint(
+    "uploads",
+    "Resumable uploads",
+    "uploads",
+    "GET POST",
+    "POST create with id, filename, mime_type, total_bytes and sha256. Append base64 data with id and offset; complete or cancel with id. GET lists uploads or retrieves by id.",
+    "Files scope required. Fixed one-hour expiry, 32 KiB total, 8 KiB chunks, 64 parts, eight pending uploads and 32 retained receipts per owner. Retries at already received offsets must match. Completion verifies digest, UTF-8 and file quotas and returns file_id. Cancel and complete erase temporary bytes; no inference or charge.",
+  ),
+  endpoint(
     "prompts",
     "Saved prompts",
     "prompts",

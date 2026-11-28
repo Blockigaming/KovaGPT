@@ -334,6 +334,26 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   };
+  readonly uploads: {
+    create(
+      input: {
+        id: string;
+        filename: string;
+        mime_type: "text/plain" | "text/markdown" | "text/csv" | "application/json";
+        total_bytes: number;
+        sha256: string;
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    append(
+      input: { id: string; offset: number; data: string },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    complete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    cancel(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+  };
   readonly webhooks: {
     create(
       input: { id: string; url: string; events: ("request.settled" | "request.rejected")[] },

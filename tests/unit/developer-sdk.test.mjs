@@ -763,3 +763,31 @@ test("saved prompt CRUD uses the separate scoped resource and exact version", as
   await assert.rejects(client.prompts.retrieve(id, { version: 21 }), /prompt_version_invalid/);
   assert.equal(calls.length, 5);
 });
+
+test("resumable upload SDK exposes the six non-metered lifecycle calls", async () => {
+  const f = fixture();
+  const id = "55555555-5555-4555-8555-555555555555";
+  await f.client.uploads.create({
+    id,
+    filename: "a.txt",
+    mime_type: "text/plain",
+    total_bytes: 1,
+    sha256: "a".repeat(64),
+  });
+  await f.client.uploads.append({ id, offset: 0, data: "YQ==" });
+  await f.client.uploads.retrieve(id);
+  await f.client.uploads.list();
+  await f.client.uploads.complete(id);
+  await f.client.uploads.cancel(id);
+  assert.deepEqual(
+    f.calls.map((c) => c.method),
+    ["POST", "POST", "GET", "GET", "POST", "POST"],
+  );
+  assert.deepEqual(
+    f.calls.filter((c) => c.body).map((c) => JSON.parse(c.body).operation),
+    ["create", "append", "complete", "cancel"],
+  );
+  assert.ok(f.calls.every((c) => new URL(c.url).pathname === "/api/v1/uploads"));
+  await assert.rejects(f.client.uploads.retrieve("../other"), /upload_id_invalid/);
+  assert.equal(f.calls.length, 6);
+});

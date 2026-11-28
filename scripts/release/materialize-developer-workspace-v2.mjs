@@ -19,6 +19,7 @@ const names = [
   "developer_batches_v1",
   "developer_mcp_connections_v1",
   "developer_prompts_v1",
+  "developer_uploads_v1",
 ];
 for (const name of names) {
   const source = await readFile(resolve(root, "supabase/pending", name + ".sql"), "utf8");

@@ -14,6 +14,7 @@ export type DeveloperResourceSection =
   | "agents"
   | "skills"
   | "prompts"
+  | "uploads"
   | "conversations"
   | "vector-stores"
   | "batches"

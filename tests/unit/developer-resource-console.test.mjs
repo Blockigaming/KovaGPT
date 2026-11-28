@@ -197,3 +197,23 @@ test("saved prompt controls draft version-bound mutations without executing infe
   assert.throws(() => resourceConsolePromptDraft("update", { ...result, version: 20 }));
   assert.throws(() => resourceConsolePromptDraft("update", { ...result, id: "../x" }));
 });
+
+test("upload console supports resumable byte parts and non-metered confirmation", () => {
+  assert.equal(JSON.parse(resourceConsoleTemplate("uploads", "create", () => id)).id, id);
+  assert.deepEqual(JSON.parse(resourceConsoleTemplate("uploads", "append", () => id)), {
+    id: "",
+    offset: 0,
+    data: "",
+  });
+  const request = resourceConsoleRequest(
+    "uploads",
+    "append",
+    JSON.stringify({ id, offset: 0, data: "YQ==" }),
+  );
+  assert.equal(request.path, "/api/v1/uploads");
+  assert.equal(JSON.parse(request.body).operation, "append");
+  for (const action of ["create", "append", "complete", "cancel"]) {
+    assert.equal(resourceConsoleRequiresConfirmation("uploads", action), true);
+    assert.equal(resourceConsoleMaySpend("uploads", action), false);
+  }
+});

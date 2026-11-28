@@ -109,6 +109,8 @@ export async function recoverDeveloperBilling(): Promise<number> {
     if (failures) console.warn("[developer-billing] credit refresh failed", { failures });
   }
   await rpc<number>("expire_developer_files", { p_limit: 100 });
+  if (runtimeEnv("KOVA_DEVELOPER_UPLOAD_SCHEMA_READY") === "true")
+    await rpc<number>("expire_developer_uploads_v1", { p_limit: 100 });
   if (runtimeEnv("KOVA_DEVELOPER_VECTOR_SCHEMA_READY") === "true")
     await rpc<number>("expire_developer_vector_stores_v1", { p_limit: 100 });
   if (runtimeEnv("KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY") === "true")
