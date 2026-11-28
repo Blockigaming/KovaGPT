@@ -57,6 +57,17 @@ class WebhookVerificationTests(unittest.TestCase):
 
 
 class SDKTests(unittest.TestCase):
+    def test_reviewed_mcp_approval(self):
+        data={"id":ID,"tool":"search","query":"test","approved":True}
+        with self.assertRaisesRegex(KovaError,"approval_required"):
+            self.client.mcp_connection_invoke({**data,"approved":False})
+        self.assertEqual(len(self.calls),0)
+        self.responses.extend([FakeResponse({"object":"list","data":[]}),FakeResponse({"object":"mcp.read_result"})])
+        self.client.mcp_connections_list()
+        self.client.mcp_connection_invoke(data)
+        self.assertTrue(all(call[1].endswith("/mcp-connections") for call in self.calls))
+        self.assertEqual(json.loads(self.calls[1][2]),data)
+
     def setUp(self):
         self.calls, self.responses, self.connections = [], [], []
         test = self

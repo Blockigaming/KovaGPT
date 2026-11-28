@@ -32,6 +32,10 @@ transformed = transformed.replace(
    const authenticateMcpOAuth=async()=>({capabilities:['embeddings']});
    const mcpOAuthResponseHeaders=(_request,response)=>{response.headers.set('X-Mcp-Auth-Wrapper','applied');return response;};`,
 );
+transformed = transformed.replace(
+  'await import("./developer-mcp-connections.server")',
+  '({executeDeveloperMcpConnection:async(identity,operation,args)=>{state.connectionCall={identity,operation,args};return {object:"list",data:[]};}})',
+);
 const compiled = ts.transpileModule(transformed, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;
@@ -347,5 +351,33 @@ test("hosted MCP tools share current scopes, paid quotes and redacted terminal e
   } finally {
     state.scopes = ["chat"];
     state.failedResponse = false;
+  }
+});
+
+test("MCP outbound tools are advertised only to delegated-key scope", async () => {
+  state.scopes = ["mcp_read"];
+  try {
+    const list = await (
+      await handleDeveloperMcp(request({ jsonrpc: "2.0", id: 9, method: "tools/list" }))
+    ).json();
+    assert.deepEqual(
+      list.result.tools.map((t) => t.name),
+      ["kova_mcp_connections_list", "kova_mcp_read"],
+    );
+    const invoke = await (
+      await handleDeveloperMcp(
+        request({
+          jsonrpc: "2.0",
+          id: 10,
+          method: "tools/call",
+          params: { name: "kova_mcp_connections_list", arguments: {} },
+        }),
+      )
+    ).json();
+    assert.equal(invoke.result.structuredContent.object, "list");
+    assert.equal(state.connectionCall.operation, "list");
+    assert.equal(state.connectionCall.identity.id, "key");
+  } finally {
+    state.scopes = ["chat"];
   }
 });

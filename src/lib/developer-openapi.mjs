@@ -355,6 +355,7 @@ const bodies = {
   batches: batch(false),
   automations: batch(true),
   "research-runs": batch(false, true),
+  "mcp-connections": obj({ id: uuid, tool: str(128), query: str(300), approved: { const: true } }),
   "response-jobs": union(
     op("create", { ...budget, input: background, quote_token: quoteToken }),
     op("cancel", { id: uuid }),
@@ -653,6 +654,28 @@ const researchRun = open({
     4,
   ),
 });
+output["mcp-connections"] = union(
+  list(
+    open({
+      id: uuid,
+      server_id: str(48),
+      tool_name: str(128),
+      expires_at: str(64),
+      read_only: { const: true },
+    }),
+  ),
+  open({
+    object: { const: "mcp.read_result" },
+    id: uuid,
+    tool: str(128),
+    results: arr(
+      open({ id: str(32), title: str(128), snippet: str(2000), url: { type: "null" } }),
+      10,
+      0,
+    ),
+    limited: { type: "boolean" },
+  }),
+);
 output["research-runs"] = union(researchRun, list(open({ id: uuid }, ["id"])));
 const error = obj({ error: open({ code: str(128), message: str(1024) }) });
 const header = (name, schema, required, description) => ({

@@ -18,6 +18,7 @@ export type DeveloperResourceSection =
   | "batches"
   | "automations"
   | "response-jobs"
+  | "mcp-connections"
   | "research-runs"
   | "webhooks";
 export const developerResourceSections: Readonly<Record<DeveloperResourceSection, ResourceSection>>;

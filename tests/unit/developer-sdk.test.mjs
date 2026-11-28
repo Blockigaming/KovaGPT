@@ -8,6 +8,24 @@ import {
   chatCompletionEvents,
   verifyWebhookSignature,
 } from "../../sdk/javascript/index.mjs";
+test("reviewed MCP read requires approval and never requests arbitrary transport", async () => {
+  const f = fixture();
+  const request = {
+    id: "55555555-5555-4555-8555-555555555555",
+    tool: "search",
+    query: "test",
+    approved: true,
+  };
+  await assert.rejects(
+    f.client.mcpConnections.invoke({ ...request, approved: false }),
+    /approval_required/,
+  );
+  assert.equal(f.calls.length, 0);
+  await f.client.mcpConnections.list();
+  await f.client.mcpConnections.invoke(request);
+  assert.ok(f.calls.every((c) => c.url.endsWith("/mcp-connections")));
+  assert.deepEqual(JSON.parse(f.calls[1].body), request);
+});
 const apiKey = `kova_11111111-1111-4111-8111-111111111111_${"a".repeat(43)}`;
 const input = { model: "kova-fast", input: "hello", max_output_tokens: 100 };
 const options = { currency: "USD", maximumCharge: 10, idempotencyKey: "stable-request" };

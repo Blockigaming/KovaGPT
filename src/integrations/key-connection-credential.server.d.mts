@@ -38,3 +38,7 @@ export function unpackKeyCredential(
   provider: "etoro",
   token: string,
 ): { apiKey: string; userKey: string };
+export function unpackKeyCredential(
+  provider: "custom-mcp",
+  token: string,
+): { apiKey: string; serverId: string; bindingHash: string; writeFingerprint?: string };

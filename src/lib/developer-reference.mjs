@@ -10,6 +10,14 @@ const endpoint = (slug, title, path, methods, request, behavior) => ({
 
 export const DEVELOPER_ENDPOINTS = [
   endpoint(
+    "mcp-connections",
+    "Reviewed MCP connections",
+    "mcp-connections",
+    "GET POST",
+    "GET lists active reviewed read tools explicitly delegated to this key. POST id, tool, query (1–300 characters) and approved:true to invoke that exact tool.",
+    "Requires mcp_read scope and a current owner grant (up to 24 hours). No arbitrary endpoint, write tool or credential access. Remote discovery revalidates read-only tool schema on every invocation. Kova inference credit is not charged; third-party charges may apply. Revoking the grant, rotating the key or changing the linked connection invalidates access.",
+  ),
+  endpoint(
     "models",
     "Models",
     "models",

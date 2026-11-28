@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 239,
+  "migrationCount": 240,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -97,6 +97,7 @@
     "developer_funding_attempts",
     "developer_funding_events",
     "developer_funding_receipts",
+    "developer_mcp_connections_v1",
     "developer_paid_pro_invoices_v2",
     "developer_pricing_administration_events",
     "developer_pricing_drafts",
@@ -839,6 +840,7 @@
     "manage_developer_batches_v1",
     "manage_developer_conversations_v1",
     "manage_developer_files",
+    "manage_developer_mcp_connections_v1",
     "manage_developer_realtime_sessions_v1",
     "manage_developer_skills_v1",
     "manage_developer_vector_stores_v1",
@@ -1221,6 +1223,8 @@
     "developer_files_owner_idx",
     "developer_funding_account_history_idx",
     "developer_funding_pending_idx",
+    "developer_mcp_connections_key_idx",
+    "developer_mcp_connections_owner_project_idx",
     "developer_paid_pro_period_v2_idx",
     "developer_pricing_drafts_updated_idx",
     "developer_realtime_sessions_expiry_v1_idx",
@@ -1880,6 +1884,7 @@
     "developer_funding_attempts",
     "developer_funding_events",
     "developer_funding_receipts",
+    "developer_mcp_connections_v1",
     "developer_paid_pro_invoices_v2",
     "developer_pricing_administration_events",
     "developer_pricing_drafts",
@@ -2607,6 +2612,7 @@
     "execute on function public.manage_developer_batches_v1(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_conversations_v1(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_files(uuid,uuid,uuid,text,jsonb) to service_role",
+    "execute on function public.manage_developer_mcp_connections_v1(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_realtime_sessions_v1(text,uuid,jsonb) to service_role",
     "execute on function public.manage_developer_skills_v1(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_vector_stores_v1(uuid,uuid,uuid,text,jsonb) to service_role",
@@ -2850,6 +2856,7 @@
     "select,insert,update,delete on public.writing_documents, public.writing_document_versions to authenticated",
     "select,insert,update,delete on table public.%I to service_role',t)",
     "select,insert,update,delete on table public.%I to service_role',t)",
+    "select,insert,update,delete on table public.developer_mcp_connections_v1 to service_role",
     "those tokens the new protocol's authority.\nupdate kova_private.auth_password_recoveries\n set consumed_at = greatest(now(), created_at) where consumed_at is null",
     "tokens fetch\n-- private content later. Native callback verification remains in server source.\nCREATE TABLE public.scheduled_task_event_inbox (\n id uuid PRIMARY KEY DEFAULT gen_random_uuid(),provider text NOT NULL CHECK(provider IN('gmail','slack','github')),\n event_key text NOT NULL CHECK(event_key~'^[a-f0-9]{64}$'),scope_key text NOT NULL CHECK(char_length(scope_key)<=320),\n resource text NOT NULL CHECK(char_length(resource) BETWEEN 1 AND 250),reference jsonb NOT NULL CHECK(jsonb_typeof(reference)='object' AND pg_column_size(reference)<=4096),\n occurred_at timestamptz NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),state text NOT NULL DEFAULT 'pending' CHECK(state IN('pending','running','done','failed')),\n cursor_grant uuid,cursor_resource text NOT NULL DEFAULT '',worker_id uuid,lease_expires_at timestamptz,retry_at timestamptz NOT NULL DEFAULT now(),attempts integer NOT NULL DEFAULT 0,\n UNIQUE(provider,event_key)\n)",
     "update(revoked_at) on public.developer_paid_pro_invoices_v2 to service_role",
@@ -3356,6 +3363,7 @@
     "all on function public.manage_developer_batches_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_conversations_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_files(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
+    "all on function public.manage_developer_mcp_connections_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_realtime_sessions_v1(text,uuid,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_skills_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_vector_stores_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
@@ -3585,6 +3593,7 @@
     "all on table public.%I from public,anon,authenticated,service_role',t)",
     "all on table public.account_deletion_fences from public, anon, authenticated",
     "all on table public.account_export_jobs from public, anon, authenticated",
+    "all on table public.developer_mcp_connections_v1 from public,anon,authenticated",
     "all on table public.maps_geocoder_cache from public, anon, authenticated",
     "all on table public.maps_provider_throttle from public, anon, authenticated",
     "all on table public.project_template_audit_events from public, anon, authenticated",
@@ -3848,6 +3857,10 @@
     },
     { "table": "public.developer_funding_export_records", "role": "public", "granted": false },
     { "table": "public.developer_funding_export_records", "role": "service_role", "granted": true },
+    { "table": "public.developer_mcp_connections_v1", "role": "anon", "granted": false },
+    { "table": "public.developer_mcp_connections_v1", "role": "authenticated", "granted": false },
+    { "table": "public.developer_mcp_connections_v1", "role": "public", "granted": false },
+    { "table": "public.developer_mcp_connections_v1", "role": "service_role", "granted": true },
     {
       "table": "public.developer_pricing_administration_events",
       "role": "service_role",
@@ -4277,5 +4290,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "13750980d27bbb9169d823d45d18f8a72dd99d0315d1b325121e118c73431d65"
+  "sha256": "e3a21affc4ffcab1986f56b2774d48a0085b91edb4a68df0da4807487cd61df0"
 }

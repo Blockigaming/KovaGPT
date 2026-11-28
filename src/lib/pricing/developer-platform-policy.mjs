@@ -32,6 +32,7 @@ export const DEVELOPER_SCOPES = Object.freeze([
   "audio_speech",
   "realtime",
   "audio_translation",
+  "mcp_read",
   "files",
 ]);
 export function developerUuid(value) {

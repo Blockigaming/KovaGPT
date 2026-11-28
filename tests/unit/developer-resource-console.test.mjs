@@ -18,6 +18,7 @@ test("resource console exposes only fixed authenticated resource routes", () => 
       path: "/api/v1/" + section,
     });
     assert.equal(resourceConsoleRequiresConfirmation(section, "list"), false);
+    if (section === "mcp-connections") continue; // Grants are discovered as a bounded list.
     assert.equal(
       resourceConsoleRequest(section, "detail", JSON.stringify({ id })).path,
       "/api/v1/" + section + "?id=" + id,

@@ -1323,6 +1323,19 @@ export async function handleDeveloperConsole(request: Request) {
   try {
     if (request.method === "GET") {
       const params = new URL(request.url).searchParams;
+      if (params.has("mcpProject")) {
+        const { manageOwnerMcpConnections } = await import("./developer-mcp-connections.server");
+        return developerJson(
+          await manageOwnerMcpConnections(
+            db,
+            caller.userId,
+            developerUuid(params.get("mcpProject")),
+            "owner_list",
+            {},
+            request.signal,
+          ),
+        );
+      }
       if (params.has("creditWallet")) {
         if (runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") !== "true")
           return developerJson({ enabled: false });
@@ -1379,6 +1392,9 @@ export async function handleDeveloperConsole(request: Request) {
           speechEnabled: developerSpeechEnabled(),
           realtimeEnabled: developerRealtimeEnabled(),
           translationEnabled: developerTranslationEnabled(),
+          mcpReadEnabled: (
+            await import("./developer-mcp-connections.server")
+          ).developerMcpReadEnabled(),
           decisionsEnabled: developerDecisionsEnabled(),
           analysisEnabled: developerAnalysisEnabled(),
           computerEnabled: developerComputerEnabled(),
@@ -1532,6 +1548,9 @@ export async function handleDeveloperConsole(request: Request) {
         speechEnabled: developerSpeechEnabled(),
         realtimeEnabled: developerRealtimeEnabled(),
         translationEnabled: developerTranslationEnabled(),
+        mcpReadEnabled: (
+          await import("./developer-mcp-connections.server")
+        ).developerMcpReadEnabled(),
         decisionsEnabled: developerDecisionsEnabled(),
         analysisEnabled: developerAnalysisEnabled(),
         computerEnabled: developerComputerEnabled(),
@@ -1551,6 +1570,19 @@ export async function handleDeveloperConsole(request: Request) {
     }
     const body = await readBoundedJsonObject(request, 8192);
     const operation = String(body.operation);
+    if (operation === "grant_mcp_read" || operation === "revoke_mcp_read") {
+      const { manageOwnerMcpConnections } = await import("./developer-mcp-connections.server");
+      return developerJson(
+        await manageOwnerMcpConnections(
+          db,
+          caller.userId,
+          developerUuid(body.projectId),
+          operation === "grant_mcp_read" ? "grant" : "revoke",
+          body,
+          request.signal,
+        ),
+      );
+    }
     if (operation === "refresh_credit_wallet") {
       if (runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") !== "true")
         throw new Error("developer_workspace_upgrade_unavailable");
@@ -1642,7 +1674,9 @@ export async function handleDeveloperConsole(request: Request) {
           (body.scopes.includes("decisions") && !developerDecisionsEnabled()) ||
           (body.scopes.includes("file_analysis") && !developerAnalysisEnabled()) ||
           (body.scopes.includes("computer_use") && !developerComputerEnabled()) ||
-          (body.scopes.includes("cloud_browser") && !developerBrowserEnabled())
+          (body.scopes.includes("cloud_browser") && !developerBrowserEnabled()) ||
+          (body.scopes.includes("mcp_read") &&
+            !(await import("./developer-mcp-connections.server")).developerMcpReadEnabled())
         )
           throw new Error("developer_key_invalid");
         const keyId = crypto.randomUUID();

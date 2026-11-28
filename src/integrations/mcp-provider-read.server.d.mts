@@ -21,3 +21,16 @@ export function runReviewedMcpWrite(
   beforeRequest: () => Promise<void>,
   transport?: typeof fetch,
 ): Promise<boolean>;
+export function readMcpConnection(
+  id: string,
+  query: string,
+  credential: string,
+  fetchImpl?: typeof fetch,
+  beforeRequest?: () => Promise<void>,
+  customTransport?: typeof fetch,
+  parentSignal?: AbortSignal,
+): Promise<{
+  service: string;
+  results: { id: string; title: string; snippet: string; url: string | null }[];
+  limited: boolean;
+}>;

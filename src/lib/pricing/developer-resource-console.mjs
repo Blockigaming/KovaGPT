@@ -207,6 +207,20 @@ export const developerResourceSections = Object.freeze({
       cancel,
     },
   },
+  "mcp-connections": {
+    label: "Reviewed MCP tools",
+    description:
+      "Discover delegated read-only tools and invoke a selected tool. External service charges may apply; no Kova inference charge.",
+    actions: {
+      list: get("Discover delegated tools"),
+      invoke: post("Invoke approved read", undefined, {
+        id: "",
+        tool: "",
+        query: "",
+        approved: true,
+      }),
+    },
+  },
   "research-runs": {
     label: "Research runs",
     description:

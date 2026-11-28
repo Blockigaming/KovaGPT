@@ -350,6 +350,13 @@ export class KovaGPT {
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;
   };
+  readonly mcpConnections: {
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    invoke(
+      input: { id: string; tool: string; query: string; approved: true },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+  };
   readonly researchRuns: {
     prepareAutonomous(
       input: {

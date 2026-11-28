@@ -35,6 +35,7 @@ import { DeveloperFundingPanel } from "@/components/DeveloperFundingPanel";
 import { DeveloperCreditWallet } from "@/components/DeveloperCreditWallet";
 import { DeveloperFilesPanel } from "@/components/DeveloperFilesPanel";
 import { DeveloperPlayground } from "@/components/DeveloperPlayground";
+import { DeveloperMcpConnectionsPanel } from "@/components/DeveloperMcpConnectionsPanel";
 import { DeveloperResourcePanel } from "@/components/DeveloperResourcePanel";
 import {
   developerResourceSections,
@@ -97,6 +98,7 @@ type ConsoleData = {
   speechEnabled?: boolean;
   realtimeEnabled?: boolean;
   translationEnabled?: boolean;
+  mcpReadEnabled?: boolean;
   decisionsEnabled?: boolean;
   analysisEnabled?: boolean;
   computerEnabled?: boolean;
@@ -128,6 +130,7 @@ const WORKSPACE_SECTIONS = [
   "automations",
   "response-jobs",
   "research-runs",
+  "mcp-connections",
   "webhooks",
   "usage",
   "costs",
@@ -186,6 +189,7 @@ function DeveloperWorkspace({
         { label: "Automations", anchor: "automations", icon: Settings },
         { label: "Background responses", anchor: "response-jobs", icon: List },
         { label: "Research runs", anchor: "research-runs", icon: List },
+        { label: "MCP connections", anchor: "mcp-connections", icon: List },
         { label: "Webhooks", anchor: "webhooks", icon: SlidersHorizontal },
       ],
     },
@@ -827,17 +831,30 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
           {section === "playground" && (
             <DeveloperPlayground key={userId} enabled={data?.enabled === true} />
           )}
+          {section === "mcp-connections" && project && (
+            <DeveloperMcpConnectionsPanel
+              key={userId + ":" + project}
+              userId={userId}
+              projectId={project}
+            />
+          )}
           {Object.hasOwn(developerResourceSections, section) && (
             <DeveloperResourcePanel
               key={userId + ":" + account + ":" + project + ":" + section}
               section={section as DeveloperResourceSection}
-              enabled={data?.enabled === true && Boolean(project)}
+              enabled={
+                data?.enabled === true &&
+                Boolean(project) &&
+                (section !== "mcp-connections" || data?.mcpReadEnabled === true)
+              }
               keys={(data?.keys ?? [])
                 .filter(
                   (key) =>
                     key.account_id === account &&
                     key.project_id === project &&
                     key.enabled === true &&
+                    (section !== "mcp-connections" ||
+                      (Array.isArray(key.capabilities) && key.capabilities.includes("mcp_read"))) &&
                     !key.revoked_at &&
                     Date.parse(String(key.expires_at)) > Date.now(),
                 )
@@ -1292,6 +1309,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "audio_speech",
                     "realtime",
                     "audio_translation",
+                    "mcp_read",
                   ]
                     .filter(
                       (scope) =>
@@ -1303,7 +1321,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         (scope !== "audio_transcription" || data?.transcriptionEnabled) &&
                         (scope !== "audio_speech" || data?.speechEnabled) &&
                         (scope !== "realtime" || data?.realtimeEnabled) &&
-                        (scope !== "audio_translation" || data?.translationEnabled),
+                        (scope !== "audio_translation" || data?.translationEnabled) &&
+                        (scope !== "mcp_read" || data?.mcpReadEnabled),
                     )
                     .map((scope) => (
                       <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">

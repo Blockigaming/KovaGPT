@@ -211,7 +211,7 @@ _READS = (
     "vector_list", "vector_retrieve", "vector_entries", "vector_entry", "agent_list",
     "agent_retrieve", "skill_list", "skill_retrieve", "webhook_list", "webhook_retrieve",
     "webhook_deliveries", "batch_list", "batch_retrieve", "batch_item", "response_job_list",
-    "response_job_retrieve", "research_list", "research_retrieve", "automation_list", "automation_retrieve", "automation_item",
+    "response_job_retrieve", "mcp_connections_list", "research_list", "research_retrieve", "automation_list", "automation_retrieve", "automation_item",
 )
 _MUTATIONS = (
     "realtime_session_create", "realtime_session_close", "browser_session_create", "browser_session_close", "file_delete", "file_upload", "file_upload_multipart", "conversation_create",
@@ -221,7 +221,7 @@ _MUTATIONS = (
     "webhook_test", "webhook_delete", "batch_cancel", "response_job_cancel", "research_cancel",
     "automation_cancel", "automation_pause",
 )
-_PAID_MUTATIONS = ("batch_create", "response_job_create", "research_create", "automation_create", "automation_resume")
+_PAID_MUTATIONS = ("mcp_connection_invoke", "batch_create", "response_job_create", "research_create", "automation_create", "automation_resume")
 _INFERENCE = {
     "responses": "responses", "chat_completions": "chat/completions", "search": "search",
     "images": "images", "embeddings": "embeddings", "agent_turn": "agent-turns",

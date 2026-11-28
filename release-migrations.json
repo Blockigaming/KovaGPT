@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 239,
-  "latest": "20261127205035_developer_batches_v1.sql",
+  "count": 240,
+  "latest": "20261128105700_developer_mcp_connections_v1.sql",
   "migrations": [
     {
       "order": 1,
@@ -4805,7 +4805,7 @@
       "order": 231,
       "filename": "20261127205018_developer_workspace_v2.sql",
       "timestamp": "20261127205018",
-      "sha256": "e0f6854acec8e65b62c0bad7d5a43aef3f21022539f122d0467a0700982c6502",
+      "sha256": "5218e6c48dd8e0586795f5ba6ce91bcb43939b62c225b7dc086a7589987a0c74",
       "tables": ["developer_credit_sharing_preferences", "developer_realtime_sessions_v1"],
       "functions": [
         "manage_developer_workspace_v2",
@@ -5000,6 +5000,23 @@
         "developer_batches_owner_v1_idx",
         "developer_batches_expiry_v1_idx",
         "developer_batch_items_state_v1_idx"
+      ]
+    },
+    {
+      "order": 240,
+      "filename": "20261128105700_developer_mcp_connections_v1.sql",
+      "timestamp": "20261128105700",
+      "sha256": "0f876bffb7b0ad5527d1ac506846b77536935a4de38133c7244b5675090eaa40",
+      "tables": ["developer_mcp_connections_v1"],
+      "functions": ["manage_developer_mcp_connections_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_mcp_connections_v1"],
+      "policies": [],
+      "indexes": [
+        "developer_mcp_connections_owner_project_idx",
+        "developer_mcp_connections_key_idx"
       ]
     }
   ]

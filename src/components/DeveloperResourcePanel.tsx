@@ -265,9 +265,13 @@ export function DeveloperResourcePanel({
                 onChange={(event) => setConfirmed(event.target.checked)}
               />
               <span>
-                {maySpend
-                  ? "Authorize paid execution for this project within the submitted budget."
-                  : "Confirm " + config.actions[action].label.toLowerCase() + " for this project."}
+                {section === "mcp-connections" && action === "invoke"
+                  ? "Authorize this read of the delegated external service. Third-party charges may apply."
+                  : maySpend
+                    ? "Authorize paid execution for this project within the submitted budget."
+                    : "Confirm " +
+                      config.actions[action].label.toLowerCase() +
+                      " for this project."}
               </span>
             </label>
           )}

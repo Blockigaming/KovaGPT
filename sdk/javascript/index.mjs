@@ -648,6 +648,18 @@ export class KovaGPT {
       });
       return generation ? jobResult(response, 524288) : smallJson(response, 524288);
     };
+    this.mcpConnections = Object.freeze({
+      list: async ({ signal } = {}) =>
+        smallJson(await this.#request("mcp-connections", { signal }), 131072),
+      invoke: async (input, { signal } = {}) => {
+        const data = boundedInput(input);
+        if (data.approved !== true) fail("mcp_approval_required");
+        return jobResult(
+          await this.#request("mcp-connections", { input: data, signal, generation: true }),
+          131072,
+        );
+      },
+    });
     this.researchRuns = Object.freeze({
       prepareAutonomous: async (input, { signal } = {}) => {
         const data = boundedInput(input);

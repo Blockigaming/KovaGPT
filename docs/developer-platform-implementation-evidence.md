@@ -1,18 +1,20 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for bounded autonomous research on base 0d29ecc18d172de56f8b6e250f98855027556eea, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for reviewed MCP connection delegation on base e7c5c7845e609604c20c9df4edd52dce1db48ff5, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 26; partial: 65; missing: 9. Total 100.
-- Verification: 10 targeted requirement-level tested; 1 prior CI verified; 73 narrower evidence; 16 unverified. Total 100.
+- Implemented: 27; partial: 64; missing: 9. Total 100.
+- Verification: 11 targeted requirement-level tested; 1 prior CI verified; 72 narrower evidence; 16 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
 
 - 0d29ecc: snapshot-bound Computer Use, 20 focused tests passing.
+- e7c5c78: bounded autonomous research; 103 Node, 32 Python, 11 canonical-history tests passing.
+- Reviewed outbound MCP delegation: 67 focused Node, 33 Python, 11 canonical-history tests passing, including authorization fences, revoked access and redacted mock dispatch. No live third-party calls; schema and provider flags remain off.
 
 - [8c14be3 isolated replay](https://github.com/Blockigaming/KovaGPT/actions/runs/46067432818) and [be68daf isolated replay](https://github.com/Blockigaming/KovaGPT/actions/runs/46070676725): prior successful migration workflows. Replay must be repeated for changed schema, not merely new SDK edits.
 - 016b836: multipart and strict file requests; 29 Node / 16 Python passing.
@@ -60,7 +62,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R22 | P | F | 016b836 multipart form upload and private text file CRUD/retention; resumable upload completion/cancel lifecycle missing. |
 | R23 | I | F | file-search, developer-file-search-policy and project file ownership; scoped text retrieval with sources. |
 | R24 | I | T | dc071f1 atomic vector upsert batches, CRUD, cosine retrieval and rollback; vector-policy and files-migration. |
-| R25 | P | F | Scoped inbound OAuth access, file search, speech, read-only browser navigation and computer proposals via MCP; outbound connections and remaining hosted tools missing. |
+| R25 | I | T | Owner-delegated reviewed MCP read grants (up to 24h), key/project/credential/config binding, discovery, approval, invocation, revocation, SDK/console/API and hosted tools. Database and mocked dispatch tests pass; approved live server/provider qualification pending. No arbitrary servers or writes. |
 | R26 | I | F | moderations route and developer-moderation-policy; dc071f1 bounded queued invocation support. |
 | R27 | I | F | Webhook endpoint CRUD, signing, rotation, history and retries; 8c14be3 replay and webhook/worker tests. |
 | R28 | I | T | Batch API, cancellation, leases, results and settlement; dc071f1, be68daf batch-policy and response-jobs-migration. |

@@ -210,6 +210,7 @@ import { Route as ApiV1RealtimeSessionsRouteImport } from './routes/api/v1/realt
 import { Route as ApiV1BrowserSessionsRouteImport } from './routes/api/v1/browser-sessions'
 import { Route as ApiV1RealtimeRouteImport } from './routes/api/v1/realtime'
 import { Route as ApiV1ResearchRunsRouteImport } from './routes/api/v1/research-runs'
+import { Route as ApiV1McpConnectionsRouteImport } from './routes/api/v1/mcp-connections'
 import { Route as ApiV1ConversationsRouteImport } from './routes/api/v1/conversations'
 import { Route as ApiV1DecisionsRouteImport } from './routes/api/v1/decisions'
 import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
@@ -1292,6 +1293,11 @@ const ApiV1ResearchRunsRoute = ApiV1ResearchRunsRouteImport.update({
   path: '/api/v1/research-runs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1McpConnectionsRoute = ApiV1McpConnectionsRouteImport.update({
+  id: '/api/v1/mcp-connections',
+  path: '/api/v1/mcp-connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1ConversationsRoute = ApiV1ConversationsRouteImport.update({
   id: '/api/v1/conversations',
   path: '/api/v1/conversations',
@@ -1780,6 +1786,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/browser-sessions': typeof ApiV1BrowserSessionsRoute
   '/api/v1/realtime': typeof ApiV1RealtimeRoute
   '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
+  '/api/v1/mcp-connections': typeof ApiV1McpConnectionsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -2037,6 +2044,7 @@ export interface FileRoutesByTo {
   '/api/v1/browser-sessions': typeof ApiV1BrowserSessionsRoute
   '/api/v1/realtime': typeof ApiV1RealtimeRoute
   '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
+  '/api/v1/mcp-connections': typeof ApiV1McpConnectionsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -2295,6 +2303,7 @@ export interface FileRoutesById {
   '/api/v1/browser-sessions': typeof ApiV1BrowserSessionsRoute
   '/api/v1/realtime': typeof ApiV1RealtimeRoute
   '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
+  '/api/v1/mcp-connections': typeof ApiV1McpConnectionsRoute
   '/api/v1/conversations': typeof ApiV1ConversationsRoute
   '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
@@ -2554,6 +2563,7 @@ export interface FileRouteTypes {
     | '/api/v1/browser-sessions'
     | '/api/v1/realtime'
     | '/api/v1/research-runs'
+    | '/api/v1/mcp-connections'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -2811,6 +2821,7 @@ export interface FileRouteTypes {
     | '/api/v1/browser-sessions'
     | '/api/v1/realtime'
     | '/api/v1/research-runs'
+    | '/api/v1/mcp-connections'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -3068,6 +3079,7 @@ export interface FileRouteTypes {
     | '/api/v1/browser-sessions'
     | '/api/v1/realtime'
     | '/api/v1/research-runs'
+    | '/api/v1/mcp-connections'
     | '/api/v1/conversations'
     | '/api/v1/decisions'
     | '/api/v1/embeddings'
@@ -3316,6 +3328,7 @@ export interface RootRouteChildren {
   ApiV1BrowserSessionsRoute: typeof ApiV1BrowserSessionsRoute
   ApiV1RealtimeRoute: typeof ApiV1RealtimeRoute
   ApiV1ResearchRunsRoute: typeof ApiV1ResearchRunsRoute
+  ApiV1McpConnectionsRoute: typeof ApiV1McpConnectionsRoute
   ApiV1ConversationsRoute: typeof ApiV1ConversationsRoute
   ApiV1DecisionsRoute: typeof ApiV1DecisionsRoute
   ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
@@ -4779,6 +4792,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ResearchRunsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/mcp-connections': {
+      id: '/api/v1/mcp-connections'
+      path: '/api/v1/mcp-connections'
+      fullPath: '/api/v1/mcp-connections'
+      preLoaderRoute: typeof ApiV1McpConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/conversations': {
       id: '/api/v1/conversations'
       path: '/api/v1/conversations'
@@ -5475,6 +5495,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1BrowserSessionsRoute: ApiV1BrowserSessionsRoute,
   ApiV1RealtimeRoute: ApiV1RealtimeRoute,
   ApiV1ResearchRunsRoute: ApiV1ResearchRunsRoute,
+  ApiV1McpConnectionsRoute: ApiV1McpConnectionsRoute,
   ApiV1ConversationsRoute: ApiV1ConversationsRoute,
   ApiV1DecisionsRoute: ApiV1DecisionsRoute,
   ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,

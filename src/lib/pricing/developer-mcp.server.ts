@@ -258,9 +258,37 @@ const paidTools = [
     ),
   },
 ];
+const connectionTools = [
+  {
+    name: "kova_mcp_connections_list",
+    scope: "mcp_read",
+    connectionOperation: "list" as const,
+    description: "Discover reviewed read tools delegated to this key.",
+    inputSchema: objectSchema({}, []),
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  {
+    name: "kova_mcp_read",
+    scope: "mcp_read",
+    connectionOperation: "invoke" as const,
+    description:
+      "Invoke an explicitly owner-delegated read tool after approval. Third-party charges may apply; no arbitrary URL or write.",
+    inputSchema: objectSchema(
+      {
+        id: { type: "string", format: "uuid" },
+        tool: text(128),
+        query: text(300),
+        approved: { const: true },
+      },
+      ["id", "tool", "query", "approved"],
+    ),
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+];
 function definitionsForScopes(scopes: string[]) {
   const permitted = paidTools.filter((tool) => scopes.includes(tool.scope));
   return [
+    ...connectionTools.filter((tool) => scopes.includes(tool.scope)),
     ...[...developerFileTools, fileSearchTool].filter((tool) => scopes.includes(tool.scope)),
     ...(permitted.length
       ? [
@@ -370,7 +398,7 @@ async function handleMcpMessage(request: Request) {
         )
       )
         return error(-32602, "Tool scope unavailable");
-      if (!("fileOperation" in tool)) {
+      if (!("fileOperation" in tool) && !("connectionOperation" in tool)) {
         const allowed =
           tool.name === "kova_quote"
             ? ["operation", "input"]
@@ -395,7 +423,16 @@ async function handleMcpMessage(request: Request) {
           throw new Error("developer_mcp_stream_invalid");
         request.signal.throwIfAborted();
         let output: unknown;
-        if ("fileOperation" in tool) {
+        if ("connectionOperation" in tool) {
+          const { executeDeveloperMcpConnection } =
+            await import("./developer-mcp-connections.server");
+          output = await executeDeveloperMcpConnection(
+            identity,
+            tool.connectionOperation,
+            args,
+            request.signal,
+          );
+        } else if ("fileOperation" in tool) {
           output =
             tool.fileOperation === "search"
               ? await executeDeveloperFileSearch(identity, args, request.signal)

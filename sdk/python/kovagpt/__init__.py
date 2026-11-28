@@ -592,6 +592,13 @@ class Client:
         _require(item_id is not None, "batch_id_invalid")
         return self._request(self._batch_path(batch_id, item_id), method="GET").json(262144)
 
+    def mcp_connections_list(self):
+        return self._get("mcp-connections")
+
+    def mcp_connection_invoke(self, data):
+        _require(isinstance(data, dict) and data.get("approved") is True, "mcp_approval_required")
+        return self._request("mcp-connections", method="POST", paid=True, body=_json_body(data,4096)).json(131072)
+
     def research_create(self, data):
         _require(isinstance(data, dict), "input_invalid")
         return self._request("research-runs", method="POST", paid=True,
