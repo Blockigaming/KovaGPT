@@ -647,6 +647,7 @@ export class KovaGPT {
       create: (input, options) => webhookPost("create", input, options),
       rotate: (input, options) => webhookPost("rotate", input, options),
       test: (input, options) => webhookPost("test", input, options),
+      retry: (input, options) => webhookPost("retry", input, options),
       list: async ({ signal } = {}) => smallJson(await this.#request("webhooks", { signal })),
       retrieve: async (id, { signal } = {}) =>
         smallJson(await this.#request(webhookPath(id), { signal })),

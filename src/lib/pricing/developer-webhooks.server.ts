@@ -66,15 +66,31 @@ export async function handleDeveloperWebhooks(request: Request) {
         : undefined,
       config.allowlist,
     );
-    const result = await identity.db
-      .rpc("manage_developer_webhooks_v1", {
-        p_owner: identity.ownerId,
-        p_key: identity.id,
-        p_project: identity.project_id,
-        p_operation: parsed.operation,
-        p_input: parsed.input,
-      })
-      .abortSignal(AbortSignal.any([request.signal, AbortSignal.timeout(10000)]));
+    if (
+      parsed.operation === "retry" &&
+      runtimeEnv("KOVA_DEVELOPER_WEBHOOK_RETRY_SCHEMA_READY") !== "true"
+    )
+      throw new Error("developer_webhook_unavailable");
+    const rpc =
+      parsed.operation === "retry"
+        ? identity.db.rpc("retry_developer_webhook_v1", {
+            p_owner: identity.ownerId,
+            p_key: identity.id,
+            p_project: identity.project_id,
+            p_endpoint: parsed.input.id,
+            p_event: parsed.input.event_id,
+            p_expected_attempts: parsed.input.expected_attempts,
+          })
+        : identity.db.rpc("manage_developer_webhooks_v1", {
+            p_owner: identity.ownerId,
+            p_key: identity.id,
+            p_project: identity.project_id,
+            p_operation: parsed.operation,
+            p_input: parsed.input,
+          });
+    const result = await rpc.abortSignal(
+      AbortSignal.any([request.signal, AbortSignal.timeout(10000)]),
+    );
     if (result.error || !result.data) {
       const known = result.error?.message?.match(
         /^developer_(?:webhook_not_found|webhook_quota_exceeded|webhook_conflict|webhook_invalid|scope_required)$/,
@@ -88,7 +104,7 @@ export async function handleDeveloperWebhooks(request: Request) {
         parsed.operation === "create" ? 201 : 200,
       );
     }
-    return developerJson(result.data, parsed.operation === "test" ? 202 : 200);
+    return developerJson(result.data, ["test", "retry"].includes(parsed.operation) ? 202 : 200);
   } catch (error) {
     return developerFailure(error);
   }

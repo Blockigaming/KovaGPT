@@ -765,6 +765,7 @@ test("outgoing webhook registration, stable test events, lease retry and rotatio
   try {
     await f.db.exec("reset role");
     await f.db.exec(await readFile("supabase/pending/developer_webhooks_v1.sql", "utf8"));
+    await f.db.exec(await readFile("supabase/pending/developer_webhook_retry_v1.sql", "utf8"));
     await f.db.exec("set role service_role");
     const run = async (operation, input, user = owner) =>
       (
@@ -818,15 +819,33 @@ test("outgoing webhook registration, stable test events, lease retry and rotatio
     assert.equal(await finish(claimed[0].lease_token, 503), true);
     assert.equal((await run("deliveries", { id: endpoint })).data[0].status, "pending");
     assert.deepEqual(await claim(), []);
-    await f.db.query(
-      "update developer_webhook_deliveries_v1 set next_attempt_at=now()-interval '1 second' where id=$1",
-      [event],
-    );
+    const manualRetry = async (attempts, user = owner, target = endpoint, eventId = event) =>
+      (
+        await f.db.query("select retry_developer_webhook_v1($1,$2,$3,$4,$5,$6) result", [
+          user,
+          key,
+          f.account.projectId,
+          target,
+          eventId,
+          attempts,
+        ])
+      ).rows[0].result;
+    await assert.rejects(manualRetry(0), /webhook_invalid/);
+    await assert.rejects(manualRetry(2), /webhook_conflict/);
+    await assert.rejects(manualRetry(1, other), /scope_required/);
+    await assert.rejects(manualRetry(1, owner, id(94)), /webhook_not_found/);
+    await assert.rejects(manualRetry(1, owner, endpoint, id(95)), /webhook_not_found/);
+    assert.deepEqual(await manualRetry(1), { id: event, status: "pending" });
+    assert.deepEqual(await manualRetry(1), { id: event, status: "pending" });
+    assert.equal((await run("deliveries", { id: endpoint })).data[0].attempts, 1);
     const retry = await claim();
     assert.equal(retry[0].event.id, event);
     assert.notEqual(retry[0].lease_token, claimed[0].lease_token);
+    await assert.rejects(manualRetry(2), /webhook_conflict/);
     assert.equal(await finish(retry[0].lease_token, 204), true);
     assert.equal((await run("deliveries", { id: endpoint })).data[0].status, "delivered");
+    await assert.rejects(manualRetry(2), /webhook_conflict/);
+    await assert.rejects(manualRetry(5), /webhook_invalid/);
     assert.deepEqual(await claim(), []);
     for (const role of ["anon", "authenticated"])
       assert.equal(

@@ -6,6 +6,7 @@ import {
   resourceConsoleKey,
   resourceConsoleMaySpend,
   resourceConsolePromptDraft,
+  resourceConsoleFollowups,
   resourceConsoleRequest,
   resourceConsoleRequiresConfirmation,
   resourceConsoleTemplate,
@@ -216,4 +217,74 @@ test("upload console supports resumable byte parts and non-metered confirmation"
     assert.equal(resourceConsoleRequiresConfirmation("uploads", action), true);
     assert.equal(resourceConsoleMaySpend("uploads", action), false);
   }
+});
+
+test("webhook and schedule responses prepare scoped followups without dispatch or bypassing confirmation", () => {
+  const event = "22222222-2222-4222-8222-222222222222";
+  const endpoint = resourceConsoleFollowups(
+    "webhooks",
+    "detail",
+    "{}",
+    { object: "webhook.endpoint", id, generation: 2 },
+    () => event,
+  );
+  assert.deepEqual(
+    endpoint.map((x) => x.action),
+    ["deliveries", "test", "rotate", "delete"],
+  );
+  assert.deepEqual(JSON.parse(endpoint[2].draft), { id, expected_generation: 2 });
+  const deliveries = resourceConsoleFollowups(
+    "webhooks",
+    "deliveries",
+    JSON.stringify({ id, deliveries: "true" }),
+    {
+      object: "list",
+      data: [
+        { id: event, status: "pending", attempts: 2 },
+        { id: event, status: "delivered", attempts: 1 },
+        { id: event, status: "pending", attempts: 0 },
+        { id: event, status: "failed", attempts: 5 },
+      ],
+    },
+    () => event,
+  );
+  assert.equal(deliveries.length, 1);
+  assert.deepEqual(
+    JSON.parse(resourceConsoleRequest("webhooks", "retry", deliveries[0].draft).body),
+    { operation: "retry", id, event_id: event, expected_attempts: 2 },
+  );
+  assert.equal(resourceConsoleRequiresConfirmation("webhooks", "retry"), true);
+  const batch = {
+    object: "batch",
+    id,
+    expires_at: new Date(Date.now() + 60000).toISOString(),
+    items: [{ id: event }],
+  };
+  assert.deepEqual(
+    resourceConsoleFollowups("automations", "detail", "{}", batch, () => event).map(
+      (x) => x.action,
+    ),
+    ["pause", "cancel", "item"],
+  );
+  assert.deepEqual(
+    resourceConsoleFollowups(
+      "automations",
+      "detail",
+      "{}",
+      { ...batch, paused_at: "now" },
+      () => event,
+    ).map((x) => x.action),
+    ["resume", "cancel", "item"],
+  );
+  assert.equal(resourceConsoleMaySpend("automations", "resume"), true);
+  assert.deepEqual(
+    resourceConsoleFollowups(
+      "automations",
+      "detail",
+      "{}",
+      { ...batch, canceled_at: "now" },
+      () => event,
+    ).map((x) => x.action),
+    ["item"],
+  );
 });

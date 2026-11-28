@@ -33,6 +33,13 @@ export function resourceConsolePromptDraft(
   action: "version" | "update" | "delete",
   result: unknown,
 ): string;
+export function resourceConsoleFollowups(
+  section: string,
+  action: string,
+  raw: string,
+  result: unknown,
+  randomId: () => string,
+): { action: string; label: string; draft: string }[];
 export function resourceConsoleKey(value: unknown, allowed: string[]): string | null;
 export function resourceConsoleRequest(
   section: string,

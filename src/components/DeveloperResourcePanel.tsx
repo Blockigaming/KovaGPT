@@ -8,6 +8,7 @@ import {
   resourceConsoleKey,
   resourceConsoleMaySpend,
   resourceConsolePromptDraft,
+  resourceConsoleFollowups,
   resourceConsoleRequest,
   resourceConsoleRequiresConfirmation,
   resourceConsoleTemplate,
@@ -187,6 +188,26 @@ export function DeveloperResourcePanel({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not prepare the job.");
     }
+  };
+  const followups =
+    result === null
+      ? []
+      : resourceConsoleFollowups(
+          section,
+          action,
+          input,
+          result,
+          () => "00000000-0000-4000-8000-000000000000",
+        );
+  const prepareFollowup = (next: (typeof followups)[number]) => {
+    const draft = JSON.parse(next.draft);
+    if (next.action === "test") draft.event_id = crypto.randomUUID();
+    setAction(next.action);
+    setInput(JSON.stringify(draft, null, 2));
+    setConfirmed(false);
+    setResult(null);
+    setError("");
+    retry.current = null;
   };
   const data = record(result).data;
   const rows = Array.isArray(data) ? data.map(record) : null;
@@ -507,6 +528,25 @@ export function DeveloperResourcePanel({
                   Delete prompt
                 </Button>
               </div>
+            </div>
+          )}
+          {!!followups.length && (
+            <div className="space-y-2" aria-label="Resource actions">
+              <h3 className="text-sm font-medium">Next actions</h3>
+              <p className="text-xs text-muted-foreground">
+                Prepare a request from this response. Mutations still require confirmation.
+              </p>
+              {followups.map((next) => (
+                <Button
+                  key={next.action + next.draft}
+                  variant="outline"
+                  className="h-auto min-h-11 w-full justify-start whitespace-normal break-all text-left"
+                  disabled={busy || !enabled || !token}
+                  onClick={() => prepareFollowup(next)}
+                >
+                  {next.label}
+                </Button>
+              ))}
             </div>
           )}
           {result !== null ? (

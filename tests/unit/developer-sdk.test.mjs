@@ -813,3 +813,13 @@ test("429 exposes the bounded Retry-After without replaying a request", async ()
   );
   await assert.rejects(invalid.client.models(), (error) => error.retryAfter === null);
 });
+
+test("webhook manual retry sends one revision-bound request, not a new event", async () => {
+  const f = fixture();
+  const id = "55555555-5555-4555-8555-555555555555";
+  const data = { id, event_id: id, expected_attempts: 2 };
+  await f.client.webhooks.retry(data);
+  assert.equal(f.calls.length, 1);
+  assert.ok(f.calls[0].url.endsWith("/webhooks"));
+  assert.deepEqual(JSON.parse(f.calls[0].body), { ...data, operation: "retry" });
+});

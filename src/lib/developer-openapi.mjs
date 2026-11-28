@@ -368,6 +368,7 @@ const bodies = {
     }),
     op("rotate", { id: uuid, expected_generation: integer(1, 999) }),
     op("test", { id: uuid, event_id: uuid }),
+    op("retry", { id: uuid, event_id: uuid, expected_attempts: integer(1, 4) }),
   ),
   batches: batch(false),
   automations: batch(true),

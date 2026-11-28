@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 242,
-  "latest": "20261128115506_developer_uploads_v1.sql",
+  "count": 243,
+  "latest": "20261128124018_developer_webhook_retry_v1.sql",
   "migrations": [
     {
       "order": 1,
@@ -5046,6 +5046,20 @@
       "rls": ["developer_uploads_v1"],
       "policies": [],
       "indexes": ["developer_uploads_owner_v1_idx", "developer_uploads_expiry_v1_idx"]
+    },
+    {
+      "order": 243,
+      "filename": "20261128124018_developer_webhook_retry_v1.sql",
+      "timestamp": "20261128124018",
+      "sha256": "69f53825cd2a1681a0ddfbcfaba065a1a2735264ffcee88e51fa54ddb269f39f",
+      "tables": [],
+      "functions": ["retry_developer_webhook_v1"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

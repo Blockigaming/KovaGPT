@@ -238,8 +238,8 @@ export const DEVELOPER_ENDPOINTS = [
     "Webhooks",
     "webhooks",
     "GET POST DELETE",
-    "POST create with id, approved HTTPS url and request.settled or request.rejected events; rotate with expected_generation; test with event_id. GET id or id and deliveries=true; DELETE id.",
-    "Store the returned signing secret securely. Verify HMAC over event_id.timestamp.raw_body and a five-minute timestamp window; deduplicate event IDs. Delivery is bounded and retried, not exactly once.",
+    "POST create with id, approved HTTPS url and request.settled or request.rejected events; rotate with expected_generation; test with event_id; retry pending delivery with event_id and expected_attempts. GET id or id and deliveries=true; DELETE id.",
+    "Store the returned signing secret securely. Verify HMAC over event_id.timestamp.raw_body and a five-minute timestamp window; deduplicate event IDs. Delivery is bounded and retried, not exactly once. Manual retry accelerates only a pending previously attempted delivery, retains the same event ID and never resets the five-attempt cap or seven-day lifetime. Stale, leased, delivered and exhausted events cannot be retried.",
   ),
   endpoint(
     "batches",

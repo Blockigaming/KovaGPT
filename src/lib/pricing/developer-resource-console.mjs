@@ -328,6 +328,11 @@ export const developerResourceSections = Object.freeze({
       }),
       rotate: post("Rotate signing secret", "rotate", { id: "", expected_generation: 1 }),
       test: post("Queue test event", "test", { id: "", event_id: "" }),
+      retry: post("Retry pending delivery", "retry", {
+        id: "",
+        event_id: "",
+        expected_attempts: 1,
+      }),
       delete: remove,
     },
   },
@@ -371,6 +376,77 @@ export function resourceConsolePromptDraft(action, result) {
     ...draft,
   });
   return JSON.stringify(parsed.input, null, 2);
+}
+
+export function resourceConsoleFollowups(section, action, raw, result, randomId) {
+  const choices = [];
+  const add = (next, fields) => {
+    const draft = JSON.stringify(fields, null, 2);
+    resourceConsoleRequest(section, next, draft);
+    choices.push({ action: next, label: descriptor(section, next).label, draft });
+  };
+  const id = result?.id;
+  if (
+    section === "webhooks" &&
+    result?.object === "webhook.endpoint" &&
+    typeof id === "string" &&
+    uuid.test(id)
+  ) {
+    add("deliveries", { id, deliveries: "true" });
+    add("test", { id, event_id: randomId() });
+    if (
+      Number.isSafeInteger(result.generation) &&
+      result.generation >= 1 &&
+      result.generation < 1000
+    )
+      add("rotate", { id, expected_generation: result.generation });
+    add("delete", { id });
+  }
+  if (
+    section === "webhooks" &&
+    action === "deliveries" &&
+    result?.object === "list" &&
+    Array.isArray(result.data)
+  ) {
+    const endpoint = JSON.parse(raw).id;
+    if (typeof endpoint !== "string" || !uuid.test(endpoint)) return [];
+    for (const row of result.data.slice(0, 50)) {
+      if (
+        typeof row?.id === "string" &&
+        uuid.test(row.id) &&
+        row.status === "pending" &&
+        Number.isSafeInteger(row.attempts) &&
+        row.attempts >= 1 &&
+        row.attempts < 5
+      ) {
+        add("retry", { id: endpoint, event_id: row.id, expected_attempts: row.attempts });
+        choices[choices.length - 1].label += ` (${row.id}, attempt ${row.attempts + 1})`;
+      }
+    }
+  }
+  if (
+    section === "automations" &&
+    result?.object === "batch" &&
+    typeof id === "string" &&
+    uuid.test(id)
+  ) {
+    if (
+      !result.canceled_at &&
+      Number.isFinite(Date.parse(result.expires_at)) &&
+      Date.parse(result.expires_at) > Date.now()
+    ) {
+      add(result.paused_at ? "resume" : "pause", { id });
+      add("cancel", { id });
+    }
+    if (Array.isArray(result.items))
+      for (const item of result.items.slice(0, 8)) {
+        if (typeof item?.id === "string" && uuid.test(item.id)) {
+          add("item", { id, item_id: item.id });
+          choices[choices.length - 1].label += ` (${item.id})`;
+        }
+      }
+  }
+  return choices;
 }
 
 export function resourceConsoleKey(value, allowed) {

@@ -99,6 +99,23 @@ export function parseDeveloperWebhookRequest(method, params, body, allowlist) {
         input: { id: id(body.id), expected_generation: body.expected_generation },
       };
     }
+    if (body?.operation === "retry") {
+      exact(body, ["operation", "id", "event_id", "expected_attempts"]);
+      if (
+        !Number.isSafeInteger(body.expected_attempts) ||
+        body.expected_attempts < 1 ||
+        body.expected_attempts > 4
+      )
+        fail();
+      return {
+        operation: "retry",
+        input: {
+          id: id(body.id),
+          event_id: id(body.event_id),
+          expected_attempts: body.expected_attempts,
+        },
+      };
+    }
     if (body?.operation === "test") {
       exact(body, ["operation", "id", "event_id"]);
       return { operation: "test", input: { id: id(body.id), event_id: id(body.event_id) } };

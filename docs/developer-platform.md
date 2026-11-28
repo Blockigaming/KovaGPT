@@ -130,6 +130,8 @@ Terminal accounting events are independently discovered from committed request h
 
 Each POST uses the exact JSON body and headers X-Kova-Webhook-Id, X-Kova-Webhook-Timestamp (Unix seconds), X-Kova-Webhook-Signature (v1=hex HMAC-SHA256). Sign the UTF-8 string event_id.timestamp.body with the returned signing secret; verify the signature in constant time, require a timestamp within 300 seconds and deduplicate event IDs. Rotate using the expected generation. Pending retries use the current signing secret; receivers should allow for a short in-flight rotation overlap.
 
+Manual retry is a separate, explicitly confirmed operation for a pending delivery with one to four attempts already made. It preserves the original event ID, attempt count, payload, and seven-day expiry; it cannot restart a delivered, leased or exhausted event. `KOVA_DEVELOPER_WEBHOOK_RETRY_SCHEMA_READY=true` is additionally required after isolated migration replay.
+
 Activation requires canonical migration replay, verified database/worker tests, reviewed endpoint ownership and network policy, KOVA_DEVELOPER_WEBHOOK_SCHEMA_READY=true, KOVA_DEVELOPER_WEBHOOKS_ENABLED=true, a securely generated server-only 32-byte hex DEVELOPER_WEBHOOK_MASTER_KEY and comma-separated KOVA_DEVELOPER_WEBHOOK_DESTINATIONS (exact canonical HTTPS URLs). The server resolves A records, refuses nonpublic or mixed answers, pins the selected address while validating the original TLS hostname, forbids redirects, and limits outbound requests. IPv6-only endpoints, arbitrary URLs, custom headers, automatic customer registration and real delivery activation are not provided by this staged implementation.
 
 ## Developer Batches (staged asynchronous execution)

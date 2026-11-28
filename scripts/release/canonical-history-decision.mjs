@@ -22,6 +22,10 @@ const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4
 // exception to its exact body instead of admitting arbitrary non-Kova files.
 const reviewedForwardMigrations = new Map([
   [
+    "20261128124018_developer_webhook_retry_v1.sql",
+    "69f53825cd2a1681a0ddfbcfaba065a1a2735264ffcee88e51fa54ddb269f39f",
+  ],
+  [
     "20261128115506_developer_uploads_v1.sql",
     "4ed6b5ac7f692266d743bf4155c2b38f840dda404133eb9edb761fa2358f5840",
   ],

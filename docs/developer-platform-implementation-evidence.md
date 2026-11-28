@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for support, source changelog, search and route inventory on base 6488d5c08c2244c132a0db1196d3f4729c0cd300, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for bounded webhook retry and automation controls on base ec39522734c31d2d1eb64ae96b05209506b140ea, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 38; partial: 54; missing: 8. Total 100.
-- Verification: 22 targeted requirement-level tested; 1 prior CI verified; 64 narrower evidence; 13 unverified. Total 100.
+- Implemented: 39; partial: 53; missing: 8. Total 100.
+- Verification: 23 targeted requirement-level tested; 1 prior CI verified; 63 narrower evidence; 13 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Bounded webhook retry and automation controls: 73 focused Node checks, 41 Python SDK tests, one PostgreSQL fixture and database reference inventory passed. Retry preserves event identity, existing attempt budget and seven-day expiry; stale/foreign/leased/delivered attempts reject. Response-bound controls draft test, retry, rotate, delete, pause, resume, cancel and item retrieval, with explicit confirmation and existing budget authorization. R60 source coverage; browser qualification, canonical replay and full CI pending. Canonical timestamp obtained from observed UTC clock because Supabase CLI was unavailable; retry gate remains off.
 
 - Public developer documentation: 12 reference and OpenAPI tests passed. Exact frozen 29-page baseline and 66 source pages, method coverage, related links, full-content search including detailed FAQ and changelog, accessible breadcrumb and search markup, source commit links and dates (not production release dates). R79/R87/R88/R89 source coverage; authenticated and responsive browser qualification remains pending.
 
@@ -110,7 +112,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R57 | I | F | Batch/background Responses resource controls with explicit quote submission, status and cancellation; d1e5243 console/policy tests. |
 | R58 | P | F | Browser Playground and analysis exist; no persistent container/browser lifecycle UI. |
 | R59 | P | F | Skills controls and DeveloperMcpAccess; full outbound connection management/discovery missing. |
-| R60 | P | F | Automation and webhook resource controls; complete retry/delivery management UX pending. |
+| R60 | I | T | Schedule, pause, resume, cancel and item history; endpoint create, test, rotate, delete and delivery history; manual pending retry binds original event and attempt count without resetting the cap. Response-bound console actions retain confirmation and existing spend checks; JS/Python SDK and database/console fixtures passed. |
 | R61 | I | T | Owner-scoped UTC time series, account/project/key/model/service/status filters, pagination, redacted rows, independently measured totals for all existing meters, complete filtered CSV including isolated container/browser counts. Focused analytics tests passed; browser qualification pending. |
 | R62 | P | F | Request detail ownership check; full redacted trace/health diagnostics missing. |
 | R63 | P | F | Project selection and owner controls; full organization/member invitation and role management missing. |

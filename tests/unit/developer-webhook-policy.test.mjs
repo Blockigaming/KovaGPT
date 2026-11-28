@@ -98,3 +98,21 @@ test("HMAC binds event, body and timestamp; rotation and recreation change the k
   ])
     assert.equal(verifyDeveloperWebhook({ ...input, ...patch }), false);
 });
+
+test("manual retry binds the exact event and existing attempt count", () => {
+  const body = { operation: "retry", id, event_id: endpoint.project_id, expected_attempts: 2 };
+  const parse = (body) =>
+    parseDeveloperWebhookRequest("POST", new URLSearchParams(), body, allowed);
+  assert.deepEqual(parse(body), {
+    operation: "retry",
+    input: { id, event_id: endpoint.project_id, expected_attempts: 2 },
+  });
+  for (const change of [
+    { expected_attempts: 0 },
+    { expected_attempts: 5 },
+    { expected_attempts: 1.5 },
+    { event_id: "../x" },
+    { force: true },
+  ])
+    assert.throws(() => parse({ ...body, ...change }), /webhook_invalid/);
+});

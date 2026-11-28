@@ -218,7 +218,7 @@ _MUTATIONS = (
     "conversation_append", "conversation_remove", "conversation_delete", "vector_create",
     "vector_upsert", "vector_upsert_batch", "vector_delete", "agent_create", "agent_update", "agent_delete",
     "skill_create", "skill_update", "skill_delete", "prompt_create", "prompt_update", "prompt_delete", "upload_create", "upload_append", "upload_complete", "upload_cancel", "webhook_create", "webhook_rotate",
-    "webhook_test", "webhook_delete", "batch_cancel", "response_job_cancel", "research_cancel",
+    "webhook_test", "webhook_retry", "webhook_delete", "batch_cancel", "response_job_cancel", "research_cancel",
     "automation_cancel", "automation_pause",
 )
 _PAID_MUTATIONS = ("mcp_connection_invoke", "batch_create", "response_job_create", "research_create", "automation_create", "automation_resume")

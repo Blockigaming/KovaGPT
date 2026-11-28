@@ -58,6 +58,13 @@ class WebhookVerificationTests(unittest.TestCase):
 
 
 class SDKTests(unittest.TestCase):
+    def test_webhook_manual_retry(self):
+        self.responses.append(FakeResponse({"id": ID, "status": "pending"}))
+        data = {"id": ID, "event_id": ID, "expected_attempts": 2}
+        self.client.webhook_retry(data)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(json.loads(self.calls[0][2]), {**data, "operation": "retry"})
+
     def test_throttle_delay_is_exposed_without_retry(self):
         self.responses.append(FakeResponse({"error": {"code": "developer_rate_limit"}}, status=429, retry_after="60"))
         with self.assertRaises(KovaError) as failure:

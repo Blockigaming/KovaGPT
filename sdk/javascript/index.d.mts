@@ -370,6 +370,10 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
     list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retry(
+      input: { id: string; event_id: string; expected_attempts: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
     deliveries(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
     delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   };

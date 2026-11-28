@@ -606,6 +606,9 @@ class Client:
     def webhook_test(self, data):
         return self._webhook_post("test", data)
 
+    def webhook_retry(self, data):
+        return self._webhook_post("retry", data)
+
     def webhook_list(self):
         return self._get("webhooks")
 
