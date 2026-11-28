@@ -12,6 +12,8 @@ Implementation: I = supported source implementation covers the named requirement
 
 ## Reusable evidence
 
+- Isolated analysis cleanup hardening on c7e0ca4: 5 focused Node tests passed using copied policy and fixture files, not a full repository checkout. Rejected/incomplete receipts now attempt bounded cleanup of up to two distinct typed provider container IDs, including when one deletion fails. No persistent reuse, guaranteed recovery of IDs missing from provider responses, or provider billing/cleanup qualification is claimed.
+
 - 0d29ecc: snapshot-bound Computer Use, 20 focused tests passing.
 - e7c5c78: bounded autonomous research; 103 Node, 32 Python, 11 canonical-history tests passing.
 - Reviewed outbound MCP delegation: 67 focused Node, 33 Python, 11 canonical-history tests passing, including authorization fences, revoked access and redacted mock dispatch. No live third-party calls; schema and provider flags remain off.
@@ -56,7 +58,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R16 | P | F | Persistent conversations and agent turns; full artifacts and redacted traces missing. |
 | R17 | I | T | Bounded interactive isolated Browserbase sessions with separate one-use project grants, approved same-origin navigation/link clicks/viewport actions, snapshot fences, quote-bound 60-second provider budget, cancellation and expiry, JS client, Playground, OpenAPI and Python grant lifecycle. No arbitrary scripts, form submission or authenticated browsing; provider/runtime qualification remains pending. |
 | R18 | I | T | Isolated browser Computer Use with server-owned snapshot conversion, separate maximum-price proposal quote, one metered proposal dispatch, exact model-proposed action and second human confirmation, scope rechecks, stale/replay rejection and cancellation. JS socket and Playground controls; supported link clicks, scroll, wait and screenshot only. Broader desktop GUI, arbitrary input and write operations are not enabled. Provider/runtime validation remains a release gate. |
-| R19 | P | F | 095b037 file-backed isolated analysis; persistent files and hosted shell not complete. |
+| R19 | P | F | 095b037 file-backed isolated analysis; bounded cleanup of identified containers on rejected receipts; persistent files, durable cleanup recovery and hosted shell not complete. |
 | R20 | M | N | No public persistent container lifecycle. Provider containers refresh idle expiry on access and current pricing is duration-based with a five-minute minimum. Existing fixed isolated invocation meter cannot authorize indefinite reuse. Need approved time-based price contract and authoritative billed-duration/cleanup receipts (or separately approved hard-lifetime runner infrastructure). See https://developers.openai.com/api/docs/guides/tools-code-interpreter and https://openai.com/api/pricing/. |
 | R21 | I | F | Decisions route and bounded typed receipts, developer-decisions-policy; dc071f1 queued policy and SDK tests. |
 | R22 | P | F | 016b836 multipart form upload and private text file CRUD/retention; resumable upload completion/cancel lifecycle missing. |

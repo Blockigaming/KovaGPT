@@ -62,3 +62,40 @@ test("response cleanup completes before returning", async () => {
   assert.deepEqual(deleted, ["cntr_test"]);
   assert.equal(result.text, "Result.");
 });
+
+test("rejected or incomplete receipts still clean up identified containers", async () => {
+  const call = value.output[0];
+  for (const output of [
+    [null, call],
+    [{ ...call, status: "incomplete" }],
+    [call, call],
+    [call, { ...call, id: "ci_second", container_id: "cntr_second" }],
+  ]) {
+    const deleted = [];
+    await assert.rejects(
+      readDeveloperAnalysisResponse(Response.json({ ...value, output }), ["test"], "public",
+        async (id) => deleted.push(id)),
+      /developer_analysis_invalid/,
+    );
+    assert.deepEqual(deleted, output.length === 2 && output[1]?.container_id === "cntr_second"
+      ? ["cntr_test", "cntr_second"] : ["cntr_test"]);
+  }
+});
+
+test("cleanup attempts are bounded and ignore untyped or invalid IDs", async () => {
+  const call = value.output[0];
+  const output = [
+    { type: "message", id: "ci_fake", container_id: "cntr_fake" },
+    { ...call, id: "bad", container_id: "cntr_fake" },
+    call,
+    { ...call, id: "ci_second", container_id: "cntr_second" },
+    { ...call, id: "ci_third", container_id: "cntr_third" },
+  ];
+  const deleted = [];
+  await assert.rejects(
+    readDeveloperAnalysisResponse(Response.json({ ...value, output }), ["test"], "public",
+      async (id) => { deleted.push(id); if (id === "cntr_test") throw new Error("secret"); }),
+    /developer_analysis_cleanup_unavailable/,
+  );
+  assert.deepEqual(deleted, ["cntr_test", "cntr_second"]);
+});

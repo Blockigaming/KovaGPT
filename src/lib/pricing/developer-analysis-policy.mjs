@@ -111,6 +111,23 @@ export function validateDeveloperAnalysisResult(value, expectedModels, publicMod
     },
   };
 }
+// Cleanup is independent of acceptance of the billing/result receipt. Only inspect
+// typed provider call records, never assistant text or caller-supplied IDs.
+function cleanupCandidates(output) {
+  if (!Array.isArray(output)) return [];
+  const ids = new Set();
+  for (const item of output) {
+    if (
+      item?.type === "code_interpreter_call" &&
+      typeof item.id === "string" &&
+      /^ci_[A-Za-z0-9_-]{1,180}$/.test(item.id) &&
+      typeof item.container_id === "string" &&
+      /^cntr_[A-Za-z0-9_-]{1,180}$/.test(item.container_id)
+    ) ids.add(item.container_id);
+    if (ids.size > 1) break;
+  }
+  return [...ids];
+}
 export async function readDeveloperAnalysisResponse(
   response,
   expectedModels,
@@ -129,7 +146,7 @@ export async function readDeveloperAnalysisResponse(
     decoder = new TextDecoder("utf-8", { fatal: true });
   let body = "",
     bytes = 0,
-    container = null;
+    containers = [];
   try {
     for (;;) {
       const part = await reader.read();
@@ -139,11 +156,13 @@ export async function readDeveloperAnalysisResponse(
       body += decoder.decode(part.value, { stream: true });
     }
     const value = JSON.parse(body + decoder.decode());
-    container = analysisContainerReceipt(value?.output);
+    containers = cleanupCandidates(value?.output);
     return validateDeveloperAnalysisResult(value, expectedModels, publicModel);
   } finally {
     await reader.cancel().catch(() => {});
     reader.releaseLock();
-    if (container) await dispose(container);
+    const outcomes = await Promise.allSettled(containers.map(async (container) => dispose(container)));
+    if (outcomes.some((outcome) => outcome.status === "rejected"))
+      throw new Error("developer_analysis_cleanup_unavailable");
   }
 }
