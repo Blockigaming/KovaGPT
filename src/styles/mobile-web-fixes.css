@@ -18,11 +18,10 @@
   .kova-assistant .kova-empty-chat-content .kova-greeting {
     margin-block: auto;
     align-items: center;
-    /* Centered on the screen's own middle height, not in the space left above
-       the docked composer (which sits higher than the middle). */
+    /* Slightly above the viewport midpoint, independent of the docked composer. */
     position: fixed;
     inset-inline: 0;
-    inset-block-start: 50dvh;
+    inset-block-start: calc(50dvh - 8px);
     margin-block: 0;
     translate: 0 -50%;
     pointer-events: none;
@@ -149,7 +148,26 @@
     column-gap: 0;
   }
   .kova-assistant .spec400-composer .spec400-composer-trailing > .kova-thinking-toggle {
-    padding-inline-start: 2px;
+    padding-inline: 6px 12px;
+  }
+  /* Shorten only the painted pill, not its touch target or toolbar alignment. */
+  @media (forced-colors: none) {
+    .kova-assistant .spec400-composer .kova-thinking-toggle[aria-pressed="true"] {
+      position: relative;
+      isolation: isolate;
+      background: transparent;
+      border-color: transparent;
+    }
+    .kova-assistant .spec400-composer .kova-thinking-toggle[aria-pressed="true"]::before {
+      content: "";
+      position: absolute;
+      inset: 3px 0;
+      z-index: -1;
+      border: 1px solid #3b82f633;
+      border-radius: inherit;
+      background: #3b82f618;
+      pointer-events: none;
+    }
   }
   .kova-assistant .spec400-composer .spec400-composer-speech-actions {
     order: 2;
