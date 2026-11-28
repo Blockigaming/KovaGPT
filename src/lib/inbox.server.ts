@@ -58,7 +58,10 @@ async function outlookAccounts(owner: string) {
   );
 }
 
-export async function listInboxAccountsServer(data: { owner: string }, context: { userId: string }): Promise<InboxAccount[]> {
+export async function listInboxAccountsServer(
+  data: { owner: string },
+  context: { userId: string },
+): Promise<InboxAccount[]> {
   checkOwner(data.owner, context.userId);
   await protect(context.userId);
   const owner = context.userId;
@@ -112,7 +115,11 @@ async function access(target: Target, operation: Operation) {
     const binding = await getGoogleExecutionBinding(owner, account);
     if (!binding.grantId || binding.connectionId !== account) throw new Error("Reconnect Gmail.");
     const capability =
-      operation === "modify" ? "gmail.modify" : operation === "reply" ? "gmail.write" : "gmail.read";
+      operation === "modify"
+        ? "gmail.modify"
+        : operation === "reply"
+          ? "gmail.write"
+          : "gmail.read";
     const token = await getValidGoogleAccessToken(owner, { ...binding, capability });
     return {
       token,
@@ -266,16 +273,20 @@ function graphMessage(message: GraphRecord, detail = false): InboxMessage {
     unread: message.isRead === false,
     ...(detail
       ? {
-          body: message.body?.contentType?.toLowerCase() === "text"
-            ? (message.body.content || "").slice(0, 100_000)
-            : message.bodyPreview || "",
+          body:
+            message.body?.contentType?.toLowerCase() === "text"
+              ? (message.body.content || "").slice(0, 100_000)
+              : message.bodyPreview || "",
         }
       : {}),
   };
 }
 const graphFields = "id,subject,from,bodyPreview,receivedDateTime,isRead";
 
-export async function listInboxMessagesServer(data: Target & { folder: "inbox" | "trash"; cursor: string | null }, context: { userId: string }): Promise<InboxPage> {
+export async function listInboxMessagesServer(
+  data: Target & { folder: "inbox" | "trash"; cursor: string | null },
+  context: { userId: string },
+): Promise<InboxPage> {
   checkOwner(data.owner, context.userId);
   const auth = await access(data, "read");
   if (data.provider === "gmail") {
@@ -293,14 +304,16 @@ export async function listInboxMessagesServer(data: Target & { folder: "inbox" |
     const ids = (result.messages ?? []).slice(0, 20);
     for (let i = 0; i < ids.length; i += 5) {
       const batch = await Promise.all(
-        ids.slice(i, i + 5).map(async ({ id }) =>
-          gmailMessage(
-            (await json(
-              auth,
-              `${gmail}/messages/${encodeURIComponent(id)}?format=metadata`,
-            )) as GmailRecord,
+        ids
+          .slice(i, i + 5)
+          .map(async ({ id }) =>
+            gmailMessage(
+              (await json(
+                auth,
+                `${gmail}/messages/${encodeURIComponent(id)}?format=metadata`,
+              )) as GmailRecord,
+            ),
           ),
-        ),
       );
       messages.push(...batch);
     }
@@ -333,7 +346,10 @@ export async function listInboxMessagesServer(data: Target & { folder: "inbox" |
   };
 }
 
-export async function readInboxMessageServer(data: Target & { id: string }, context: { userId: string }): Promise<InboxMessage> {
+export async function readInboxMessageServer(
+  data: Target & { id: string },
+  context: { userId: string },
+): Promise<InboxMessage> {
   checkOwner(data.owner, context.userId);
   const auth = await access(data, "read");
   const id = encodeURIComponent(data.id);
@@ -345,7 +361,10 @@ export async function readInboxMessageServer(data: Target & { id: string }, cont
       );
 }
 
-export async function updateInboxMessageServer(data: Target & { id: string; action: "read" | "unread" | "trash" | "restore"; confirmed: true }, context: { userId: string }) {
+export async function updateInboxMessageServer(
+  data: Target & { id: string; action: "read" | "unread" | "trash" | "restore"; confirmed: true },
+  context: { userId: string },
+) {
   checkOwner(data.owner, context.userId);
   const auth = await access(data, "modify");
   const id = encodeURIComponent(data.id);
@@ -374,7 +393,10 @@ export async function updateInboxMessageServer(data: Target & { id: string; acti
   return { ok: true };
 }
 
-export async function replyInboxMessageServer(data: Target & { id: string; body: string; confirmed: true }, context: { userId: string }) {
+export async function replyInboxMessageServer(
+  data: Target & { id: string; body: string; confirmed: true },
+  context: { userId: string },
+) {
   checkOwner(data.owner, context.userId);
   const auth = await access(data, "reply");
   const id = encodeURIComponent(data.id);
@@ -416,7 +438,10 @@ export async function replyInboxMessageServer(data: Target & { id: string; body:
       "Content-Type: text/plain; charset=UTF-8",
       "Content-Transfer-Encoding: base64",
       "",
-      Buffer.from(data.body).toString("base64").match(/.{1,76}/gu)?.join("\r\n") || "",
+      Buffer.from(data.body)
+        .toString("base64")
+        .match(/.{1,76}/gu)
+        ?.join("\r\n") || "",
     ].join("\r\n"),
   ).toString("base64url");
   const result = await json(auth, `${gmail}/messages/send`, "POST", {

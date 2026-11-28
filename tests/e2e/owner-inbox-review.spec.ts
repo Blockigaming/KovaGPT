@@ -43,7 +43,9 @@ const notice = {
 };
 
 for (const theme of ["dark", "light"] as const) {
-  test(`${theme}: connected Inbox, reply, shared toast and Trash review`, async ({ page }, info) => {
+  test(`${theme}: connected Inbox, reply, shared toast and Trash review`, async ({
+    page,
+  }, info) => {
     test.skip(!["desktop-1440x900", "phone-390x844"].includes(info.project.name));
     test.setTimeout(90_000);
     await coreFixture(page, theme, "pro");

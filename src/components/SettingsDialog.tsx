@@ -2374,7 +2374,8 @@ export function SettingsDialog({
                       onChange={(event) =>
                         onChange({
                           ...settings,
-                          inboxDensity: event.target.value === "compact" ? "compact" : "comfortable",
+                          inboxDensity:
+                            event.target.value === "compact" ? "compact" : "comfortable",
                         })
                       }
                     >

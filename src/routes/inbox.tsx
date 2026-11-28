@@ -69,7 +69,8 @@ function OwnerInbox({ owner }: { owner: string }) {
     };
   }, [owner]);
   if (loading) return <p role="status">Checking mail connections…</p>;
-  if (error) return <p role="alert">Mail connection status is unavailable. Reopen Inbox to retry.</p>;
+  if (error)
+    return <p role="alert">Mail connection status is unavailable. Reopen Inbox to retry.</p>;
   if (!account)
     return (
       <section className="kova-inbox-empty">
@@ -219,7 +220,9 @@ function Mailbox({
   }, [folder, notifications, refresh]);
 
   const changeUnread = (id: string, unread: boolean) => {
-    setMessages((previous) => previous.map((item) => (item.id === id ? { ...item, unread } : item)));
+    setMessages((previous) =>
+      previous.map((item) => (item.id === id ? { ...item, unread } : item)),
+    );
     setOpened((previous) =>
       previous?.kind === "mail" && previous.message.id === id
         ? { kind: "mail", message: { ...previous.message, unread } }
@@ -324,8 +327,7 @@ function Mailbox({
     })
     .sort(
       (a, b) =>
-        (unreadFirst ? Number(unread(b)) - Number(unread(a)) : 0) ||
-        date(b).localeCompare(date(a)),
+        (unreadFirst ? Number(unread(b)) - Number(unread(a)) : 0) || date(b).localeCompare(date(a)),
     );
 
   return (

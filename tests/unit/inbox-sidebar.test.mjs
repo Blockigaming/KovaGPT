@@ -7,7 +7,10 @@ import {
   saveSidebarLayout,
   sidebarLayoutKey,
 } from "../../src/lib/sidebar-layout.mjs";
-import { googleConnectorScopes, hasGoogleCapability } from "../../src/lib/google-account-policy.mjs";
+import {
+  googleConnectorScopes,
+  hasGoogleCapability,
+} from "../../src/lib/google-account-policy.mjs";
 
 test("Inbox defaults on, including existing customized sidebars, while explicit removal persists", () => {
   const data = new Map();
@@ -20,10 +23,7 @@ test("Inbox defaults on, including existing customized sidebars, while explicit 
   data.set(key, JSON.stringify({ shortcuts: ["library"] }));
   const migrated = readSidebarLayout(storage, "owner");
   assert.deepEqual(migrated.shortcuts, ["library", "inbox"]);
-  assert.equal(
-    saveSidebarLayout(storage, "owner", { ...migrated, shortcuts: ["library"] }),
-    true,
-  );
+  assert.equal(saveSidebarLayout(storage, "owner", { ...migrated, shortcuts: ["library"] }), true);
   assert.deepEqual(readSidebarLayout(storage, "owner").shortcuts, ["library"]);
   assert.ok(readSidebarLayout(storage, "other").shortcuts.includes("inbox"));
 });

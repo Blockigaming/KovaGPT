@@ -76,7 +76,10 @@ export function settingsSearchMatches(item, query, description = "") {
 
 /** Preserve original spelling and mark only literal matching characters. */
 export function settingsSearchParts(value, query) {
-  const terms = String(query ?? "").toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  const terms =
+    String(query ?? "")
+      .toLocaleLowerCase()
+      .match(/[\p{L}\p{N}]+/gu) ?? [];
   const lower = value.toLocaleLowerCase();
   const marked = Array(value.length).fill(false);
   for (const term of terms) {
