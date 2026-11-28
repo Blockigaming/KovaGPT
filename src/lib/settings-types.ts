@@ -23,6 +23,9 @@ export type Settings = {
   readingSize: 16 | 18 | 20;
   readingWidth: 680 | 760 | 900;
   density: "comfortable" | "compact";
+  inboxDensity?: "comfortable" | "compact";
+  inboxShowPreview?: boolean;
+  inboxUnreadFirst?: boolean;
   motion: "full" | "reduced";
   contrast?: "system" | "high";
   rememberAcross: boolean;

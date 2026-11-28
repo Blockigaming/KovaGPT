@@ -36,6 +36,7 @@ import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
+import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
 import { Route as KovasRouteImport } from './routes/kovas'
 import { Route as LibraryRouteImport } from './routes/library'
@@ -372,6 +373,11 @@ const HumanizeAiTextRoute = HumanizeAiTextRouteImport.update({
 const ImagesRoute = ImagesRouteImport.update({
   id: '/images',
   path: '/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KnowledgeGraphRoute = KnowledgeGraphRouteImport.update({
@@ -1450,6 +1456,7 @@ export interface FileRoutesByFullPath {
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
+  '/inbox': typeof InboxRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
@@ -1681,6 +1688,7 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
+  '/inbox': typeof InboxRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
@@ -1913,6 +1921,7 @@ export interface FileRoutesById {
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
+  '/inbox': typeof InboxRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
@@ -2146,6 +2155,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/humanize-ai-text'
     | '/images'
+    | '/inbox'
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
@@ -2377,6 +2387,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/humanize-ai-text'
     | '/images'
+    | '/inbox'
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
@@ -2608,6 +2619,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/humanize-ai-text'
     | '/images'
+    | '/inbox'
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
@@ -2840,6 +2852,7 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
+  InboxRoute: typeof InboxRoute
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
   KovasRoute: typeof KovasRoute
   LibraryRoute: typeof LibraryRoute
@@ -3221,6 +3234,13 @@ declare module '@tanstack/react-router' {
       path: '/images'
       fullPath: '/images'
       preLoaderRoute: typeof ImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/knowledge-graph': {
@@ -4788,6 +4808,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,
+  InboxRoute: InboxRoute,
   KnowledgeGraphRoute: KnowledgeGraphRoute,
   KovasRoute: KovasRoute,
   LibraryRoute: LibraryRoute,

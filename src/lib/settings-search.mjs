@@ -73,3 +73,42 @@ export function settingsSearchMatches(item, query, description = "") {
       words.some((word) => word.startsWith(term) || oneEditApart(word, term)),
   );
 }
+
+/** Preserve original spelling and mark only literal matching characters. */
+export function settingsSearchParts(value, query) {
+  const terms =
+    String(query ?? "")
+      .toLocaleLowerCase()
+      .match(/[\p{L}\p{N}]+/gu) ?? [];
+  const lower = value.toLocaleLowerCase();
+  const marked = Array(value.length).fill(false);
+  for (const term of terms) {
+    let start = lower.indexOf(term);
+    while (start !== -1) {
+      for (let i = start; i < Math.min(start + term.length, value.length); i++) marked[i] = true;
+      start = lower.indexOf(term, start + term.length);
+    }
+  }
+  const parts = [];
+  for (let i = 0; i < value.length; i++) {
+    const last = parts[parts.length - 1];
+    if (last && last.match === marked[i]) last.text += value[i];
+    else parts.push({ text: value[i], match: marked[i] });
+  }
+  return parts;
+}
+
+export function settingsSearchHint(item, query, description = "", topics = "") {
+  if (settingsSearchParts(item.label, query).some((part) => part.match)) return description;
+  const candidates = [
+    description,
+    ...(item.keywords ?? []),
+    ...topics.split(" "),
+    ...(ALIASES[item.v] ?? "").split(" "),
+  ];
+  return (
+    candidates.find((candidate) =>
+      settingsSearchParts(candidate, query).some((part) => part.match),
+    ) || description
+  );
+}

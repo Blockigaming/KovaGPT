@@ -1,4 +1,5 @@
 export type SidebarShortcutId =
+  | "inbox"
   | "images"
   | "library"
   | "projects"

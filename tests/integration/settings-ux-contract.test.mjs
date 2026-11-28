@@ -242,7 +242,6 @@ test("settings navigation is centralized and routes every rendered category", ()
       "Family Center",
       "Report an issue",
       "Help center",
-      "About",
       "Log out",
     ],
   );
@@ -297,7 +296,6 @@ test("settings navigation is centralized and routes every rendered category", ()
       ["billing", "Subscriptions"],
       ["report", "Report an issue"],
       ["help", "Help center"],
-      ["about", "About"],
       ["logout", "Log out"],
     ],
   );

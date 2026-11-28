@@ -295,7 +295,6 @@ test("project sections and account settings remain navigable and cancel safely",
     "Storage",
     "Apps",
     "Family Center",
-    "About",
     "Data control",
   ]) {
     await chooseSettingsSection(page, name);
@@ -318,8 +317,10 @@ test("project sections and account settings remain navigable and cancel safely",
   const searchSettings = settings.getByRole("textbox", { name: "Search settings", exact: true });
   if (await searchSettings.isVisible()) {
     await searchSettings.fill("subscription");
-    await expect(settings.getByRole("tab", { name: "Subscriptions", exact: true })).toBeVisible();
-    await expect(settings.getByRole("tab", { name: "Responses", exact: true })).toHaveCount(0);
+    const results = settings.getByRole("group", { name: "Matching settings" });
+    await expect(results.getByRole("button", { name: "Subscriptions", exact: true })).toBeVisible();
+    await expect(settings.getByRole("tab", { name: "General", exact: true })).toHaveCount(1);
+    await searchSettings.fill("");
   } else {
     await settings.getByRole("button", { name: "Section", exact: true }).click();
     await page

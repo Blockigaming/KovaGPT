@@ -4,6 +4,7 @@ export const GOOGLE_CONNECTOR_SCOPES = Object.freeze({
   gmail: [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.modify",
   ],
   "google-calendar": ["https://www.googleapis.com/auth/calendar.events"],
   "google-drive": ["https://www.googleapis.com/auth/drive.readonly"],
@@ -27,6 +28,7 @@ export function googleConnectorScopes(
 }
 
 export const GOOGLE_CAPABILITY_SCOPES = {
+  "gmail.modify": ["https://www.googleapis.com/auth/gmail.modify"],
   "gmail.read": [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.modify",

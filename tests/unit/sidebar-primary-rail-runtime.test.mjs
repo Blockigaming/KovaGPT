@@ -69,6 +69,7 @@ function fixture(options = {}) {
     signedIn: true,
     canSchedule: true,
     mapsReleaseApproved: false,
+    inboxAccounts: { accounts: [] },
     mobileViewport: false,
     railShortcuts: [],
     collapsed: true,
@@ -250,6 +251,18 @@ test("all chosen tools are configurable and Maps retains its release gate", () =
     SIDEBAR_SHORTCUTS.some((item) => item.id === "work"),
     false,
   );
+});
+
+test("Inbox is selectable only for an active mail connection", () => {
+  const options = { railShortcuts: ["inbox", "library"] };
+  const disconnected = fixture(options);
+  const connected = fixture({ ...options, inboxAccounts: { accounts: [{ id: "mail" }] } });
+  const links = (f) => controls(f.find("Additional shortcuts")).map(({ props }) => props.to);
+  const hasInbox = (f) => f.deps.availableShortcuts.some((item) => item.id === "inbox");
+  assert.deepEqual(links(disconnected), ["/library"]);
+  assert.deepEqual(links(connected), ["/inbox", "/library"]);
+  assert.equal(hasInbox(connected), true);
+  assert.equal(hasInbox(disconnected), false);
 });
 
 test("guest/auth and scheduling gates are unchanged and hidden expanded rail is inert", () => {

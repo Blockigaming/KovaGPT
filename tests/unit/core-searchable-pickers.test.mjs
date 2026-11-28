@@ -329,7 +329,6 @@ test("Settings retains every destination and includes a legacy current section t
       "billing",
       "report",
       "help",
-      "about",
       "logout",
     ],
   );
