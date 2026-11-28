@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 240,
+  "migrationCount": 241,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -103,6 +103,7 @@
     "developer_pricing_drafts",
     "developer_pro_charge_blocks_v2",
     "developer_projects",
+    "developer_prompt_versions_v1",
     "developer_realtime_sessions_v1",
     "developer_skill_versions_v1",
     "developer_vector_entries_v1",
@@ -346,6 +347,7 @@
     "developer_funding_export_records",
     "developer_pricing_draft_export_rows",
     "developer_pricing_event_export_rows",
+    "developer_prompt_export_records_v1",
     "developer_skill_export_records_v1",
     "developer_vector_export_records_v1",
     "developer_webhook_export_records_v1",
@@ -841,6 +843,7 @@
     "manage_developer_conversations_v1",
     "manage_developer_files",
     "manage_developer_mcp_connections_v1",
+    "manage_developer_prompts_v1",
     "manage_developer_realtime_sessions_v1",
     "manage_developer_skills_v1",
     "manage_developer_vector_stores_v1",
@@ -1227,6 +1230,7 @@
     "developer_mcp_connections_owner_project_idx",
     "developer_paid_pro_period_v2_idx",
     "developer_pricing_drafts_updated_idx",
+    "developer_prompt_versions_owner_v1_idx",
     "developer_realtime_sessions_expiry_v1_idx",
     "developer_realtime_sessions_owner_v1_idx",
     "developer_requests_lease_idx",
@@ -1890,6 +1894,7 @@
     "developer_pricing_drafts",
     "developer_pro_charge_blocks_v2",
     "developer_projects",
+    "developer_prompt_versions_v1",
     "developer_realtime_sessions_v1",
     "developer_skill_versions_v1",
     "developer_vector_entries_v1",
@@ -2613,6 +2618,7 @@
     "execute on function public.manage_developer_conversations_v1(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_files(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_mcp_connections_v1(uuid,uuid,uuid,text,jsonb) to service_role",
+    "execute on function public.manage_developer_prompts_v1(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_realtime_sessions_v1(text,uuid,jsonb) to service_role",
     "execute on function public.manage_developer_skills_v1(uuid,uuid,uuid,text,jsonb) to service_role",
     "execute on function public.manage_developer_vector_stores_v1(uuid,uuid,uuid,text,jsonb) to service_role",
@@ -2750,6 +2756,7 @@
     "select on public.developer_file_export_records to service_role",
     "select on public.developer_funding_export_records to service_role",
     "select on public.developer_pricing_draft_export_rows,public.developer_pricing_event_export_rows to service_role",
+    "select on public.developer_prompt_export_records_v1 to service_role",
     "select on public.developer_skill_export_records_v1 to service_role",
     "select on public.developer_vector_export_records_v1 to service_role",
     "select on public.developer_webhook_export_records_v1 to service_role",
@@ -2832,6 +2839,7 @@
     "select,insert on table public.%I to service_role',t)",
     "select,insert,delete on public.developer_agent_versions_v1 to service_role",
     "select,insert,delete on public.developer_files to service_role",
+    "select,insert,delete on public.developer_prompt_versions_v1 to service_role",
     "select,insert,delete on public.developer_skill_versions_v1 to service_role",
     "select,insert,delete on public.developer_vector_stores_v1 to service_role",
     "select,insert,delete on public.operational_events to authenticated",
@@ -3364,6 +3372,7 @@
     "all on function public.manage_developer_conversations_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_files(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_mcp_connections_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
+    "all on function public.manage_developer_prompts_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_realtime_sessions_v1(text,uuid,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_skills_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.manage_developer_vector_stores_v1(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated",
@@ -3524,6 +3533,8 @@
     "all on public.developer_paid_pro_invoices_v2,public.developer_pro_charge_blocks_v2\n  from public,anon,authenticated",
     "all on public.developer_pricing_draft_export_rows,public.developer_pricing_event_export_rows from public,anon,authenticated",
     "all on public.developer_pricing_drafts,public.developer_pricing_administration_events from public,anon,authenticated",
+    "all on public.developer_prompt_export_records_v1 from public,anon,authenticated",
+    "all on public.developer_prompt_versions_v1 from public,anon,authenticated",
     "all on public.developer_realtime_sessions_v1 from public,anon,authenticated",
     "all on public.developer_skill_export_records_v1 from public,anon,authenticated",
     "all on public.developer_skill_versions_v1 from public,anon,authenticated",
@@ -3867,6 +3878,22 @@
       "granted": true
     },
     { "table": "public.developer_pricing_drafts", "role": "service_role", "granted": true },
+    { "table": "public.developer_prompt_export_records_v1", "role": "anon", "granted": false },
+    {
+      "table": "public.developer_prompt_export_records_v1",
+      "role": "authenticated",
+      "granted": false
+    },
+    { "table": "public.developer_prompt_export_records_v1", "role": "public", "granted": false },
+    {
+      "table": "public.developer_prompt_export_records_v1",
+      "role": "service_role",
+      "granted": true
+    },
+    { "table": "public.developer_prompt_versions_v1", "role": "anon", "granted": false },
+    { "table": "public.developer_prompt_versions_v1", "role": "authenticated", "granted": false },
+    { "table": "public.developer_prompt_versions_v1", "role": "public", "granted": false },
+    { "table": "public.developer_prompt_versions_v1", "role": "service_role", "granted": true },
     { "table": "public.developer_realtime_sessions_v1", "role": "anon", "granted": false },
     { "table": "public.developer_realtime_sessions_v1", "role": "authenticated", "granted": false },
     { "table": "public.developer_realtime_sessions_v1", "role": "public", "granted": false },
@@ -4290,5 +4317,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "e3a21affc4ffcab1986f56b2774d48a0085b91edb4a68df0da4807487cd61df0"
+  "sha256": "ef2cdddec706b668511b3105be91f15935a3663c9e7649e341c1de1d0196c65a"
 }

@@ -5,6 +5,7 @@ import {
   resourceConsoleJobDraft,
   resourceConsoleKey,
   resourceConsoleMaySpend,
+  resourceConsolePromptDraft,
   resourceConsoleRequest,
   resourceConsoleRequiresConfirmation,
   resourceConsoleTemplate,
@@ -173,4 +174,26 @@ test("autonomous research console keeps a single exact quoted item and no charge
   assert.deepEqual(draft.items[0].input, JSON.parse(input).input);
   assert.equal(draft.maximum_charge, 0);
   assert.equal(resourceConsoleMaySpend(section, action), false);
+});
+
+test("saved prompt controls draft version-bound mutations without executing inference", () => {
+  const result = {
+    object: "prompt.definition",
+    id,
+    version: 3,
+    definition: { name: "Title", description: "Description", prompt: "Text" },
+  };
+  const draft = resourceConsolePromptDraft("update", result);
+  assert.deepEqual(JSON.parse(resourceConsoleRequest("prompts", "update", draft).body), {
+    operation: "update",
+    id,
+    expected_version: 3,
+    definition: result.definition,
+  });
+  assert.equal(resourceConsoleRequiresConfirmation("prompts", "update"), true);
+  assert.equal(resourceConsoleMaySpend("prompts", "update"), false);
+  assert.deepEqual(JSON.parse(resourceConsolePromptDraft("version", result)), { id, version: 3 });
+  assert.deepEqual(JSON.parse(resourceConsolePromptDraft("delete", result)), { id });
+  assert.throws(() => resourceConsolePromptDraft("update", { ...result, version: 20 }));
+  assert.throws(() => resourceConsolePromptDraft("update", { ...result, id: "../x" }));
 });

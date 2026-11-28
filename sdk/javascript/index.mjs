@@ -577,6 +577,33 @@ export class KovaGPT {
       delete: async (id, { signal } = {}) =>
         smallJson(await this.#request(skillPath(id), { method: "DELETE", signal })),
     });
+    const promptPath = (id, version) => {
+      if (
+        typeof id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+      )
+        fail("prompt_id_invalid");
+      if (version !== undefined && (!Number.isSafeInteger(version) || version < 1 || version > 20))
+        fail("prompt_version_invalid");
+      return "prompts?id=" + id + (version === undefined ? "" : "&version=" + version);
+    };
+    const promptPost = async (operation, input, { signal } = {}) =>
+      smallJson(
+        await this.#request("prompts", {
+          input: boundedInput({ ...boundedInput(input), operation }, 16384),
+          signal,
+        }),
+        65536,
+      );
+    this.prompts = Object.freeze({
+      create: (input, options) => promptPost("create", input, options),
+      update: (input, options) => promptPost("update", input, options),
+      list: async ({ signal } = {}) => smallJson(await this.#request("prompts", { signal })),
+      retrieve: async (id, { version, signal } = {}) =>
+        smallJson(await this.#request(promptPath(id, version), { signal })),
+      delete: async (id, { signal } = {}) =>
+        smallJson(await this.#request(promptPath(id), { method: "DELETE", signal })),
+    });
     const webhookPath = (id, deliveries = false) => {
       if (
         typeof id !== "string" ||

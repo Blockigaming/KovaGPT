@@ -630,6 +630,136 @@ test("skill versions are private, immutable and project scoped", async () => {
   }
 });
 
+test("prompt versions are private, immutable and project scoped", async () => {
+  const f = await fixture();
+  try {
+    await f.db.exec("reset role");
+    await f.db.exec(await readFile("supabase/pending/developer_prompts_v1.sql", "utf8"));
+    await f.db.exec("set role service_role");
+    const run = async (operation, input, user = owner) =>
+      (
+        await f.db.query("select manage_developer_prompts_v1($1,$2,$3,$4,$5) result", [
+          user,
+          key,
+          f.account.projectId,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
+    const prompt = id(71);
+    const definition = {
+      name: "Review",
+      description: "Review evidence",
+      prompt: "Cite the evidence.",
+    };
+    const create = { id: prompt, definition };
+    assert.equal((await run("create", create)).version, 1);
+    assert.equal((await run("create", create)).version, 1);
+    const secondAccount = await f.manage("create_account", {
+      name: "Second project",
+      currency: "USD",
+    });
+    const secondKey = id(72);
+    await f.manage("issue_key", {
+      accountId: secondAccount.accountId,
+      projectId: secondAccount.projectId,
+      keyId: secondKey,
+      name: "Second key",
+      digest: "d".repeat(64),
+      suffix: "abcdef",
+      scopes: ["chat"],
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      limits,
+    });
+    const scoped = async (pKey, pProject, operation, input) =>
+      (
+        await f.db.query("select manage_developer_prompts_v1($1,$2,$3,$4,$5) result", [
+          owner,
+          pKey,
+          pProject,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
+    assert.deepEqual((await scoped(secondKey, secondAccount.projectId, "list", {})).data, []);
+    await assert.rejects(
+      scoped(secondKey, secondAccount.projectId, "get", { id: prompt }),
+      /prompt_not_found/,
+    );
+    await assert.rejects(
+      scoped(key, secondAccount.projectId, "get", { id: prompt }),
+      /scope_required/,
+    );
+    await scoped(secondKey, secondAccount.projectId, "create", {
+      ...create,
+      definition: { ...definition, prompt: "Second project only" },
+    });
+    assert.equal((await run("get", { id: prompt })).definition.prompt, definition.prompt);
+    await assert.rejects(
+      run("create", { ...create, definition: { ...definition, code: "run" } }),
+      /prompt_invalid/,
+    );
+    const update = {
+      id: prompt,
+      expected_version: 1,
+      definition: { ...definition, prompt: "List evidence." },
+    };
+    assert.equal((await run("update", update)).version, 2);
+    assert.equal((await run("update", update)).version, 2);
+    await assert.rejects(
+      run("update", { ...update, definition: { ...definition, prompt: "Changed" } }),
+      /prompt_conflict/,
+    );
+    assert.equal(
+      (await run("get", { id: prompt, version: 1 })).definition.prompt,
+      definition.prompt,
+    );
+    assert.equal((await run("get", { id: prompt })).version, 2);
+    assert.equal((await run("list", {})).data[0].definition, undefined);
+    await assert.rejects(run("get", { id: prompt }, other), /scope_required/);
+    for (const role of ["anon", "authenticated"])
+      assert.equal(
+        (
+          await f.db.query(
+            "select has_table_privilege($1,'developer_prompt_versions_v1','select') allowed",
+            [role],
+          )
+        ).rows[0].allowed,
+        false,
+      );
+    const exported = (
+      await f.db.query(
+        "select definition from developer_prompt_export_records_v1 where project_id=$1",
+        [f.account.projectId],
+      )
+    ).rows;
+    assert.equal(exported.length, 2);
+    await run("delete", { id: prompt });
+    assert.equal(
+      (
+        await f.db.query(
+          "select count(*)::int n from developer_prompt_export_records_v1 where project_id=$1",
+          [f.account.projectId],
+        )
+      ).rows[0].n,
+      0,
+    );
+    await assert.rejects(run("get", { id: prompt, version: 1 }), /prompt_not_found/);
+    assert.equal(
+      (await scoped(secondKey, secondAccount.projectId, "get", { id: prompt })).definition.prompt,
+      "Second project only",
+    );
+    await run("create", create);
+    await f.db.exec(`reset role;delete from auth.users where id='${owner}';set role service_role`);
+    assert.equal(
+      (await f.db.query("select count(*)::int n from developer_prompt_versions_v1")).rows[0].n,
+      0,
+    );
+  } finally {
+    await f.db.close();
+  }
+});
+
 test("outgoing webhook registration, stable test events, lease retry and rotation remain key scoped", async () => {
   const f = await fixture();
   try {

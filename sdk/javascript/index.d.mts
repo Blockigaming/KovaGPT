@@ -198,6 +198,11 @@ export interface SkillDefinition {
   description: string;
   instructions: string;
 }
+export interface PromptDefinition {
+  name: string;
+  description: string;
+  prompt: string;
+}
 export type DecisionQuestion = {
   name: string;
   instructions: string;
@@ -304,6 +309,22 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
     update(
       input: { id: string; definition: SkillDefinition; expected_version: number },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    retrieve(
+      id: string,
+      options?: { version?: number; signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    delete(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+  };
+  readonly prompts: {
+    create(
+      input: { id: string; definition: PromptDefinition },
+      options?: { signal?: AbortSignal },
+    ): Promise<Record<string, unknown>>;
+    update(
+      input: { id: string; definition: PromptDefinition; expected_version: number },
       options?: { signal?: AbortSignal },
     ): Promise<Record<string, unknown>>;
     list(options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;

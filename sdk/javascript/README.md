@@ -74,3 +74,7 @@ Reference: https://developers.openai.com/api/docs/guides/transcription
 ### Background Responses
 
 Use `POST /api/v1/response-jobs` with `operation: "create"`, a stable UUID `id`, `currency`, `maximum_charge`, `input` (a non-streaming Responses request of at most 2,048 output tokens, optionally with strict structured output or client-owned functions) and the `quote_token` returned by quoting that exact input as `responses`. Creating a job authorizes paid execution by the existing durable worker and stores the input and result for bounded retrieval. No automatic provider retries occur. A job expires after 24 hours and is eligible for cleanup seven days after expiration. List or retrieve through GET, or cancel a queued job by POSTing `{ operation: "cancel", id }`. Cancel does not interrupt a job already claimed by a worker. Retrieval reports the actual job and settlement status and exposes output only for settled completed jobs. This feature requires the staged batch migration and background Responses runtime flag.
+
+### Saved prompts
+
+Use `client.prompts.create({ id, definition: { name, description, prompt } })`, `list()`, `retrieve(id, { version })`, `update({ id, expected_version, definition })`, and `delete(id)`. Saved text does not execute inference; submit it separately with an explicit quote.

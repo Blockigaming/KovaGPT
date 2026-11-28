@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 240,
-  "latest": "20261128105700_developer_mcp_connections_v1.sql",
+  "count": 241,
+  "latest": "20261128114651_developer_prompts_v1.sql",
   "migrations": [
     {
       "order": 1,
@@ -5018,6 +5018,20 @@
         "developer_mcp_connections_owner_project_idx",
         "developer_mcp_connections_key_idx"
       ]
+    },
+    {
+      "order": 241,
+      "filename": "20261128114651_developer_prompts_v1.sql",
+      "timestamp": "20261128114651",
+      "sha256": "22b7a4b8f6b5c50a74fa175700780e698ab6d7f315c87f5189fd20745cd0bbd6",
+      "tables": ["developer_prompt_versions_v1"],
+      "functions": ["manage_developer_prompts_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_prompt_versions_v1"],
+      "policies": [],
+      "indexes": ["developer_prompt_versions_owner_v1_idx"]
     }
   ]
 }

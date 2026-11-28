@@ -79,7 +79,11 @@ test("research contract describes distinct autonomous and reviewed envelopes and
 test("versioned resource responses distinguish definitions, summaries and deletion receipts", () => {
   const schema = (route, method, status = 200) =>
     spec.paths["/api/v1/" + route][method].responses[status].content["application/json"].schema;
-  for (const [route, kind] of [["agents", "agent"], ["skills", "skill"]]) {
+  for (const [route, kind] of [
+    ["agents", "agent"],
+    ["skills", "skill"],
+    ["prompts", "prompt"],
+  ]) {
     const detail = schema(route, "post", 201);
     assert.equal(detail.properties.object.const, kind + ".definition");
     assert.deepEqual(schema(route, "post"), detail);

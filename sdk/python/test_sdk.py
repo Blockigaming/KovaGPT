@@ -57,6 +57,22 @@ class WebhookVerificationTests(unittest.TestCase):
 
 
 class SDKTests(unittest.TestCase):
+    def test_saved_prompt_lifecycle(self):
+        definition = {"name": "Example", "description": "Saved text", "prompt": "Summarize"}
+        self.responses.extend(FakeResponse({"id": ID}) for _ in range(5))
+        self.client.prompt_create({"id": ID, "definition": definition})
+        self.client.prompt_list()
+        self.client.prompt_retrieve(ID, version=1)
+        self.client.prompt_update({"id": ID, "definition": definition, "expected_version": 1})
+        self.client.prompt_delete(ID)
+        self.assertEqual([call[0] for call in self.calls], ["POST", "GET", "GET", "POST", "DELETE"])
+        self.assertTrue(all("/api/v1/prompts" in call[1] for call in self.calls))
+        self.assertTrue(self.calls[2][1].endswith("?id=" + ID + "&version=1"))
+        self.assertEqual(json.loads(self.calls[3][2])["expected_version"], 1)
+        with self.assertRaisesRegex(KovaError, "prompt_version_invalid"):
+            self.client.prompt_retrieve(ID, version=21)
+        self.assertEqual(len(self.calls), 5)
+
     def test_reviewed_mcp_approval(self):
         data={"id":ID,"tool":"search","query":"test","approved":True}
         with self.assertRaisesRegex(KovaError,"approval_required"):

@@ -7,6 +7,7 @@ import {
   resourceConsoleJobDraft,
   resourceConsoleKey,
   resourceConsoleMaySpend,
+  resourceConsolePromptDraft,
   resourceConsoleRequest,
   resourceConsoleRequiresConfirmation,
   resourceConsoleTemplate,
@@ -92,6 +93,28 @@ export function DeveloperResourcePanel({
     setResult(null);
     setError("");
     retry.current = null;
+  };
+
+  const promptInput = section === "prompts" ? record(JSON.parse(input)) : {};
+  const promptDefinition = record(promptInput.definition);
+  const changePromptInput = (fields: Row) => {
+    setInput(JSON.stringify({ ...promptInput, ...fields }, null, 2));
+    setConfirmed(false);
+    setResult(null);
+    setError("");
+  };
+  const preparePrompt = (next: "version" | "update" | "delete") => {
+    try {
+      const draft = resourceConsolePromptDraft(next, result);
+      setAction(next);
+      setInput(draft);
+      setConfirmed(false);
+      setResult(null);
+      setError("");
+      retry.current = null;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not prepare prompt.");
+    }
   };
 
   const run = async () => {
@@ -232,7 +255,94 @@ export function DeveloperResourcePanel({
               ))}
             </select>
           </label>
-          {Object.keys(config.actions[action].fields).length > 0 && (
+          {section === "prompts" && action !== "list" && (
+            <div className="space-y-3">
+              <label className="block space-y-1 text-sm">
+                <span>Prompt ID</span>
+                <Input
+                  value={String(promptInput.id ?? "")}
+                  readOnly={action === "create"}
+                  disabled={busy}
+                  onChange={(event) => changePromptInput({ id: event.target.value })}
+                />
+              </label>
+              {(action === "version" || action === "update") && (
+                <label className="block space-y-1 text-sm">
+                  <span>{action === "update" ? "Current version" : "Version to retrieve"}</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={action === "update" ? 19 : 20}
+                    value={String(
+                      promptInput[action === "update" ? "expected_version" : "version"] ?? "",
+                    )}
+                    disabled={busy}
+                    onChange={(event) =>
+                      changePromptInput({
+                        [action === "update" ? "expected_version" : "version"]: Number(
+                          event.target.value,
+                        ),
+                      })
+                    }
+                  />
+                </label>
+              )}
+              {(action === "create" || action === "update") && (
+                <>
+                  <label className="block space-y-1 text-sm">
+                    <span>Name</span>
+                    <Input
+                      maxLength={160}
+                      value={String(promptDefinition.name ?? "")}
+                      disabled={busy}
+                      onChange={(event) =>
+                        changePromptInput({
+                          definition: { ...promptDefinition, name: event.target.value },
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="block space-y-1 text-sm">
+                    <span>Description</span>
+                    <Input
+                      maxLength={512}
+                      value={String(promptDefinition.description ?? "")}
+                      disabled={busy}
+                      onChange={(event) =>
+                        changePromptInput({
+                          definition: { ...promptDefinition, description: event.target.value },
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="block space-y-1 text-sm">
+                    <span>Prompt text</span>
+                    <Textarea
+                      rows={9}
+                      maxLength={4000}
+                      value={String(promptDefinition.prompt ?? "")}
+                      disabled={busy}
+                      onChange={(event) =>
+                        changePromptInput({
+                          definition: { ...promptDefinition, prompt: event.target.value },
+                        })
+                      }
+                    />
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Text is stored privately and never executed automatically. Limits are measured
+                    in UTF-8 bytes.
+                  </p>
+                </>
+              )}
+              {action === "delete" && (
+                <p className="text-sm text-muted-foreground">
+                  Deleting this prompt removes every saved version.
+                </p>
+              )}
+            </div>
+          )}
+          {section !== "prompts" && Object.keys(config.actions[action].fields).length > 0 && (
             <label className="block space-y-1 text-sm">
               <span>Request fields (JSON)</span>
               <Textarea
@@ -359,6 +469,45 @@ export function DeveloperResourcePanel({
               ))}
               {!rows.length && <li className="text-sm text-muted-foreground">No resources.</li>}
             </ul>
+          )}
+          {section === "prompts" && record(result).object === "prompt.definition" && (
+            <div className="space-y-3">
+              <p className="break-words text-sm font-medium">
+                {String(record(record(result).definition).name ?? "Prompt")} · Version{" "}
+                {String(record(result).version)}
+              </p>
+              <Textarea
+                readOnly
+                rows={8}
+                value={String(record(record(result).definition).prompt ?? "")}
+                aria-label="Saved prompt text"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  disabled={busy || !enabled || !token}
+                  onClick={() => preparePrompt("version")}
+                >
+                  Retrieve version
+                </Button>
+                {action !== "version" && Number(record(result).version) < 20 && (
+                  <Button
+                    variant="outline"
+                    disabled={busy || !enabled || !token}
+                    onClick={() => preparePrompt("update")}
+                  >
+                    Create new version
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  disabled={busy || !enabled || !token}
+                  onClick={() => preparePrompt("delete")}
+                >
+                  Delete prompt
+                </Button>
+              </div>
+            </div>
           )}
           {result !== null ? (
             <pre className="max-h-[32rem] max-w-full overflow-auto whitespace-pre-wrap break-all rounded-[var(--kova-radius-output)] bg-muted/40 p-4 text-xs">

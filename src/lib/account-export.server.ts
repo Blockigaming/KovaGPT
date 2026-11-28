@@ -352,6 +352,7 @@ async function collectDirectRecords(
     ["KOVA_DEVELOPER_VECTOR_SCHEMA_READY", "developer_vector_export_records_v1"],
     ["KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY", "developer_conversation_export_records_v1"],
     ["KOVA_DEVELOPER_AGENT_SCHEMA_READY", "developer_agent_export_records_v1"],
+    ["KOVA_DEVELOPER_PROMPT_SCHEMA_READY", "developer_prompt_export_records_v1"],
     ["KOVA_DEVELOPER_SKILL_SCHEMA_READY", "developer_skill_export_records_v1"],
     ["KOVA_DEVELOPER_WEBHOOK_SCHEMA_READY", "developer_webhook_export_records_v1"],
     ["KOVA_DEVELOPER_BATCH_SCHEMA_READY", "developer_batch_export_records_v1"],

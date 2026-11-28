@@ -13,6 +13,7 @@ export type ResourceSection = {
 export type DeveloperResourceSection =
   | "agents"
   | "skills"
+  | "prompts"
   | "conversations"
   | "vector-stores"
   | "batches"
@@ -26,6 +27,10 @@ export function resourceConsoleTemplate(
   section: string,
   action: string,
   randomId: () => string,
+): string;
+export function resourceConsolePromptDraft(
+  action: "version" | "update" | "delete",
+  result: unknown,
 ): string;
 export function resourceConsoleKey(value: unknown, allowed: string[]): string | null;
 export function resourceConsoleRequest(

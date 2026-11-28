@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for reviewed MCP connection delegation on base e7c5c7845e609604c20c9df4edd52dce1db48ff5, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for saved prompts on base d18e67687fbed1770eb5e758101ad41746895fcb, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 27; partial: 64; missing: 9. Total 100.
-- Verification: 11 targeted requirement-level tested; 1 prior CI verified; 72 narrower evidence; 16 unverified. Total 100.
+- Implemented: 28; partial: 64; missing: 8. Total 100.
+- Verification: 12 targeted requirement-level tested; 1 prior CI verified; 72 narrower evidence; 15 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Saved prompts: exact-head source bundle and pinned offline test kit recovered and checksum-verified. Dedicated versioned SQL resource, project/key fences, structured console controls, JS and sync/async Python SDK, OpenAPI and public guide. 63 Node tests (including 13 PostgreSQL fixture tests), 35 Python SDK tests, 12 canonical-history and migration inventory tests passed; expanded cross-project and erasure fixture rerun passed. Canonical SQL version uses the observed UTC clock; exact migration replay in full isolated Supabase and browser qualification still pending. Both activation flags remain off.
 
 - Isolated analysis cleanup hardening on c7e0ca4: 5 focused Node tests passed using copied policy and fixture files, not a full repository checkout. Rejected/incomplete receipts now attempt bounded cleanup of up to two distinct typed provider container IDs, including when one deletion fails. No persistent reuse, guaranteed recovery of IDs missing from provider responses, or provider billing/cleanup qualification is claimed.
 
@@ -38,6 +40,7 @@ Implementation: I = supported source implementation covers the named requirement
 
 ## Requirement ledger
 
+<!-- prettier-ignore -->
 | ID | Source | Verification | Evidence and remaining gap |
 | --- | --- | --- | --- |
 | R01 | P | F | Lazy catalog splitting (33ee41e); latest full build not qualified, keep 202000-byte gzip ceiling. |
@@ -92,7 +95,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R50 | M | N | No approved live verification or revision retirement executed. |
 | R51 | P | F | Console overview and navigation exist; complete URL-addressable section and real metric qualification pending. |
 | R52 | P | F | Playground supports text, images, audio, isolated analysis and browser; agent/session UX and full browser checks incomplete. |
-| R53 | M | N | No saved-prompt versioned resource or lifecycle view. |
+| R53 | I | T | Dedicated project-scoped saved prompts with immutable revision create/update/retrieve/list/delete, bounded text and owner quotas, exact retry/revision fences, structured console view, JS and sync/async Python SDK, OpenAPI, public guide and export/erasure. Local PostgreSQL fixture and SDK/console tests passed. Full replay and browser qualification remain release gates. |
 | R54 | P | F | Approved catalog and scoped details; full search/filter/live eligibility views incomplete. |
 | R55 | P | F | Agent definitions and session-bound turns; run/artifact/trace viewer incomplete. |
 | R56 | I | F | DeveloperFilesPanel and vector-store resource CRUD/index controls; dc071f1 and resource-console tests. |

@@ -209,7 +209,7 @@ _READS = (
     "models", "realtime_session_retrieve", "browser_session_retrieve", "usage_list", "usage_retrieve", "file_search", "file_list", "file_retrieve",
     "conversation_list", "conversation_retrieve", "conversation_item", "vector_search",
     "vector_list", "vector_retrieve", "vector_entries", "vector_entry", "agent_list",
-    "agent_retrieve", "skill_list", "skill_retrieve", "webhook_list", "webhook_retrieve",
+    "agent_retrieve", "skill_list", "skill_retrieve", "prompt_list", "prompt_retrieve", "webhook_list", "webhook_retrieve",
     "webhook_deliveries", "batch_list", "batch_retrieve", "batch_item", "response_job_list",
     "response_job_retrieve", "mcp_connections_list", "research_list", "research_retrieve", "automation_list", "automation_retrieve", "automation_item",
 )
@@ -217,7 +217,7 @@ _MUTATIONS = (
     "realtime_session_create", "realtime_session_close", "browser_session_create", "browser_session_close", "file_delete", "file_upload", "file_upload_multipart", "conversation_create",
     "conversation_append", "conversation_remove", "conversation_delete", "vector_create",
     "vector_upsert", "vector_upsert_batch", "vector_delete", "agent_create", "agent_update", "agent_delete",
-    "skill_create", "skill_update", "skill_delete", "webhook_create", "webhook_rotate",
+    "skill_create", "skill_update", "skill_delete", "prompt_create", "prompt_update", "prompt_delete", "webhook_create", "webhook_rotate",
     "webhook_test", "webhook_delete", "batch_cancel", "response_job_cancel", "research_cancel",
     "automation_cancel", "automation_pause",
 )

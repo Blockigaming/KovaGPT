@@ -1,3 +1,5 @@
+import { parseDeveloperPromptRequest } from "./developer-prompt-policy.mjs";
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const entryId = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 const keyPattern = /^kova_([0-9a-f-]{36})_[A-Za-z0-9_-]{43}$/;
@@ -9,6 +11,7 @@ const detail = get("Retrieve resource", { id: "" });
 const version = get("Retrieve version", { id: "", version: 1 });
 const agent = { name: "", model: "", instructions: "", max_output_tokens: 256 };
 const skill = { name: "", description: "", instructions: "" };
+const prompt = { name: "", description: "", prompt: "" };
 const item = get("Retrieve item", { id: "", item_id: "" });
 const cancel = post("Cancel queued items", "cancel", { id: "" });
 const responseInput = { model: "", input: "", max_output_tokens: 256 };
@@ -121,6 +124,22 @@ export const developerResourceSections = Object.freeze({
         id: "",
         expected_version: 1,
         definition: skill,
+      }),
+      delete: remove,
+    },
+  },
+  prompts: {
+    label: "Prompts",
+    description: "Create, inspect, revise and delete private saved prompts.",
+    actions: {
+      list,
+      detail,
+      version,
+      create: post("Create prompt", "create", { id: "", definition: prompt }),
+      update: post("Create new version", "update", {
+        id: "",
+        expected_version: 1,
+        definition: prompt,
       }),
       delete: remove,
     },
@@ -311,6 +330,28 @@ export function resourceConsoleTemplate(section, action, randomId) {
   if (operation === "append") value.item.id = randomId();
   if (operation === "test") value.event_id = randomId();
   return JSON.stringify(value, null, 2);
+}
+
+export function resourceConsolePromptDraft(action, result) {
+  if (
+    result?.object !== "prompt.definition" ||
+    typeof result.id !== "string" ||
+    !uuid.test(result.id) ||
+    !Number.isInteger(result.version) ||
+    result.version < 1 ||
+    result.version > 20
+  )
+    throw new Error("Retrieve a saved prompt first.");
+  const { id, version, definition } = result;
+  if (action === "version") return JSON.stringify({ id, version }, null, 2);
+  if (action === "delete") return JSON.stringify({ id }, null, 2);
+  if (action !== "update") throw new Error("Unknown prompt operation.");
+  const draft = { id, expected_version: version, definition };
+  const parsed = parseDeveloperPromptRequest("POST", new URLSearchParams(), {
+    operation: "update",
+    ...draft,
+  });
+  return JSON.stringify(parsed.input, null, 2);
 }
 
 export function resourceConsoleKey(value, allowed) {

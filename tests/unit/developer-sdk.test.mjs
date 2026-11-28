@@ -733,3 +733,33 @@ test("autonomous research prepares one quote without starting a paid run", async
     /quote_outside_budget/,
   );
 });
+
+test("saved prompt CRUD uses the separate scoped resource and exact version", async () => {
+  const { client, calls } = fixture();
+  const id = "55555555-5555-4555-8555-555555555555";
+  const definition = { name: "Example", description: "Saved text", prompt: "Summarize" };
+  await client.prompts.create({ id, definition });
+  await client.prompts.list();
+  await client.prompts.retrieve(id, { version: 1 });
+  await client.prompts.update({ id, definition, expected_version: 1 });
+  await client.prompts.delete(id);
+  assert.deepEqual(
+    calls.map((c) => [c.method, new URL(c.url).pathname + new URL(c.url).search]),
+    [
+      ["POST", "/api/v1/prompts"],
+      ["GET", "/api/v1/prompts"],
+      ["GET", "/api/v1/prompts?id=" + id + "&version=1"],
+      ["POST", "/api/v1/prompts"],
+      ["DELETE", "/api/v1/prompts?id=" + id],
+    ],
+  );
+  assert.deepEqual(JSON.parse(calls[0].body), { id, definition, operation: "create" });
+  assert.deepEqual(JSON.parse(calls[3].body), {
+    id,
+    definition,
+    expected_version: 1,
+    operation: "update",
+  });
+  await assert.rejects(client.prompts.retrieve(id, { version: 21 }), /prompt_version_invalid/);
+  assert.equal(calls.length, 5);
+});

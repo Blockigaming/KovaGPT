@@ -73,3 +73,7 @@ Use `POST /api/v1/response-jobs` with `operation: "create"`, a stable UUID `id`,
 `AsyncClient` offers awaitable equivalents of every public `Client` method using the same bounded HTTPS transport. It uses worker threads for blocking I/O; it does not introduce automatic retries. Use `async with await client.responses(data, **budget) as response:` and either `await response.json()` or `async for event in async_response_events(response):`. For Chat Completions use `async_chat_completion_events`. Always use the async context manager when consuming a stream partially.
 
 `AsyncRequestCancelled` subclasses `asyncio.CancelledError`. Its `request_may_have_started` and `mutation_may_have_started` flags distinguish potentially dispatched paid work and resource mutations. Canceling during a quote cannot start subsequent inference. Canceling after dispatch does not cancel work on the server: the bounded transport finishes in its worker and closes abandoned responses. Reconcile usage or retrieve the original resource before retrying.
+
+### Saved prompts
+
+Use `prompt_create`, `prompt_list`, `prompt_retrieve(id, version=...)`, `prompt_update`, and `prompt_delete`. The sync and async clients accept the same definition: `name`, `description`, `prompt`. Retrieve and explicitly quote text before running inference.

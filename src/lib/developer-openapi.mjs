@@ -342,6 +342,7 @@ const bodies = {
   agents: definition(
     obj({ name: str(160), model, instructions: str(8000), max_output_tokens: integer(1, 8192) }),
   ),
+  prompts: definition(obj({ name: str(160), description: str(512), prompt: str(4000) })),
   skills: definition(obj({ name: str(160), description: str(512), instructions: str(4000) })),
   webhooks: union(
     op("create", {
@@ -375,6 +376,7 @@ const query = {
   },
   conversations: { id: uuid, item_id: uuid },
   agents: { id: uuid, version: integer(1, 20) },
+  prompts: { id: uuid, version: integer(1, 20) },
   skills: { id: uuid, version: integer(1, 20) },
   webhooks: { id: uuid, deliveries: { const: "true" } },
   batches: { id: uuid, item_id: uuid },
@@ -826,6 +828,11 @@ const responseJob = union(
 );
 const resourceOutputs = {
   agents: versionedOutput("agent", { name: agentFields.name, model }, obj(agentFields)),
+  prompts: versionedOutput(
+    "prompt",
+    { name: skillFields.name, description: skillFields.description },
+    obj({ name: str(160), description: str(512), prompt: str(4000) }),
+  ),
   skills: versionedOutput(
     "skill",
     { name: skillFields.name, description: skillFields.description },
@@ -846,7 +853,10 @@ const resourceOutputs = {
     ),
     post: union(vectorEntryMutation, resourceList(vectorEntryMutation), vectorSearchResult),
     created: vectorStoreDetail,
-    delete: union(deletedResource, obj({ entry_id: vectorEntry.entry_id, deleted: { const: true } })),
+    delete: union(
+      deletedResource,
+      obj({ entry_id: vectorEntry.entry_id, deleted: { const: true } }),
+    ),
   },
   webhooks: {
     // An empty list is valid for either endpoints or delivery history.
@@ -862,8 +872,13 @@ const resourceOutputs = {
     get: union(
       responseJob,
       resourceList(
-        obj({ id: uuid, created_at: dateTime, expires_at: dateTime,
-          status: responseJobStatus, finished_at: nullableDateTime }),
+        obj({
+          id: uuid,
+          created_at: dateTime,
+          expires_at: dateTime,
+          status: responseJobStatus,
+          finished_at: nullableDateTime,
+        }),
       ),
     ),
     post: responseJob,
@@ -964,6 +979,7 @@ export function developerOpenApi() {
           "conversations",
           "agents",
           "skills",
+          "prompts",
           "webhooks",
           "realtime-sessions",
           "browser-sessions",

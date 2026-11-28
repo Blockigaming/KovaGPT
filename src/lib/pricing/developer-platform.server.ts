@@ -65,6 +65,7 @@ import {
   parseDeveloperAgentTurn,
 } from "./developer-agent-policy.mjs";
 import { expandDeveloperSkills, parseDeveloperSkillRequest } from "./developer-skill-policy.mjs";
+import { parseDeveloperPromptRequest } from "./developer-prompt-policy.mjs";
 import {
   developerConversationReference,
   expandDeveloperConversation,
@@ -442,6 +443,69 @@ export async function handleDeveloperSkills(request: Request) {
         : undefined,
     );
     const result = await skillResource(identity, parsed.operation, parsed.input, request.signal);
+    return developerJson(result, parsed.operation === "create" ? 201 : 200);
+  } catch (error) {
+    return developerFailure(error);
+  }
+}
+function requireDeveloperPrompts(identity: DeveloperIdentity) {
+  if (!identity.capabilities.includes("chat")) throw new Error("developer_scope_required");
+  if (
+    runtimeEnv("KOVA_DEVELOPER_PROMPT_SCHEMA_READY") !== "true" ||
+    runtimeEnv("KOVA_DEVELOPER_PROMPTS_ENABLED") !== "true"
+  )
+    throw new Error("developer_prompt_unavailable");
+}
+async function promptResource(
+  identity: DeveloperIdentity,
+  operation: string,
+  input: Record<string, unknown>,
+  signal?: AbortSignal,
+) {
+  requireDeveloperPrompts(identity);
+  const result = await identity.db
+    .rpc("manage_developer_prompts_v1", {
+      p_owner: identity.ownerId,
+      p_key: identity.id,
+      p_project: identity.project_id,
+      p_operation: operation,
+      p_input: input,
+    })
+    .abortSignal(
+      signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000),
+    );
+  if (result.error || !result.data) {
+    const known = result.error?.message?.match(
+      /^developer_(?:prompt_not_found|prompt_quota_exceeded|prompt_conflict|prompt_invalid|scope_required|owner_unavailable)$/,
+    )?.[0];
+    throw new Error(known ?? "developer_prompt_unavailable");
+  }
+  return result.data;
+}
+export async function handleDeveloperPrompts(request: Request) {
+  try {
+    const identity = await authenticateDeveloper(request);
+    requireDeveloperPrompts(identity);
+    const rate = await consumeApplicationRateLimit({
+      identity: `developer:${identity.id}`,
+      action: "developer_prompt_definitions",
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rate.allowed) throw new Error("developer_rate_limit");
+    if (
+      request.method === "POST" &&
+      request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
+    )
+      throw new Error("developer_json_required");
+    const parsed = parseDeveloperPromptRequest(
+      request.method,
+      new URL(request.url).searchParams,
+      request.method === "POST"
+        ? await readBoundedJsonObject(request, 16384, request.signal)
+        : undefined,
+    );
+    const result = await promptResource(identity, parsed.operation, parsed.input, request.signal);
     return developerJson(result, parsed.operation === "create" ? 201 : 200);
   } catch (error) {
     return developerFailure(error);

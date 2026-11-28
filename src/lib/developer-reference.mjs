@@ -210,6 +210,14 @@ export const DEVELOPER_ENDPOINTS = [
     "The server loads the exact authorized definition and binds the versions to the quote. Returns a bounded native Responses result. Conversation-bound turns reuse private persisted history; append new messages explicitly. Changed revisions invalidate authorization. No model-directed delegation or automatic chaining is claimed.",
   ),
   endpoint(
+    "prompts",
+    "Saved prompts",
+    "prompts",
+    "GET POST DELETE",
+    "POST create with id and definition (name, description, prompt); update adds expected_version. GET id with optional version; DELETE id.",
+    "Private saved text, up to 20 immutable versions per prompt and 20 prompts or 200 total versions per owner. Requires chat scope. Retrieve and submit text explicitly in a separately quoted request; storage never executes inference.",
+  ),
+  endpoint(
     "skills",
     "Skills",
     "skills",

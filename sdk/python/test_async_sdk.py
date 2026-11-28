@@ -37,6 +37,15 @@ class AsyncSDKTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.mock.stop)
         self.client = AsyncClient(KEY)
 
+    async def test_saved_prompt_resource(self):
+        definition = {"name": "Example", "description": "Saved text", "prompt": "Summarize"}
+        self.responses.extend([FakeResponse({"id": ID}), FakeResponse({"id": ID})])
+        await self.client.prompt_create({"id": ID, "definition": definition})
+        await self.client.prompt_retrieve(ID, version=1)
+        self.assertEqual(self.calls[0][0], "POST")
+        self.assertTrue(self.calls[1][1].endswith("/prompts?id=" + ID + "&version=1"))
+        self.assertTrue(all(c.closed.is_set() for c in self.connections))
+
     async def test_public_method_parity(self):
         public = lambda cls: {name for name, value in inspect.getmembers(cls, inspect.isfunction)
                               if not name.startswith("_")}

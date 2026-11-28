@@ -536,6 +536,34 @@ class Client:
         return self._request(self._skill_path(skill_id), method="DELETE").json(65536)
 
     @staticmethod
+    def _prompt_path(prompt_id, version=None):
+        path = "prompts?id=" + _identifier(prompt_id, _UUID, "prompt_id_invalid")
+        if version is not None:
+            _require(type(version) is int and 1 <= version <= 20, "prompt_version_invalid")
+            path += f"&version={version}"
+        return path
+
+    def _prompt_post(self, operation, data):
+        _require(isinstance(data, dict), "input_invalid")
+        return self._request("prompts", method="POST",
+                             body=_json_body({**data, "operation": operation}, 16384)).json(65536)
+
+    def prompt_create(self, data):
+        return self._prompt_post("create", data)
+
+    def prompt_update(self, data):
+        return self._prompt_post("update", data)
+
+    def prompt_list(self):
+        return self._get("prompts")
+
+    def prompt_retrieve(self, prompt_id, *, version=None):
+        return self._get(self._prompt_path(prompt_id, version))
+
+    def prompt_delete(self, prompt_id):
+        return self._request(self._prompt_path(prompt_id), method="DELETE").json(65536)
+
+    @staticmethod
     def _webhook_path(endpoint_id, deliveries=False):
         return "webhooks?id=" + _identifier(endpoint_id, _UUID, "webhook_id_invalid") + ("&deliveries=true" if deliveries else "")
 
