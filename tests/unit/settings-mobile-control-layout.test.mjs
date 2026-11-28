@@ -59,9 +59,9 @@ test("phone dialog close and back have independent touch targets with safe-area 
     assert.equal(back.height, "44px");
     assert.equal(
       rule('[role="dialog"].kova-settings-dialog .kova-settings-content-header', media)[
-        "padding-right"
+        "padding-inline"
       ],
-      "64px",
+      "max(16px, var(--safe-left, 0px)) max(64px, calc(var(--safe-right, 0px) + 52px))",
     );
   }
 });

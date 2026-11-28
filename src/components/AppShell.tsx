@@ -173,9 +173,7 @@ export function AppShell({
           navigate({ to: "/library" });
         },
         "open-settings": () => {
-          window.dispatchEvent(
-            new CustomEvent("kova-open-settings", { detail: { tab: "responses" } }),
-          );
+          window.dispatchEvent(new CustomEvent("kova-open-settings"));
         },
         "generate-image": () => {
           navigate({ to: "/images" });
@@ -293,6 +291,12 @@ export function AppShell({
         onSelect={goToConversation}
         onNew={handleNew}
         onDelete={handleDelete}
+        onArchived={(id) => {
+          setConversationState((current) => ({
+            principal: current.principal,
+            items: current.items.filter((item) => item.id !== id),
+          }));
+        }}
         deleteReady={deleteReady}
         onRename={async (id, title) =>
           updateSidebarChat(id, (chat) => ({ ...chat, title, updatedAt: Date.now() }))

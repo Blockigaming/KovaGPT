@@ -11,6 +11,7 @@ import {
   primeVoiceAudio,
   supportsStreamingMp3,
 } from "../../src/lib/voice/webaudio-sink.mjs";
+import * as voicePcm from "../../src/lib/voice-pcm.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -121,6 +122,7 @@ function fixture(initial = {}, options = {}) {
   const audioContexts = [];
   const storage = options.storage ?? new Map();
   const listeners = new Map();
+  const fakeDocument = Object.assign(new EventTarget(), { visibilityState: "visible" });
   const fakeWindow = {
     get localStorage() {
       if (options.storageUnavailable) throw new Error("Storage getter denied");
@@ -241,6 +243,12 @@ function fixture(initial = {}, options = {}) {
     emit(size = 16) {
       this.ondataavailable?.({ data: new Blob([new Uint8Array(size)], { type: this.mimeType }) });
     }
+    pause() {
+      this.state = "paused";
+    }
+    resume() {
+      this.state = "recording";
+    }
     stop() {
       this.state = "inactive";
       queueMicrotask(() => {
@@ -328,6 +336,16 @@ function fixture(initial = {}, options = {}) {
       primeVoiceAudio,
       supportsStreamingMp3,
     },
+    "@/lib/voice-pcm.mjs": voicePcm,
+    "@/lib/kova-native": {
+      KOVA_NATIVE_AUDIO_INTERRUPTION: "kova-native-audio-interruption",
+      nativeDictationHandler: () => undefined,
+      nativeKovaPlatform: () => options.nativePlatform ?? null,
+      sendNativeKovaMessage: (message) => {
+        options.nativeMessages?.push(message);
+        return true;
+      },
+    },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
         const pending = deferred();
@@ -340,7 +358,7 @@ function fixture(initial = {}, options = {}) {
     "@/lib/speech-playback.mjs": {
       createSpeechPlayback,
       stopActiveSpeechPlayback,
-      createBrowserSpeechSink(options) {
+      createReadAloudSpeechSink(options) {
         const sink = {
           options,
           writes: [],
@@ -417,6 +435,7 @@ function fixture(initial = {}, options = {}) {
     TextEncoder,
     console,
     window: fakeWindow,
+    document: fakeDocument,
     CustomEvent: class {
       constructor(type, { detail }) {
         this.type = type;
@@ -484,21 +503,16 @@ function fixture(initial = {}, options = {}) {
     return found.props;
   }
   function trackStream() {
-    const tracks = [
-      {
+    const tracks = [0, 1].map(() =>
+      Object.assign(new EventTarget(), {
+        enabled: true,
         stopped: 0,
         stop() {
           this.stopped++;
         },
-      },
-      {
-        stopped: 0,
-        stop() {
-          this.stopped++;
-        },
-      },
-    ];
-    return { tracks, getTracks: () => tracks };
+      }),
+    );
+    return { tracks, getTracks: () => tracks, getAudioTracks: () => tracks };
   }
   render();
   return {
@@ -520,6 +534,10 @@ function fixture(initial = {}, options = {}) {
     storageReads,
     dispatched,
     dispatch: (event) => fakeWindow.dispatchEvent(event),
+    setVisibility(visibility) {
+      fakeDocument.visibilityState = visibility;
+      fakeDocument.dispatchEvent(new Event("visibilitychange"));
+    },
     // Voice choice lives in Settings only; the composer must never render a picker.
     hasVoicePicker: () =>
       nodes(tree).some((node) => node.type === "Select" || node.type === "SelectTrigger"),
@@ -1599,6 +1617,110 @@ for (const change of [
     f.unmount();
   });
 }
+
+test("iOS Voice lets an active reply finish while hidden without reopening the microphone", async () => {
+  const nativeMessages = [];
+  const f = fixture({ mode: "voice" }, { nativePlatform: "ios", nativeMessages });
+  const { speech, sink } = await voiceReply(f);
+  const lease = nativeMessages[0];
+  assert.equal(lease.action, "voice-reply-begin");
+  assert.match(lease.id, /^[a-f0-9-]{36}$/u);
+  f.setVisibility("hidden");
+  assert.equal(speech.init.signal.aborted, false);
+  sink.options.onEnded();
+  await f.flush();
+  assert.equal(nativeMessages.at(-1).action, "voice-reply-end");
+  assert.equal(nativeMessages.at(-1).id, lease.id);
+  f.setVisibility("visible");
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1);
+  f.unmount();
+});
+
+test("Android background lifecycle keeps a submitted reply and prevents microphone restart", async () => {
+  const f = fixture({ mode: "voice" }, { nativePlatform: "android" });
+  const { speech, sink } = await voiceReply(f);
+  f.dispatch({ type: "kova-native-background" });
+  assert.equal(speech.init.signal.aborted, false);
+  sink.options.onEnded();
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1);
+  f.unmount();
+});
+
+test("Android Voice continues while its foreground service runs and stops with its notification", async () => {
+  const nativeMessages = [];
+  const f = fixture({ mode: "voice" }, { nativePlatform: "android", nativeMessages });
+  const { sink } = await voiceReply(f);
+  const service = nativeMessages.find((message) => message.action === "android-voice-start");
+  assert.ok(service);
+  f.dispatch({ type: "kova-android-voice-service", detail: { id: service.id, running: true } });
+  f.dispatch({ type: "kova-native-background" });
+  f.setVisibility("hidden");
+  sink.options.onEnded();
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 2);
+  const stream = f.trackStream();
+  f.microphoneRequests[1].resolve(stream);
+  await f.flush();
+  f.dispatch({ type: "kova-android-voice-service", detail: { id: service.id, running: false } });
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.equal(f.voiceSubmissions.length, 1);
+  f.unmount();
+});
+
+test("native Voice stops active microphone capture when hidden", async () => {
+  const f = fixture({ mode: "voice" }, { nativePlatform: "ios" });
+  await f.ready();
+  await f.click("Start");
+  const stream = f.trackStream();
+  f.microphoneRequests[0].resolve(stream);
+  await f.flush();
+  f.setVisibility("hidden");
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.equal(f.voiceSubmissions.length, 0);
+  f.unmount();
+});
+
+test("native audio interruption releases the microphone without submitting a turn", async () => {
+  const f = fixture({ mode: "voice" }, { nativePlatform: "android" });
+  await f.ready();
+  await f.click("Start");
+  const stream = f.trackStream();
+  f.microphoneRequests[0].resolve(stream);
+  await f.flush();
+  f.dispatch({ type: "kova-native-audio-interruption" });
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.match(f.text(), /Audio was interrupted/);
+  assert.equal(f.voiceSubmissions.length, 0);
+});
+
+test("mobile Voice mutes capture, resumes it explicitly, and handles a disconnected input", async () => {
+  const f = fixture({ mode: "voice" });
+  await f.ready();
+  await f.click("Start");
+  const stream = await f.acquire();
+  const recorder = f.recorders.at(-1);
+  await f.click("Mute microphone");
+  assert.equal(recorder.state, "paused");
+  assert.ok(stream.tracks.every((track) => !track.enabled));
+  assert.equal(f.control("Unmute microphone")["aria-pressed"], true);
+  assert.match(f.text(), /Microphone muted/);
+
+  await f.click("Unmute microphone");
+  assert.equal(recorder.state, "recording");
+  assert.ok(stream.tracks.every((track) => track.enabled));
+  stream.tracks[0].dispatchEvent(new Event("ended"));
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped));
+  assert.match(f.text(), /The microphone disconnected/);
+  assert.equal(f.voiceSubmissions.length, 0);
+  assert.equal(f.requests.length, 1, "An interrupted capture never starts transcription");
+  f.unmount();
+});
 
 test("Voice Stop cancels pending microphone and transcription without late submission", async () => {
   const pending = fixture({ mode: "voice" });

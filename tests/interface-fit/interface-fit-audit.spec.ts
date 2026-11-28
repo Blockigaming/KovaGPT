@@ -322,6 +322,9 @@ if (scope === "public") {
           : route;
         await page.goto(url, { waitUntil: "domcontentloaded" });
         await waitForKovaHydration(page);
+        if (url !== route) {
+          await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();
+        }
         await expectContained(page, route);
         expect(errors, `${route}: client exceptions`).toEqual([]);
         if (["/", "/library", "/settings/appearance"].includes(route)) {

@@ -1,7 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { fixture } from "../e2e/actual-app-fixture";
+import { waitForCommittedChat } from "../e2e/chat-history-commit";
 import { coreFixture } from "../e2e/core-app-fixture";
-import { usesSidebarDrawer } from "../e2e/current-ui";
+import { revealSidebar, usesSidebarDrawer } from "../e2e/current-ui";
 import { waitForKovaHydration } from "../e2e/hydration";
 
 async function expectReachable(control: Locator, top: number, bottom: number) {
@@ -64,6 +65,80 @@ async function simulateKeyboard(page: Page, height: number, top: number) {
   await expect(page.locator("html")).toHaveAttribute("data-kova-keyboard");
 }
 
+test("a transient history storage failure recovers without reloading or losing the draft", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "phone-390");
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await fixture(page, "dark", true, true);
+  await page.addInitScript(() => {
+    const open = IDBFactory.prototype.open;
+    let unavailable = true;
+    window.addEventListener("test:restore-chat-storage", () => {
+      unavailable = false;
+    });
+    IDBFactory.prototype.open = function (name, version) {
+      if (name === "kovagpt-chat-history-v1" && unavailable) {
+        throw new DOMException("Storage temporarily unavailable", "UnknownError");
+      }
+      return version === undefined ? open.call(this, name) : open.call(this, name, version);
+    };
+  });
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Recovered chat reply"}}]}\n\ndata: [DONE]\n\n',
+    }),
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  const draft = "Keep this draft across a browser storage retry.";
+  const retry = page.getByRole("button", { name: "Retry chat sync", exact: true });
+  await expect(retry).toBeEnabled();
+  await input.fill(draft);
+  const send = page.getByRole("button", { name: "Send message", exact: true });
+  await page.evaluate(() => window.dispatchEvent(new Event("test:restore-chat-storage")));
+  await retry.click();
+  await expect(retry).toBeHidden();
+  await expect(input).toHaveValue(draft);
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(page.getByText("Recovered chat reply", { exact: true })).toBeVisible();
+  await waitForCommittedChat(page, draft);
+  expect(errors).toEqual([]);
+});
+
+test("chat search keeps the back button and message matches reachable above the keyboard", async ({
+  page,
+}, info) => {
+  test.skip(!["phone-320", "phone-390", "landscape-844"].includes(info.project.name));
+  await fixture(page, "dark", true, true);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const drawer = await revealSidebar(page);
+  const trigger = drawer.getByRole("button", { name: "Search chats", exact: true });
+  await trigger.click();
+  const search = page.getByRole("dialog", { name: "Search chats", exact: true });
+  const field = search.getByRole("searchbox");
+  const back = search.getByRole("button", { name: "Close chat search", exact: true });
+  await expect(field).toBeFocused();
+  const height = Math.min(330, page.viewportSize()!.height - 140);
+  await simulateKeyboard(page, height, 12);
+  await field.fill("practical release unrelatedword");
+  await expect(search.getByText("1 matching chat", { exact: true })).toBeAttached();
+  const match = search.getByRole("button", { name: "Open chat Composer review chat", exact: true });
+  await expect(match).toContainText("practical release checklist");
+  await expectReachable(back, 12, 12 + height);
+  await expectReachable(field, 12, 12 + height);
+  await expectReachable(match, 12, 12 + height);
+  await back.click();
+  await expect(search).toBeHidden();
+  await expect(drawer).toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
 test("crossing the phone and tablet boundaries preserves the draft and model menu", async ({
   page,
 }, info) => {
@@ -110,14 +185,89 @@ test("crossing the phone and tablet boundaries preserves the draft and model men
   }
 });
 
+test("tablet Settings remains inside the visible viewport when searching", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "tablet-768");
+  await fixture(page, "dark", true, true);
+  await page.goto("/?settings=appearance", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const settings = page.getByRole("dialog", { name: "Settings", exact: true });
+  const field = settings.getByPlaceholder("Search settings");
+  const close = settings.getByRole("button", { name: "Close settings", exact: true });
+  await field.fill("appearance");
+  await simulateKeyboard(page, 360, 24);
+  await expectReachable(field, 24, 384);
+  await expectReachable(close, 24, 384);
+  await expect(settings.getByRole("tab", { name: "Appearance", exact: true })).toBeVisible();
+  await close.click({ delay: 150 });
+  await expect(settings).toBeHidden();
+  await expect(page.locator("html")).not.toHaveAttribute("data-kova-keyboard");
+});
+
 for (const theme of ["light", "dark"] as const) {
+  test(`${theme}: mobile chrome resize and live text scaling preserve the draft and controls`, async ({
+    page,
+  }, info) => {
+    test.skip(!["phone-320", "phone-390", "landscape-844"].includes(info.project.name));
+    const { width, height } = page.viewportSize()!;
+    const portrait = height > width;
+    const safe = portrait
+      ? { top: 44, right: 0, bottom: 34, left: 0 }
+      : { top: 0, right: 47, bottom: 21, left: 47 };
+    await fixture(page, theme, true, true, "plus");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const html = page.locator("html");
+    await html.evaluate((root, insets) => {
+      for (const [edge, value] of Object.entries(insets)) {
+        root.style.setProperty(`--safe-${edge}`, `${value}px`);
+      }
+    }, safe);
+    const shell = page.locator('.kova-assistant[data-ui="modern"]');
+    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    const send = page.getByRole("button", { name: "Send message", exact: true });
+    const open = page.getByRole("button", { name: "Open menu", exact: true });
+    const draft = "The same draft should survive browser controls and text size changes.";
+    await input.fill(draft);
+    await input.blur();
+    const themeColor = page.locator('meta[name="theme-color"]');
+    const color = (await themeColor.getAttribute("content"))!;
+    expect(color).toMatch(/^#[0-9a-f]{6}$/i);
+    const background = await shell.evaluate((node) => getComputedStyle(node).backgroundColor);
+
+    // Resize the browser before and after applying the value from the native text bridge.
+    for (const [availableHeight, size] of [
+      [height - 108, 32],
+      [height, 32],
+      [height, 16],
+    ]) {
+      await page.setViewportSize({ width, height: availableHeight });
+      await html.evaluate((root, size) => {
+        root.style.setProperty("--kova-native-font-size", `${size}px`);
+      }, size);
+      await expect(html).toHaveCSS("font-size", `${size}px`);
+      await expect
+        .poll(async () => (await shell.boundingBox())?.height)
+        .toBeCloseTo(availableHeight, 0);
+      await expect(shell).toHaveCSS("background-color", background);
+      await expect(themeColor).toHaveAttribute("content", color);
+      await expect(html).not.toHaveAttribute("data-kova-keyboard");
+      await expect(input).toHaveValue(draft);
+      await expectReachable(open, safe.top, availableHeight);
+      await expectReachable(input, safe.top, availableHeight - safe.bottom);
+      await expectReachable(send, safe.top, availableHeight - safe.bottom);
+      expect(await html.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    }
+  });
+
   test(`${theme}: saved reading sizes reach the rendered answer after reload`, async ({ page }) => {
     await coreFixture(page, theme, "plus", { preserveStorageOnReload: true });
     for (const [label, size] of [
       ["Large", 18],
       ["Extra large", 20],
     ] as const) {
-      await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
+      await page.goto("/?settings=appearance", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       await page.getByRole("combobox", { name: "Text size", exact: true }).click();
       await page.getByRole("option", { name: label, exact: true }).click();

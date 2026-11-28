@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 /**
- * A top-aligned mobile dialog with a swipe-to-dismiss handle.
+ * A bottom-aligned mobile dialog with a swipe-to-dismiss handle.
  * Radix owns modal isolation and nested-layer keyboard behavior. In particular,
  * Escape in a child menu must not also dismiss this sheet.
  */
@@ -14,6 +14,7 @@ export function MobileBottomSheet({
   children,
   ariaLabel,
   restoreFocus = true,
+  expandable = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,9 +22,11 @@ export function MobileBottomSheet({
   children: ReactNode;
   ariaLabel?: string;
   restoreFocus?: boolean;
+  expandable?: boolean;
 }) {
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [dragY, setDragY] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const dragStart = useRef<number | null>(null);
   const dragDistance = useRef(0);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -42,7 +45,10 @@ export function MobileBottomSheet({
   }, []);
 
   useEffect(() => {
-    if (!open) resetDrag();
+    if (!open) {
+      resetDrag();
+      setExpanded(false);
+    }
   }, [open, resetDrag]);
 
   const onTouchStart = (event: React.TouchEvent) => {
@@ -55,24 +61,30 @@ export function MobileBottomSheet({
       resetDrag();
       return;
     }
-    const distance = Math.max(0, dragStart.current - event.touches[0].clientY);
+    const distance = event.touches[0].clientY - dragStart.current;
     dragDistance.current = distance;
-    setDragY(distance);
+    setDragY(Math.max(0, distance));
   };
   const onTouchEnd = () => {
-    const dismiss = dragDistance.current > 90;
+    const distance = dragDistance.current;
     resetDrag();
-    if (dismiss) onOpenChange(false);
+    if (expandable && distance < -65) setExpanded(true);
+    else if (distance > 90) {
+      if (expanded) setExpanded(false);
+      else onOpenChange(false);
+    }
   };
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 duration-150 motion-reduce:animate-none" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 duration-150 motion-reduce:animate-none" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           data-testid="mobile-bottom-sheet"
+          className="kova-mobile-bottom-sheet"
           data-kova-bottom-sheet=""
+          data-sheet-size={expandable ? (expanded ? "expanded" : "compact") : undefined}
           onOpenAutoFocus={() => {
             previouslyFocused.current =
               document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -81,15 +93,25 @@ export function MobileBottomSheet({
             // Callers use their existing toolbar buttons rather than DialogTrigger.
             event.preventDefault();
             if (restoreFocus && previouslyFocused.current?.isConnected)
-              previouslyFocused.current.focus();
+              previouslyFocused.current.focus({ preventScroll: true });
           }}
           style={{
-            transform: dragY > 0 ? `translateY(${-dragY}px)` : undefined,
-            transition: reduceMotion || dragY > 0 ? "none" : "transform 160ms ease-out",
+            transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+            transition: reduceMotion || dragY > 0 ? "none" : "transform 180ms ease-out",
           }}
-          className="fixed inset-x-0 top-[var(--kova-visible-top,0px)] z-[100] flex min-w-0 max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-b-2xl pt-[var(--safe-top)] border-b border-border bg-popover text-popover-foreground shadow-lg outline-none [overflow-wrap:anywhere] data-[state=open]:animate-in data-[state=open]:slide-in-from-top data-[state=closed]:animate-out data-[state=closed]:slide-out-to-top duration-150 motion-reduce:animate-none"
         >
-          <div className="flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))]">
+          <div
+            className="flex shrink-0 touch-none justify-center pb-1 pt-2.5 cursor-grab active:cursor-grabbing"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={resetDrag}
+            data-kova-sheet-handle=""
+            aria-hidden="true"
+          >
+            <div className="h-[5px] w-9 rounded-full bg-muted-foreground/35" />
+          </div>
+          <div className="flex shrink-0 items-center gap-3 min-h-12 px-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))]">
             <DialogPrimitive.Title
               className={
                 title
@@ -100,6 +122,16 @@ export function MobileBottomSheet({
               {title || ariaLabel || "Options"}
             </DialogPrimitive.Title>
             {!title && <div className="flex-1" />}
+            {expandable && (
+              <button
+                type="button"
+                className="min-h-11 min-w-11 rounded-lg px-2 text-sm"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((value) => !value)}
+              >
+                {expanded ? "Collapse" : "Expand"}
+              </button>
+            )}
             <DialogPrimitive.Close
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kova-radius-compact)] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Close sheet"
@@ -107,19 +139,8 @@ export function MobileBottomSheet({
               <X className="h-4 w-4" aria-hidden="true" />
             </DialogPrimitive.Close>
           </div>
-          <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-[max(.5rem,var(--safe-left))] pb-4 pr-[max(.5rem,var(--safe-right))] [scrollbar-gutter:stable]">
+          <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pl-[max(1rem,var(--safe-left))] pb-3 pr-[max(1rem,var(--safe-right))] [scrollbar-gutter:stable]">
             {children}
-          </div>
-          <div
-            className="flex shrink-0 touch-none justify-center pb-2.5 pt-2 cursor-grab active:cursor-grabbing"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            onTouchCancel={resetDrag}
-            data-kova-sheet-handle=""
-            aria-hidden="true"
-          >
-            <div className="h-1 w-9 rounded-full bg-muted-foreground/35" />
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

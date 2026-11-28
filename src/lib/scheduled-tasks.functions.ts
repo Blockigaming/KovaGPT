@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireVerifiedUser } from "@/lib/api-auth.server";
@@ -68,8 +68,7 @@ function safeTaskError(code?: string, message?: string): Error {
     return new Error("Check the task schedule, context, and trigger settings.");
   return new Error("Tasks are temporarily unavailable. Please retry.");
 }
-async function access(userId: string, mutation = false) {
-  const request = getRequest();
+async function access(userId: string, mutation = false, request = getRequest()) {
   if (mutation && isCrossSiteMutation(request)) throw new Error("Cross-site request blocked.");
   const auth = await requireVerifiedUser(request);
   if (auth instanceof Response) throw auth;
@@ -103,8 +102,9 @@ async function mutate(
     expectedRevision: number;
     payload: Record<string, unknown>;
   },
+  request?: Request,
 ) {
-  const { admin, signal } = await access(userId, true);
+  const { admin, signal } = await access(userId, true, request);
   if (["create", "resume", "retry"].includes(action) && !(await scheduledExecutionAvailable()))
     throw safeTaskError("55000", "task_execution_unavailable");
   const result = await admin
@@ -199,6 +199,21 @@ const createSchema = z
     mutationId: z.string().uuid().optional(),
   })
   .passthrough();
+export const persistScheduledTask = createServerOnlyFn(
+  async (
+    userId: string,
+    data: { id: string; mutationId: string; payload: ReturnType<typeof parseTaskPayload> },
+    request?: Request,
+  ): Promise<ScheduledTask> => {
+    const result = await mutate(
+      userId,
+      "create",
+      { ...data, expectedRevision: 0, payload: data.payload as Record<string, unknown> },
+      request,
+    );
+    return readTask(result.admin, result.signal, data.id, userId);
+  },
+);
 export const createScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((value: unknown) => {
@@ -212,12 +227,7 @@ export const createScheduledTask = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
     assertTaskPrincipal(data, context.userId);
-    const result = await mutate(context.userId, "create", {
-      ...data,
-      expectedRevision: 0,
-      payload: data.payload as Record<string, unknown>,
-    });
-    return readTask(result.admin, result.signal, data.id, context.userId);
+    return persistScheduledTask(context.userId, data);
   });
 const updateSchema = identity
   .extend({ status: z.enum(["scheduled", "paused"]).optional(), retry: z.boolean().optional() })

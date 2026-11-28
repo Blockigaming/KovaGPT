@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
+import { expectsSeparateModeRow } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: the two-row composer expands and contracts without a resize loop`, async ({
+  test(`${theme}: the composer expands and contracts without a resize loop`, async ({
     page,
   }, info) => {
     const resizeErrors: string[] = [];
@@ -36,7 +37,10 @@ for (const theme of ["light", "dark"] as const) {
         : matchMedia("(width < 768px)").matches,
     );
     expect(compactHeight).toBeGreaterThanOrEqual(phone ? 88 : 128);
-    if (phone) expect(compactHeight).toBeLessThanOrEqual(108);
+    if (phone) {
+      const stacked = await expectsSeparateModeRow(composer);
+      expect(compactHeight).toBe(stacked ? 148 : 96);
+    }
 
     // This text fits the full expanded row but wraps the narrow desktop slot.
     // A height-based toggle would alternate between those two layouts forever.

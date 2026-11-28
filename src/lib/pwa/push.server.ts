@@ -8,6 +8,11 @@ import {
 } from "./push-policy.mjs";
 import { sealPushSubscription, openPushSubscription } from "./push-vault.server.mjs";
 import { sendWebPush, vapidAuthorization } from "./web-push.server.mjs";
+import {
+  androidPushConfigured,
+  normalizeAndroidPushToken,
+  sendAndroidTaskPush,
+} from "./android-push.server";
 type Client = {
   rpc(
     name: string,
@@ -63,19 +68,24 @@ export async function pushStatus(userId: string) {
     ...value,
     ready: config !== null && value.ready === true,
     publicKey: config?.publicKey ?? null,
+    androidReady: config !== null && value.ready === true && androidPushConfigured(),
   };
 }
-export async function subscribePush(userId: string, input: unknown) {
+export async function subscribePush(userId: string, input: unknown, android = false) {
   const config = await pushConfiguration();
   if (!config) throw new Error("push_runtime_unavailable");
-  const data = normalizePushSubscription(input),
-    id = crypto.randomUUID(),
+  if (android && !androidPushConfigured()) throw new Error("android_push_unavailable");
+  const data = android
+    ? { transport: "android", token: normalizeAndroidPushToken(input) }
+    : normalizePushSubscription(input);
+  const endpointIdentity = "token" in data ? `fcm:${data.token}` : data.endpoint;
+  const id = crypto.randomUUID(),
     deviceSecret = encodePushKey(crypto.getRandomValues(new Uint8Array(32)));
   const sealed = await sealPushSubscription(data, userId, id, config.vaultSecret);
   const result = (await pushRpc(userId, "subscribe", {
     id,
     configId: config.configId,
-    endpointHash: await pushHash(data.endpoint),
+    endpointHash: await pushHash(endpointIdentity),
     deviceSecretHash: await pushHash(deviceSecret),
     sealed,
   })) as { id: string; revision: number };
@@ -134,33 +144,83 @@ export async function runWebPushBatch(signal: AbortSignal) {
     };
     try {
       await current();
-      const decoded = await openPushSubscription(
+      const decoded = (await openPushSubscription(
         row.sealed,
         row.userId,
         row.id,
         config.vaultSecret,
-      );
-      const subscription = normalizePushSubscription({
-        ...(decoded as { endpoint: string }),
-        keys: {
-          p256dh: (decoded as { p256dh: string }).p256dh,
-          auth: (decoded as { auth: string }).auth,
-        },
-      });
-      outcome = await sendWebPush(
-        {
-          ...subscription,
-          id: row.id,
-          eventId: row.eventId,
-          eventSource: row.eventSource,
-          eventAt: row.eventAt,
-        },
-        config,
-        {
-          assertCurrent: current,
-          signal,
-        },
-      );
+      )) as {
+        transport?: string;
+        token?: unknown;
+        endpoint?: string;
+        p256dh?: string;
+        auth?: string;
+      } | null;
+      if (decoded?.transport === "android") {
+        if (row.eventSource !== "application") {
+          outcome = "skip";
+        } else {
+          const notification = await (
+            supabaseAdmin as unknown as {
+              from(table: string): {
+                select(columns: string): {
+                  eq(
+                    key: string,
+                    value: string,
+                  ): {
+                    eq(
+                      key: string,
+                      value: string,
+                    ): {
+                      maybeSingle(): {
+                        abortSignal(signal: AbortSignal): PromiseLike<{
+                          data: { type: string; source_entity: string | null } | null;
+                          error: unknown;
+                        }>;
+                      };
+                    };
+                  };
+                };
+              };
+            }
+          )
+            .from("app_notifications")
+            .select("type,source_entity")
+            .eq("id", row.eventId)
+            .eq("owner_id", row.userId)
+            .maybeSingle()
+            .abortSignal(AbortSignal.any([signal, AbortSignal.timeout(5000)]));
+          if (notification.error) throw new Error("push_event_unavailable");
+          outcome =
+            (notification.data?.type === "task_result" ||
+              notification.data?.type === "task_failure") &&
+            notification.data.source_entity?.startsWith("scheduled_task:")
+              ? await sendAndroidTaskPush(normalizeAndroidPushToken(decoded.token), signal, current)
+              : "skip";
+        }
+      } else {
+        const subscription = normalizePushSubscription({
+          ...(decoded as { endpoint: string }),
+          keys: {
+            p256dh: (decoded as { p256dh: string }).p256dh,
+            auth: (decoded as { auth: string }).auth,
+          },
+        });
+        outcome = await sendWebPush(
+          {
+            ...subscription,
+            id: row.id,
+            eventId: row.eventId,
+            eventSource: row.eventSource,
+            eventAt: row.eventAt,
+          },
+          config,
+          {
+            assertCurrent: current,
+            signal,
+          },
+        );
+      }
     } catch {
       /* The queue retains transient/quiet-hour failures without exposing private endpoint data. */
     }

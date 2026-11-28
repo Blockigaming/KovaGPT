@@ -15,7 +15,18 @@ for (const theme of ["dark", "light"] as const) {
     await expect(page.locator(".kova-topbar:visible")).toHaveCount(1);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
-    const composerBackground = theme === "dark" ? "rgb(48, 48, 48)" : "rgb(255, 255, 255)";
+    const phonePalette = await page.evaluate(
+      () =>
+        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches,
+    );
+    const composerBackground = phonePalette
+      ? theme === "dark"
+        ? "rgb(42, 42, 42)"
+        : "rgb(239, 239, 239)"
+      : theme === "dark"
+        ? "rgb(48, 48, 48)"
+        : "rgb(255, 255, 255)";
     await expect(surface).toHaveCSS("background-color", composerBackground);
     await expect(page.locator('[data-slot="dialog-overlay"]')).toBeVisible();
     await expect(
@@ -92,7 +103,10 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   await page.addInitScript(() => {
     Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
       configurable: true,
-      value: async () => ({ getTracks: () => [{ stop() {} }] }),
+      value: async () => {
+        const track = { enabled: true, stop() {}, addEventListener() {} };
+        return { getTracks: () => [track], getAudioTracks: () => [track] };
+      },
     });
     Object.defineProperty(window, "MediaRecorder", {
       configurable: true,
@@ -183,10 +197,10 @@ test("a second tab can send while the first tab stays open", async ({ page }, in
   });
   await second.goto("/");
   await waitForKovaHydration(second);
-  await expect(second.locator(".kova-composer-tray")).toHaveCSS(
-    "background-color",
-    "rgb(33, 33, 33)",
-  );
+  const workspaceColor = await second
+    .locator(".kova-chat-main")
+    .evaluate((node) => getComputedStyle(node).backgroundColor);
+  await expect(second.locator(".kova-composer-tray")).toHaveCSS("background-color", workspaceColor);
   await second.getByRole("textbox", { name: "Message KovaGPT" }).fill("Send from the second tab");
   await second.getByRole("button", { name: "Send message", exact: true }).click();
   await expect(second.getByText("Reply from the second tab.", { exact: true })).toBeVisible();

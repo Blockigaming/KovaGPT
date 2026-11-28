@@ -1482,35 +1482,58 @@
   min-height: var(--composer-action-size);
 }
 
-/* Reserve a common mode row when the composer cannot comfortably fit a full
-   model name and three touch targets, including before the account loads. */
+/* Phones keep one ChatGPT-style row: attach, mode, voice and Send. Narrow
+   composers already drop the "Kova" brand prefix; only a model name that still
+   cannot fit moves above the speech controls, kept whole and legible, with
+   Attach staying on the bottom row beside Voice and Send. */
 @container chat-composer (width < 22.5rem) {
-  .spec400-composer
-    .spec400-composer-toolbar:has(:is(.kova-consumer-model-trigger, .kova-home-model-placeholder)),
-  :where(:root[data-kova-surface="app"])
-    .spec400-composer
-    .spec400-composer-toolbar:has(.kova-thinking-toggle) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--composer-action-gap);
+  .spec400-composer-toolbar:has(.kova-consumer-model-trigger) {
+    align-items: flex-end;
   }
-  .spec400-composer-toolbar:has(:is(.kova-consumer-model-trigger, .kova-home-model-placeholder))
-    .spec400-composer-trailing,
-  :where(:root[data-kova-surface="app"])
-    .spec400-composer-toolbar:has(.kova-thinking-toggle)
-    .spec400-composer-trailing {
-    display: contents;
+  .spec400-composer-toolbar > .spec400-composer-trailing {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    row-gap: 8px;
+    min-inline-size: 0;
   }
-  .spec400-composer-toolbar :is(.kova-consumer-model-trigger, .kova-home-model-placeholder),
-  :where(:root[data-kova-surface="app"]) .spec400-composer-toolbar .kova-thinking-toggle {
-    grid-area: 1 / 1 / 2 / -1;
-    justify-self: end;
+  .kova-consumer-model-trigger .kova-consumer-model-pill {
+    padding-inline: 10px;
   }
-  .spec400-composer-toolbar .spec400-composer-tools {
-    grid-area: 2 / 1;
+}
+/* Every phone-width composer shows the short model name (the picker, title and
+   accessible name keep the full Kova name). Effort changes then no longer push
+   the row past its width, so the bar and an open picker stay put mid-drag. */
+@container chat-composer (width < 30rem) {
+  .kova-consumer-model-brand {
+    display: none;
   }
-  .spec400-composer-toolbar .spec400-composer-speech-actions {
-    grid-area: 2 / 2;
+}
+/* 320px-class phones: tighter spacing between the 44px targets lets the
+   default model name share the row instead of wrapping. */
+@container chat-composer (width < 20rem) {
+  .spec400-composer-toolbar:has(.kova-consumer-model-trigger),
+  .spec400-composer-toolbar:has(.kova-consumer-model-trigger)
+    :is(.spec400-composer-trailing, .spec400-composer-speech-actions) {
+    column-gap: 4px;
+  }
+  .kova-consumer-model-trigger .kova-consumer-model-pill {
+    gap: 4px;
+    padding-inline: 8px;
+    font-size: 0.8125rem;
+  }
+}
+@container chat-composer (width < 17rem) {
+  .kova-thinking-toggle > span {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .kova-thinking-toggle {
+    min-inline-size: 44px;
+    padding-inline: 12px;
   }
 }
 
@@ -1573,5 +1596,14 @@
 @media (max-width: 1023px), (max-height: 679px) {
   .spec400-recent-work li:nth-child(n + 3) {
     display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kova-assistant :is(.kova-empty-composer .kova-composer-tray, .kova-desktop-recent-work button) {
+    background: var(--assistant-canvas);
+  }
+  .kova-assistant .kova-desktop-recent-work button:hover {
+    background: var(--accent);
   }
 }

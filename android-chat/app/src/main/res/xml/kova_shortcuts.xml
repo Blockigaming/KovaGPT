@@ -1,0 +1,18 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="chat" android:shortcutShortLabel="@string/shortcut_chat">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.kovagpt.chat"
+            android:targetClass="com.kovagpt.chat.KovaChatActivity" android:data="kovagpt-native://open/chat" />
+    </shortcut>
+    <shortcut android:shortcutId="voice" android:shortcutShortLabel="@string/shortcut_voice">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.kovagpt.chat"
+            android:targetClass="com.kovagpt.chat.KovaChatActivity" android:data="kovagpt-native://open/voice" />
+    </shortcut>
+    <shortcut android:shortcutId="images" android:shortcutShortLabel="@string/shortcut_images">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.kovagpt.chat"
+            android:targetClass="com.kovagpt.chat.KovaChatActivity" android:data="kovagpt-native://open/images" />
+    </shortcut>
+    <shortcut android:shortcutId="tasks" android:shortcutShortLabel="@string/shortcut_tasks">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.kovagpt.chat"
+            android:targetClass="com.kovagpt.chat.KovaChatActivity" android:data="kovagpt-native://open/tasks" />
+    </shortcut>
+</shortcuts>

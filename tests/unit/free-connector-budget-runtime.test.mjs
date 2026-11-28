@@ -37,6 +37,7 @@ const seams = {
     "getGenerationTokenHeadroom",
     "hashGuestIp",
   ],
+  "@/lib/scheduled-tasks.functions": ["persistScheduledTask"],
   "@/lib/runtime-env.server": ["runtimeEnv"],
   "@/integrations/supabase/client.server": ["supabaseAdmin"],
 };
@@ -295,6 +296,7 @@ function fixture(options = {}) {
       enforceQuota: noop,
     },
     "@/lib/account-identity.server.mjs": { readAccountIdentity: noop },
+    "@/lib/scheduled-tasks.functions": { persistScheduledTask: denied },
     "@/lib/google-tools.server": {
       getGoogleToolContext: async () =>
         options.googleTools

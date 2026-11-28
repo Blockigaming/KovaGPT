@@ -141,6 +141,23 @@
   }
 }
 
+.kova-prompt-actions .kova-prompt-edit-mobile {
+  display: none;
+}
+@media (width < 1024px), (pointer: coarse) and (hover: none) {
+  .kova-user-message-group .kova-prompt-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .kova-prompt-actions .kova-prompt-edit-mobile {
+    display: inline-flex;
+  }
+  .kova-prompt-actions .kova-prompt-copy {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 /* Activity rows: nesting, secondary labels, progress, timing and states. */
 .kova-activity-row[data-nested] {
   padding-inline-start: 32px;

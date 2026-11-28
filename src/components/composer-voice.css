@@ -848,6 +848,20 @@
   opacity: 1;
 }
 
+.kova-voice-dialog button.kova-mobile-voice-mute {
+  display: none;
+}
+@media (width < 1024px), (pointer: coarse) and (hover: none) {
+  .kova-voice-dialog button.kova-mobile-voice-mute {
+    display: inline-flex;
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .kova-voice-dialog button.kova-mobile-voice-mute[aria-pressed="true"] {
+    background: var(--accent);
+  }
+}
+
 /* Voice session transcript: who spoke, when, and what was said. */
 .kova-voice-log {
   display: grid;

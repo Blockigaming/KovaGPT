@@ -5,6 +5,9 @@
 export type ThemeMode = "light" | "dark" | "system";
 
 export const DEFAULT_THEME_COLOR = "#191919";
+export const PHONE_THEME_QUERY =
+  "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)";
+export const PHONE_DARK_THEME_COLOR = "#111111";
 export const LIGHT_THEME_COLOR = "#ffffff";
 
 const STORAGE_KEY = "kova-theme-mode";
@@ -18,9 +21,7 @@ export function applyThemeMode(mode: ThemeMode) {
   if (typeof document === "undefined") return;
   const isDark = mode === "dark" || (mode === "system" && systemPrefersDark());
   document.documentElement.classList.toggle("dark", isDark);
-  document
-    .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", isDark ? DEFAULT_THEME_COLOR : LIGHT_THEME_COLOR);
+  syncThemeColor();
   // Drop the pre-paint CSSOM override in the same task as the class update, so
   // later light/dark changes use the original stylesheet without a bright frame.
   (window as Window & { __kovaRestoreThemeSelectors?: () => void }).__kovaRestoreThemeSelectors?.();
@@ -29,6 +30,13 @@ export function applyThemeMode(mode: ThemeMode) {
   } catch {
     /* ignore */
   }
+}
+
+export function syncThemeColor() {
+  const dark = document.documentElement.classList.contains("dark");
+  const phone = window.matchMedia?.(PHONE_THEME_QUERY).matches;
+  const color = dark ? (phone ? PHONE_DARK_THEME_COLOR : DEFAULT_THEME_COLOR) : LIGHT_THEME_COLOR;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
 }
 
 export function loadThemeMode(): ThemeMode {

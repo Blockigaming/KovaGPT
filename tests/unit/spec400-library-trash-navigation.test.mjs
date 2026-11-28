@@ -84,11 +84,8 @@ test("management Search preserves the Sidebar choice and opens the appropriate s
       });
       const cleanup = install();
       listeners.get(events[0])();
-      assert.deepEqual(
-        calls,
-        workspace ? [["cancel-pending-selection"], ["workspace-search"]] : [["search-open", true]],
-      );
-      assert.equal(returnFocus.current, workspace ? null : trigger);
+      assert.deepEqual(calls, [["search-open", true]]);
+      assert.equal(returnFocus.current, trigger);
       cleanup();
       assert.equal(listeners.size, 0, "Unmounting removes the Search listener");
     }

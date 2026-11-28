@@ -18,3 +18,11 @@ test("chart controls report export failures and remain touch accessible", () => 
   assert.ok((chart.match(/min-h-11/g) ?? []).length >= 4);
   assert.ok((chart.match(/min-w-11/g) ?? []).length >= 3);
 });
+
+test("all Recharts tooltips select tap on touch and hover on fine pointers", () => {
+  assert.match(chart, /interaction === "touch" \? "click" : "hover"/);
+  const tooltips = [...chart.matchAll(/<Tooltip\b[\s\S]*?trigger=\{tooltipTrigger\}/g)];
+  const count = [...chart.matchAll(/<Tooltip\b/g)].length;
+  assert.ok(count > 0);
+  assert.equal(tooltips.length, count);
+});

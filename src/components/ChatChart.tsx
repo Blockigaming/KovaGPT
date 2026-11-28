@@ -442,7 +442,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                 node={{ fill: colors[0] }}
                 link={{ stroke: colors[0], strokeOpacity: 0.35 }}
               >
-                <Tooltip />
+                {tooltip}
               </Sankey>
             </ResponsiveContainer>
           </div>
@@ -467,6 +467,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                     <XAxis dataKey="label" fontSize={12} />
                     <YAxis domain={["auto", "auto"]} fontSize={12} />
                     <Tooltip
+                      trigger={tooltipTrigger}
+                      isAnimationActive={false}
                       formatter={(value: number | number[], name, item) => {
                         if (type === "waterfall" && item.payload)
                           return [String(item.payload.detail), "Change"];
@@ -503,6 +505,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                     <XAxis dataKey="range" fontSize={11} />
                     <YAxis allowDecimals={false} fontSize={12} />
                     <Tooltip
+                      trigger={tooltipTrigger}
+                      isAnimationActive={false}
                       labelFormatter={(label, payload) => {
                         const bin = payload[0]?.payload;
                         return bin

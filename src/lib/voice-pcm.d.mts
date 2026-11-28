@@ -11,3 +11,4 @@ export function encodeVoicePcm(
   channels: Float32Array[],
   sampleRate: number,
 ): Uint8Array<ArrayBuffer>;
+export function canonicalizeNativeVoiceWav(bytes: Uint8Array): Uint8Array<ArrayBuffer>;

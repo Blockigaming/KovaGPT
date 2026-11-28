@@ -22,6 +22,12 @@
     }
   ],
   "id": "/",
+  "shortcuts": [
+    { "name": "Chat", "url": "/" },
+    { "name": "Create an image", "short_name": "Images", "url": "/images" },
+    { "name": "Scheduled tasks", "short_name": "Tasks", "url": "/scheduled-tasks" },
+    { "name": "Open Library", "short_name": "Library", "url": "/library" }
+  ],
   "share_target": {
     "action": "/share-inbox",
     "method": "POST",

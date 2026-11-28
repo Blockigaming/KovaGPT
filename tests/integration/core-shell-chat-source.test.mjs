@@ -56,16 +56,17 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.equal(closed.visibility, "hidden");
   assert.equal(closed["pointer-events"], "none");
   assert.match(sidebar, /data-state=\{open \? "open" : "closed"\}/);
+  assert.match(sidebar, /const navigationCovered = searchOpen \|\| workspaceSearchOpen;/);
   assert.match(tokens, /--kova-sidebar-drawer-width: 260px;/);
   assert.equal(
     sidebarRule(".kova-sidebar[data-kova-core-sidebar]", "(width < 1024px)").width,
-    "var(--kova-sidebar-drawer-width, 260px)",
+    "var(--kova-sidebar-drawer-width)",
   );
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);
   assert.match(sidebar, /aria-label="Primary navigation"/);
-  assert.match(sidebar, /aria-hidden=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/);
-  assert.match(sidebar, /inert=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/);
+  assert.match(sidebar, /aria-hidden=\{collapsed \|\| navigationCovered \? true : undefined\}/);
+  assert.match(sidebar, /inert=\{collapsed \|\| navigationCovered \? true : undefined\}/);
   assert.match(sidebar, />\s*Rename\s*</);
   assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);

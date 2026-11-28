@@ -89,6 +89,17 @@ test("mixed-provider configuration reports the image and embedding targets actua
   assert.equal(api.calls.length, 0);
 });
 
+test("automatic image routing uses the existing OpenAI key with both providers configured", async () => {
+  const api = provider({ ...azure, KOVA_IMAGE_PROVIDER: undefined });
+  assert.equal(api.getAiProviderConfig("image_generation").provider, "openai");
+  assert.equal(api.getAiProviderConfig("embeddings").provider, "azure_openai");
+  await (await api.imageGenerations({ model: "gpt-image-1", prompt: "Synthetic square" })).text();
+  assert.equal(api.calls.length, 1);
+  assert.equal(api.calls[0].url, "https://api.openai.com/v1/images/generations");
+  assert.equal(api.calls[0].init.headers.get("authorization"), `Bearer ${azure.OPENAI_API_KEY}`);
+  assert.equal(api.calls[0].init.headers.has("api-key"), false);
+});
+
 test("missing OpenAI text credentials do not disable separately configured Azure media", async () => {
   const api = provider({ ...azure, OPENAI_API_KEY: undefined });
   assert.equal(api.providerUnavailableEnvelope("chat").status, 503);

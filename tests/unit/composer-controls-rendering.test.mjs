@@ -1,6 +1,7 @@
 import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import * as kovaNative from "../../src/lib/kova-native.ts";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -98,6 +99,7 @@ vm.runInNewContext(output, {
     if (id === "@/components/ComposerPdfPages") return { ComposerPdfPages: empty };
     if (id === "@/lib/composer-local-attachments.mjs") return localAttachments;
     if (id === "@/lib/composer-keyboard-inset.mjs") return keyboardInset;
+    if (id === "@/lib/kova-native") return kovaNative;
     if (["react", "lucide-react"].includes(id)) return nativeRequire(id);
     if (id === "react/jsx-runtime")
       return {

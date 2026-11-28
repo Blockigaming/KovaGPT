@@ -282,25 +282,13 @@ function ChatMessageInner({
   const waitingForFirstToken = Boolean(streaming && !message.content && !message.pendingImage);
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-  const pressTimer = useRef<number | null>(null);
-  const startLongPress = useCallback(() => {
-    if (!isMobile) return;
-    if (pressTimer.current) window.clearTimeout(pressTimer.current);
-    pressTimer.current = window.setTimeout(() => {
-      try {
-        navigator.vibrate?.(12);
-      } catch {
-        /* ignore */
-      }
-      setMobileSheetOpen(true);
-    }, 480);
-  }, [isMobile]);
-  const cancelLongPress = useCallback(() => {
-    if (pressTimer.current) {
-      window.clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  }, []);
+  const copyFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copyFeedbackTimer.current) clearTimeout(copyFeedbackTimer.current);
+    },
+    [principal, message.id],
+  );
 
   const [retryInstruction, setRetryInstruction] = useState("");
   const [retryMenuOpen, setRetryMenuOpen] = useState(false);
@@ -544,11 +532,10 @@ function ChatMessageInner({
       setMemoryOpenFor(null);
       memoryReturnFocusRef.current = null;
       setMobileSheetOpen(false);
-      cancelLongPress();
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
-  }, [cancelLongPress, closeSources, isSignedIn, isUser, principal, principalResolved, userKey]);
+  }, [closeSources, isSignedIn, isUser, principal, principalResolved, userKey]);
 
   const cleanedResponse = useMemo(
     () => (isUser ? "" : cleanAssistantText(message.content)),
@@ -708,8 +695,14 @@ function ChatMessageInner({
 
     try {
       await navigator.clipboard.writeText(message.content);
+      if (
+        generation !== lifecycleGenerationRef.current ||
+        requestPrincipal !== principalRef.current
+      )
+        return;
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyFeedbackTimer.current) clearTimeout(copyFeedbackTimer.current);
+      copyFeedbackTimer.current = setTimeout(() => setCopied(false), isMobile ? 1200 : 2000);
     } catch {
       if (
         generation !== lifecycleGenerationRef.current ||
@@ -1195,29 +1188,42 @@ function ChatMessageInner({
                   <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
                 )}
               </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    ref={responseMoreRef}
-                    type="button"
-                    className="kova-message-icon-action"
-                    title="More actions"
-                    aria-label="More actions"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="kova-response-menu w-60">
-                  <DropdownMenuItem onSelect={() => onRetry?.()} disabled={!onRetry}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Try again
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => onBranch?.()} disabled={!onBranch}>
-                    <GitBranch className="mr-2 h-4 w-4" />
-                    Branch into new chat
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isMobile ? (
+                <button
+                  ref={responseMoreRef}
+                  type="button"
+                  className="kova-message-icon-action"
+                  aria-label="More actions"
+                  aria-haspopup="dialog"
+                  onClick={() => setMobileSheetOpen(true)}
+                >
+                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                </button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      ref={responseMoreRef}
+                      type="button"
+                      className="kova-message-icon-action"
+                      title="More actions"
+                      aria-label="More actions"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="kova-response-menu w-60">
+                    <DropdownMenuItem onSelect={() => onRetry?.()} disabled={!onRetry}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Try again
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onBranch?.()} disabled={!onBranch}>
+                      <GitBranch className="mr-2 h-4 w-4" />
+                      Branch into new chat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           )}
         </div>

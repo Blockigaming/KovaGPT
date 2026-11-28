@@ -65,7 +65,11 @@ const EMPTY: ChatHistoryPresentation = {
 };
 let current = EMPTY;
 const listeners = new Set<() => void>();
-const controls = new Map<string, ReturnType<typeof createChatHistoryController>>();
+type HistoryControls = Pick<
+  ReturnType<typeof createChatHistoryController>,
+  "migrate" | "resolve" | "retry"
+>;
+const controls = new Map<string, HistoryControls>();
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => {
@@ -91,6 +95,7 @@ export function ChatHistorySyncRuntime() {
     const summarized = new Map<string, number>();
     const pendingSummaries = new Set<string>();
     let memoryLifetime = new AbortController();
+    lifetime.signal.addEventListener("abort", () => memoryLifetime.abort(), { once: true });
     const syncConversationSummaries = () => {
       if (lifetime.signal.aborted || !controller) return;
       const settings = loadSettings(ownerId);
@@ -104,7 +109,7 @@ export function ChatHistorySyncRuntime() {
         return;
       }
       if (memoryLifetime.signal.aborted) memoryLifetime = new AbortController();
-      const signal = AbortSignal.any([lifetime.signal, memoryLifetime.signal]);
+      const signal = memoryLifetime.signal;
       for (const record of Object.values(controller.getState()?.records ?? {})) {
         const revision = record.revision;
         if (
@@ -231,6 +236,7 @@ export function ChatHistorySyncRuntime() {
       const writer = controller;
       if (
         !writer ||
+        lifetime.signal.aborted ||
         !view.writable ||
         pumpingWriter === writer ||
         document.visibilityState === "hidden"
@@ -316,21 +322,26 @@ export function ChatHistorySyncRuntime() {
           }
         },
       });
-      controls.set(ownerId, controller);
-      try {
-        await controller.initialize();
-        if (!lifetime.signal.aborted) {
+      const writer = controller;
+      const initializeWriter = async () => {
+        if (writerSignal.aborted) return;
+        try {
+          await writer.initialize();
+          if (writerSignal.aborted) return;
           view.writable = true;
           // Publish readiness only after the local snapshot is available.
           notifyChatHistoryChanged(ownerId, "cloud");
           void tick();
+        } catch {
+          if (!writerSignal.aborted) event("device_error");
         }
-      } catch {
-        if (!lifetime.signal.aborted) event("device_error");
-        controls.delete(ownerId);
-        controller = null;
-        return;
-      }
+      };
+      controls.set(ownerId, {
+        migrate: writer.migrate,
+        resolve: writer.resolve,
+        retry: () => (view.writable ? writer.retry() : initializeWriter()),
+      });
+      await initializeWriter();
       await new Promise<void>((resolve) => {
         if (writerSignal.aborted) resolve();
         else {
@@ -365,7 +376,6 @@ export function ChatHistorySyncRuntime() {
         .request(`kova-chat-history:${ownerId}`, { ifAvailable: true }, acquire)
         .catch(onLockError);
     return () => {
-      memoryLifetime.abort();
       window.removeEventListener("kova:settings-saved", syncConversationSummaries);
       window.removeEventListener("storage", syncConversationSummaries);
       closeChatHistoryOwner(ownerId);

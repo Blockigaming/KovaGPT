@@ -233,7 +233,7 @@ for (const theme of ["dark", "light"] as const) {
       await trigger.focus();
       await page.keyboard.press("Control+K");
       const dialog = page.getByRole("dialog", { name: "Search chats", exact: true });
-      const query = dialog.getByRole("textbox", { name: "Search chats", exact: true });
+      const query = dialog.getByRole("searchbox", { name: "Search chats", exact: true });
       await expect(dialog).toBeVisible();
       await expect(query).toBeFocused();
       await page.keyboard.press("Control+K");

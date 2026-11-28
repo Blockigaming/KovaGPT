@@ -18,6 +18,9 @@ import {
 } from "react";
 import {
   createContext,
+  lazy,
+  Suspense,
+  type ComponentProps,
   useCallback,
   useContext,
   useEffect,
@@ -32,7 +35,6 @@ import {
   signOutLegacySupabaseSession,
   supabase,
 } from "@/integrations/supabase/client";
-import { AuthDialog } from "@/components/auth/AuthDialog";
 import { MfaChallengeDialog } from "@/components/auth/MfaChallengeDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
@@ -78,6 +80,23 @@ import {
 } from "@/lib/kova-auth-browser";
 
 export const clerkEnabled = true;
+
+const AuthDialog = lazy(() =>
+  import("@/components/auth/AuthDialog").then((module) => ({ default: module.AuthDialog })),
+);
+
+function DeferredAuthDialog(props: ComponentProps<typeof AuthDialog>) {
+  const [opened, setOpened] = useState(props.open);
+  useEffect(() => {
+    if (props.open) setOpened(true);
+  }, [props.open]);
+  if (!props.open && !opened) return null;
+  return (
+    <Suspense fallback={null}>
+      <AuthDialog {...props} />
+    </Suspense>
+  );
+}
 
 type AuthDialogState = { open: boolean; mode: "sign-in" | "sign-up" };
 type AuthIssue = "temporarily_unavailable" | "configuration_unavailable" | null;
@@ -187,6 +206,8 @@ function KovaClerkProvider({
   ).current;
 
   const purgeOwnerlessStateFor = useCallback((userId: string | null) => {
+    // Unscoped cleanup leaves account drafts and history intact. A scoped
+    // reset here would discard the mounted workspace on focus and visibility.
     const result = purgeUnscopedPrivateBrowserStorage(userId);
     const failureCount = result.local.failures.length + result.session.failures.length;
     if (failureCount > 0) {
@@ -194,7 +215,6 @@ function KovaClerkProvider({
         failureCount,
       });
     }
-    dispatchPrincipalBrowserStorageCleared(userId);
   }, []);
 
   const toSession = useCallback((principal: KovaBrowserPrincipal): Session => {
@@ -371,6 +391,11 @@ function KovaClerkProvider({
   }, []);
 
   const signOut = useCallback(async () => {
+    if (typeof window !== "undefined" && "kovaNative" in window) {
+      await import("@/lib/pwa/android-device")
+        .then(({ clearAndroidTaskPush }) => clearAndroidTaskPush(session?.user.id ?? null))
+        .catch(() => undefined);
+    }
     // Dual mode must retire the dormant hosted-auth session first. Otherwise,
     // a reload after Kova logout could silently reveal a stale legacy account.
     if (allowLegacyFallback) {
@@ -457,7 +482,7 @@ function KovaClerkProvider({
           </Button>
         </div>
       ) : null}
-      <AuthDialog
+      <DeferredAuthDialog
         open={isLoaded && dialog.open && !authorityPending}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
@@ -899,6 +924,11 @@ function SupabaseClerkProvider({
     // sessions" remains a separate, explicit security action.
     const browserStorageUserId = browserStorageUserIdRef.current;
     const pendingValidationUserId = pendingValidationUserIdRef.current;
+    if (typeof window !== "undefined" && "kovaNative" in window) {
+      await import("@/lib/pwa/android-device")
+        .then(({ clearAndroidTaskPush }) => clearAndroidTaskPush(browserStorageUserId ?? null))
+        .catch(() => undefined);
+    }
     sessionValidationRef.current += 1;
     setSession(null);
     setPendingMfaSession(null);
@@ -973,7 +1003,7 @@ function SupabaseClerkProvider({
           </Button>
         </div>
       ) : null}
-      <AuthDialog
+      <DeferredAuthDialog
         open={isLoaded && dialog.open && !authorityUnresolved}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
@@ -1172,11 +1202,7 @@ export function UserButton(_props?: {
           <DropdownMenuItem
             onClick={() => {
               if (typeof window !== "undefined") {
-                window.dispatchEvent(
-                  new CustomEvent("kova-open-settings", {
-                    detail: { tab: "general" },
-                  }),
-                );
+                window.dispatchEvent(new CustomEvent("kova-open-settings"));
               }
             }}
           >

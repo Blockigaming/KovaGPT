@@ -112,6 +112,7 @@ for (const theme of ["light", "dark"] as const) {
       // Phones open the Settings home list; open a section to get its header.
       await chooseSettingsSection(page, "General");
     }
+    await chooseSettingsSection(page, "General");
     await contained(page, modal);
     const heading = modal.locator(".kova-settings-content-header h2");
     await expect(heading).toBeInViewport({ ratio: 1 });

@@ -84,7 +84,7 @@
     border-color: var(--color-border);
   }
   html {
-    font-size: 16px;
+    font-size: calc(var(--kova-native-font-size, 16px) * var(--kova-interface-scale, 1));
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     background-color: var(--color-background);
@@ -562,9 +562,6 @@ body {
 }
 
 @media (max-width: 767px) {
-  html {
-    font-size: 16px;
-  }
   .prose-chat {
     font-size: 1rem;
     line-height: 1.68;
@@ -1272,10 +1269,6 @@ body {
 /* Desktop refinement layer: tighter density and quieter elevation while
    preserving the established Kova tokens and mobile behavior. */
 @media (min-width: 1024px) {
-  html {
-    font-size: 16px;
-  }
-
   .kova-page {
     max-width: 1180px;
     padding: 1.75rem 2rem 2.5rem;
@@ -1652,11 +1645,6 @@ body {
 
 /* Portaled compact overlays follow the visible viewport while typing. */
 @media (width < 1024px) {
-  :root[data-kova-keyboard] [data-kova-bottom-sheet] {
-    max-height: min(calc(var(--kova-visible-height, 100dvh) * 0.88), 44rem);
-    padding-top: 0;
-  }
-
   :root[data-kova-keyboard] [data-slot="command-palette-overlay"] {
     top: var(--kova-visible-top, 0px);
     bottom: auto;

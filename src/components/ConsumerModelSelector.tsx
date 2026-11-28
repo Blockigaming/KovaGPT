@@ -168,8 +168,16 @@ export function ConsumerModelSelector({
             className="kova-model-trigger kova-consumer-model-trigger"
           >
             <span className="kova-consumer-model-pill">
-              <span>
-                {modelLabel} <span className="text-muted-foreground">{effort.label}</span>
+              <span className="kova-consumer-model-text">
+                {modelLabel.startsWith("Kova ") ? (
+                  <>
+                    <span className="kova-consumer-model-brand">Kova </span>
+                    {modelLabel.slice(5)}
+                  </>
+                ) : (
+                  modelLabel
+                )}{" "}
+                <span className="text-muted-foreground">{effort.label}</span>
               </span>
               <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
             </span>

@@ -203,6 +203,7 @@ test("Azure canonical text selects Azure and receives no OpenAI service-tier fie
 
 test("explicit OpenAI text selection preserves dedicated Azure image and primary embedding selection", () => {
   const { actual } = harness({
+    KOVA_IMAGE_PROVIDER: "azure_openai",
     AZURE_OPENAI_ENDPOINT: "https://offline-primary.openai.azure.com",
     AZURE_OPENAI_API_KEY: "offline-primary-nonsecret",
     AZURE_OPENAI_IMAGE_ENDPOINT: "https://offline-images.openai.azure.com",

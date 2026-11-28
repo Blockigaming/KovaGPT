@@ -245,7 +245,7 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
       )),
     "drawer layout",
   );
-  await installAuthenticatedFixture(page, { preserveStorageOnReload: true });
+  await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
@@ -256,14 +256,9 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   await opener.click();
   const drawer = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(drawer).toBeVisible();
-  const phoneLayout = await page.evaluate(
-    () =>
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
-  );
   await expect
     .poll(async () => (await drawer.boundingBox())?.width)
-    .toBeCloseTo(phoneLayout ? (viewport.width * 2) / 3 : 260, 0);
+    .toBeCloseTo(Math.min(viewport.width * 0.86, 360), 0);
   const mainBox = (await main.boundingBox())!;
   expect(mainBox.x).toBe(0);
   expect(mainBox.width).toBe(viewport.width);
@@ -301,7 +296,7 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   await expect.poll(async () => (await shell.boundingBox())?.height).toBe(visibleHeight);
   if (compactPhone) {
     const composerFrame = page.locator(".spec400-composer:visible");
-    await expect(composerFrame).toHaveCSS("border-radius", "20px");
+    await expect(composerFrame).toHaveCSS("border-radius", "24px");
     const composer = (await composerFrame.boundingBox())!;
     // The app shell shows its welcome mark here; the website shows its greeting.
     const logo = page.locator(".kova-empty-chat .kova-greeting");
@@ -311,8 +306,7 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
     expect(logoBox.y).toBeGreaterThanOrEqual(shellBox.y);
     expect(logoBox.y + logoBox.height).toBeLessThanOrEqual(composer.y);
     const keyboardGap = visibleHeight - composer.y - composer.height;
-    expect(keyboardGap).toBeGreaterThanOrEqual(12);
-    expect(keyboardGap).toBeLessThanOrEqual(16);
+    expect(keyboardGap).toBeCloseTo(8, 0);
   }
   const send = page.getByRole("button", { name: "Send message" });
   const sendBox = (await send.boundingBox())!;

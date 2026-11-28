@@ -304,12 +304,9 @@ test("the neutral shell has one theme layer and accessible collapsed navigation"
   assert.match(primaryNavigation, /aria-label="Primary navigation"/);
   assert.match(
     primaryNavigation,
-    /aria-hidden=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/,
+    /aria-hidden=\{collapsed \|\| navigationCovered \? true : undefined\}/,
   );
-  assert.match(
-    primaryNavigation,
-    /inert=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/,
-  );
+  assert.match(primaryNavigation, /inert=\{collapsed \|\| navigationCovered \? true : undefined\}/);
   assert.match(appShell, /addEventListener\("kova-open-settings", handleOpenSettings\)/);
 
   for (const source of [route, styles, appShell, sidebar, chatInput, chatMessage]) {

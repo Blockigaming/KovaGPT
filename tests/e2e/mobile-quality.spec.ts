@@ -84,8 +84,8 @@ test("navigation opens, contains its controls, and dismisses predictably", async
     expect(gap).toBeGreaterThanOrEqual(0);
   }).toPass();
   await search.tap();
-  const palette = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
-  await expect(palette.getByRole("combobox")).toBeFocused();
+  const palette = page.getByRole("dialog", { name: "Search chats", exact: true });
+  await expect(palette.getByRole("searchbox")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(palette).toBeHidden();
   await expect(navigation).toBeVisible();

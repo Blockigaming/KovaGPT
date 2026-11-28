@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">KovaGPT</string>
+    <string name="shortcut_chat">Chat</string>
+    <string name="shortcut_voice">Voice</string>
+    <string name="shortcut_images">Images</string>
+    <string name="shortcut_tasks">Scheduled tasks</string>
+    <style name="KovaTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
+    </style>
+</resources>

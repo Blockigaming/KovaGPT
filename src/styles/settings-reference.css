@@ -44,6 +44,21 @@
   background: transparent;
   opacity: 1;
 }
+
+/* Keep the tablet popup centered in the visible area while its search or an
+   editable preference has focus. The compact phone surface has its own dock. */
+@media (768px <= width < 1024px) and (height > 500px),
+  (width >= 1024px) and (pointer: coarse) and (hover: none) {
+  :root[data-kova-keyboard] [role="dialog"].kova-settings-dialog {
+    top: calc(var(--kova-visible-top, 0px) + var(--kova-visible-height) / 2);
+    max-height: calc(var(--kova-visible-height) - 16px);
+  }
+
+  [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
+    width: 44px;
+    height: 44px;
+  }
+}
 .kova-settings-reference .kova-settings-sidebar {
   display: flex;
   flex: 0 0 auto;
@@ -695,7 +710,11 @@
     height: 44px;
   }
   [role="dialog"].kova-settings-dialog .kova-settings-content-header {
-    padding-right: 64px;
+    padding-inline: max(16px, var(--safe-left, 0px)) max(64px, calc(var(--safe-right, 0px) + 52px));
+  }
+  [role="dialog"].kova-settings-dialog:has(.kova-settings-content.mobile-content)
+    > [data-kova-dialog-close] {
+    top: calc(6px + var(--safe-top, 0px));
   }
   .kova-settings-reference [data-slot="switch"] {
     width: 48px;

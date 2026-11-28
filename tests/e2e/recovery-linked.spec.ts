@@ -1,6 +1,7 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { linkedFixture, linkedPrompt, linkedReport } from "./recovery-linked-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { expectResponseMoreActions } from "./current-ui";
 
 async function capture(page: Page, info: TestInfo, name: string) {
   await expect
@@ -97,7 +98,7 @@ test("Knowledge Graph supports keyboard selection and timeline navigation", asyn
   await expect(page).toHaveURL(/\/library$/);
 });
 
-test("response More contains only retry and branching and returns focus on dismissal", async ({
+test("response More provides the appropriate actions and returns focus on dismissal", async ({
   page,
 }, info) => {
   await linkedFixture(page);
@@ -107,14 +108,7 @@ test("response More contains only retry and branching and returns focus on dismi
     .getByRole("toolbar", { name: "Response actions", exact: true })
     .last()
     .getByRole("button", { name: "More actions", exact: true });
-  await trigger.click();
-  const menu = page.getByRole("menu");
-  await expect(menu.getByRole("menuitem")).toHaveCount(2);
-  await expect(menu.getByRole("menuitem", { name: "Try again", exact: true })).toBeVisible();
-  await expect(
-    menu.getByRole("menuitem", { name: "Branch into new chat", exact: true }),
-  ).toBeVisible();
-  await expect(menu.locator("time")).toHaveCount(0);
+  const menu = await expectResponseMoreActions(page, trigger);
   await expect(menu.getByText("Practice this explanation", { exact: true })).toHaveCount(0);
   await capture(page, info, "minimal-response-menu");
   await page.keyboard.press("Escape");

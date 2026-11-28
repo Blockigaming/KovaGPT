@@ -1,13 +1,18 @@
 import { expect, test } from "@playwright/test";
+import { readableTextColor } from "../../src/lib/appearance-preferences.mjs";
 import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 const viewports = [
   [320, 568],
+  [360, 800],
   [375, 667],
   [390, 844],
+  [402, 874],
   [430, 932],
+  [480, 960],
+  [600, 960],
   [667, 375],
   [768, 1024],
   [1024, 768],
@@ -21,9 +26,16 @@ test.beforeEach(async ({ page }, info) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
-for (const [width, height] of viewports) {
+const typographyCases = [
+  ...viewports.map(([width, height]) => ({ width, height, textSize: 20 })),
+  { width: 320, height: 568, textSize: 32 },
+];
+
+for (const { width, height, textSize } of typographyCases) {
   for (const theme of ["light", "dark"] as const) {
-    test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
+    test(`chat fits ${width}×${height} in ${theme} with ${textSize}px native text`, async ({
+      page,
+    }) => {
       test.setTimeout(60_000);
       await fixture(page, theme);
       await page.setViewportSize({ width, height });
@@ -82,13 +94,68 @@ for (const [width, height] of viewports) {
       await waitForKovaHydration(page);
 
       const html = page.locator("html");
-      await html.evaluate((element, mode) => {
-        element.classList.toggle("dark", mode === "dark");
-        element.style.fontSize = "20px";
-      }, theme);
+      await html.evaluate(
+        (element, { theme, textSize }) => {
+          element.classList.toggle("dark", theme === "dark");
+          element.style.setProperty("--kova-native-font-size", `${textSize}px`);
+        },
+        { theme, textSize },
+      );
+
+      if (width < 768) {
+        const palette = await html.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return ["--background", "--sidebar", "--composer-background"].map((token) =>
+            styles
+              .getPropertyValue(token)
+              .trim()
+              .replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i, "#$1$1$2$2$3$3"),
+          );
+        });
+        expect(palette).toEqual(
+          theme === "dark" ? ["#111111", "#171717", "#2a2a2a"] : ["#ffffff", "#f7f7f8", "#efefef"],
+        );
+      }
+
+      if (width === 320 && textSize === 20) {
+        const colors = await html.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return Object.fromEntries(
+            [
+              "--composer-background",
+              "--kova-phone-placeholder",
+              "--destructive",
+              "--destructive-foreground",
+              "--kova-phone-danger-text",
+              "--sidebar-active",
+            ].map((token) => [
+              token,
+              styles
+                .getPropertyValue(token)
+                .trim()
+                .replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i, "#$1$1$2$2$3$3"),
+            ]),
+          );
+        });
+        for (const [surface, ink] of [
+          ["--composer-background", "--kova-phone-placeholder"],
+          ["--destructive", "--destructive-foreground"],
+          ["--kova-phone-danger-text", "--destructive-foreground"],
+          ["--sidebar-active", "--kova-phone-danger-text"],
+        ]) {
+          expect(colors[surface]).toMatch(/^#[0-9a-f]{6}$/i);
+          expect(colors[ink]).toMatch(/^#[0-9a-f]{6}$/i);
+          expect(readableTextColor(colors[surface], colors[ink]), ink).toBe(colors[ink]);
+        }
+      }
 
       const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
       await expect(composer).toBeVisible();
+      if (width < 768) {
+        await expect(composer).toHaveCSS("font-size", `${textSize}px`);
+        await expect(composer).toHaveCSS("line-height", `${textSize * 1.5}px`);
+        await expect(composer).toHaveCSS("unicode-bidi", "plaintext");
+      }
       await composer.fill("First line\nA second line for this draft.");
       const send = page.getByRole("button", { name: "Send message" });
       await send.scrollIntoViewIfNeeded();
@@ -242,3 +309,97 @@ for (const [width, height] of viewports) {
     expect(bounds.right).toBeLessThanOrEqual(bounds.viewport);
   });
 }
+
+test("tabletop posture keeps the composer above the hinge and preserves the draft as it unfolds", async ({
+  page,
+}) => {
+  await fixture(page, "dark");
+  const session = await page.context().newCDPSession(page);
+  const screen = {
+    width: 700,
+    height: 900,
+    screenWidth: 700,
+    screenHeight: 900,
+    deviceScaleFactor: 2,
+    mobile: true,
+  };
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    ...screen,
+    displayFeature: { orientation: "horizontal", offset: 440, maskLength: 20 },
+    devicePosture: { type: "folded" },
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await composer.fill("Keep this draft when the screen unfolds");
+  const bounds = await composer.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(440);
+
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    ...screen,
+    devicePosture: { type: "continuous" },
+  });
+  await expect
+    .poll(() => page.evaluate(() => matchMedia("(vertical-viewport-segments: 2)").matches))
+    .toBe(false);
+  await expect(composer).toHaveValue("Keep this draft when the screen unfolds");
+});
+
+test("phone controls clear the safe areas as the available height changes", async ({ page }) => {
+  await fixture(page, "dark");
+  const session = await page.context().newCDPSession(page);
+  const screen = {
+    width: 390,
+    screenWidth: 390,
+    screenHeight: 844,
+    deviceScaleFactor: 3,
+    mobile: true,
+  };
+  await session.send("Emulation.setDeviceMetricsOverride", { ...screen, height: 844 });
+  await session.send("Emulation.setSafeAreaInsetsOverride", {
+    insets: { top: 44, right: 24, bottom: 34, left: 28 },
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const shell = page.locator('.kova-assistant[data-ui="modern"]');
+  const header = shell.locator(".kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner");
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await composer.fill("A draft that should stay in place");
+  await composer.blur();
+  const send = page.getByRole("button", { name: "Send message" });
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#111111");
+
+  for (const height of [844, 736, 844]) {
+    await session.send("Emulation.setDeviceMetricsOverride", { ...screen, height });
+    await expect(shell).toHaveCSS("height", `${height}px`);
+    await expect.poll(async () => (await header.boundingBox())?.y).toBeGreaterThanOrEqual(44);
+    await expect
+      .poll(async () => {
+        const bounds = await send.boundingBox();
+        return bounds ? bounds.y + bounds.height : Infinity;
+      })
+      .toBeLessThanOrEqual(height - 34);
+    const bounds = await composer.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x).toBeGreaterThanOrEqual(28);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(screen.width - 24);
+    await expect(composer).toHaveValue("A draft that should stay in place");
+    await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
+  }
+
+  await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1.5 });
+  await expect.poll(() => page.evaluate(() => window.visualViewport?.scale)).toBe(1.5);
+  await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
+  await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    ...screen,
+    width: 844,
+    screenWidth: 844,
+    height: 600,
+  });
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#191919");
+  await session.send("Emulation.setDeviceMetricsOverride", { ...screen, height: 844 });
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#111111");
+  await expect(composer).toHaveValue("A draft that should stay in place");
+});

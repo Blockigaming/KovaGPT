@@ -25,9 +25,10 @@ test("principal transitions invalidate pending retry callbacks and dismiss accou
   }
   assert.match(read("src/routes/__root.tsx"), /toast.dismiss\(\)/);
 });
-test("workspace palette has a touch reachable sidebar entry", () => {
-  assert.match(read("src/components/Sidebar.tsx"), /onOpenWorkspaceSearch\(\)/);
-  assert.match(read("src/routes/index.tsx"), /onOpenWorkspaceSearch=\{openCommandPalette\}/);
+test("chat search has a touch reachable sidebar entry", () => {
+  const sidebar = read("src/components/Sidebar.tsx");
+  assert.match(sidebar, /aria-label="Search chats"[\s\S]*?onClick=\{openChatSearch\}/);
+  assert.match(sidebar, /const openChatSearch = [\s\S]*?setSearchOpen\(true\)/);
 });
 test("mobile modals remain centered and capped while full viewport scrims stay square", () => {
   const dialog = read("src/components/ui/dialog.tsx");

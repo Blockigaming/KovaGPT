@@ -1,6 +1,7 @@
 import * as webAudioSink from "../../src/lib/voice/webaudio-sink.mjs";
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import * as kovaNative from "../../src/lib/kova-native.ts";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
 import assert from "node:assert/strict";
@@ -84,6 +85,13 @@ function fixture(
   };
   const react = {
     useImperativeHandle() {},
+    useCallback(callback, dependencies) {
+      const index = cursor++;
+      const previous = hooks[index];
+      if (!previous || dependencies.some((value, i) => !Object.is(value, previous.dependencies[i])))
+        hooks[index] = { callback, dependencies };
+      return hooks[index].callback;
+    },
     useRef(value) {
       const index = cursor++;
       hooks[index] ??= { current: value };
@@ -148,6 +156,7 @@ function fixture(
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
     "@/lib/composer-keyboard-inset.mjs": keyboardInset,
+    "@/lib/kova-native": kovaNative,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {
       tryUseUpload: (limit) => {

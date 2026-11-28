@@ -189,6 +189,7 @@ for (const theme of ["light", "dark"] as const) {
       const billing = navigation.getByRole("tab", { name: "Subscriptions", exact: true });
       await billing.scrollIntoViewIfNeeded();
       await expect(billing).toBeInViewport({ ratio: 1 });
+      const origin = page.url();
       await billing.click();
       await expect(page).toHaveURL(/\/$/);
       await expect(

@@ -88,19 +88,15 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await closeCurrentSettings(page);
   const sidebar = await openSidebar(page);
   await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
-  const search = page.getByRole("combobox", {
-    name: "Search workspace, commands, and chats",
-    exact: true,
-  });
-  await search.fill("Second review");
-  const results = page.getByRole("dialog", {
-    name: "Search workspace, chats, and actions",
-    exact: true,
-  });
-  await expect(results.getByRole("option").filter({ hasText: "Second review chat" })).toBeVisible();
-  await expect(results.getByRole("option").filter({ hasText: "Composer review chat" })).toHaveCount(
-    0,
-  );
+  const results = page.getByRole("dialog", { name: "Search chats", exact: true });
+  const search = results.getByRole("searchbox", { name: "Search chats", exact: true });
+  await search.fill("Second");
+  await expect(
+    results.getByRole("button", { name: "Open chat Second review chat", exact: true }),
+  ).toBeVisible();
+  await expect(
+    results.getByRole("button", { name: "Open chat Composer review chat", exact: true }),
+  ).toHaveCount(0);
   await capture(page, info, "sidebar-search");
   await search.fill("");
   await page.keyboard.press("Escape");

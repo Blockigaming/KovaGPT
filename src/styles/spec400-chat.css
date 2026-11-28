@@ -732,7 +732,7 @@
   min-width: 0;
   flex-direction: column;
 }
-.spec400-conversation-pane:has(> .kova-conversation-scroll)::before {
+.spec400-conversation-pane:has(.kova-conversation-scroll)::before {
   position: absolute;
   z-index: 2;
   inset: 0 0 auto;
@@ -801,7 +801,7 @@
   padding-inline: calc(max(var(--chat-gutter), var(--safe-left)) - 4px)
     calc(max(var(--chat-gutter), var(--safe-right)) - 4px);
 }
-.spec400-conversation-pane:has(> .kova-conversation-scroll) .spec400-composer-dock {
+.spec400-conversation-pane:has(.kova-conversation-scroll) .spec400-composer-dock {
   --composer-overlap: 16px;
   z-index: 3;
   margin-block-start: calc(-1 * var(--composer-overlap));
@@ -824,7 +824,7 @@
   margin-inline: auto;
 }
 @media (max-height: 500px) {
-  .spec400-conversation-pane:has(> .kova-conversation-scroll) .spec400-composer-dock {
+  .spec400-conversation-pane:has(.kova-conversation-scroll) .spec400-composer-dock {
     --composer-overlap: 0px;
   }
   /* Oversized scroll insets can place a focused answer control behind the
@@ -1801,7 +1801,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     border: 0;
     padding: 20px 8px;
     font-family: inherit;
-    font-size: var(--kova-reading-size, 16px);
+    font-size: var(--kova-reading-size, 1rem);
     line-height: 1.7;
   }
 

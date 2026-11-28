@@ -21,7 +21,15 @@ import { useKeyboardViewport } from "@/hooks/use-keyboard-viewport";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, DEFAULT_THEME_COLOR, LIGHT_THEME_COLOR, loadThemeMode } from "@/lib/theme";
+import {
+  applyThemeMode,
+  DEFAULT_THEME_COLOR,
+  LIGHT_THEME_COLOR,
+  loadThemeMode,
+  PHONE_DARK_THEME_COLOR,
+  PHONE_THEME_QUERY,
+  syncThemeColor,
+} from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
 import { useEffect, useLayoutEffect, useRef } from "react";
@@ -52,8 +60,16 @@ const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
   } catch {}
   const isDark = mode === "dark" || (mode === "system" &&
     window.matchMedia?.("(prefers-color-scheme: dark)").matches);
-  document.querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", isDark ? "${DEFAULT_THEME_COLOR}" : "${LIGHT_THEME_COLOR}");
+  const phone = window.matchMedia?.("${PHONE_THEME_QUERY}").matches;
+  const darkColor = phone ? "${PHONE_DARK_THEME_COLOR}" : "${DEFAULT_THEME_COLOR}";
+  // Own the metadata outside React, which hydrates hoisted tags by content.
+  let chrome = document.querySelector('meta[name="theme-color"]');
+  if (!chrome) {
+    chrome = document.createElement("meta");
+    chrome.name = "theme-color";
+    document.head.append(chrome);
+  }
+  chrome.content = isDark ? darkColor : "${LIGHT_THEME_COLOR}";
   if (!isDark) return;
 
   const changed = [];
@@ -329,7 +345,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
     >
       <head>
         <HeadContent />
-        <meta name="theme-color" content={DEFAULT_THEME_COLOR} suppressHydrationWarning />
         <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
       </head>
       <body>
@@ -367,7 +382,12 @@ function RootThemeManager() {
       if (loadThemeMode() === "system") applyThemeMode("system");
     };
     scheme.addEventListener("change", syncSystemTheme);
-    return () => scheme.removeEventListener("change", syncSystemTheme);
+    const phoneTheme = window.matchMedia(PHONE_THEME_QUERY);
+    phoneTheme.addEventListener("change", syncThemeColor);
+    return () => {
+      scheme.removeEventListener("change", syncSystemTheme);
+      phoneTheme.removeEventListener("change", syncThemeColor);
+    };
   }, []);
 
   useEffect(() => {

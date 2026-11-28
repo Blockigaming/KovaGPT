@@ -3,7 +3,7 @@ import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { usesSidebarDrawer } from "./current-ui";
 
-test("workspace search preserves the sidebar and restores its active dialog", async ({
+test("chat search preserves the sidebar and restores its focused trigger", async ({
   page,
 }, info) => {
   await coreFixture(page, "dark", "free");
@@ -41,37 +41,18 @@ test("workspace search preserves the sidebar and restores its active dialog", as
   await expect(account).toContainText("Shell Parity");
   await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
 
-  const search = page.getByRole("dialog", {
-    name: "Search workspace, chats, and actions",
-    exact: true,
-  });
+  const search = page.getByRole("dialog", { name: "Search chats", exact: true });
   await expect(search).toBeVisible({ timeout: 10_000 });
   await expect(search).toHaveAttribute("aria-modal", "true");
-  const clippedLabels = await search.getByRole("option").evaluateAll((options) =>
-    options.flatMap((option) => {
-      const bounds = option.getBoundingClientRect();
-      return [...option.querySelectorAll(":scope > span")].flatMap((label) => {
-        // Chat/workspace titles deliberately use ellipses; command labels and
-        // explanations must remain readable within their own result rows.
-        if (getComputedStyle(label).textOverflow === "ellipsis") return [];
-        const range = document.createRange();
-        range.selectNodeContents(label);
-        return [...range.getClientRects()].some(
-          (text) =>
-            text.left < bounds.left - 1 ||
-            text.right > bounds.right + 1 ||
-            text.top < bounds.top - 1 ||
-            text.bottom > bounds.bottom + 1,
-        )
-          ? [label.textContent]
-          : [];
-      });
-    }),
-  );
-  expect(clippedLabels, "Command labels and disabled reasons must fit their rows").toEqual([]);
+  const results = search.getByRole("list", { name: "Chat search results" });
   await expect(
-    search.getByRole("combobox", { name: "Search workspace, commands, and chats", exact: true }),
-  ).toBeFocused();
+    results.getByRole("button", { name: "Open chat Composer review chat", exact: true }),
+  ).toBeVisible();
+  const overflow = await results
+    .getByRole("button")
+    .evaluateAll((rows) => rows.some((row) => row.scrollWidth > row.clientWidth + 1));
+  expect(overflow, "Search rows contain their truncated labels").toBe(false);
+  await expect(search.getByRole("searchbox", { name: "Search chats", exact: true })).toBeFocused();
   if (mobile) {
     await expect(sidebar).toHaveAttribute("data-state", "open");
     await expect(sidebar).toHaveAttribute("aria-hidden", "true");
@@ -79,7 +60,7 @@ test("workspace search preserves the sidebar and restores its active dialog", as
     await expect(sidebar).not.toHaveAttribute("aria-modal", "true");
   }
   await expect(page.locator('[aria-modal="true"]')).toHaveCount(1);
-  await page.screenshot({ path: info.outputPath("workspace-search.png"), animations: "disabled" });
+  await page.screenshot({ path: info.outputPath("chat-search.png"), animations: "disabled" });
 
   await page.keyboard.press("Escape");
   await expect(search).toBeHidden();
@@ -114,7 +95,9 @@ for (const input of ["pointer", "keyboard"] as const) {
     await waitForKovaHydration(page);
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
     const sidebar = page.locator("#kova-primary-navigation");
-    await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
+    // The sidebar search is now dedicated to chat history; the workspace
+    // command palette is still available through the explicit shortcut.
+    await page.keyboard.press("Control+K");
     const search = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
     await expect(search).toBeVisible();
     const action = search.getByRole("option", {

@@ -3,11 +3,12 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type ReactNode,
   type RefObject,
   type SetStateAction,
 } from "react";
-import { Sliders } from "lucide-react";
+import { ArrowDown, Sliders } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatBranchBar } from "@/components/ChatBranchBar";
@@ -92,12 +93,14 @@ export function ActiveChatTranscript({
     [branchState, conversations, setActiveId, scrollRef, transcriptScope, transcriptScopeRef],
   );
 
+  const [awayFromLatest, setAwayFromLatest] = useState(false);
   const updateNearBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
     const near = distance < 120;
     nearBottomRef.current = near;
+    setAwayFromLatest(!near);
   }, [scrollRef, nearBottomRef]);
 
   const activeMessageCount = active.messages.length;
@@ -112,6 +115,7 @@ export function ActiveChatTranscript({
     const positions = readingPositionsRef.current;
     const remembered = positions.get(transcriptScope);
     nearBottomRef.current = !remembered || remembered.kind === "end";
+    setAwayFromLatest(!nearBottomRef.current);
     const controller = createTranscriptReadingAnchorController(element, {
       isCurrent: () =>
         transcriptScopeRef.current === transcriptScope && scrollRef.current === element,
@@ -194,62 +198,80 @@ export function ActiveChatTranscript({
   };
 
   return (
-    <div
-      ref={scrollRef}
-      data-chat-transcript="true"
-      tabIndex={-1}
-      onScroll={updateNearBottom}
-      className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain pb-5 pt-4 lg:pb-8 lg:pt-6"
-      aria-label="Conversation"
-    >
-      {active.branchOrigin && (
-        <div className="mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
-          <div className="min-w-0">
-            <span className="font-medium">Branched conversation</span>
-            <span className="ml-1 text-muted-foreground">from {active.branchOrigin.title}</span>
+    <div className="kova-transcript-frame">
+      <div
+        ref={scrollRef}
+        data-chat-transcript="true"
+        tabIndex={-1}
+        onScroll={updateNearBottom}
+        className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain pb-5 pt-4 lg:pb-8 lg:pt-6"
+        aria-label="Conversation"
+      >
+        {active.branchOrigin && (
+          <div className="mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
+            <div className="min-w-0">
+              <span className="font-medium">Branched conversation</span>
+              <span className="ml-1 text-muted-foreground">from {active.branchOrigin.title}</span>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-lg px-2.5 py-1.5 font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => {
+                const origin = active.branchOrigin;
+                if (!origin) return;
+                const sourceExists = conversations.some(
+                  (conversation) => conversation.id === origin.conversationId,
+                );
+                if (sourceExists) setActiveId(origin.conversationId);
+                else toast.error("The source conversation is no longer available");
+              }}
+            >
+              View source
+            </button>
           </div>
-          <button
-            type="button"
-            className="shrink-0 rounded-lg px-2.5 py-1.5 font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={() => {
-              const origin = active.branchOrigin;
-              if (!origin) return;
-              const sourceExists = conversations.some(
-                (conversation) => conversation.id === origin.conversationId,
-              );
-              if (sourceExists) setActiveId(origin.conversationId);
-              else toast.error("The source conversation is no longer available");
-            }}
-          >
-            View source
-          </button>
-        </div>
+        )}
+        <ChatBranchBar
+          branches={branchState.branches}
+          activeBranch={branchState.activeBranch}
+          loading={branchState.loading}
+          error={branchState.error}
+          onActivate={activateBranch}
+          onRetry={branchState.refresh}
+          durableHint={
+            isSignedIn
+              ? "Branching keeps the original path; sharing snapshots the active branch only."
+              : "Branches are stored on this device until you sign in."
+          }
+        />
+        {chatRulesActive && (
+          <div className="mx-auto flex w-full max-w-[48rem] px-3 pt-2 lg:px-0">
+            <button
+              type="button"
+              onClick={(event) => openChatWorkspace(event.currentTarget)}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <Sliders className="h-3.5 w-3.5" /> Chat rules are active
+            </button>
+          </div>
+        )}
+        {active.messages.map((m, i) => renderMessage(m, i, ChatMessage, () => branchMessage(m, i)))}
+      </div>
+      {awayFromLatest && (
+        <button
+          type="button"
+          className="kova-mobile-jump-latest"
+          aria-label="Scroll to latest message"
+          onClick={() => {
+            const element = scrollRef.current;
+            if (!element) return;
+            element.focus({ preventScroll: true });
+            element.scrollTo({ top: element.scrollHeight, behavior: "instant" });
+            updateNearBottom();
+          }}
+        >
+          <ArrowDown aria-hidden="true" />
+        </button>
       )}
-      <ChatBranchBar
-        branches={branchState.branches}
-        activeBranch={branchState.activeBranch}
-        loading={branchState.loading}
-        error={branchState.error}
-        onActivate={activateBranch}
-        onRetry={branchState.refresh}
-        durableHint={
-          isSignedIn
-            ? "Branching keeps the original path; sharing snapshots the active branch only."
-            : "Branches are stored on this device until you sign in."
-        }
-      />
-      {chatRulesActive && (
-        <div className="mx-auto flex w-full max-w-[48rem] px-3 pt-2 lg:px-0">
-          <button
-            type="button"
-            onClick={(event) => openChatWorkspace(event.currentTarget)}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <Sliders className="h-3.5 w-3.5" /> Chat rules are active
-          </button>
-        </div>
-      )}
-      {active.messages.map((m, i) => renderMessage(m, i, ChatMessage, () => branchMessage(m, i)))}
     </div>
   );
 }

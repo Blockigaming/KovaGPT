@@ -18,6 +18,12 @@ import {
   subscribeInstallPrompt,
   promptPwaInstall,
 } from "@/lib/pwa/install";
+import {
+  androidTaskPushEnabled,
+  clearAndroidTaskPush,
+  enableAndroidTaskPush,
+} from "@/lib/pwa/android-device";
+import { nativeKovaPlatform, sendNativeKovaMessage } from "@/lib/kova-native";
 type Status = {
   ready: boolean;
   publicKey: string | null;
@@ -26,8 +32,97 @@ type Status = {
   devices: { id: string; revision: number; createdAt: string }[];
 };
 export function PwaSettings({ ownerId }: { ownerId: string | null }) {
+  const platform = useSyncExternalStore(noNativeSubscription, nativeKovaPlatform, noNativePlatform);
+  if (platform) {
+    return (
+      <section
+        className="space-y-3 rounded-lg border border-border p-4"
+        aria-label="Native app settings"
+      >
+        <h4 className="text-sm font-medium">Native app settings</h4>
+        <p className="text-xs text-muted-foreground">
+          Use your device’s authentication to lock KovaGPT when you leave the app.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => sendNativeKovaMessage({ action: "device-lock" })}
+          >
+            Change device lock
+          </Button>
+          {platform === "android" && (
+            <Button
+              variant="outline"
+              onClick={() => sendNativeKovaMessage({ action: "notifications" })}
+            >
+              Notification settings
+            </Button>
+          )}
+        </div>
+        {platform === "android" && ownerId && (
+          <AndroidTaskNotificationSettings key={ownerId} ownerId={ownerId} />
+        )}
+      </section>
+    );
+  }
   return <DeviceSettings key={ownerId ?? "signed-out"} ownerId={ownerId} />;
 }
+function AndroidTaskNotificationSettings({ ownerId }: { ownerId: string }) {
+  const [enabled, setEnabled] = useState(() => androidTaskPushEnabled(ownerId));
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, ownerId)) return;
+      pending.current?.abort();
+      setEnabled(false);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => {
+      pending.current?.abort();
+      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    };
+  }, [ownerId]);
+  async function change() {
+    if (pending.current) return;
+    const controller = new AbortController();
+    pending.current = controller;
+    setBusy(true);
+    setError("");
+    try {
+      if (enabled) await clearAndroidTaskPush(ownerId);
+      else await enableAndroidTaskPush(ownerId, controller.signal);
+      if (!controller.signal.aborted) setEnabled(!enabled);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setError(error instanceof Error ? error.message : "Could not change task notifications.");
+      }
+    } finally {
+      pending.current = null;
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <Button variant="outline" disabled={busy} onClick={() => void change()}>
+        {enabled ? "Disable task notifications" : "Enable task notifications"}
+      </Button>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+function noNativeSubscription() {
+  return () => {};
+}
+function noNativePlatform() {
+  return null;
+}
+
 function DeviceSettings({ ownerId }: { ownerId: string | null }) {
   const canInstall = useSyncExternalStore(subscribeInstallPrompt, canPromptInstall, noServerPrompt);
   const [status, setStatus] = useState<Status | null>(null),

@@ -324,6 +324,7 @@ test("Responses owns custom instructions/personality, their scope and current-ch
 
 test("Settings deep links open the modal; narrow headings keep their safe-area layout and preview keeps its palette and motion override", () => {
   const route = readFileSync("src/routes/settings.$section.tsx", "utf8");
+  const chat = readFileSync("src/routes/index.tsx", "utf8");
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
   assert.match(route, /redirect\(\{ to: "\/", search: \{ settings: section \}, replace: true \}\)/);

@@ -4,19 +4,14 @@ import { waitForKovaHydration } from "./hydration";
 
 export async function expectsSeparateModeRow(composer: Locator) {
   return composer.evaluate((frame) => {
-    const container = frame.closest(".spec400-chat-input")!;
-    const styles = getComputedStyle(container);
-    const contentWidth =
-      container.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
-    // A model name needs 22.5rem beside the actions; the Thinking toggle fits down to 20rem.
-    const thinkingOnly =
-      document.documentElement.dataset.kovaSurface !== "app" &&
-      frame.querySelector(".kova-thinking-toggle") !== null &&
-      frame.querySelector(".kova-consumer-model-trigger, .kova-home-model-placeholder") === null;
-    const threshold = thinkingOnly ? 20 : 22.5;
-    return (
-      contentWidth < threshold * parseFloat(getComputedStyle(document.documentElement).fontSize)
+    const attach = frame.querySelector(".kova-composer-plus");
+    const mode = frame.querySelector(
+      ".kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder",
     );
+    if (!attach || !mode) return false;
+    const attachBox = attach.getBoundingClientRect();
+    const modeBox = mode.getBoundingClientRect();
+    return modeBox.bottom <= attachBox.top || modeBox.top >= attachBox.bottom;
   });
 }
 
@@ -59,14 +54,20 @@ export async function revealSidebar(page: Page) {
     .getByRole("navigation", { name: "Primary navigation", exact: true })
     .or(page.getByRole("dialog", { name: "Primary navigation", exact: true }));
   if (!(await navigation.isVisible())) {
+    // Match the application breakpoint before choosing a trigger. At 1024px
+    // WebKit can briefly report the mobile header as visible while its desktop
+    // styles settle, leaving Playwright waiting on a now-hidden mobile button.
+    const drawer = await usesSidebarDrawer(page);
+    const trigger = page
+      .getByRole("button", {
+        name: drawer
+          ? /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/
+          : /^(Open sidebar|Expand sidebar|Toggle sidebar)$/,
+      })
+      .filter({ visible: true })
+      .first();
     try {
-      await page
-        .getByRole("button", {
-          name: /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/,
-        })
-        .filter({ visible: true })
-        .first()
-        .click({ timeout: 5_000 });
+      await trigger.click({ timeout: 5_000 });
     } catch (error) {
       // A returning profile can open its saved sidebar while the click waits.
       // That transition already satisfies this helper; other failures still fail.
@@ -171,4 +172,45 @@ export async function chooseSettingsSection(page: Page, section: string) {
   await surface.getByRole("tab", { name: label, exact: true }).click();
   await expect(surface.getByRole("tabpanel").first()).toBeVisible();
   return surface;
+}
+
+// The phone action sheet intentionally provides touch-accessible shortcuts;
+// the desktop dropdown remains the minimal two-action menu.
+export async function expectResponseMoreActions(page: Page, trigger: Locator) {
+  // Read the trigger before opening a modal: Radix hides the underlying
+  // accessibility tree while its menu or dialog owns focus.
+  const sheet = (await trigger.getAttribute("aria-haspopup")) === "dialog";
+  await trigger.click();
+  const menu = sheet
+    ? page.getByRole("dialog", { name: "Message actions", exact: true })
+    : page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  if (sheet) {
+    for (const name of [
+      /^(Copy|Copied)$/,
+      "Share",
+      /^(Regenerate response|Retry response)$/,
+      "Branch in new chat",
+      "Search the web",
+      /^(Save to Library|Remove from Library)$/,
+    ]) {
+      await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
+    }
+    await expect(menu.getByRole("button", { name: "Close sheet", exact: true })).toBeVisible();
+  } else {
+    const actions = menu.getByRole("menuitem");
+    await expect(actions).toHaveCount(2);
+    await expect(actions).toHaveText(["Try again", "Branch into new chat"]);
+  }
+  await expect(menu.locator("time")).toHaveCount(0);
+  return menu;
+}
+
+export async function confirmChatDeletionIfDrawer(page: Page) {
+  if (!(await usesSidebarDrawer(page))) return;
+  const confirmation = page.getByRole("dialog", { name: "Delete chat?", exact: true });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.getByRole("button", { name: "Cancel", exact: true })).toBeEnabled();
+  await confirmation.getByRole("button", { name: "Delete chat", exact: true }).click();
+  await expect(confirmation).toBeHidden();
 }

@@ -183,6 +183,55 @@ export function createBrowserSpeechSink({
   };
 }
 
+// The native app keeps an explicitly started read-aloud response active when
+// iOS backgrounds the app. Microphone capture is managed separately.
+export function createReadAloudSpeechSink(options) {
+  const native = typeof window !== "undefined" && window.webkit?.messageHandlers?.kovaReadAloud;
+  if (!native || typeof native.postMessage !== "function") return createBrowserSpeechSink(options);
+
+  const { signal, onPlaying, onEnded, onError } = options;
+  const id = crypto.randomUUID();
+  const parts = [];
+  let requested = false;
+  const completed = (event) => {
+    if (!signal.aborted && event.detail?.id === id) {
+      if (event.detail.success === true) onEnded();
+      else onError();
+    }
+  };
+  window.addEventListener("kova-native-read-aloud", completed);
+  return {
+    async write(bytes) {
+      signal.throwIfAborted();
+      parts.push(bytes);
+    },
+    async end() {
+      signal.throwIfAborted();
+      let raw = "";
+      for (const part of parts)
+        for (let index = 0; index < part.length; index += 0x8000)
+          raw += String.fromCharCode(...part.subarray(index, index + 0x8000));
+      parts.length = 0;
+      requested = true;
+      const accepted = await native.postMessage({ action: "play", id, audio: btoa(raw) });
+      if (signal.aborted) return;
+      if (accepted === true) onPlaying();
+      else onError();
+    },
+    dispose() {
+      window.removeEventListener("kova-native-read-aloud", completed);
+      parts.length = 0;
+      if (requested) {
+        try {
+          void Promise.resolve(native.postMessage({ action: "stop", id })).catch(() => undefined);
+        } catch {
+          // The app may have already dismantled the native view.
+        }
+      }
+    },
+  };
+}
+
 export function createSpeechPlayback({
   fetchImpl = fetch,
   createSink = createBrowserSpeechSink,

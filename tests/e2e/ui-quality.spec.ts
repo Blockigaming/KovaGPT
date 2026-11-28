@@ -470,7 +470,19 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   expect(assistant!.width).toBeLessThanOrEqual(Math.min(page.viewportSize()!.width, 820));
 
   const userMessage = page.getByRole("article", { name: "Your message", exact: true }).last();
-  await expect(userMessage.getByRole("button")).toHaveCount(1);
+  const touchActions = await page.evaluate(
+    () => matchMedia("(width < 1024px), (pointer: coarse) and (hover: none)").matches,
+  );
+  await expect(userMessage.getByRole("button")).toHaveCount(touchActions ? 2 : 1);
+  const editAction = userMessage.getByRole("button", { name: "Edit message", exact: true });
+  if (touchActions) {
+    await expect(editAction).toBeVisible();
+    const target = (await editAction.boundingBox())!;
+    expect(target.width + 0.01).toBeGreaterThanOrEqual(44);
+    expect(target.height + 0.01).toBeGreaterThanOrEqual(44);
+  } else {
+    await expect(editAction).toBeHidden();
+  }
   await expect(
     userMessage.getByRole("button", { name: "Copy prompt", exact: true }),
   ).toBeAttached();

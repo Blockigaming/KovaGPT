@@ -24,8 +24,7 @@ function checkOpeningLayout(
   appShell: boolean,
 ) {
   if (width >= 768) return;
-  expect(first.composer.width).toBeCloseTo(width - 32, 0);
-  // Phone web and the app shell share one home: greeting centered above a docked composer.
+  expect(first.composer.width).toBeCloseTo(width - 24, 0);
   void appShell;
   expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
   // The greeting sits at the middle height of the screen.

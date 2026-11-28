@@ -3,6 +3,7 @@ import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
 import type { ComponentType, CSSProperties } from "react";
+import { ActiveChatTranscript } from "@/lib/preload-conversation-view";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
   resolveConsumerModelChoice,
@@ -89,6 +90,7 @@ import { MobileTopBar } from "@/components/MobileTopBar";
 import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
 import { type Settings, DEFAULT_SETTINGS, settingsTabForSection } from "@/lib/settings-types";
+import { saveStoredSettings } from "@/lib/settings-storage";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function named<K extends string, M extends Record<K, ComponentType<any>>>(
@@ -104,11 +106,6 @@ const ConversationHeaderActions = named(
   "ConversationHeaderActions",
 );
 const CommandPalette = named(() => import("@/components/CommandPalette"), "CommandPalette");
-const ActiveChatTranscript = named(
-  () => import("@/components/ActiveChatTranscript"),
-  "ActiveChatTranscript",
-);
-
 const QuotaRejectedDraftPreview = named(
   () => import("@/components/QuotaRejectedDraftPreview"),
   "QuotaRejectedDraftPreview",
@@ -221,9 +218,13 @@ type AppChatContextHandoff =
   | { prompt: string; connector: { id: string; label: string } };
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { settings?: string } =>
-    typeof search.settings === "string" ? { settings: search.settings } : {},
   component: KovaGPT,
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): Record<string, unknown> & { settings?: string } => ({
+    ...search,
+    settings: typeof search.settings === "string" ? search.settings : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "KovaGPT" },
@@ -1038,21 +1039,24 @@ function KovaGPT() {
     return () => window.removeEventListener("storage", sync);
   }, [settingsReady, userKey]);
 
-  // Persist local edits only. Hydration and cross-tab snapshots must not
-  // schedule a write that can overwrite a newer preference from another tab.
-  useEffect(() => {
-    if (!settingsReady || !settingsState.persist || typeof window === "undefined") return;
-    const storage = safeBrowserStorage("localStorage");
+  // Commit local edits before paint so immediately closing or reloading the
+  // Settings dialog cannot drop the last choice or echo a passive snapshot.
+  useLayoutEffect(() => {
+    if (
+      !settingsReady ||
+      !settingsState.persist ||
+      storagePrincipalRef.current !== storagePrincipal
+    )
+      return;
     try {
-      if (!storage) throw new Error("settings_storage_unavailable");
-      storage.setItem(settingsKey(userKey), JSON.stringify(settings));
+      saveStoredSettings(userKey, settings);
       window.dispatchEvent(
         new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
       );
     } catch {
       toast.error("Preferences could not be saved on this device.", { id: "settings-storage" });
     }
-  }, [settings, settingsReady, settingsState.persist, userKey]);
+  }, [settings, settingsReady, settingsState.persist, storagePrincipal, userKey]);
 
   useEffect(() => {
     if (!principalReady) return;
@@ -3275,16 +3279,19 @@ function KovaGPT() {
         onSelect={setActiveId}
         onNew={startNewChat}
         onDelete={(id) => historyAction({ kind: "delete", id })}
+        onArchived={(id) => {
+          setConversations((items) => items.filter((item) => item.id !== id));
+          if (id === activeIdRef.current) setActiveId(null);
+        }}
         onRename={(id, title) => historyAction({ kind: "rename", id, title })}
         open={showSidebar}
+        workspaceSearchOpen={commandOpen}
         onToggle={() => {
           readingAnchorControllerRef.current?.capture();
           setSidebarOpen((v) => !v);
         }}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
-        onOpenWorkspaceSearch={openCommandPalette}
-        workspaceSearchOpen={commandOpen}
         hideGuestLogin
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
         onShare={(id) => {

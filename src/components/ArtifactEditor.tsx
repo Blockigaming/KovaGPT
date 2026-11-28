@@ -1,3 +1,4 @@
+import { nativeKovaPlatform, sendNativeKovaMessage } from "@/lib/kova-native";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1567,9 +1568,9 @@ function ArtifactEditorSession({
               className="border"
               onClick={async () => {
                 try {
-                  if (navigator.share)
+                  if (navigator.share) {
                     await navigator.share({ title: artifactTitle, text: shareSnapshot });
-                  else {
+                  } else if (!sendNativeKovaMessage({ action: "share", text: shareSnapshot })) {
                     await navigator.clipboard.writeText(shareSnapshot);
                     toast.success("Snapshot copied");
                   }
@@ -1580,7 +1581,8 @@ function ArtifactEditorSession({
                 }
               }}
             >
-              {typeof navigator !== "undefined" && typeof navigator.share === "function"
+              {(typeof navigator !== "undefined" && typeof navigator.share === "function") ||
+              nativeKovaPlatform()
                 ? "Share this snapshot"
                 : "Copy this snapshot"}
             </Button>

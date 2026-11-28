@@ -119,7 +119,7 @@ export const Route = createFileRoute("/api/generate-image")({
         }
       },
       POST: async ({ request }) => {
-        const deadline = createRequestDeadline(request.signal, 45_000, "image_request");
+        const deadline = createRequestDeadline(request.signal, 135_000, "image_request");
         try {
           const auth = await waitForPromiseWithSignal(
             requireVerifiedUser(request),

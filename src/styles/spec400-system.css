@@ -177,6 +177,16 @@ body .kova-assistant .kova-user-message {
 body .kova-assistant .kova-desktop-topbar {
   height: 64px !important;
   min-height: 64px !important;
+  border-bottom: 0 !important;
+  z-index: 3;
+}
+body .kova-assistant .kova-desktop-topbar::after {
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 16px;
+  background: linear-gradient(to bottom, var(--assistant-canvas), transparent);
+  pointer-events: none;
+  content: "";
 }
 body .kova-assistant .kova-topbar {
   border-bottom: 0 !important;

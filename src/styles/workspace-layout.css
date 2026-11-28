@@ -145,3 +145,19 @@
     margin-left: auto;
   }
 }
+
+/* In tabletop posture, the upper segment owns the workspace. Keep the
+   composer, scroll container and docked navigation above the hinge. */
+@media (vertical-viewport-segments: 2) {
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]:not([data-keyboard-open="true"]) {
+    --kova-fold-height: env(viewport-segment-height 0 0, 100dvh);
+    height: min(100dvh, var(--kova-fold-height));
+    max-height: var(--kova-fold-height);
+  }
+
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
+    > :is(.kova-chat-main, .kova-app-content, .kova-sidebar, .kova-sidebar-rail) {
+    min-height: 0;
+    max-height: var(--kova-fold-height, 100dvh);
+  }
+}

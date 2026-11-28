@@ -16,6 +16,7 @@ import type { ModeId, Tier } from "@/lib/modes";
 export function MobileTopBar({
   onOpenSidebar,
   onNewChat,
+  title,
   temporaryChat = false,
   chatStarted = false,
   conversationActions,
@@ -78,7 +79,7 @@ export function MobileTopBar({
             data-kova-navigation-heading=""
             className="spec400-mobile-page-title min-w-0 truncate text-sm font-medium"
           >
-            KovaGPT
+            {chatStarted && title ? title : "KovaGPT"}
           </span>
           {skill ? (
             <Button

@@ -44,8 +44,11 @@ export async function fixture(
       // Retry one connection reset on this read-only document fetch. HTTP
       // failures still reach the browser and fail the original assertions.
       const response = await route.fetch({ maxRedirects: 0, maxRetries: 1 });
-      if (response.status() >= 300 && response.status() < 400) {
-        // WebKit cannot fulfill redirects. Let the browser perform the navigation.
+      const location = response.headers().location;
+      if (response.status() >= 300 && response.status() < 400 && location) {
+        // WebKit and Firefox reject synthetic redirects from route.fulfill.
+        // Let the browser follow the original same-origin response.
+        if (new URL(location, url).origin !== origin) return route.abort("blockedbyclient");
         return route.continue();
       }
       return route.fulfill({

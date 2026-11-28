@@ -38,6 +38,8 @@ export interface ComposerVoiceDialogViewProps {
   handsFreeListening?: boolean;
   canFinishVoiceTurn?: boolean;
   microphoneAvailable?: boolean;
+  microphoneMuted?: boolean;
+  microphoneControl?: ReactNode;
   replyAvailable?: boolean;
   error?: string;
   voicePicker?: ReactNode;
@@ -67,6 +69,8 @@ export function ComposerVoiceDialogView({
   handsFreeListening = false,
   canFinishVoiceTurn = true,
   microphoneAvailable = true,
+  microphoneMuted = false,
+  microphoneControl,
   replyAvailable = true,
   error,
   voicePicker,
@@ -108,7 +112,9 @@ export function ComposerVoiceDialogView({
               : availability === "error"
                 ? "Voice couldn’t connect"
                 : phase === "recording"
-                  ? "Recording"
+                  ? microphoneMuted
+                    ? "Microphone muted"
+                    : "Recording"
                   : phase === "requesting"
                     ? "Allow microphone access"
                     : phase === "stopping" || phase === "transcribing"
@@ -157,13 +163,15 @@ export function ComposerVoiceDialogView({
                       ? "Listen to a completed reply using your selected voice."
                       : "Recording and reply playback are unavailable right now."
                   : phase === "recording"
-                    ? mode === "voice"
-                      ? handsFreeListening
-                        ? canFinishVoiceTurn
-                          ? "Pause to send your turn, or press Finish turn."
-                          : "Pause after speaking to send your turn automatically."
-                        : "Listening now. Press Finish turn when you finish speaking; Stop ends the conversation."
-                      : "Stop when you’re ready to turn your recording into text."
+                    ? microphoneMuted
+                      ? "Unmute the microphone to keep talking."
+                      : mode === "voice"
+                        ? handsFreeListening
+                          ? canFinishVoiceTurn
+                            ? "Pause to send your turn, or press Finish turn."
+                            : "Pause after speaking to send your turn automatically."
+                          : "Listening now. Press Finish turn when you finish speaking; Stop ends the conversation."
+                        : "Stop when you’re ready to turn your recording into text."
                     : phase === "requesting"
                       ? "Your browser will ask before the microphone can start."
                       : phase === "stopping" || phase === "transcribing"
@@ -241,7 +249,7 @@ export function ComposerVoiceDialogView({
                 {(processing || availability === "checking") && (
                   <Loader2 className="animate-spin" aria-hidden="true" />
                 )}
-                {phase === "recording" && (
+                {phase === "recording" && !microphoneMuted && (
                   <span className="kova-voice-recording-dot" aria-hidden="true" />
                 )}
                 {ready ? status : "Checking voice availability…"}
@@ -264,9 +272,10 @@ export function ComposerVoiceDialogView({
         </div>
 
         <div className="kova-voice-bottom">
-          {ready && (retryControl || cancelControl) && (
+          {ready && (retryControl || cancelControl || microphoneControl) && (
             <div className="kova-voice-recovery">
               {retryControl && <div className="kova-voice-retry-control">{retryControl}</div>}
+              {microphoneControl}
               {cancelControl}
             </div>
           )}

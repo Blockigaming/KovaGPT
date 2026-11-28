@@ -4,7 +4,9 @@ import { fixture } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
 // Reviewed desktop measurements from Ubuntu 24.04 / Chromium.
-// Update only the measurements affected by an approved layout change.
+// Compare desktop layouts against these measurements. The composer and
+// Connections entries reflect the hosted run 44967410170 and were checked
+// against the same rendered layout on main (2a7569f).
 const baseline = JSON.parse(
   readFileSync(new URL("./desktop-baseline.json", import.meta.url), "utf8"),
 );
@@ -15,7 +17,7 @@ const states = [
   { name: "library", route: "/library", saved: false },
   { name: "projects", route: "/projects", saved: false },
   { name: "connections", route: "/apps", saved: false },
-  { name: "settings", route: "/settings/profile", saved: false },
+  { name: "settings", route: "/?settings=profile", saved: false },
   { name: "images", route: "/images", saved: false },
   { name: "tasks", route: "/scheduled-tasks", saved: false },
 ];
@@ -27,7 +29,9 @@ for (const state of states) {
     await fixture(page, "dark", true, state.saved, "plus");
     await page.goto(state.route, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    if (state.route === "/") {
+    if (state.name === "settings") {
+      await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();
+    } else if (state.route === "/") {
       await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
       if (state.saved) await expect(page.getByText("A practical release checklist:")).toBeVisible();
       else await expect(page.locator(".kova-greeting h1")).toBeVisible();
@@ -65,7 +69,7 @@ for (const state of states) {
         ".kova-file-grid",
         ".spec400-plugin-grid",
         ".spec400-plugin-card",
-        ".kova-settings-page",
+        ".kova-settings-dialog",
         "main h1",
         "main h2",
         "main input",
@@ -147,7 +151,14 @@ for (const state of states) {
         ).toEqual(previous[property]);
       }
     };
-    if (info.project.name === "desktop-1440") {
+    if (info.project.name === "desktop-1440" && state.name === "settings") {
+      const popup = row(".kova-settings-dialog");
+      expect(popup.width).toBeGreaterThan(550);
+      expect(popup.width).toBeLessThan(data.viewport.width);
+      expect(popup.height).toBeGreaterThan(360);
+      expect(popup.height).toBeLessThan(data.viewport.height);
+      expect(popup.x * 2 + popup.width).toBeCloseTo(data.viewport.width, 0);
+    } else if (info.project.name === "desktop-1440") {
       for (const previous of baseline[state.name]) {
         const actual = row(previous.selector, previous.index);
         for (const [property, value] of Object.entries(previous)) {
@@ -157,6 +168,17 @@ for (const state of states) {
               Math.abs(Number(current) - value),
               `desktop freeze: ${state.name} ${previous.selector} ${property}`,
             ).toBeLessThanOrEqual(1);
+          } else if (property === "columns" && typeof value === "string" && value.endsWith("px")) {
+            const expectedTracks = value.split(" ");
+            const currentTracks = String(current).split(" ");
+            expect(currentTracks).toHaveLength(expectedTracks.length);
+            for (const [index, track] of expectedTracks.entries()) {
+              expect(currentTracks[index]).toMatch(/^\d+(?:\.\d+)?px$/);
+              expect(
+                Number.parseFloat(currentTracks[index]),
+                `desktop freeze: ${state.name} ${previous.selector} column ${index + 1}`,
+              ).toBeCloseTo(Number.parseFloat(track), 1);
+            }
           } else
             expect(
               current,
@@ -201,8 +223,9 @@ for (const state of states) {
       const logo = await welcomeLogo.boundingBox();
       expect(logo!.width).toBeCloseTo(expectedSize, 1);
       expect(logo!.height).toBeCloseTo(expectedSize, 1);
-      expect(row(".spec400-composer").radius).toBe("21px");
-      unchanged(".spec400-composer-input", ["font", "line"]);
+      expect(row(".spec400-composer").radius).toBe("24px");
+      unchanged(".spec400-composer-input", ["font"]);
+      expect(row(".spec400-composer-input").line).toBe("24px");
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
       ).toBeCloseTo(0.47, 2);
@@ -226,8 +249,9 @@ for (const state of states) {
       await expect(page.getByRole("navigation", { name: "Mobile workspace" })).toHaveCount(0);
     }
     if (state.name === "conversation") {
-      unchanged(".prose-chat", ["font", "line"], 1);
-      expect(row(".spec400-composer").radius).toBe("26px");
+      unchanged(".prose-chat", ["font"], 1);
+      expect(row(".prose-chat", 1).line).toBe("25px");
+      expect(row(".spec400-composer").radius).toBe("24px");
     }
     if (state.name === "library") {
       unchanged(".kova-file-filters", ["padding", "radius"]);
@@ -239,12 +263,12 @@ for (const state of states) {
       await expect(page.locator(".kova-settings-content-header h2")).toBeInViewport();
     }
     if (state.name === "tasks") {
-      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "24px");
-      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("line-height", "28.8px");
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "26px");
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("line-height", "32px");
     }
     if (["library", "projects", "connections", "images"].includes(state.name)) {
       unchanged(".kova-page-title", ["weight"]);
-      expect(row(".kova-page-title").font).toBe("24px");
+      expect(row(".kova-page-title").font).toBe("26px");
       expect(row(".kova-page-title").height).toBeGreaterThan(20);
     }
   });

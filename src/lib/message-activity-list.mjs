@@ -1,3 +1,7 @@
+import {
+  normalizeTaskCreatedReceipt,
+  normalizeTaskCreationFailureReceipt,
+} from "./task-created-receipt.mjs";
 import { browserActivityIsFresh, normalizeBrowserActivity } from "./browser-activity-contract.mjs";
 
 let liveBrowserActivity = null;
@@ -19,6 +23,14 @@ function publishLiveBrowserActivity(activity) {
 }
 
 export function messageActivitiesFromDelta(current, delta) {
+  const receipt =
+    delta.tool === "scheduled_task" &&
+    delta.status === "done" &&
+    normalizeTaskCreatedReceipt(delta.taskReceipt);
+  const failure =
+    delta.tool === "scheduled_task" &&
+    delta.status === "failed" &&
+    normalizeTaskCreationFailureReceipt(delta.taskFailure);
   return appendMessageActivity(current, {
     ...(typeof delta.activity_id === "string" && delta.activity_id.trim()
       ? { activityId: delta.activity_id.slice(0, 160) }
@@ -28,6 +40,8 @@ export function messageActivitiesFromDelta(current, delta) {
     ...(delta.tool === "browser_interact"
       ? { browser: normalizeBrowserActivity(delta.browser) }
       : {}),
+    ...(receipt ? { taskReceipt: receipt } : {}),
+    ...(failure ? { taskFailure: failure } : {}),
     ...(typeof delta.detail === "string" && delta.detail.trim()
       ? { detail: delta.detail.trim().slice(0, 200) }
       : {}),

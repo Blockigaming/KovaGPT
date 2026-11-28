@@ -16,6 +16,7 @@ export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
   "kova-voice-glow-v1",
   "kova-live-voice-reply-v1",
   "kova-sidebar-shortcuts-v1",
+  "kova-mobile-shortcuts-v1",
   "kova-location",
   "kova-memory-write-block-v1",
   "kova-write-draft",

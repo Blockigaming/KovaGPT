@@ -53,6 +53,9 @@ function fixture(initial = {}) {
     "src/components/ResponseImage.tsx",
     {
       react,
+      "@/hooks/use-mobile-image-gestures": loadUiModule("src/hooks/use-mobile-image-gestures.ts", {
+        react,
+      }),
       "lucide-react": icons,
       "./ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
       "./ui/dialog": { Dialog: "dialog", DialogContent: "dialog-content", DialogTitle: "title" },

@@ -303,7 +303,17 @@ test("the schema instruction stays in final API content across isolated workflow
   const systemContent = property(systemMessage, "content").initializer;
   assert.equal(descendants(systemContent, (node) => node === instructionRefs[1]).length, 1);
   assert.match(declaration("finalMessages").initializer.getText(source), /^body\.messages\s+as /);
-  const planner = declaration("toolPlanningMessages").initializer;
+  const planning = declaration("toolPlanningMessages").initializer;
+  assert.ok(ts.isConditionalExpression(planning));
+  assert.equal(planning.condition.getText(source), "scheduleRequest");
+  assert.ok(ts.isArrayLiteralExpression(planning.whenTrue));
+  assert.equal(planning.whenTrue.elements.length, 2);
+  assert.match(planning.whenTrue.getText(source), /chatScheduleInstructions/);
+  assert.equal(
+    property(planning.whenTrue.elements[1], "content").initializer.getText(source),
+    "scheduleRequest",
+  );
+  const planner = planning.whenFalse;
   assert.ok(ts.isConditionalExpression(planner));
   assert.equal(planner.condition.getText(source), "workflowSkill");
   const ordinaryPlanner = planner.whenFalse;
@@ -322,7 +332,7 @@ test("the schema instruction stays in final API content across isolated workflow
   );
   assert.equal(
     descendants(
-      planner,
+      planning,
       (node) => ts.isIdentifier(node) && node.text === "GENERATIVE_UI_INSTRUCTIONS",
     ).length,
     0,

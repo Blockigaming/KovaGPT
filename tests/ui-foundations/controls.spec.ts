@@ -216,8 +216,8 @@ test("mobile sheet isolates background, respects a nested Escape, and resets can
 
   const handle = sheet.locator("[data-kova-sheet-handle]");
   await dispatchSheetTouch(handle, "touchstart", [160]);
-  await dispatchSheetTouch(handle, "touchmove", [100]);
-  await expect(sheet).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, -60)");
+  await dispatchSheetTouch(handle, "touchmove", [220]);
+  await expect(sheet).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 60)");
   await dispatchSheetTouch(handle, "touchcancel", []);
   await expect(sheet).toHaveCSS("transform", "none");
   await expect(sheet).toBeVisible();
@@ -231,7 +231,7 @@ test("mobile sheet isolates background, respects a nested Escape, and resets can
   await page.getByTestId("trigger").click();
   await expect(sheet).toHaveCSS("transform", "none");
   await dispatchSheetTouch(handle, "touchstart", [160]);
-  await dispatchSheetTouch(handle, "touchmove", [50]);
+  await dispatchSheetTouch(handle, "touchmove", [270]);
   await dispatchSheetTouch(handle, "touchend", []);
   await expect(sheet).toBeHidden();
   await expect(page.getByTestId("trigger")).toBeFocused();

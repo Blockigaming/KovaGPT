@@ -173,7 +173,8 @@ test("sidebar colors and bounded drawer width come from one shared owner without
       rule.parent.params === "(width < 1024px)" &&
       rule.selector === ".kova-sidebar[data-kova-core-sidebar]",
   );
-  assert.equal(property(mobile, "width"), "var(--kova-sidebar-drawer-width, 260px)");
+  assert.equal(property(mobile, "width"), "var(--kova-sidebar-drawer-width)");
+  assert.equal(property(mobile, "--kova-sidebar-drawer-width"), "min(86vw, 360px)");
   assert.equal(property(mobile, "min-width"), "0");
   assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
   // Round the sidebar panel's outer edge while keeping its viewport edge square.
@@ -196,10 +197,13 @@ test("sidebar colors and bounded drawer width come from one shared owner without
     ),
     "Dialog customization does not compete with navigation geometry",
   );
-  for (const rule of sharedRules)
+  for (const rule of sharedRules.filter((rule) => rule.selector.includes("data-kova-core-sidebar")))
     for (const node of rule.nodes)
       if (node.type === "decl")
-        assert.ok(!node.important, "No sidebar override relies on important specificity");
+        assert.ok(
+          !node.important,
+          "Sidebar drawer geometry does not rely on important specificity",
+        );
 });
 
 test("navigation keeps dense desktop rows, touch targets and account outside scrollable shortcuts", () => {

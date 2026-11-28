@@ -136,7 +136,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/high-impact-chat.spec.ts", 11, 12, 11],
     ["tests/e2e/mobile-quality.spec.ts", 13, 13, 12],
     ["tests/e2e/mobile-shell-ui-truth.spec.ts", 7, 8, 7],
-    ["tests/e2e/mobile-spec-matrix.spec.ts", 2, 2],
+    ["tests/e2e/mobile-spec-matrix.spec.ts", 4, 4],
     ["tests/e2e/model-selector.spec.ts", 6, 6],
     ["tests/e2e/multimodal-canvas.spec.ts", 2, 2],
     ["tests/e2e/product-completeness.spec.ts", 4, 4],

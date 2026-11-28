@@ -8,6 +8,7 @@ import {
   openCurrentSettings,
   chooseSettingsSection,
   revealSidebar,
+  usesSidebarDrawer,
 } from "./current-ui";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
@@ -425,7 +426,9 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   await waitForKovaHydration(page);
   await startAttachedConversation(page, "Regenerated response");
   await page.getByRole("button", { name: "More actions", exact: true }).click();
-  await page.getByRole("menuitem", { name: /Try again/, exact: false }).click();
+  if (await usesSidebarDrawer(page))
+    await page.getByRole("button", { name: "Regenerate response", exact: true }).click();
+  else await page.getByRole("menuitem", { name: "Try again", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toHaveCount(0);
 
   await expect(page.locator(".kova-user-message")).toHaveCount(1);
@@ -463,8 +466,20 @@ test("archived chats return to history and can be permanently deleted", async ({
     page.getByRole("button", { name: "Open chat Archived chat", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Options for Archived chat", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
+  const mobile = await usesSidebarDrawer(page);
+  const archive = page.getByRole("menuitem", { name: "Archive", exact: true });
+  await expect(archive).toHaveCount(mobile ? 1 : 0);
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  if (mobile) {
+    const confirmation = page.getByRole("dialog", { name: "Delete chat?", exact: true });
+    await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Open chat Archived chat", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Options for Archived chat", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+    await confirmation.getByRole("button", { name: "Delete chat", exact: true }).click();
+  }
   await expect(page.getByText("Chat deleted", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0, {
     timeout: 10000,

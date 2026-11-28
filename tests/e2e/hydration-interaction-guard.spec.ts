@@ -80,9 +80,15 @@ for (const { mode, system, dark } of themeCases) {
     page,
   }, testInfo) => {
     test.skip(!["desktop-1440x900", "phone-390x844"].includes(testInfo.project.name));
-    const background = dark ? "rgb(25, 25, 25)" : "rgb(255, 255, 255)";
-    // The canonical ChatGPT source palette is also selected before hydration.
-    const foreground = dark ? "rgb(255, 255, 255)" : "rgb(13, 13, 13)";
+    const phone = testInfo.project.name === "phone-390x844";
+    const background = dark
+      ? phone
+        ? "rgb(17, 17, 17)"
+        : "rgb(25, 25, 25)"
+      : "rgb(255, 255, 255)";
+    const foreground = dark ? "rgb(255, 255, 255)" : phone ? "rgb(17, 17, 17)" : "rgb(13, 13, 13)";
+    const themeColor = dark ? (phone ? "#111111" : "#191919") : "#ffffff";
+    const browserChrome = page.locator('meta[name="theme-color"]');
     const hydrationErrors: string[] = [];
     const captureHydrationError = (message: string) => {
       if (/(?:hydration|#418|server rendered html|didn't match)/iu.test(message)) {
@@ -131,6 +137,7 @@ for (const { mode, system, dark } of themeCases) {
       await expect(root).not.toHaveClass(/\bdark\b/);
       await expect(page.locator("body")).toHaveCSS("background-color", background);
       await expect(page.locator("body")).toHaveCSS("color", foreground);
+      await expect(browserChrome).toHaveAttribute("content", themeColor);
       await expect(
         page.locator('dialog[aria-label="Checking account"] [aria-busy]'),
       ).toHaveAttribute("aria-busy", "true");
@@ -143,6 +150,7 @@ for (const { mode, system, dark } of themeCases) {
       await expect(root).toHaveClass(dark ? /\bdark\b/ : /^(?!.*\bdark\b)/);
       await expect(page.locator("body")).toHaveCSS("background-color", background);
       await expect(page.locator("body")).toHaveCSS("color", foreground);
+      await expect(browserChrome).toHaveAttribute("content", themeColor);
       await expect(
         page.getByRole("button", { name: "Continue with email", exact: true }),
       ).toBeVisible();

@@ -12,6 +12,13 @@ import {
   isPrincipalBrowserStorageClearedEvent,
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
+import {
+  KOVA_NATIVE_AUDIO_INTERRUPTION,
+  nativeDictationHandler,
+  nativeKovaPlatform,
+  sendNativeKovaMessage,
+} from "@/lib/kova-native";
+import { canonicalizeNativeVoiceWav } from "@/lib/voice-pcm.mjs";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
 import {
   preferredVoice,
@@ -23,6 +30,7 @@ import { listenForVoiceTurn } from "@/lib/voice/realtime-client";
 import { createVoiceSilenceGate } from "@/lib/voice/speech-pause.mjs";
 import {
   createBrowserSpeechSink,
+  createReadAloudSpeechSink,
   createSpeechPlayback,
   stopActiveSpeechPlayback,
 } from "@/lib/speech-playback.mjs";
@@ -291,7 +299,10 @@ export function ComposerVoiceDialog({
   const closing = useRef(false);
   const generation = useRef(0);
   const phaseRef = useRef<Phase>("idle");
+  const nativeBackgrounded = useRef(false);
   const recorder = useRef<MediaRecorder | null>(null);
+  const androidVoice = useRef<{ id: string; running: boolean } | null>(null);
+  const nativeRecording = useRef<{ id: string; listeners: AbortController } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
   const audioBytes = useRef(0);
@@ -307,6 +318,12 @@ export function ComposerVoiceDialog({
     gate: ReturnType<typeof createVoiceSilenceGate>;
   } | null>(null);
   const [handsFreeListening, setHandsFreeListening] = useState(false);
+  const [microphoneMuted, setMicrophoneMuted] = useState(false);
+  const microphoneMutedRef = useRef(false);
+  const resetMute = useCallback(() => {
+    microphoneMutedRef.current = false;
+    setMicrophoneMuted(false);
+  }, []);
   const requestDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
   const objectUrl = useRef("");
@@ -375,6 +392,17 @@ export function ComposerVoiceDialog({
     if (requestDeadline.current !== null) clearTimeout(requestDeadline.current);
     requestDeadline.current = null;
     clearRecordingTimers();
+    const android = androidVoice.current;
+    androidVoice.current = null;
+    if (android) sendNativeKovaMessage({ action: "android-voice-stop", id: android.id });
+    const native = nativeRecording.current;
+    nativeRecording.current = null;
+    if (native) {
+      native.listeners.abort();
+      void nativeDictationHandler()
+        ?.postMessage({ action: "cancel", id: native.id })
+        .catch(() => {});
+    }
     const activeRecorder = recorder.current;
     recorder.current = null;
     if (activeRecorder) {
@@ -389,12 +417,13 @@ export function ComposerVoiceDialog({
     }
     stopTracks(stream.current);
     stream.current = null;
+    resetMute();
     chunks.current = [];
     audioBytes.current = 0;
     retainedRecording.current = null;
     phaseRef.current = "idle";
     releasePlayback();
-  }, [clearRecordingTimers, releasePlayback]);
+  }, [clearRecordingTimers, releasePlayback, resetMute]);
 
   const isCurrent = useCallback((scope: OperationScope) => {
     const value = current.current;
@@ -542,6 +571,69 @@ export function ComposerVoiceDialog({
     },
     [releaseResources, updatePhase],
   );
+
+  useLayoutEffect(() => {
+    if (!navigator.userAgent?.includes("KovaGPTNative/CarPlay") || mode !== "voice") return;
+    const state = error
+      ? "ended"
+      : phase === "recording"
+        ? "listening"
+        : phase === "speaking"
+          ? "speaking"
+          : phase === "stopping" || phase === "transcribing" || phase === "chat"
+            ? "working"
+            : null;
+    if (state) sendNativeKovaMessage({ action: "carplay-voice-state", state });
+  }, [mode, phase, error]);
+
+  useLayoutEffect(() => {
+    if (!open || !nativeKovaPlatform()) return;
+    const interrupt = () => {
+      if (phaseRef.current !== "idle")
+        failOperation("Audio was interrupted. Start again when your microphone is available.");
+    };
+    const stopHiddenCapture = () => {
+      if (nativeRecording.current || androidVoice.current?.running) return;
+      if (phaseRef.current === "requesting" || phaseRef.current === "recording") {
+        failOperation("Microphone capture stopped when you left the app. Start again to continue.");
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") stopHiddenCapture();
+    };
+    const onBackground = () => {
+      nativeBackgrounded.current = true;
+      stopHiddenCapture();
+    };
+    const onForeground = () => {
+      nativeBackgrounded.current = false;
+    };
+    const onAndroidVoiceService = (event: Event) => {
+      const service = androidVoice.current;
+      const detail = (event as CustomEvent<{ id?: string; running?: boolean }>).detail;
+      if (!service || detail?.id !== service.id) return;
+      if (detail.running) {
+        service.running = true;
+      } else if (service.running) {
+        cancelOperation();
+      } else {
+        androidVoice.current = null;
+      }
+    };
+    window.addEventListener("kova-android-voice-service", onAndroidVoiceService);
+    window.addEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+    window.addEventListener("kova-native-background", onBackground);
+    window.addEventListener("kova-native-foreground", onForeground);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      nativeBackgrounded.current = false;
+      window.removeEventListener("kova-android-voice-service", onAndroidVoiceService);
+      window.removeEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+      window.removeEventListener("kova-native-background", onBackground);
+      window.removeEventListener("kova-native-foreground", onForeground);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [open, cancelOperation, failOperation]);
 
   useLayoutEffect(() => {
     if (mode === "voice") return;
@@ -767,12 +859,21 @@ export function ComposerVoiceDialog({
     };
   };
 
-  const submitVoiceTurn = async (scope: OperationScope, text: string, realtime = false) => {
+  const submitVoiceTurn = async (
+    scope: OperationScope,
+    text: string,
+    realtime = false,
+    nativeRecordedTurn = false,
+  ) => {
     const submit = current.current.onVoiceSubmit;
     if (!isCurrent(scope) || !voiceSessionActive.current || !submit) return;
     updatePhase("chat");
     setVoiceLog((log) => [...log.slice(-49), { speaker: "You", text, at: Date.now() }]);
     const controller = beginRequest(120_000);
+    const backgroundReplyID =
+      nativeKovaPlatform() === "ios" && !nativeRecordedTurn ? crypto.randomUUID() : null;
+    if (backgroundReplyID)
+      sendNativeKovaMessage({ action: "voice-reply-begin", id: backgroundReplyID });
     let abortListener: (() => void) | undefined;
     let streaming: ReturnType<typeof startStreamingSpeech> | null = null;
     let handedOff = false;
@@ -783,7 +884,10 @@ export function ComposerVoiceDialog({
         if (controller.signal.aborted) abortListener();
       });
       // Live (hands-free) turns speak while the reply is still being generated.
-      if (realtime && scope.userId) streaming = startStreamingSpeech(scope);
+      // Native playback uses the OS audio handoff and background lifecycle.
+      // Web streaming must not bypass that path in the installed apps.
+      if (realtime && scope.userId && !nativeKovaPlatform())
+        streaming = startStreamingSpeech(scope);
       const reply = await Promise.race([
         submit(text, controller.signal, realtime, streaming?.events),
         aborted,
@@ -824,7 +928,7 @@ export function ComposerVoiceDialog({
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
         createSink: (options) =>
-          createBrowserSpeechSink({
+          createReadAloudSpeechSink({
             ...options,
             onLevel: updateGlow,
             onProgress: (elapsed, duration) => {
@@ -853,6 +957,15 @@ export function ComposerVoiceDialog({
           // Only the shared manager's current natural-ended receipt advances
           // the explicit session. Stop, stale sink callbacks and byte completion
           // cannot request another microphone turn.
+          if (
+            nativeKovaPlatform() &&
+            !nativeRecordedTurn &&
+            !androidVoice.current?.running &&
+            (nativeBackgrounded.current || document.visibilityState !== "visible")
+          ) {
+            voiceSessionActive.current = false;
+            return;
+          }
           void resumeRecording.current?.(true);
         },
         onState: (state, code) => {
@@ -964,6 +1077,8 @@ export function ComposerVoiceDialog({
               : "This voice turn could not be completed and saved. Review the conversation in chat before trying again.",
       );
     } finally {
+      if (backgroundReplyID)
+        sendNativeKovaMessage({ action: "voice-reply-end", id: backgroundReplyID });
       if (abortListener) controller.signal.removeEventListener("abort", abortListener);
       finishRequest(controller);
       if (!handedOff && streaming) {
@@ -974,14 +1089,23 @@ export function ComposerVoiceDialog({
     }
   };
 
-  const transcribeRecording = async (scope: OperationScope, original: Blob) => {
+  const transcribeRecording = async (
+    scope: OperationScope,
+    original: Blob,
+    nativeRecordedTurn = false,
+  ) => {
     if (!isCurrent(scope)) return;
     retainedRecording.current = original;
     setCanRetryRecording(false);
     updatePhase("transcribing");
     const controller = beginRequest();
     try {
-      const audio = await prepareVoiceRecording(original, { signal: controller.signal });
+      const audio =
+        original.type === "audio/wav"
+          ? new Blob([canonicalizeNativeVoiceWav(new Uint8Array(await original.arrayBuffer()))], {
+              type: "audio/wav",
+            })
+          : await prepareVoiceRecording(original, { signal: controller.signal });
       if (!isCurrent(scope)) return;
       const body = new FormData();
       body.append("action", "stt");
@@ -1006,7 +1130,7 @@ export function ComposerVoiceDialog({
       if (current.current.mode === "voice" && voiceSessionActive.current) {
         setTranscript(result.text.trim());
         setHasTranscript(true);
-        await submitVoiceTurn(scope, result.text.trim());
+        await submitVoiceTurn(scope, result.text.trim(), false, nativeRecordedTurn);
       } else if (current.current.mode === "dictate") {
         // Dictation behaves like typing: insert into the current composer draft
         // without a second transcript review or an automatic Send action.
@@ -1065,14 +1189,62 @@ export function ComposerVoiceDialog({
     void transcribeRecording(scope, retainedRecording.current);
   };
 
+  const toggleMicrophone = () => {
+    const native = nativeRecording.current;
+    if (native && phaseRef.current === "recording") {
+      const muted = !microphoneMutedRef.current;
+      microphoneMutedRef.current = muted;
+      setMicrophoneMuted(muted);
+      void nativeDictationHandler()
+        ?.postMessage({ action: muted ? "mute" : "unmute", id: native.id })
+        .then((ok) => {
+          if (!ok && nativeRecording.current === native)
+            failOperation("The microphone could not change state. Start Voice again.");
+        })
+        .catch(() => {
+          if (nativeRecording.current === native)
+            failOperation("The microphone could not change state. Start Voice again.");
+        });
+      return;
+    }
+    const capture = stream.current;
+    if (!capture || phaseRef.current !== "recording") return;
+    const muted = !microphoneMutedRef.current;
+    const activeRecorder = recorder.current;
+    for (const track of capture.getAudioTracks()) track.enabled = !muted;
+    if (muted && activeRecorder?.state === "recording") activeRecorder.pause();
+    if (!muted && activeRecorder?.state === "paused") activeRecorder.resume();
+    microphoneMutedRef.current = muted;
+    setMicrophoneMuted(muted);
+  };
+
   const stopRecording = () => {
-    if (phaseRef.current !== "recording" || recorder.current?.state !== "recording") return;
+    const native = nativeRecording.current;
+    if (native && phaseRef.current === "recording") {
+      updatePhase("stopping");
+      clearRecordingTimers();
+      void nativeDictationHandler()
+        ?.postMessage({ action: "finish", id: native.id })
+        .then((finished) => {
+          if (!finished && nativeRecording.current === native)
+            failOperation("The microphone recording ended. Please try again.");
+        })
+        .catch(() => {
+          if (nativeRecording.current === native)
+            failOperation("The microphone recording ended. Please try again.");
+        });
+      return;
+    }
+    const activeRecorder = recorder.current;
+    if (phaseRef.current !== "recording" || !activeRecorder || activeRecorder.state === "inactive")
+      return;
     updatePhase("stopping");
     clearRecordingTimers();
     setHandsFreeListening(false);
-    recorder.current.stop();
+    activeRecorder.stop();
     stopTracks(stream.current);
     stream.current = null;
+    resetMute();
   };
 
   const startRecording = async (continuing = false) => {
@@ -1093,11 +1265,37 @@ export function ComposerVoiceDialog({
       voiceId: selectedVoice.current,
     };
     if (!isCurrent(scope)) return;
+    const watchMicrophone = (capture: MediaStream) => {
+      stream.current = capture;
+      if (mode === "voice" && nativeKovaPlatform() === "android" && !androidVoice.current) {
+        const id = crypto.randomUUID();
+        androidVoice.current = { id, running: false };
+        sendNativeKovaMessage({ action: "android-voice-start", id });
+      }
+      for (const track of capture.getAudioTracks()) {
+        track.addEventListener(
+          "ended",
+          () => {
+            if (isCurrent(scope) && stream.current === capture)
+              failOperation(
+                "The microphone disconnected. Select an available microphone and start again.",
+              );
+          },
+          { once: true },
+        );
+      }
+    };
+    const native = nativeDictationHandler();
     const realtime =
-      mode === "voice" && capabilities.realtime && !realtimeFailed && canListenInRealtime();
+      mode === "voice" &&
+      !navigator.userAgent?.includes("KovaGPTNative/CarPlay") &&
+      !(native && continuing && document.visibilityState === "hidden") &&
+      capabilities.realtime &&
+      !realtimeFailed &&
+      canListenInRealtime();
     const canRecord =
       typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
-    if (!realtime && !canRecord) {
+    if (!native && !realtime && !canRecord) {
       setError(
         "This browser does not support microphone recording. Try a supported browser on a secure connection, or keep typing.",
       );
@@ -1141,6 +1339,7 @@ export function ComposerVoiceDialog({
               throw new Error("Live Voice could not connect.");
             return token;
           },
+          onMicrophone: watchMicrophone,
           onLevel: updateGlow,
           onListening: () => {
             startedListening = true;
@@ -1151,15 +1350,23 @@ export function ComposerVoiceDialog({
           },
         });
         finishRequest(controller);
-        if (isCurrent(scope)) await submitVoiceTurn(scope, text, true);
+        if (!isCurrent(scope)) return;
+        stream.current = null;
+        resetMute();
+        await submitVoiceTurn(scope, text, true);
         return;
       } catch (cause) {
         if (!isCurrent(scope) || controller.signal.aborted) return;
         const mediaError = cause instanceof Error ? cause.name : "";
         const permissionDenied = mediaError === "NotAllowedError" || mediaError === "SecurityError";
         const canUseRecordedVoice =
-          canRecord && !permissionDenied && mediaError !== "NotFoundError" && fallbackAllowed;
+          (canRecord || !!native) &&
+          !permissionDenied &&
+          mediaError !== "NotFoundError" &&
+          fallbackAllowed;
         setHandsFreeListening(false);
+        stream.current = null;
+        resetMute();
         if (canUseRecordedVoice) setRealtimeFailed(true);
         if (!canUseRecordedVoice || startedListening) {
           failOperation(
@@ -1179,6 +1386,66 @@ export function ComposerVoiceDialog({
         finishRequest(controller);
       }
     }
+    if (native) {
+      const active = { id: crypto.randomUUID(), listeners: new AbortController() };
+      nativeRecording.current = active;
+      const { signal } = active.listeners;
+      let completed = false;
+      window.addEventListener(
+        "kova-native-dictation",
+        (event) => {
+          const result = (
+            event as CustomEvent<{ id?: string; audio?: string; backgroundProcessing?: boolean }>
+          ).detail;
+          if (result?.id !== active.id || nativeRecording.current !== active || !isCurrent(scope))
+            return;
+          completed = true;
+          resetMute();
+          clearRecordingTimers();
+          updatePhase("stopping");
+          const deliver = () => {
+            if (!result.backgroundProcessing && document.visibilityState === "hidden") return;
+            active.listeners.abort();
+            nativeRecording.current = null;
+            if (!result.audio) {
+              failOperation("No audio was recorded. Check your microphone and try again.");
+              return;
+            }
+            const bytes = Uint8Array.from(atob(result.audio), (character) =>
+              character.charCodeAt(0),
+            );
+            void transcribeRecording(
+              scope,
+              new Blob([bytes], { type: "audio/wav" }),
+              result.backgroundProcessing === true,
+            ).finally(() => {
+              if (result.backgroundProcessing)
+                sendNativeKovaMessage({ action: "voice-reply-end", id: active.id });
+            });
+          };
+          document.addEventListener("visibilitychange", deliver, { signal });
+          deliver();
+        },
+        { signal },
+      );
+      const started = await native
+        .postMessage({ action: mode === "voice" ? "start-voice" : "start", id: active.id })
+        .catch(() => false);
+      if (!isCurrent(scope) || nativeRecording.current !== active || completed) return;
+      if (!started) {
+        failOperation(
+          "The microphone could not start. Check KovaGPT’s microphone permission in Settings.",
+        );
+        return;
+      }
+      updatePhase("recording");
+      const began = Date.now();
+      recordingClock.current = setInterval(
+        () => setElapsed(Math.min(59, Math.floor((Date.now() - began) / 1000))),
+        250,
+      );
+      return;
+    }
     let acquired: MediaStream | null = null;
     try {
       // Capture starts only after explicit Start, or after actual playback ends
@@ -1188,7 +1455,7 @@ export function ComposerVoiceDialog({
         stopTracks(acquired);
         return;
       }
-      stream.current = acquired;
+      watchMicrophone(acquired);
       const mimeType = [
         "audio/webm;codecs=opus",
         "audio/mp4",
@@ -1243,7 +1510,8 @@ export function ComposerVoiceDialog({
           const samples = new Float32Array(analyser.fftSize);
           const gate = createVoiceSilenceGate();
           const interval = setInterval(() => {
-            if (!isCurrent(scope) || phaseRef.current !== "recording") return;
+            if (!isCurrent(scope) || phaseRef.current !== "recording" || microphoneMutedRef.current)
+              return;
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
@@ -1266,6 +1534,11 @@ export function ComposerVoiceDialog({
         }
       }
       recordingDeadline.current = setTimeout(() => {
+        if (microphoneMutedRef.current) {
+          cancelOperation();
+          setError("The listening limit was reached while muted. Press Start to continue.");
+          return;
+        }
         if (
           mode === "voice" &&
           silenceMonitor.current &&
@@ -1335,7 +1608,7 @@ export function ComposerVoiceDialog({
       let started = false;
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
-        createSink: createBrowserSpeechSink,
+        createSink: createReadAloudSpeechSink,
         onEnded: (completed) => {
           if (
             !isCurrent(scope) ||
@@ -1438,7 +1711,9 @@ export function ComposerVoiceDialog({
         : phase === "requesting"
           ? "Waiting for microphone permission…"
           : phase === "recording"
-            ? `Recording · ${elapsed}s of 59s`
+            ? microphoneMuted
+              ? "Microphone muted"
+              : `Recording · ${elapsed}s of 59s`
             : phase === "stopping"
               ? "Finishing recording…"
               : phase === "transcribing"
@@ -1506,6 +1781,7 @@ export function ComposerVoiceDialog({
       } as CSSProperties)
     : undefined;
   const realtimeListening =
+    !nativeRecording.current &&
     phase === "recording" &&
     mode === "voice" &&
     capabilities?.realtime &&
@@ -1595,6 +1871,20 @@ export function ComposerVoiceDialog({
       glowStyle={glowStyle}
       mode={mode}
       status={status}
+      microphoneMuted={microphoneMuted}
+      microphoneControl={
+        mode === "voice" && phase === "recording" ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="kova-mobile-voice-mute"
+            onClick={toggleMicrophone}
+            aria-pressed={microphoneMuted}
+          >
+            {microphoneMuted ? "Unmute microphone" : "Mute microphone"}
+          </Button>
+        ) : undefined
+      }
       handsFreeListening={mode === "voice" && handsFreeListening}
       canFinishVoiceTurn={!realtimeListening}
       availability={

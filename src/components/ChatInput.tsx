@@ -81,6 +81,7 @@ import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-aut
 import { useLayout } from "@/hooks/use-mobile";
 import { composerKeyboardInset } from "@/lib/composer-keyboard-inset.mjs";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
+import { KOVA_NATIVE_OPEN_VOICE, nativeKovaPlatform } from "@/lib/kova-native";
 
 import {
   lazy,
@@ -97,7 +98,10 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { conversationLimitMessage, conversationLimitReached } from "@/lib/conversation-limits.mjs";
-import { preloadConversationView } from "@/lib/preload-conversation-view";
+import {
+  preloadActiveChatTranscript,
+  preloadConversationView,
+} from "@/lib/preload-conversation-view";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
@@ -654,27 +658,49 @@ export function ChatInput({
       voiceCallbacksRef.current.onVoiceModeChange?.(null);
     }
   }, [voiceScope, disabled, online]);
-  const openVoice = (next: "dictate" | "voice", trigger: HTMLElement) => {
-    const latest = voiceCallbacksRef.current;
-    if (
-      !voiceMountedRef.current ||
-      voiceIdentityRef.current !== voiceScope ||
-      !voiceScope.isLoaded ||
-      latest.disabled ||
-      latest.isStreaming ||
-      !latest.online ||
-      (next === "voice" &&
-        (!voiceScope.userId || !latest.onVoiceSubmit || latest.voiceOpeningBlocked))
-    )
-      return;
-    // Unlock audio inside this tap so iOS lets the spoken reply play later.
-    if (next === "voice") primeVoiceAudio();
-    voiceTriggerRef.current = trigger;
-    voiceReturnUrlRef.current = window.location.href;
-    voiceDraftAppliedRef.current = false;
-    setPlusOpen(false);
-    setVoiceOpenMode(next);
-  };
+  const openVoice = useCallback(
+    (next: "dictate" | "voice", trigger: HTMLElement) => {
+      const latest = voiceCallbacksRef.current;
+      if (
+        !voiceMountedRef.current ||
+        voiceIdentityRef.current !== voiceScope ||
+        !voiceScope.isLoaded ||
+        latest.disabled ||
+        latest.isStreaming ||
+        !latest.online ||
+        (next === "voice" &&
+          (!voiceScope.userId || !latest.onVoiceSubmit || latest.voiceOpeningBlocked))
+      )
+        return;
+      // Unlock audio inside this tap so iOS lets the spoken reply play later.
+      if (next === "voice") primeVoiceAudio();
+      voiceTriggerRef.current = trigger;
+      voiceReturnUrlRef.current = window.location.href;
+      voiceDraftAppliedRef.current = false;
+      setPlusOpen(false);
+      voiceModeRef.current = next;
+      setLocalVoiceMode(next);
+      latest.onVoiceModeChange?.(next);
+    },
+    [voiceScope],
+  );
+  const nativeVoiceInvoker = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!nativeKovaPlatform() || !voiceScope.isLoaded) return;
+    const showVoice = () => {
+      const invoker = nativeVoiceInvoker.current;
+      if (invoker && !invoker.disabled && !invoker.hidden && voiceModeRef.current === null)
+        openVoice("voice", invoker);
+    };
+    window.addEventListener(KOVA_NATIVE_OPEN_VOICE, showVoice);
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("native_voice") === "1") {
+      url.searchParams.delete("native_voice");
+      window.history.replaceState(window.history.state, "", url);
+      showVoice();
+    }
+    return () => window.removeEventListener(KOVA_NATIVE_OPEN_VOICE, showVoice);
+  }, [openVoice, voiceScope.isLoaded]);
   const acceptVoiceTranscript = (text: string) => {
     const latest = voiceCallbacksRef.current;
     if (
@@ -735,6 +761,12 @@ export function ChatInput({
   useEffect(() => {
     if (signedInChat) preloadConversationView();
   }, [signedInChat]);
+  const hasComposerText = value.trim().length > 0;
+  useEffect(() => {
+    if (signedInChat && hasComposerText) {
+      void preloadActiveChatTranscript().catch(() => undefined);
+    }
+  }, [signedInChat, hasComposerText]);
   const streamingRef = useRef(isStreaming);
   streamingRef.current = isStreaming;
   const composingRef = useRef(false);
@@ -2861,6 +2893,7 @@ export function ChatInput({
                       ? "Start a voice conversation"
                       : "Voice conversations require a saved chat"
                 }
+                ref={nativeVoiceInvoker}
                 onClick={(event) => {
                   if (activeVoiceMode === "voice") setVoiceOpenMode(null);
                   else openVoice("voice", event.currentTarget);

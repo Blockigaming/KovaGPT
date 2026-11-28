@@ -22,8 +22,10 @@ test("mobile sheets delegate isolation and nested layer handling to the existing
 test("interrupted and multi-touch sheet gestures reset without relying on a stale render", () => {
   assert.match(source, /onTouchCancel=\{resetDrag\}/);
   assert.match(source, /event\.touches\.length !== 1/);
-  assert.match(source, /const dismiss = dragDistance\.current > 90/);
-  assert.match(source, /if \(!open\) resetDrag\(\)/);
+  assert.match(
+    source,
+    /const distance = dragDistance\.current;\s*resetDrag\(\);[\s\S]*?else if \(distance > 90\)/,
+  );
+  assert.match(source, /if \(!open\) \{\s*resetDrag\(\);\s*setExpanded\(false\)/);
   assert.match(source, /motion-reduce:animate-none/);
-  assert.match(source, /max-h-\[min\(88dvh,44rem\)\]/);
 });

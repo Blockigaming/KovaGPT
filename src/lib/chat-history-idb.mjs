@@ -21,8 +21,11 @@ async function open() {
       );
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = request.onblocked = () =>
+    request.onerror = () => reject(new Error("chat_history_device_unavailable"));
+    request.onblocked = () => {
+      request.onsuccess = () => request.result.close();
       reject(new Error("chat_history_device_unavailable"));
+    };
   });
 }
 function completion(tx) {

@@ -19,6 +19,7 @@ export function createBrowserSpeechSink(options: {
   onEnded: () => void;
   onError: () => void;
 }): { write(bytes: Uint8Array): Promise<void>; end(): Promise<void>; dispose(): void };
+export const createReadAloudSpeechSink: typeof createBrowserSpeechSink;
 export function createSpeechPlayback(options: {
   fetchImpl?: typeof fetch;
   createSink?: typeof createBrowserSpeechSink;

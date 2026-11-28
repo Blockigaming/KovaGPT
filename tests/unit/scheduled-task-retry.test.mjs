@@ -63,7 +63,7 @@ function load({
   };
   const modules = {
     zod: { z },
-    "@tanstack/react-start": { createServerFn },
+    "@tanstack/react-start": { createServerFn, createServerOnlyFn: (handler) => handler },
     "@tanstack/react-start/server": {
       getRequest: () => new Request("https://kovagpt.com/tasks", { method: "POST" }),
     },

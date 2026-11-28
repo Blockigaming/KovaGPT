@@ -103,7 +103,7 @@ test("imported interface preferences are bounded and cannot inject arbitrary CSS
     settingsNavigationWidth: 320,
     interfaceAccent: "#12abcd",
   });
-  assert.equal(root.style.fontSize, "17.6px");
+  assert.equal(properties.get("--kova-interface-scale"), "1.1");
   assert.equal(properties.get("--kova-settings-navigation-width"), "320px");
   assert.equal(properties.get("--primary"), "#12abcd");
   assert.equal(properties.get("--kova-message-accent"), "#12abcd");

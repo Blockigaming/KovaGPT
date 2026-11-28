@@ -33,7 +33,10 @@ async function geometry(page: Page) {
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  // Compact phone corners apply in the native app shell and on phone-width web.
+  const appShell = await page.evaluate(
+    () => document.documentElement.dataset.kovaSurface === "app",
+  );
+  // The app uses a single corner radius across its phone composer states.
   const phone = await page.evaluate(() =>
     document.documentElement.dataset.kovaSurface === "app"
       ? matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
@@ -42,7 +45,7 @@ async function geometry(page: Page) {
   );
   await expect(composer).toHaveCSS(
     "border-radius",
-    phone ? (conversation ? "26px" : "21px") : "34px",
+    phone ? (appShell ? "24px" : conversation ? "26px" : "21px") : "34px",
   );
   const singleRow =
     conversation && (await page.evaluate(() => matchMedia("(min-width: 1024px)").matches));

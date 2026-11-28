@@ -36,6 +36,7 @@ function fixture(state = {}) {
     sharing: false,
     saving: false,
     saved: false,
+    isMobile: false,
     isSignedIn: true,
     principalResolved: true,
     userKey: "owner",
