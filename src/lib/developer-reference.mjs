@@ -87,7 +87,7 @@ export const DEVELOPER_ENDPOINTS = [
     "browser-sessions",
     "POST GET DELETE",
     "Create a single-use grant with optional exact HTTPS origin, retrieve or close by ID. Connect to the returned WebSocket with the kova.browser.v1 protocol. Authenticate with client_secret, quote a browser input {model,url,interactive:true}, then send turn.create with the exact quote and request key.",
-    "One independently metered isolated session. Receive turn.delta browser.snapshot views with snapshot_id; send turn.action with id, command {snapshot_id,approved:true,source,action}. Supports same-origin navigation, approved link click, scroll, wait, screenshot and finish. Computer source requires computer_use scope. No forms, credentials, arbitrary scripts or writes. Cancel or disconnect closes the browser. Provider approval and activation remain required.",
+    "One independently metered isolated session. Receive turn.delta browser.snapshot views with snapshot_id; send turn.action with id, command {snapshot_id,approved:true,source,action}. Supports same-origin navigation, approved link click, scroll, wait, screenshot and finish. Computer source requires computer_use scope and a server-bound proposal. Send turn.computer_quote with command {snapshot_id,model,input,max_output_tokens}; after reviewing the returned maximum charge send turn.computer_propose with command {snapshot_id,approved:true,quote_token,request_key}. Review turn.computer_proposed before approving its exact action with turn.action. No forms, credentials, arbitrary scripts or writes. Cancel or disconnect closes the browser. Provider approval and activation remain required.",
   ),
   endpoint(
     "realtime-sessions",

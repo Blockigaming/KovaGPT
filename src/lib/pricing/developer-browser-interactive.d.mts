@@ -5,6 +5,23 @@ export type BrowserAction =
   | { type: "wait" | "screenshot" | "finish" };
 export interface BrowserChannel {
   next(view: Record<string, unknown>, remaining: number): Promise<BrowserAction>;
+  quoteComputer(
+    command: unknown,
+    prepare: (
+      view: Record<string, unknown>,
+      input: Record<string, unknown>,
+      signal: AbortSignal,
+    ) => Promise<{ input: Record<string, unknown>; quote: unknown }>,
+  ): Promise<unknown>;
+  proposeComputer(
+    command: unknown,
+    execute: (
+      input: Record<string, unknown>,
+      key: string,
+      token: string,
+      signal: AbortSignal,
+    ) => Promise<unknown>,
+  ): Promise<unknown>;
   accept(value: unknown, computerAllowed: boolean): void;
   close(): void;
 }

@@ -235,6 +235,44 @@ export function createDeveloperRealtimeSocket(
       }
       return withDeveloperRealtimeEvents(delta, run);
     },
+    prepareComputer: async (identity, view, fields, signal) => {
+      signal.throwIfAborted();
+      await rate(`developer:${identity.id}`, "developer_browser_computer_quote", 12);
+      if (
+        view.width !== 840 ||
+        view.height !== 540 ||
+        typeof view.screenshot !== "string" ||
+        !/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(view.screenshot) ||
+        view.screenshot.length > 350000
+      )
+        throw Error("developer_computer_invalid");
+      const { default: sharp } = await import("sharp");
+      const source = sharp(Buffer.from(view.screenshot.split(",")[1], "base64"), {
+        limitInputPixels: 840 * 540,
+      });
+      const metadata = await source.metadata();
+      if (metadata.width !== 840 || metadata.height !== 540 || metadata.format !== "jpeg")
+        throw Error("developer_computer_invalid");
+      const image = await source
+        .resize(420, 270, { fit: "fill" })
+        .png({ palette: true, colours: 64 })
+        .toBuffer();
+      if (image.length > 32768) throw Error("developer_computer_invalid");
+      signal.throwIfAborted();
+      const input = { ...fields, screenshot: "data:image/png;base64," + image.toString("base64") };
+      return { input, quote: await developerQuote(identity, "computer-use", input) };
+    },
+    executeComputer: async (identity, input, key, token, signal) => {
+      signal.throwIfAborted();
+      await rate(`developer:${identity.id}`, "developer_browser_computer_turn", 8);
+      signal.throwIfAborted();
+      const response = await executeDeveloper(identity, "computer-use", input, key, token, signal);
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
+        throw Error("developer_computer_unavailable");
+      }
+      return response.json();
+    },
     finish: (id, connection, turn) =>
       session("finish", id, { connection_id: connection, turn_id: turn }, kind),
     disconnect: (id, connection) => session("disconnect", id, { connection_id: connection }, kind),

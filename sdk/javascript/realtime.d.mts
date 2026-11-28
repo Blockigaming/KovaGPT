@@ -24,6 +24,18 @@ export type BrowserAction =
   | { type: "scroll"; x: number; y: number; scroll_x: number; scroll_y: number }
   | { type: "wait" | "screenshot" | "finish" };
 export interface BrowserSession extends RealtimeSession {
+  quoteComputer(command: {
+    snapshot_id: string;
+    model: string;
+    input: string;
+    max_output_tokens: number;
+  }): void;
+  proposeComputer(command: {
+    snapshot_id: string;
+    approved: true;
+    quote_token: string;
+    request_key: string;
+  }): void;
   act(command: {
     snapshot_id: string;
     approved: true;

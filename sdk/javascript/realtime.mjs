@@ -78,7 +78,10 @@ async function connectSession(
         value.type === "turn.started" ||
         value.type === "turn.cancel_requested" ||
         value.type === "turn.action_accepted" ||
-        value.type === "turn.action_rejected"
+        value.type === "turn.action_rejected" ||
+        value.type === "turn.computer_quoted" ||
+        value.type === "turn.computer_proposed" ||
+        value.type === "turn.computer_rejected"
       ) {
         pending.onEvent?.(value);
         return;
@@ -133,6 +136,15 @@ async function connectSession(
         true,
         onEvent,
       );
+    },
+    quoteComputer(command) {
+      if (kind !== "browser" || closed || !pending?.paid) throw fail("browser_session_closed");
+      socket.send(JSON.stringify({ type: "turn.computer_quote", id: pending.id, command }));
+    },
+    proposeComputer(command) {
+      if (kind !== "browser" || closed || !pending?.paid || command?.approved !== true)
+        throw fail("budget_required");
+      socket.send(JSON.stringify({ type: "turn.computer_propose", id: pending.id, command }));
     },
     act(command) {
       if (kind !== "browser" || closed || !pending?.paid || command?.approved !== true)

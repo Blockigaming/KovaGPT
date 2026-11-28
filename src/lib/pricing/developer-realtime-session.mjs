@@ -74,7 +74,11 @@ function message(value, kind) {
   if (v?.type === "session.close" && exact(v, ["type"])) return v;
   if (v?.type === "turn.cancel" && exact(v, ["type", "id"]))
     return { type: v.type, id: developerUuid(v.id) };
-  if (kind === "browser" && v?.type === "turn.action" && exact(v, ["type", "id", "command"]))
+  if (
+    kind === "browser" &&
+    ["turn.action", "turn.computer_quote", "turn.computer_propose"].includes(v?.type) &&
+    exact(v, ["type", "id", "command"])
+  )
     return { type: v.type, id: developerUuid(v.id), command: v.command };
   if (v?.type === "turn.quote" && exact(v, ["type", "id", "input"])) {
     validateInput(v.input);
@@ -115,6 +119,8 @@ export function createRealtimeConnection({
   quote,
   begin,
   execute,
+  prepareComputer,
+  executeComputer,
   finish,
   disconnect,
   now = Date.now,
@@ -235,7 +241,7 @@ export function createRealtimeConnection({
       } else emit({ type: "error", id: v.id, code: "developer_realtime_not_found" });
       return;
     }
-    if (v.type === "turn.action") {
+    if (["turn.action", "turn.computer_quote", "turn.computer_propose"].includes(v.type)) {
       if (++actionAttempts > 32) {
         await stop(1008, "action_limit");
         return;
@@ -244,11 +250,37 @@ export function createRealtimeConnection({
         if (!active?.channel || active.id !== v.id) fail("developer_browser_conflict");
         const identity = await check(grant.id, connection);
         if (active?.id !== v.id) fail("developer_browser_conflict");
-        active.channel.accept(v.command, identity.capabilities.includes("computer_use"));
-        emit({ type: "turn.action_accepted", id: v.id });
+        if (v.type === "turn.action") {
+          active.channel.accept(v.command, identity.capabilities.includes("computer_use"));
+          emit({ type: "turn.action_accepted", id: v.id });
+        } else {
+          if (
+            !identity.capabilities.includes("computer_use") ||
+            !prepareComputer ||
+            !executeComputer
+          )
+            fail("developer_scope_required");
+          const channel = active.channel;
+          const result =
+            v.type === "turn.computer_quote"
+              ? await channel.quoteComputer(v.command, (view, input, signal) =>
+                  prepareComputer(identity, view, input, signal),
+                )
+              : await channel.proposeComputer(v.command, (input, key, token, signal) =>
+                  executeComputer(identity, input, key, token, signal),
+                );
+          if (active?.channel !== channel) fail("developer_browser_conflict");
+          emit({
+            type:
+              v.type === "turn.computer_quote" ? "turn.computer_quoted" : "turn.computer_proposed",
+            id: v.id,
+            snapshot_id: v.command.snapshot_id,
+            result,
+          });
+        }
       } catch (error) {
         emit({
-          type: "turn.action_rejected",
+          type: v.type === "turn.action" ? "turn.action_rejected" : "turn.computer_rejected",
           id: v.id,
           code: /^developer_[a-z_]+$/.test(error?.message ?? "")
             ? error.message

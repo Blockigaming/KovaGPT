@@ -92,6 +92,22 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [browserPoint, setBrowserPoint] = useState<{ x: number; y: number } | null>(null);
   const [browserNext, setBrowserNext] = useState("");
   const [browserActionPending, setBrowserActionPending] = useState(false);
+  const [computerModel, setComputerModel] = useState("");
+  const [computerTask, setComputerTask] = useState("");
+  const [computerQuote, setComputerQuote] = useState<{
+    snapshotId: string;
+    token: string;
+    currency: string;
+    maximumCharge: number;
+    expiresAt: number;
+  } | null>(null);
+  const [computerProposal, setComputerProposal] = useState<{
+    snapshotId: string;
+    action: BrowserAction | null;
+    text: string;
+  } | null>(null);
+  const [computerPending, setComputerPending] = useState(false);
+  const currentSnapshot = useRef("");
   const [translationLanguage, setTranslationLanguage] = useState("en");
   const [realtimeOutput, setRealtimeOutput] = useState<"text" | "audio">("text");
   const [realtimeInput, setRealtimeInput] = useState<"text" | "audio">("text");
@@ -127,7 +143,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     source: "browser" | "computer" = "browser",
   ) => {
     const session = realtimeSession.current;
-    if (!browserView || !session || !("act" in session) || browserActionPending) return;
+    if (!browserView || !session || !("act" in session) || browserActionPending || computerPending)
+      return;
     try {
       session.act({ snapshot_id: browserView.snapshot_id, approved: true, source, action });
       setBrowserActionPending(true);
@@ -135,7 +152,55 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       setError("Browser session unavailable. Check Logs before retrying.");
     }
   };
+  const clearComputer = () => {
+    setComputerQuote(null);
+    setComputerProposal(null);
+    setComputerPending(false);
+  };
+  const quoteComputer = () => {
+    const session = realtimeSession.current;
+    if (!browserView || !session || !("quoteComputer" in session) || computerPending) return;
+    try {
+      clearComputer();
+      session.quoteComputer({
+        snapshot_id: browserView.snapshot_id,
+        model: computerModel,
+        input: computerTask,
+        max_output_tokens: 512,
+      });
+      setComputerPending(true);
+    } catch {
+      setError("Computer proposal quote unavailable.");
+    }
+  };
+  const proposeComputer = () => {
+    const session = realtimeSession.current;
+    if (
+      !computerQuote ||
+      !browserView ||
+      computerQuote.snapshotId !== browserView.snapshot_id ||
+      computerQuote.expiresAt <= Date.now() ||
+      !session ||
+      !("proposeComputer" in session) ||
+      computerPending
+    )
+      return;
+    try {
+      session.proposeComputer({
+        snapshot_id: computerQuote.snapshotId,
+        approved: true,
+        quote_token: computerQuote.token,
+        request_key: crypto.randomUUID(),
+      });
+      setComputerQuote(null);
+      setComputerPending(true);
+    } catch {
+      setError("Computer proposal unavailable. Check Logs before retrying.");
+    }
+  };
   const resetQuote = () => {
+    currentSnapshot.current = "";
+    clearComputer();
     setQuote(null);
     setOutput("");
     setImages([]);
@@ -475,6 +540,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(event.screenshot) &&
                   event.screenshot.length <= 350000
                 ) {
+                  currentSnapshot.current = event.snapshot_id;
+                  clearComputer();
                   setBrowserView({
                     snapshot_id: event.snapshot_id,
                     url: event.url,
@@ -482,6 +549,45 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   });
                   setBrowserPoint(null);
                   setBrowserActionPending(false);
+                }
+                if (
+                  event.type === "turn.computer_quoted" &&
+                  event.snapshot_id === currentSnapshot.current
+                ) {
+                  const q = record(event.result);
+                  if (
+                    typeof q.quoteToken === "string" &&
+                    typeof q.currency === "string" &&
+                    typeof q.maximumCharge === "number" &&
+                    typeof q.expiresAt === "number" &&
+                    q.expiresAt > Date.now()
+                  ) {
+                    setComputerQuote({
+                      snapshotId: currentSnapshot.current,
+                      token: q.quoteToken,
+                      currency: q.currency,
+                      maximumCharge: q.maximumCharge,
+                      expiresAt: q.expiresAt,
+                    });
+                  }
+                  setComputerPending(false);
+                }
+                if (
+                  event.type === "turn.computer_proposed" &&
+                  event.snapshot_id === currentSnapshot.current
+                ) {
+                  const p = record(event.result);
+                  setComputerProposal({
+                    snapshotId: currentSnapshot.current,
+                    action:
+                      p.status === "proposed" && p.action ? (p.action as BrowserAction) : null,
+                    text: typeof p.text === "string" ? p.text : "No supported action proposed.",
+                  });
+                  setComputerPending(false);
+                }
+                if (event.type === "turn.computer_rejected") {
+                  clearComputer();
+                  setError("Computer request rejected or uncertain. Check Logs before retrying.");
                 }
                 if (event.type === "turn.action_rejected") {
                   setBrowserActionPending(false);
@@ -505,6 +611,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             realtimeSession.current = null;
             if (mounted.current) {
               setSessionId("");
+              currentSnapshot.current = "";
+              clearComputer();
               setBrowserView(null);
               setBrowserActionPending(false);
             }
@@ -1183,7 +1291,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <button
                 type="button"
                 className="relative block w-full overflow-hidden rounded-lg border"
-                disabled={browserActionPending}
+                disabled={browserActionPending || computerPending}
                 aria-label="Select a point on the current browser screenshot"
                 onClick={(event) => {
                   const rect = event.currentTarget.getBoundingClientRect();
@@ -1219,33 +1327,20 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 <Input
                   value={browserNext}
                   onChange={(e) => setBrowserNext(e.target.value)}
-                  disabled={browserActionPending}
+                  disabled={browserActionPending || computerPending}
                 />
               </label>
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
-                  disabled={browserActionPending || !browserNext.trim()}
+                  disabled={browserActionPending || computerPending || !browserNext.trim()}
                   onClick={() => submitBrowserAction({ type: "navigate", url: browserNext.trim() })}
                 >
                   Confirm navigation
                 </Button>
                 <Button
                   variant="outline"
-                  disabled={browserActionPending || !browserPoint}
-                  onClick={() =>
-                    browserPoint &&
-                    submitBrowserAction(
-                      { type: "click", ...browserPoint, button: "left" },
-                      "computer",
-                    )
-                  }
-                >
-                  Confirm computer click
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={browserActionPending || !browserPoint}
+                  disabled={browserActionPending || computerPending || !browserPoint}
                   onClick={() =>
                     browserPoint &&
                     submitBrowserAction({ type: "click", ...browserPoint, button: "left" })
@@ -1257,7 +1352,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   <Button
                     key={scroll_y}
                     variant="outline"
-                    disabled={browserActionPending}
+                    disabled={browserActionPending || computerPending}
                     onClick={() =>
                       submitBrowserAction({ type: "scroll", x: 420, y: 270, scroll_x: 0, scroll_y })
                     }
@@ -1267,21 +1362,104 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 ))}
                 <Button
                   variant="outline"
-                  disabled={browserActionPending}
+                  disabled={browserActionPending || computerPending}
                   onClick={() => submitBrowserAction({ type: "screenshot" })}
                 >
                   Refresh view
                 </Button>
                 <Button
-                  disabled={browserActionPending}
+                  disabled={browserActionPending || computerPending}
                   onClick={() => submitBrowserAction({ type: "finish" })}
                 >
                   Finish session
                 </Button>
               </div>
+              {models.some((item) => item.capability === "computer_use") && (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <h3 className="text-sm font-medium">Computer proposal</h3>
+                  <label className="block text-sm">
+                    Computer model
+                    <select
+                      className="block min-h-11 w-full rounded-full border bg-background px-4"
+                      value={computerModel}
+                      disabled={computerPending || !!computerQuote || !!computerProposal}
+                      onChange={(event) => setComputerModel(event.target.value)}
+                    >
+                      <option value="">Select a model</option>
+                      {models
+                        .filter((item) => item.capability === "computer_use")
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.id}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    Read-only UI task
+                    <Textarea
+                      value={computerTask}
+                      disabled={computerPending || !!computerQuote || !!computerProposal}
+                      onChange={(event) => setComputerTask(event.target.value)}
+                    />
+                  </label>
+                  <Button
+                    variant="outline"
+                    disabled={
+                      computerPending ||
+                      browserActionPending ||
+                      !computerTask.trim() ||
+                      !computerModel ||
+                      !!computerQuote ||
+                      !!computerProposal
+                    }
+                    onClick={quoteComputer}
+                  >
+                    Get proposal price
+                  </Button>
+                  {computerQuote && (
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        Maximum additional charge: {computerQuote.currency}{" "}
+                        {computerQuote.maximumCharge}
+                      </p>
+                      <Button
+                        disabled={computerPending || browserActionPending}
+                        onClick={proposeComputer}
+                      >
+                        Confirm paid proposal
+                      </Button>
+                    </div>
+                  )}
+                  {computerProposal && (
+                    <div className="space-y-2 text-sm">
+                      <p className="whitespace-pre-wrap break-words">{computerProposal.text}</p>
+                      {computerProposal.action && (
+                        <>
+                          <pre className="whitespace-pre-wrap break-all text-xs">
+                            {JSON.stringify(computerProposal.action, null, 2)}
+                          </pre>
+                          <Button
+                            disabled={computerPending || browserActionPending}
+                            onClick={() => {
+                              if (computerProposal.action)
+                                submitBrowserAction(computerProposal.action, "computer");
+                            }}
+                          >
+                            Approve exact proposed action
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    A separate paid model request proposes one action on the current snapshot. The
+                    session never executes that action without your confirmation.
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                Computer actions require computer_use scope. Only link clicks and read-only viewport
-                operations are permitted.
+                Only same-origin link clicks and read-only viewport operations are permitted.
               </p>
             </div>
           )}

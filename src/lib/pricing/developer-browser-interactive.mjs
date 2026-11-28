@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
+import { createComputerProposalGate } from "./developer-computer-browser-proposal.mjs";
 import { developerBrowserUrl } from "./developer-browser-policy.mjs";
 const context = (globalThis[Symbol.for("kovagpt.developer-browser-interactive")] ??=
   new AsyncLocalStorage());
@@ -64,21 +65,26 @@ export function createBrowserChannel(emit, signal) {
       if (closed || pending) fail("developer_browser_conflict");
       if (remaining <= 0) return Promise.resolve({ type: "finish" });
       const snapshot_id = randomUUID();
+      const proposal = createComputerProposalGate(snapshot_id, view, signal);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
+          proposal.close();
           pending = undefined;
           resolve({ type: "finish" });
         }, remaining);
         timer.unref?.();
         pending = {
           id: snapshot_id,
+          proposal,
           resolve: (action) => {
             clearTimeout(timer);
+            proposal.close();
             pending = undefined;
             resolve(action);
           },
           reject: (error) => {
             clearTimeout(timer);
+            proposal.close();
             reject(error);
           },
         };
@@ -86,10 +92,19 @@ export function createBrowserChannel(emit, signal) {
           emit({ kind: "browser.snapshot", snapshot_id, ...view });
         } catch (error) {
           clearTimeout(timer);
+          proposal.close();
           pending = undefined;
           reject(error);
         }
       });
+    },
+    quoteComputer(command, prepare) {
+      if (closed || !pending) fail("developer_browser_conflict");
+      return pending.proposal.quote(command, prepare);
+    },
+    proposeComputer(command, execute) {
+      if (closed || !pending) fail("developer_browser_conflict");
+      return pending.proposal.propose(command, execute);
     },
     accept(value, computerAllowed) {
       if (
@@ -102,7 +117,8 @@ export function createBrowserChannel(emit, signal) {
       if (closed || !pending || pending.id !== value.snapshot_id)
         fail("developer_browser_conflict");
       const action = parseBrowserAction(value.action);
-      if (value.source === "computer" && action.type === "navigate") fail();
+      if (pending.proposal.busy) fail("developer_browser_conflict");
+      if (value.source === "computer") pending.proposal.accept(action);
       pending.resolve(action);
     },
     close() {

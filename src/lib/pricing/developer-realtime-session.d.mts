@@ -30,6 +30,19 @@ export function createRealtimeConnection<T>(options: {
     delta: (value: Record<string, unknown>) => void,
     channel?: BrowserChannel,
   ) => Promise<unknown>;
+  prepareComputer?: (
+    identity: T,
+    view: Record<string, unknown>,
+    input: Record<string, unknown>,
+    signal: AbortSignal,
+  ) => Promise<{ input: Record<string, unknown>; quote: unknown }>;
+  executeComputer?: (
+    identity: T,
+    input: Record<string, unknown>,
+    key: string,
+    token: string,
+    signal: AbortSignal,
+  ) => Promise<unknown>;
   finish: (id: string, connection: string, turn: string) => Promise<unknown>;
   disconnect: (id: string, connection: string) => Promise<unknown>;
 }): {

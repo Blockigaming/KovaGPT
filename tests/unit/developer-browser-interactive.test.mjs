@@ -41,9 +41,13 @@ test("snapshot fences require current explicit approval and computer scope; canc
   assert.throws(
     () =>
       channel.accept({ ...command, source: "computer", action: { type: "navigate", url } }, true),
-    /invalid/,
+    /proposal_required/,
   );
-  channel.accept({ ...command, source: "computer" }, true);
+  assert.throws(
+    () => channel.accept({ ...command, source: "computer" }, true),
+    /proposal_required/,
+  );
+  channel.accept(command, true);
   assert.deepEqual(await pending, click);
   assert.throws(() => channel.accept(command, true), /conflict/);
   const next = channel.next({ url }, 10000);
@@ -160,9 +164,112 @@ test("browser transport authorizes quote and turn, denies stale and unscoped act
     );
     assert.equal(events.at(-1).code, "developer_browser_conflict");
     await connection.receive(frame("turn.action", { id, command }));
+    assert.equal(events.at(-1).code, "developer_computer_proposal_required");
+    await connection.receive(
+      frame("turn.action", { id, command: { ...command, source: "browser" } }),
+    );
     await run;
     assert.equal(events.at(-1).type, "turn.completed");
     assert.deepEqual(calls, ["quote", "begin", "finish"]);
+  } finally {
+    await connection.stop();
+  }
+});
+
+test("computer socket quote and proposal bind the server snapshot and require exact second approval", async () => {
+  const grant = realtimeGrant(),
+    id = randomUUID(),
+    events = [],
+    calls = [];
+  let capabilities = ["cloud_browser", "computer_use"];
+  const connection = createRealtimeConnection({
+    kind: "browser",
+    send: (event) => events.push(event),
+    close: () => {},
+    claim: async () => ({ id: grant.id, expiresAt: Date.now() + 60000 }),
+    check: async () => ({ capabilities }),
+    quote: async () => ({ quoteToken: token }),
+    begin: async () => ({}),
+    execute: async (_identity, _input, _key, _token, _signal, _delta, channel) => {
+      const selected = await channel.next({ url, screenshot: "server-owned" }, 10000);
+      calls.push(selected);
+      return { url };
+    },
+    prepareComputer: async (_identity, view, fields) => {
+      assert.equal(view.screenshot, "server-owned");
+      calls.push("quote");
+      return {
+        input: { ...fields, screenshot: view.screenshot },
+        quote: {
+          quoteToken: token,
+          currency: "USD",
+          maximumCharge: 0.01,
+          expiresAt: Date.now() + 10000,
+        },
+      };
+    },
+    executeComputer: async (_identity, input, key, acceptedToken) => {
+      assert.equal(input.screenshot, "server-owned");
+      assert.equal(key, id);
+      assert.equal(acceptedToken, token);
+      calls.push("propose");
+      return {
+        object: "computer.proposal",
+        status: "proposed",
+        requires_human_review: true,
+        screenshot: { width: 420, height: 270 },
+        actions: [{ type: "click", x: 12, y: 20, button: "left" }],
+      };
+    },
+    finish: async () => calls.push("finish"),
+    disconnect: async () => {},
+  });
+  try {
+    await connection.receive(frame("session.authenticate", { token: grant.token }));
+    const run = connection.receive(
+      frame("turn.create", {
+        id,
+        input: { model: "browser", url, interactive: true },
+        quote_token: token,
+        request_key: id,
+      }),
+    );
+    await new Promise(setImmediate);
+    const snapshot_id = events.find((event) => event.kind === "browser.snapshot").snapshot_id;
+    const request = {
+      snapshot_id,
+      model: "computer",
+      input: "Inspect the page",
+      max_output_tokens: 100,
+    };
+    await connection.receive(
+      frame("turn.computer_quote", { id, command: { ...request, screenshot: "forged" } }),
+    );
+    assert.equal(events.at(-1).type, "turn.computer_rejected");
+    await connection.receive(frame("turn.computer_quote", { id, command: request }));
+    assert.equal(events.at(-1).type, "turn.computer_quoted");
+    const confirmation = { snapshot_id, approved: true, quote_token: token, request_key: id };
+    await connection.receive(
+      frame("turn.computer_propose", { id, command: { ...confirmation, approved: false } }),
+    );
+    assert.equal(events.at(-1).type, "turn.computer_rejected");
+    await connection.receive(frame("turn.computer_propose", { id, command: confirmation }));
+    assert.equal(events.at(-1).type, "turn.computer_proposed");
+    const action = events.at(-1).result.action;
+    assert.deepEqual(action, { type: "click", x: 25, y: 41, button: "left" });
+    assert.deepEqual(calls, ["quote", "propose"]);
+    const approval = { snapshot_id, source: "computer", approved: true, action };
+    await connection.receive(
+      frame("turn.action", { id, command: { ...approval, action: { ...action, x: 26 } } }),
+    );
+    assert.equal(events.at(-1).code, "developer_computer_proposal_required");
+    capabilities = ["cloud_browser"];
+    await connection.receive(frame("turn.action", { id, command: approval }));
+    assert.equal(events.at(-1).code, "developer_scope_required");
+    capabilities = ["cloud_browser", "computer_use"];
+    await connection.receive(frame("turn.action", { id, command: approval }));
+    await run;
+    assert.deepEqual(calls, ["quote", "propose", action, "finish"]);
   } finally {
     await connection.stop();
   }
