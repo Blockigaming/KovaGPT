@@ -374,3 +374,69 @@ test("research dispatch is independently gated, project scoped, cancellable and 
     await f.db.close();
   }
 });
+
+test("autonomous research enforces the single bounded search and revokes its running lease on cancellation", async () => {
+  const f = await fixture();
+  try {
+    const first = {
+      ...create().items[0],
+      operation_kind: "search",
+      input: {
+        model: "kova-fast",
+        query: "Research",
+        max_output_tokens: 1024,
+        max_tool_calls: 3,
+        research: true,
+      },
+    };
+    const request = { ...create(), resource_kind: "research", items: [first] };
+    for (const research of [false, "true", null])
+      await assert.rejects(
+        f.manage("create", {
+          ...request,
+          items: [{ ...first, input: { ...first.input, research } }],
+        }),
+        /batch_invalid/,
+      );
+    await assert.rejects(
+      f.manage("create", {
+        ...request,
+        items: [{ ...first, input: { ...first.input, max_tool_calls: 1 } }],
+      }),
+      /batch_invalid/,
+    );
+    await assert.rejects(
+      f.manage("create", {
+        ...request,
+        maximum_ticks: 2000,
+        items: [first, { ...first, id: id(12), request_group: "c".repeat(64) }],
+      }),
+      /batch_invalid/,
+    );
+    await f.manage("create", request);
+    assert.equal(await f.claim(), null);
+    const claim = (await f.db.query("select claim_developer_batch_v1(false,false,true) result"))
+      .rows[0].result;
+    assert.equal(claim.item.input.research, true);
+    const ref = { id: job, resource_kind: "research" };
+    assert.equal((await f.manage("get", ref)).items[0].autonomous, true);
+    const valid = async () =>
+      (
+        await f.db.query("select validate_developer_batch_claim_v1($1,$2,$3,$4) ok", [
+          project,
+          job,
+          job,
+          claim.item.lease_token,
+        ])
+      ).rows[0].ok;
+    assert.equal(await valid(), true);
+    await f.manage("cancel", ref);
+    assert.equal(await valid(), false);
+    await assert.rejects(
+      f.manage("get", ref, other, foreignKey, foreignProject),
+      /batch_not_found/,
+    );
+  } finally {
+    await f.db.close();
+  }
+});

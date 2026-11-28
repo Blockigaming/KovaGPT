@@ -106,7 +106,7 @@ function directInput(operation, value) {
   } else if (operation === "decisions") {
     exact(value, ["model", "input", "questions"]);
   } else if (operation === "search") {
-    exact(value, ["model", "query", "max_output_tokens", "max_tool_calls"]);
+    exact(value, ["model", "query", "max_output_tokens", "max_tool_calls"], ["research"]);
     if (
       !Number.isSafeInteger(value.max_output_tokens) ||
       value.max_output_tokens < 1 ||
@@ -203,7 +203,7 @@ export function parseDeveloperBatchRequest(
       !Array.isArray(body.items) ||
       body.items.length < 1 ||
       body.items.length > 8 ||
-      (resourceKind === "research" && (body.items.length < 2 || body.items.length > 4))
+      (resourceKind === "research" && body.items.length > 4)
     )
       fail();
     const items = body.items.map((item) => {
@@ -211,7 +211,15 @@ export function parseDeveloperBatchRequest(
       const operation = item.operation ?? "chat/completions";
       developerBatchCapability(operation);
       if (resourceKind === "response" && operation !== "responses") fail();
-      if (resourceKind === "research" && operation !== "search") fail();
+      if (
+        resourceKind === "research" &&
+        (operation !== "search" ||
+          (body.items.length === 1
+            ? item.input?.research !== true
+            : item.input?.research !== undefined))
+      )
+        fail();
+      if (resourceKind !== "research" && item.input?.research !== undefined) fail();
       if (
         typeof item.quote_token !== "string" ||
         item.quote_token.length > 2048 ||
@@ -325,8 +333,11 @@ export function developerResearchRunView(value, expectedId) {
     value.id !== expectedId ||
     value.resource_kind !== "research" ||
     !Array.isArray(value.items) ||
-    value.items.length < 2 ||
-    value.items.length > 4
+    value.items.length < 1 ||
+    value.items.length > 4 ||
+    (value.items.length === 1
+      ? value.items[0]?.autonomous !== true
+      : value.items.some((item) => item?.autonomous === true))
   )
     throw new Error("developer_batch_unavailable");
   const items = value.items.map((item) => {
@@ -413,6 +424,8 @@ export function developerResearchRunView(value, expectedId) {
     object: "research.run",
     id: expectedId,
     status,
+    mode: items.length === 1 ? "autonomous" : "queries",
+    synthesis: items.length === 1 && items[0].citations.length > 0 ? items[0].text : null,
     currency: value.currency,
     created_at: value.created_at,
     expires_at: value.expires_at,

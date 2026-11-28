@@ -119,12 +119,21 @@ const paid = {
     ["model", "input"],
   ),
   moderations: obj({ model, input: str(8000) }),
-  search: obj({
-    model,
-    query: str(8000),
-    max_output_tokens: integer(1, 32768),
-    max_tool_calls: integer(1, 3),
-  }),
+  search: union(
+    obj({
+      model,
+      query: str(8000),
+      max_output_tokens: integer(1, 32768),
+      max_tool_calls: integer(1, 3),
+    }),
+    obj({
+      model,
+      query: str(8000),
+      max_output_tokens: integer(1, 2048),
+      max_tool_calls: integer(2, 3),
+      research: { const: true },
+    }),
+  ),
   decisions: obj({ model, input: str(16000), questions: arr(question, 16) }),
   "agent-turns": obj(
     {
@@ -248,7 +257,7 @@ const batchInputs = {
     dimensions: integer(1, 1024),
   }),
   decisions: paid.decisions,
-  search: obj({ ...paid.search.properties, max_output_tokens: integer(1, 2048) }),
+  search: obj({ ...paid.search.oneOf[0].properties, max_output_tokens: integer(1, 2048) }),
   analysis: obj({ model, input: str(16000), max_output_tokens: integer(1, 2048) }),
 };
 const budget = {
@@ -257,7 +266,16 @@ const budget = {
   maximum_charge: { type: "number", exclusiveMinimum: 0, maximum: 1000000 },
 };
 const batch = (scheduled, research = false) => {
-  const inputs = research ? { search: paid.search } : batchInputs;
+  if (research) {
+    const item = (input) =>
+      obj({ id: uuid, operation: choices("search"), input, quote_token: quoteToken });
+    return union(
+      op("create", { ...budget, items: arr(item(batchInputs.search), 4, 2) }),
+      op("create", { ...budget, items: arr(item(paid.search.oneOf[1]), 1, 1) }),
+      op("cancel", { id: uuid }),
+    );
+  }
+  const inputs = batchInputs;
   const item = union(
     ...Object.entries(inputs).map(([operation, input]) =>
       obj(
@@ -607,6 +625,35 @@ output.usage = union(
     amount_unit: { const: "currency_minor_unit" },
   }),
 );
+const researchRun = open({
+  object: { const: "research.run" },
+  id: uuid,
+  status: choices("queued", "running", "completed", "partial", "uncertain", "canceled"),
+  mode: choices("autonomous", "queries"),
+  synthesis: { type: ["string", "null"] },
+  currency,
+  created_at: str(80),
+  expires_at: str(80),
+  items: arr(
+    open({
+      id: uuid,
+      query: str(8000),
+      status: choices("queued", "running", "completed", "uncertain", "canceled"),
+      result_status: { type: ["string", "null"] },
+      text: { type: ["string", "null"] },
+      citations: {
+        type: "array",
+        maxItems: 64,
+        items: obj({ url: { type: "string", format: "uri" }, title: { type: ["string", "null"] } }),
+      },
+      request_id: { type: ["string", "null"] },
+      settlement_state: { type: ["string", "null"] },
+      final_customer_charge: amount,
+    }),
+    4,
+  ),
+});
+output["research-runs"] = union(researchRun, list(open({ id: uuid }, ["id"])));
 const error = obj({ error: open({ code: str(128), message: str(1024) }) });
 const header = (name, schema, required, description) => ({
   name,

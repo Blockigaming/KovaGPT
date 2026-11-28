@@ -62,7 +62,7 @@ export const DEVELOPER_ENDPOINTS = [
     "Web Search",
     "search",
     "POST",
-    "Supply model, query, max_output_tokens and max_tool_calls from 1 to 3. Quote operation search.",
+    "Supply model, query, max_output_tokens and max_tool_calls from 1 to 3. Quote operation search. With research:true, use 2 or 3 calls and at most 2,048 output tokens; research release gates also apply.",
     "The native nonstreaming answer can contain source annotations. Search call and token receipts must qualify; unrestricted crawling and unsupported provider contracts are excluded.",
   ),
   endpoint(
@@ -238,8 +238,8 @@ export const DEVELOPER_ENDPOINTS = [
     "Research runs",
     "research-runs",
     "GET POST",
-    "Create with the batch envelope and two to four search items, each with its own exact quote. GET id or list; POST cancel with id.",
-    "The worker executes bounded, metered searches and returns settled findings with provider URL annotations. This is explicit multi-query evidence collection, not autonomous planning or synthesis.",
+    "Create with the batch envelope: one search item with research:true and two or three tool calls for autonomous research, or two to four separately quoted ordinary search items. GET id or list; POST cancel with id.",
+    "The worker runs bounded autonomous question planning, web search and synthesis in one metered provider invocation, or explicit multi-query evidence collection. Retrieve mode, synthesis and settled provider citations. Cancellation stops queued work and signals running work; already incurred charges remain accountable. No unlimited browsing or unbounded research.",
   ),
   endpoint(
     "response-jobs",

@@ -62,3 +62,16 @@ test("paid operations and quote schemas agree with the JavaScript SDK operation 
     2,
   );
 });
+
+test("research contract describes distinct autonomous and reviewed envelopes and settled citations", () => {
+  const route = spec.paths["/api/v1/research-runs"];
+  const [manual, autonomous, cancel] =
+    route.post.requestBody.content["application/json"].schema.oneOf;
+  assert.equal(manual.properties.items.minItems, 2);
+  assert.equal(autonomous.properties.items.maxItems, 1);
+  assert.equal(autonomous.properties.items.items.properties.input.properties.research.const, true);
+  assert.equal(cancel.properties.operation.enum[0], "cancel");
+  const run = route.get.responses[200].content["application/json"].schema.oneOf[0];
+  assert.deepEqual(run.properties.mode.enum, ["autonomous", "queries"]);
+  assert.ok(run.properties.items.items.properties.citations);
+});

@@ -136,7 +136,7 @@ begin
       or jsonb_typeof(p_input->'items') is distinct from 'array'
       or jsonb_array_length(p_input->'items') not between 1 and 8
       or (kind='response' and jsonb_array_length(p_input->'items')<>1)
-      or (kind='research' and jsonb_array_length(p_input->'items') not between 2 and 4)
+      or (kind='research' and jsonb_array_length(p_input->'items') not between 1 and 4)
     then raise exception 'developer_batch_invalid'; end if;
     budget:=(p_input->>'maximum_ticks')::bigint;
     deadline:=(p_input->>'expires_at')::timestamptz;
@@ -150,7 +150,12 @@ begin
         or jsonb_typeof(j->'maximum_ticks') is distinct from 'number'
         or coalesce(j->>'operation_kind','chat/completions') not in ('chat/completions','agent-turns','responses','moderations','embeddings','decisions','search','analysis')
         or (kind='response' and (j->>'id' is distinct from batch::text or j->>'operation_kind' is distinct from 'responses'))
-        or (kind='research' and j->>'operation_kind' is distinct from 'search')
+        or (kind='research' and (j->>'operation_kind' is distinct from 'search'
+          or (jsonb_array_length(p_input->'items')=1 and (j->'input'->'research' is distinct from 'true'::jsonb
+            or jsonb_typeof(j->'input'->'max_tool_calls') is distinct from 'number'
+            or coalesce(j->'input'->>'max_tool_calls','') not in ('2','3')))
+          or (jsonb_array_length(p_input->'items')>1 and j->'input' ? 'research')))
+        or (kind<>'research' and j->'input' ? 'research')
         or coalesce(j->>'request_group','') !~ '^[a-f0-9]{64}$'
         or length(coalesce(j->>'authorization','')) not between 1 and 2048
         or jsonb_typeof(j->'input') is distinct from 'object'
@@ -186,7 +191,7 @@ begin
   elsif p_operation='get' then
     if kind='research' then
       select coalesce(jsonb_agg(to_jsonb(t) order by t.ordinal),'[]'::jsonb) into result from (
-        select i.id,i.ordinal,i.operation_kind,i.state,i.input->>'query' as query,r.id as request_id,r.settlement_state,r.final_customer_charge,
+        select i.id,i.ordinal,i.operation_kind,i.state,i.input->>'query' as query,coalesce(i.input->'research'='true'::jsonb,false) as autonomous,r.id as request_id,r.settlement_state,r.final_customer_charge,
           case when i.state='completed' and r.settlement_state='settled' then i.output else null end as output
         from public.developer_batch_items_v1 i left join lateral (
           select r.id,r.settlement_state,r.final_customer_charge from public.developer_api_requests r

@@ -229,21 +229,22 @@ def _research_plan_result(value):
         raise KovaError("research_plan_invalid", 200, True) from None
 
 
-def _research_draft(data):
+def _research_draft(data, autonomous=False):
     data = json.loads(_json_body(data))
     run_id = _identifier(data.get("id"), _UUID, "research_id_invalid").lower()
     currency, maximum = data.get("currency"), data.get("maximum_charge")
     _require(isinstance(currency, str) and re.fullmatch(r"[A-Z]{3}", currency) and _number(maximum)
              and maximum <= 1000000 and abs(maximum * 1e8 - round(maximum * 1e8)) <= 0.00001
-             and isinstance(data.get("queries"), list) and 2 <= len(data["queries"]) <= 4, "research_budget_invalid")
+             and isinstance(data.get("queries"), list) and (len(data["queries"]) == 1 if autonomous else 2 <= len(data["queries"]) <= 4), "research_budget_invalid")
     calls = data.get("max_tool_calls")
-    _require(type(calls) is int and 1 <= calls <= 3, "workflow_input_invalid")
+    _require(type(calls) is int and (2 if autonomous else 1) <= calls <= 3, "workflow_input_invalid")
     items = []
     for item in data["queries"]:
         _require(isinstance(item, dict), "workflow_input_invalid")
         items.append({"id": _identifier(item.get("id"), _UUID, "research_id_invalid").lower(),
                       "operation": "search", "input": {"model": _workflow_model(data.get("model")),
-                      "query": _workflow_text(item.get("query"), 1000).strip(),
+                      "query": _workflow_text(item.get("query"), 8000 if autonomous else 1000).strip(),
+                      **({"research": True} if autonomous else {}),
                       "max_output_tokens": _workflow_output_limit(data.get("max_output_tokens")), "max_tool_calls": calls}})
     _require(len({item["id"] for item in items}) == len(items) and len({item["input"]["query"].lower() for item in items}) == len(items), "workflow_input_invalid")
     return {"id": run_id, "currency": currency, "maximum_charge": maximum, "items": items}
@@ -764,6 +765,11 @@ class Client:
 
     def translate_transcript(self, data, **budget):
         return self.run("responses", _translation_request(data), **budget)
+
+    def research_prepare_autonomous(self, data):
+        data = json.loads(_json_body(data))
+        draft = _research_draft({**data, "queries": [{"id": data.get("id"), "query": data.get("question")}]}, autonomous=True)
+        return _research_quoted_draft(draft, [self.quote("search", draft["items"][0]["input"])])
 
     def research_prepare(self, data):
         draft = _research_draft(data)

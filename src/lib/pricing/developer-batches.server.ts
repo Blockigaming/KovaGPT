@@ -306,20 +306,47 @@ export async function processDeveloperBatch() {
       })
       .abortSignal(signal);
     if (lease.error || lease.data !== true) throw new Error("developer_batch_unavailable");
-    output = await readResult(
-      await executeAuthorizedBatchItem(
-        { ...key.data, ownerId: claim.owner_id, db },
-        item.batch_id,
-        item.id,
-        item.input,
-        item.authorization,
-        claim.currency,
-        Number(item.maximum_ticks),
-        item.operation_kind,
-        item.run_at,
-        signal,
-      ),
-    );
+    const cancellation = new AbortController();
+    const executionSignal = AbortSignal.any([signal, cancellation.signal]);
+    let checking = false;
+    const timer = setInterval(async () => {
+      if (checking || executionSignal.aborted) return;
+      checking = true;
+      try {
+        const current = await db
+          .rpc("validate_developer_batch_claim_v1", {
+            p_project: item.project_id,
+            p_batch: item.batch_id,
+            p_item: item.id,
+            p_lease: item.lease_token,
+          })
+          .abortSignal(AbortSignal.any([executionSignal, AbortSignal.timeout(3000)]));
+        if (current.error || current.data !== true) cancellation.abort();
+      } catch {
+        cancellation.abort();
+      } finally {
+        checking = false;
+      }
+    }, 2000);
+    try {
+      output = await readResult(
+        await executeAuthorizedBatchItem(
+          { ...key.data, ownerId: claim.owner_id, db },
+          item.batch_id,
+          item.id,
+          item.input,
+          item.authorization,
+          claim.currency,
+          Number(item.maximum_ticks),
+          item.operation_kind,
+          item.run_at,
+          executionSignal,
+        ),
+      );
+    } finally {
+      clearInterval(timer);
+      cancellation.abort();
+    }
   } catch {
     // Never retry automatically after claiming. The accounting record remains
     // authoritative even if the provider result or worker response was lost.

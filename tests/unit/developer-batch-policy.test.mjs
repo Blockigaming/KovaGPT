@@ -424,3 +424,68 @@ test("research exposes only settled findings, real URL annotations and accurate 
     "canceled",
   );
 });
+
+test("autonomous research admits one exact bounded tool-driven invocation and projects only settled citations", async () => {
+  const { normalizeDeveloperOperation } =
+    await import("../../src/lib/pricing/developer-api-aliases.mjs");
+  const input = {
+    model: "kova-fast",
+    query: "Compare evidence",
+    max_output_tokens: 1024,
+    max_tool_calls: 3,
+    research: true,
+  };
+  const search = {
+    id: item,
+    operation: "search",
+    quote_token: request.items[0].quote_token,
+    input,
+  };
+  const parse = (items, kind = "research") =>
+    parseDeveloperBatchRequest("POST", new URLSearchParams(), { ...request, items }, kind);
+  assert.equal(parse([search]).input.items[0].input.research, true);
+  assert.throws(() => parse([search, { ...search, id }]), /batch_invalid/);
+  assert.throws(() => parse([search], "batch"), /batch_invalid/);
+  for (const invalid of [
+    { research: false },
+    { research: "true" },
+    { max_tool_calls: 1 },
+    { max_output_tokens: 2049 },
+  ])
+    assert.throws(() => parse([{ ...search, input: { ...input, ...invalid } }]));
+  const normalized = normalizeDeveloperOperation("search", input);
+  assert.equal(normalized.input.max_tool_calls, 3);
+  assert.match(normalized.input.instructions, /choose distinct relevant web searches/);
+  assert.equal(normalized.input.stream, false);
+  const row = {
+    id: item,
+    operation_kind: "search",
+    query: input.query,
+    autonomous: true,
+    state: "completed",
+    settlement_state: "settled",
+    output: {
+      status: "completed",
+      output: [
+        {
+          type: "message",
+          role: "assistant",
+          content: [
+            {
+              type: "output_text",
+              text: "Synthesis",
+              annotations: [{ type: "url_citation", url: "https://example.com/" }],
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const view = (entry) =>
+    developerResearchRunView({ id, resource_kind: "research", items: [entry] }, id);
+  assert.equal(view(row).mode, "autonomous");
+  assert.equal(view(row).synthesis, "Synthesis");
+  assert.equal(view(row).status, "completed");
+  assert.equal(view({ ...row, settlement_state: "uncertain" }).synthesis, null);
+  assert.throws(() => view({ ...row, autonomous: false }), /batch_unavailable/);
+});

@@ -154,3 +154,22 @@ test("research console quotes a search and drafts a two-query run without author
   assert.equal(resourceConsoleMaySpend(section, "create"), true);
   assert.equal(resourceConsoleMaySpend(section, "quoteSearch"), false);
 });
+
+test("autonomous research console keeps a single exact quoted item and no charge authorization", () => {
+  const now = 1795780800000,
+    section = "research-runs",
+    action = "quoteAutonomous";
+  const input = resourceConsoleTemplate(section, action, () => id);
+  const result = {
+    quoteToken: "payload." + "a".repeat(64),
+    currency: "USD",
+    maximumCharge: 1,
+    expiresAt: now + 60000,
+  };
+  const draft = JSON.parse(resourceConsoleJobDraft(section, action, input, result, () => id, now));
+  assert.equal(draft.items.length, 1);
+  assert.equal(draft.items[0].input.research, true);
+  assert.deepEqual(draft.items[0].input, JSON.parse(input).input);
+  assert.equal(draft.maximum_charge, 0);
+  assert.equal(resourceConsoleMaySpend(section, action), false);
+});

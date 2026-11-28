@@ -4982,7 +4982,7 @@
       "order": 239,
       "filename": "20261127205035_developer_batches_v1.sql",
       "timestamp": "20261127205035",
-      "sha256": "aff2b09b2b5540e797ff86483f390d7af9c1205ac8abeee95f55dfbbd25e853d",
+      "sha256": "9c23d08d8dbe60d899ec373f3cb2ad8442024f4ea4167ae54c1411ff047c6944",
       "tables": ["developer_batches_v1", "developer_batch_items_v1"],
       "functions": [
         "developer_batch_key_active_v1",

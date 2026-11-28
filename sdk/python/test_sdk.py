@@ -83,6 +83,18 @@ class SDKTests(unittest.TestCase):
         self.addCleanup(self.mock.stop)
         self.client = Client(KEY)
 
+    def test_autonomous_research_quote_only(self):
+        data = {"id": ID, "currency": "USD", "maximum_charge": 10, "model": "kova-fast", "question": "Compare evidence", "max_output_tokens": 1024, "max_tool_calls": 3}
+        self.responses.append(FakeResponse(quote()))
+        draft = self.client.research_prepare_autonomous(data)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(len(draft["items"]), 1)
+        self.assertIs(draft["items"][0]["input"]["research"], True)
+        self.assertEqual(json.loads(self.calls[0][2]), {"operation": "search", "input": draft["items"][0]["input"]})
+        with self.assertRaisesRegex(KovaError, "workflow_input_invalid"):
+            self.client.research_prepare_autonomous({**data, "max_tool_calls": 1})
+        self.assertEqual(len(self.calls), 1)
+
     def test_recorded_translation_and_research_review_workflows(self):
         transcript = {"id": "req_test", "status": "completed", "text": "bonjour", "usage": {"type": "duration", "seconds": 1}}
         data = {"model": "kova-fast", "transcription": transcript, "target_language": "en", "max_output_tokens": 100}

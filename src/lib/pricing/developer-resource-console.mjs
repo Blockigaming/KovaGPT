@@ -210,11 +210,18 @@ export const developerResourceSections = Object.freeze({
   "research-runs": {
     label: "Research runs",
     description:
-      "Authorize two to four explicitly quoted searches; retrieve settled findings and source citations. Draft each query separately and combine the exact quoted inputs before authorizing the total budget.",
+      "Authorize one autonomous research request or two to four separately quoted searches; retrieve settled findings and source citations. Each request is bounded by its quote.",
     actions: {
       list,
       detail,
       quoteSearch: queueQuotes.quoteSearch,
+      quoteAutonomous: quoteOperation("Get autonomous research quote", "search", {
+        model: "",
+        query: "",
+        max_output_tokens: 1024,
+        max_tool_calls: 3,
+        research: true,
+      }),
       create: post("Authorize research run", "create", {
         id: "",
         currency: "USD",
@@ -383,6 +390,7 @@ export function resourceConsoleJobDraft(section, action, raw, result, randomId, 
     draft.quote_token = result.quoteToken;
   } else {
     Object.assign(draft.items[0], { operation, input, quote_token: result.quoteToken });
+    if (section === "research-runs" && input.research === true) draft.items = [draft.items[0]];
   }
   return JSON.stringify(draft, null, 2);
 }

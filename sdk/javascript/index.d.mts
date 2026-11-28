@@ -86,6 +86,7 @@ export interface SearchInput {
   query: string;
   max_output_tokens: number;
   max_tool_calls: 1 | 2 | 3;
+  research?: true;
 }
 export type ChatCompletionInput = {
   model: string;
@@ -350,6 +351,23 @@ export class KovaGPT {
     ): Promise<Record<string, unknown>>;
   };
   readonly researchRuns: {
+    prepareAutonomous(
+      input: {
+        id: string;
+        currency: string;
+        maximum_charge: number;
+        model: string;
+        question: string;
+        max_output_tokens: number;
+        max_tool_calls: 2 | 3;
+      },
+      options?: { signal?: AbortSignal },
+    ): Promise<{
+      id: string;
+      currency: string;
+      maximum_charge: number;
+      items: Extract<BatchInvocation, { operation: "search" }>[];
+    }>;
     prepare(
       input: {
         id: string;

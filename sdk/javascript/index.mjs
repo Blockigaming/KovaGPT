@@ -221,7 +221,7 @@ function researchPlanResult(value) {
   if (new Set(queries.map((query) => query.toLowerCase())).size !== queries.length) invalid();
   return { queries, response_id: typeof value.id === "string" ? value.id : null };
 }
-function researchDraft(input, validateId) {
+function researchDraft(input, validateId, autonomous = false) {
   const data = boundedInput(input);
   const id = validateId(data.id).toLowerCase();
   if (
@@ -232,8 +232,8 @@ function researchDraft(input, validateId) {
     !Number.isSafeInteger(Math.round(data.maximum_charge * 1e8)) ||
     Math.abs(data.maximum_charge * 1e8 - Math.round(data.maximum_charge * 1e8)) > 0.00001 ||
     !Array.isArray(data.queries) ||
-    data.queries.length < 2 ||
-    data.queries.length > 4
+    data.queries.length < (autonomous ? 1 : 2) ||
+    data.queries.length > (autonomous ? 1 : 4)
   )
     fail("research_budget_invalid");
   const queries = data.queries.map((item) => ({
@@ -241,14 +241,15 @@ function researchDraft(input, validateId) {
     operation: "search",
     input: {
       model: workflowModel(data.model),
-      query: workflowText(item.query, 1000).trim(),
+      query: workflowText(item.query, autonomous ? 8000 : 1000).trim(),
+      ...(autonomous ? { research: true } : {}),
       max_output_tokens: workflowOutputLimit(data.max_output_tokens),
       max_tool_calls: data.max_tool_calls,
     },
   }));
   if (
     !Number.isSafeInteger(data.max_tool_calls) ||
-    data.max_tool_calls < 1 ||
+    data.max_tool_calls < (autonomous ? 2 : 1) ||
     data.max_tool_calls > 3 ||
     new Set(queries.map((item) => item.id)).size !== queries.length ||
     new Set(queries.map((item) => item.input.query.toLowerCase())).size !== queries.length
@@ -648,6 +649,17 @@ export class KovaGPT {
       return generation ? jobResult(response, 524288) : smallJson(response, 524288);
     };
     this.researchRuns = Object.freeze({
+      prepareAutonomous: async (input, { signal } = {}) => {
+        const data = boundedInput(input);
+        const draft = researchDraft(
+          { ...data, queries: [{ id: data.id, query: data.question }] },
+          responseJobId,
+          true,
+        );
+        const quote = await this.quote("search", draft.items[0].input, { signal });
+        signal?.throwIfAborted();
+        return researchQuotedDraft(draft, [quote]);
+      },
       prepare: async (input, { signal } = {}) => {
         const draft = researchDraft(input, responseJobId);
         const quotes = await Promise.all(

@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for snapshot-bound Computer Use on base aeb3b3e9059ced49a18ebadbf7d9a0e9a99cbd8e, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for bounded autonomous research on base 0d29ecc18d172de56f8b6e250f98855027556eea, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 25; partial: 66; missing: 9. Total 100.
-- Verification: 9 targeted requirement-level tested; 1 prior CI verified; 74 narrower evidence; 16 unverified. Total 100.
+- Implemented: 26; partial: 65; missing: 9. Total 100.
+- Verification: 10 targeted requirement-level tested; 1 prior CI verified; 73 narrower evidence; 16 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- 0d29ecc: snapshot-bound Computer Use, 20 focused tests passing.
 
 - [8c14be3 isolated replay](https://github.com/Blockigaming/KovaGPT/actions/runs/46067432818) and [be68daf isolated replay](https://github.com/Blockigaming/KovaGPT/actions/runs/46070676725): prior successful migration workflows. Replay must be repeated for changed schema, not merely new SDK edits.
 - 016b836: multipart and strict file requests; 29 Node / 16 Python passing.
@@ -47,7 +49,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R11 | I | T | Bounded native speech, transcription and audio translation with scoped access, preapproved synthetic voice (no cloning), permission notice, exact-frame duration quote, graceful-close accounting and failure settlement. Live provider validation and owner approval of translation accounting remain activation gates; no live provider invoice receipt. |
 | R12 | I | T | Native provider turns plus authenticated multi-turn WebSocket session gateway, durable single-redemption credentials, project/key fences, up to eight independently quoted turns, provisional events, cancellation/expiry and cleanup, JS socket client, Python grant lifecycle, Playground and OpenAPI. Provider socket is per turn; continuous microphone streaming and persistent upstream conversation state are not supported. Real Nitro socket and provider qualification remain release gates. |
 | R13 | I | F | Search route, bounded calls, source receipts and metering; dc071f1 queue tests. Provider verification remains open separately. |
-| R14 | P | F | be68daf research-runs and f9a4323 reviewed planner/preparation/synthesis; no autonomous server orchestration yet. |
+| R14 | I | T | Durable autonomous research: one exact signed research search with 2–3 native tool calls, provider-selected queries and synthesis, fixed output/token/search ceilings, isolated worker claim, settled citation projection, cancellation/lease revalidation, JS and Python quote-only preparation, console and OpenAPI. Existing reviewed 2–4 search mode retained. Provider qualification remains external; no unlimited research or dedicated long-running provider model. 103 Node + 32 Python + 11 canonical-history tests pass. |
 | R15 | P | F | Versioned agents and explicit revision-bound turns, d1e5243; orchestration and hosted tool lifecycle incomplete. |
 | R16 | P | F | Persistent conversations and agent turns; full artifacts and redacted traces missing. |
 | R17 | I | T | Bounded interactive isolated Browserbase sessions with separate one-use project grants, approved same-origin navigation/link clicks/viewport actions, snapshot fences, quote-bound 60-second provider budget, cancellation and expiry, JS client, Playground, OpenAPI and Python grant lifecycle. No arbitrary scripts, form submission or authenticated browsing; provider/runtime qualification remains pending. |

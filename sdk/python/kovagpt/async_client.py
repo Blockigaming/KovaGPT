@@ -174,6 +174,11 @@ class AsyncClient:
     async def translate_transcript(self, data, **budget):
         return await self.run("responses", _translation_request(data), **budget)
 
+    async def research_prepare_autonomous(self, data):
+        data = json.loads(_json_body(data))
+        draft = _research_draft({**data, "queries": [{"id": data.get("id"), "query": data.get("question")}]}, autonomous=True)
+        return _research_quoted_draft(draft, [await self.quote("search", draft["items"][0]["input"])])
+
     async def research_prepare(self, data):
         draft = _research_draft(data)
         quotes = await asyncio.gather(*(self.quote("search", item["input"]) for item in draft["items"]))

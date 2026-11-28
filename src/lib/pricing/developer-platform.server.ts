@@ -448,6 +448,17 @@ export async function handleDeveloperSkills(request: Request) {
   }
 }
 async function preparePublicRequest(identity: DeveloperIdentity, kind: string, raw: unknown) {
+  if (
+    kind === "search" &&
+    raw &&
+    typeof raw === "object" &&
+    "research" in raw &&
+    raw.research === true &&
+    (runtimeEnv("KOVA_DEVELOPER_BATCH_SCHEMA_READY") !== "true" ||
+      runtimeEnv("KOVA_DEVELOPER_BATCHES_ENABLED") !== "true" ||
+      runtimeEnv("KOVA_DEVELOPER_RESEARCH_ENABLED") !== "true")
+  )
+    throw new Error("developer_batch_unavailable");
   let agentBinding: { id: string; version: number; createdAt: string } | null = null;
   let skillBinding: string | null = null;
   if (kind === "agent-turns") {

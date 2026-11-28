@@ -1046,3 +1046,18 @@ test("analysis file quotes bind expanded data and require the same ownership and
     { id, digest: createHash("sha256").update(content).digest("hex") },
   ]);
 });
+
+test("autonomous research cannot obtain a paid quote while its release gates are closed", async () => {
+  const f = await fixture();
+  await assert.rejects(
+    f.module.developerQuote(f.identity, "search", {
+      model: f.input.model,
+      query: "test",
+      max_output_tokens: 100,
+      max_tool_calls: 2,
+      research: true,
+    }),
+    /batch_unavailable/,
+  );
+  assert.equal(f.state.calls.length, 0);
+});

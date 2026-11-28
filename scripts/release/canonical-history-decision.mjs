@@ -55,7 +55,7 @@ const reviewedForwardMigrations = new Map([
   ],
   [
     "20261127205035_developer_batches_v1.sql",
-    "aff2b09b2b5540e797ff86483f390d7af9c1205ac8abeee95f55dfbbd25e853d",
+    "9c23d08d8dbe60d899ec373f3cb2ad8442024f4ea4167ae54c1411ff047c6944",
   ],
   [
     "20261108034500_team_email_invitations.sql",

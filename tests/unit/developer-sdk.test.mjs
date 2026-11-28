@@ -686,3 +686,32 @@ test("native audio translation binds exact recording and language to dedicated q
   assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/audio/translations");
   assert.deepEqual(JSON.parse(f.calls[1].body), input);
 });
+
+test("autonomous research prepares one quote without starting a paid run", async () => {
+  const f = fixture(() => Response.json(quote()));
+  const input = {
+    id: "55555555-5555-4555-8555-555555555555",
+    currency: "USD",
+    maximum_charge: 10,
+    model: "kova-fast",
+    question: "Compare sources",
+    max_output_tokens: 1024,
+    max_tool_calls: 3,
+  };
+  const draft = await f.client.researchRuns.prepareAutonomous(input);
+  assert.equal(f.calls.length, 1);
+  assert.equal(draft.items.length, 1);
+  assert.equal(draft.items[0].input.research, true);
+  assert.deepEqual(JSON.parse(f.calls[0].body), {
+    operation: "search",
+    input: draft.items[0].input,
+  });
+  await assert.rejects(
+    f.client.researchRuns.prepareAutonomous({ ...input, max_tool_calls: 1 }),
+    /workflow_input_invalid/,
+  );
+  await assert.rejects(
+    f.client.researchRuns.prepareAutonomous({ ...input, maximum_charge: 4 }),
+    /quote_outside_budget/,
+  );
+});
