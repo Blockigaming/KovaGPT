@@ -17,11 +17,36 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   await expect(page.getByTestId("consumer-model-trigger")).toHaveCount(0);
   await expect(thinking).toHaveAttribute("aria-pressed", "false");
   await expect(thinking).toHaveAttribute("title", "Kova Argon 4.6 Lite");
+  const mobile = await page.evaluate(() => matchMedia("(width < 768px)").matches);
+  const restingBounds = await thinking.boundingBox();
+  if (mobile) {
+    const greeting = page.locator(".kova-empty-chat-content .kova-greeting");
+    await expect(greeting).toHaveCSS("position", "fixed");
+    const offset = await greeting.evaluate(
+      (el) => el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2,
+    );
+    const viewportMiddle = await page.evaluate(() => window.innerHeight / 2);
+    expect(Math.abs(offset - (viewportMiddle - 8))).toBeLessThanOrEqual(3);
+  }
   await thinking.click();
   await expect(thinking).toHaveAttribute("aria-pressed", "true");
   await expect(thinking).toHaveAttribute("title", "Kova Argon 4.6 Medium");
   await expect(thinking).toHaveCSS("color", "rgb(59, 130, 246)");
   await expect(thinking.locator("svg")).toHaveCSS("color", "rgb(59, 130, 246)");
+  if (mobile && (await page.evaluate(() => matchMedia("(forced-colors: none)").matches))) {
+    await expect(thinking).toHaveCSS("padding-inline-start", "6px");
+    await expect(thinking).toHaveCSS("padding-inline-end", "12px");
+    const pill = await thinking.evaluate((el) => {
+      const style = getComputedStyle(el, "::before");
+      return { top: style.top, bottom: style.bottom, content: style.content };
+    });
+    expect(pill.top).toBe("3px");
+    expect(pill.bottom).toBe("3px");
+    expect(pill.content).toBe('""');
+    const selectedBounds = await thinking.boundingBox();
+    expect(selectedBounds!.height).toBe(restingBounds!.height);
+    expect(selectedBounds!.width).toBe(restingBounds!.width);
+  }
   await thinking.click();
   await expect(thinking).toHaveAttribute("aria-pressed", "false");
   expect(chatRequests).toBe(0);
