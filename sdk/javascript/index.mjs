@@ -1,4 +1,4 @@
-export { connectRealtimeSession } from "./realtime.mjs";
+export { connectRealtimeSession, connectBrowserSession } from "./realtime.mjs";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const operations = new Set([
@@ -388,6 +388,18 @@ export class KovaGPT {
     this.search = (input, options) => this.run("search", input, options);
     this.browser = Object.freeze({
       snapshot: (input, options) => this.run("browser", input, options),
+      sessions: Object.freeze({
+        create: async (input = {}, { signal } = {}) =>
+          smallJson(
+            await this.#request("browser-sessions", { input: boundedInput(input, 2048), signal }),
+          ),
+        retrieve: async (id, { signal } = {}) =>
+          smallJson(await this.#request(`browser-sessions?id=${fileId(id)}`, { signal })),
+        close: async (id, { signal } = {}) =>
+          smallJson(
+            await this.#request(`browser-sessions?id=${fileId(id)}`, { signal, method: "DELETE" }),
+          ),
+      }),
     });
     this.computerUse = Object.freeze({
       propose: (input, options) => this.run("computer-use", input, options),

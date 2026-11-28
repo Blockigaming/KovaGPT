@@ -41,6 +41,7 @@ import {
   REALTIME_DIMENSIONS,
   runDeveloperRealtime,
 } from "./developer-realtime-policy.mjs";
+import { developerBrowserChannel } from "./developer-browser-interactive.mjs";
 import { TRANSLATION_MODEL, runDeveloperTranslation } from "./developer-translation-policy.mjs";
 import { TRANSCRIPTION_BODY_LIMIT } from "./developer-transcription-policy.mjs";
 import { normalizeDeveloperOperation } from "./developer-api-aliases.mjs";
@@ -550,6 +551,12 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
       runtimeEnv("KOVA_DEVELOPER_SPEECH_VOICE_ID"),
     );
   }
+  if (
+    parsed.capability === "cloud_browser" &&
+    parsed.body.interactive === true &&
+    runtimeEnv("KOVA_DEVELOPER_BROWSER_INTERACTIVE_ENABLED") !== "true"
+  )
+    throw Error("developer_browser_unavailable");
   if (parsed.capability === "cloud_browser")
     for (const target of developerBrowserTargets(parsed.body))
       await assertDeveloperBrowserAuthority(identity, target);
@@ -743,6 +750,8 @@ export async function executeDeveloper(
   const quote = readDeveloperQuote(identity, quoteToken);
   const parsed = await preparePublicRequest(identity, kind, input);
   checkDeveloperQuote(quote, kind, parsed);
+  if (kind === "browser" && parsed.body.interactive === true && !developerBrowserChannel())
+    throw Error("developer_browser_session_required");
   const response = await withDeveloperBilling(
     {
       keyId: identity.id,

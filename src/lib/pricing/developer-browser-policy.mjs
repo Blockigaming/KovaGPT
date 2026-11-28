@@ -56,7 +56,13 @@ export function developerBrowserTargets(value) {
 }
 export function developerBrowserFields(value) {
   const targets = developerBrowserTargets(value);
+  if (
+    value.interactive !== undefined &&
+    (value.interactive !== true || value.navigate !== undefined)
+  )
+    invalid();
   return {
+    ...(value.interactive === true ? { interactive: true } : {}),
     url: targets[0].href,
     ...(targets.length > 1 ? { navigate: targets.slice(1).map((url) => url.href) } : {}),
     session_seconds: BROWSER_SESSION_SECONDS,
@@ -85,10 +91,13 @@ export function validDeveloperBrowserRequest(body) {
   try {
     return (
       body?.model === BROWSER_MODEL &&
-      Object.keys(body).length === (body.navigate === undefined ? 3 : 4) &&
+      Object.keys(body).length ===
+        (body.navigate === undefined && body.interactive === undefined ? 3 : 4) &&
       Object.keys(body).every((key) =>
-        ["model", "url", "navigate", "session_seconds"].includes(key),
+        ["model", "url", "navigate", "interactive", "session_seconds"].includes(key),
       ) &&
+      (body.interactive === undefined ||
+        (body.interactive === true && body.navigate === undefined)) &&
       body.session_seconds === BROWSER_SESSION_SECONDS &&
       developerBrowserTargets(body).length >= 1
     );

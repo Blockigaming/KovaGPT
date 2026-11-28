@@ -82,6 +82,14 @@ export const DEVELOPER_ENDPOINTS = [
     "Opens a native provider WebSocket server-side for one bounded turn, returns text or base64 PCM16 audio and validated usage, and closes the connection. Separate text, audio and cached-token pricing requires approval. This is a request-scoped turn, not an interactive multi-turn WebSocket proxy.",
   ),
   endpoint(
+    "browser-sessions",
+    "Interactive Cloud Browser sessions",
+    "browser-sessions",
+    "POST GET DELETE",
+    "Create a single-use grant with optional exact HTTPS origin, retrieve or close by ID. Connect to the returned WebSocket with the kova.browser.v1 protocol. Authenticate with client_secret, quote a browser input {model,url,interactive:true}, then send turn.create with the exact quote and request key.",
+    "One independently metered isolated session. Receive turn.delta browser.snapshot views with snapshot_id; send turn.action with id, command {snapshot_id,approved:true,source,action}. Supports same-origin navigation, approved link click, scroll, wait, screenshot and finish. Computer source requires computer_use scope. No forms, credentials, arbitrary scripts or writes. Cancel or disconnect closes the browser. Provider approval and activation remain required.",
+  ),
+  endpoint(
     "realtime-sessions",
     "Realtime sessions",
     "realtime-sessions",

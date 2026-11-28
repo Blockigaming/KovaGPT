@@ -6,6 +6,7 @@ export function developerBrowserTargets(value: unknown): URL[];
 export function developerBrowserFields(value: unknown): {
   url: string;
   navigate?: string[];
+  interactive?: true;
   session_seconds: 60;
 };
 export function executeDeveloperBrowserPlan<T extends { url: string; text: string }>(

@@ -549,3 +549,57 @@ test("Realtime grants are project scoped, single redemption, fenced and revocabl
     await db.close();
   }
 });
+
+test("browser grants cannot be redeemed through Realtime and authorize exactly one metered turn", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const a = await account(db);
+    await manage(db, "issue_key", keyInput(a, { scopes: ["cloud_browser", "computer_use"] }));
+    const grant = id(20),
+      connection = id(21),
+      turn = id(22);
+    const rpc = async (op, input, g = grant) =>
+      (
+        await db.query("select public.manage_developer_realtime_sessions_v1($1,$2,$3) result", [
+          op,
+          g,
+          input,
+        ])
+      ).rows[0].result;
+    const binding = {
+      owner_id: owner,
+      api_key_id: key,
+      project_id: a.projectId,
+      session_kind: "browser",
+    };
+    const issue = { ...binding, grant_digest: "b".repeat(64), origin: "https://example.com" };
+    const claim = {
+      session_kind: "browser",
+      grant_digest: issue.grant_digest,
+      origin: issue.origin,
+      connection_id: connection,
+    };
+    await assert.rejects(
+      rpc("issue", { ...issue, session_kind: "realtime" }, id(24)),
+      /scope_required/,
+    );
+    assert.equal((await rpc("issue", issue)).state, "issued");
+    await assert.rejects(rpc("get", { ...binding, session_kind: "realtime" }), /not_found/);
+    await assert.rejects(rpc("get", { ...binding, owner_id: other }), /not_found/);
+    await assert.rejects(rpc("claim", { ...claim, session_kind: "realtime" }), /not_found/);
+    assert.equal((await rpc("claim", claim)).state, "connected");
+    await assert.rejects(rpc("claim", claim), /not_found/);
+    const fence = { session_kind: "browser", connection_id: connection, turn_id: turn };
+    assert.equal((await rpc("begin", fence)).turns, 1);
+    await rpc("finish", fence);
+    await assert.rejects(rpc("begin", fence), /conflict/);
+    await manage(db, "revoke_key", { accountId: a.accountId, keyId: key });
+    await assert.rejects(rpc("check", fence), /scope_required/);
+    assert.equal((await rpc("disconnect", fence)).state, "closed");
+  } finally {
+    await db.close();
+  }
+});

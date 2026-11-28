@@ -1,3 +1,4 @@
+import type { BrowserChannel } from "./developer-browser-interactive.mjs";
 export const REALTIME_SOCKET_PATH: string;
 export const REALTIME_SOCKET_PROTOCOL: string;
 export function realtimeOrigin(value: unknown): string | null;
@@ -9,6 +10,7 @@ export function parseRealtimeSessionRequest(
   input: unknown,
 ): { operation: "issue"; origin: string | null } | { operation: "get" | "close"; id: string };
 export function createRealtimeConnection<T>(options: {
+  kind?: "realtime" | "browser";
   send: (value: Record<string, unknown>) => void;
   close: (code: number, reason: string) => void;
   claim: (
@@ -26,6 +28,7 @@ export function createRealtimeConnection<T>(options: {
     quote: string,
     signal: AbortSignal,
     delta: (value: Record<string, unknown>) => void,
+    channel?: BrowserChannel,
   ) => Promise<unknown>;
   finish: (id: string, connection: string, turn: string) => Promise<unknown>;
   disconnect: (id: string, connection: string) => Promise<unknown>;

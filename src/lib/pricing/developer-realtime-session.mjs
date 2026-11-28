@@ -1,4 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createBrowserChannel } from "./developer-browser-interactive.mjs";
+import { developerBrowserFields } from "./developer-browser-policy.mjs";
 import { developerRealtimeFields } from "./developer-realtime-policy.mjs";
 import { developerRequestKey, developerUuid } from "./developer-platform-policy.mjs";
 
@@ -47,7 +49,18 @@ export function parseRealtimeSessionRequest(method, params, input) {
   if (!["GET", "DELETE"].includes(method) || [...params].length !== 1 || !params.has("id")) fail();
   return { operation: method === "GET" ? "get" : "close", id: developerUuid(params.get("id")) };
 }
-function message(value) {
+function message(value, kind) {
+  const validateInput = (input) => {
+    if (kind === "browser") {
+      if (
+        input?.interactive !== true ||
+        !input.model ||
+        Object.keys(input).some((k) => !["model", "url", "interactive"].includes(k))
+      )
+        fail();
+      developerBrowserFields(input);
+    } else developerRealtimeFields(input);
+  };
   if (typeof value !== "string" || Buffer.byteLength(value) > 350000) fail();
   let v;
   try {
@@ -61,15 +74,17 @@ function message(value) {
   if (v?.type === "session.close" && exact(v, ["type"])) return v;
   if (v?.type === "turn.cancel" && exact(v, ["type", "id"]))
     return { type: v.type, id: developerUuid(v.id) };
+  if (kind === "browser" && v?.type === "turn.action" && exact(v, ["type", "id", "command"]))
+    return { type: v.type, id: developerUuid(v.id), command: v.command };
   if (v?.type === "turn.quote" && exact(v, ["type", "id", "input"])) {
-    developerRealtimeFields(v.input);
+    validateInput(v.input);
     return { type: v.type, id: developerUuid(v.id), input: v.input };
   }
   if (
     v?.type === "turn.create" &&
     exact(v, ["type", "id", "input", "quote_token", "request_key"])
   ) {
-    developerRealtimeFields(v.input);
+    validateInput(v.input);
     if (
       typeof v.quote_token !== "string" ||
       !/^[A-Za-z0-9_-]+\.[a-f0-9]{64}$/.test(v.quote_token) ||
@@ -92,6 +107,7 @@ function message(value) {
  * A database grant controls redemption, expiry, ownership, revocation and turn count.
  * The transport itself never receives a provider or developer API key. */
 export function createRealtimeConnection({
+  kind = "realtime",
   send,
   close,
   claim,
@@ -112,6 +128,7 @@ export function createRealtimeConnection({
     grant,
     active,
     quotes = 0,
+    actionAttempts = 0,
     timer,
     ticker,
     checking = false;
@@ -152,7 +169,7 @@ export function createRealtimeConnection({
     if (state === "closed") return;
     let v;
     try {
-      v = message(raw);
+      v = message(raw, kind);
     } catch {
       await stop(1008, "invalid_message");
       return;
@@ -192,7 +209,7 @@ export function createRealtimeConnection({
           type: "session.ready",
           id: grant.id,
           expires_at: grant.expiresAt,
-          maximum_turns: 8,
+          maximum_turns: kind === "browser" ? 1 : 8,
         });
       } catch {
         await stop(1008, "authentication_failed");
@@ -218,6 +235,28 @@ export function createRealtimeConnection({
       } else emit({ type: "error", id: v.id, code: "developer_realtime_not_found" });
       return;
     }
+    if (v.type === "turn.action") {
+      if (++actionAttempts > 32) {
+        await stop(1008, "action_limit");
+        return;
+      }
+      try {
+        if (!active?.channel || active.id !== v.id) fail("developer_browser_conflict");
+        const identity = await check(grant.id, connection);
+        if (active?.id !== v.id) fail("developer_browser_conflict");
+        active.channel.accept(v.command, identity.capabilities.includes("computer_use"));
+        emit({ type: "turn.action_accepted", id: v.id });
+      } catch (error) {
+        emit({
+          type: "turn.action_rejected",
+          id: v.id,
+          code: /^developer_[a-z_]+$/.test(error?.message ?? "")
+            ? error.message
+            : "developer_browser_unavailable",
+        });
+      }
+      return;
+    }
     if (v.type === "session.authenticate") {
       await stop(1008, "already_authenticated");
       return;
@@ -241,6 +280,11 @@ export function createRealtimeConnection({
         job.started = true;
         job.controller.signal.throwIfAborted();
         emit({ type: "turn.started", id: v.id });
+        if (kind === "browser")
+          job.channel = createBrowserChannel(
+            (delta) => emit({ type: "turn.delta", id: v.id, ...delta }),
+            job.controller.signal,
+          );
         const result = await execute(
           turn,
           v.input,
@@ -251,6 +295,7 @@ export function createRealtimeConnection({
             job.controller.signal.throwIfAborted();
             emit({ type: "turn.delta", id: v.id, ...delta });
           },
+          job.channel,
         );
         job.controller.signal.throwIfAborted();
         await finish(grant.id, connection, v.id);
@@ -277,6 +322,7 @@ export function createRealtimeConnection({
           request_may_have_started: job.started || v.type === "turn.create",
         });
     } finally {
+      job.channel?.close();
       if (active === job) active = undefined;
     }
   }

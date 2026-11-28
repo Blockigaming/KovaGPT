@@ -1,8 +1,9 @@
 // Browser-compatible client for the bounded native Realtime session protocol.
 // Every execution requires a previously accepted quote; opening a socket never spends.
-export async function connectRealtimeSession(
+async function connectSession(
   grant,
   { baseURL = "https://kovagpt.com", WebSocketImpl = globalThis.WebSocket, signal } = {},
+  kind = "realtime",
 ) {
   const url = new URL(baseURL);
   if (
@@ -12,8 +13,8 @@ export async function connectRealtimeSession(
     url.search ||
     url.hash ||
     url.pathname !== "/" ||
-    grant?.transport !== "/api/developer/realtime/socket" ||
-    grant?.protocol !== "kova.realtime.v1" ||
+    grant?.transport !== `/api/developer/${kind}/socket` ||
+    grant?.protocol !== `kova.${kind}.v1` ||
     typeof grant.client_secret !== "string" ||
     !/^krt_[0-9a-f-]{36}_[A-Za-z0-9_-]{43}$/.test(grant.client_secret)
   )
@@ -75,7 +76,9 @@ export async function connectRealtimeSession(
       if (
         value.type === "turn.delta" ||
         value.type === "turn.started" ||
-        value.type === "turn.cancel_requested"
+        value.type === "turn.cancel_requested" ||
+        value.type === "turn.action_accepted" ||
+        value.type === "turn.action_rejected"
       ) {
         pending.onEvent?.(value);
         return;
@@ -131,6 +134,16 @@ export async function connectRealtimeSession(
         onEvent,
       );
     },
+    act(command) {
+      if (kind !== "browser" || closed || !pending?.paid || command?.approved !== true)
+        throw fail("browser_action_requires_confirmation");
+      try {
+        socket.send(JSON.stringify({ type: "turn.action", id: pending.id, command }));
+      } catch {
+        end();
+        throw fail("browser_session_closed", true);
+      }
+    },
     cancel() {
       if (pending && !closed) {
         try {
@@ -151,4 +164,11 @@ export async function connectRealtimeSession(
       }
     },
   };
+}
+
+export function connectRealtimeSession(grant, options) {
+  return connectSession(grant, options, "realtime");
+}
+export function connectBrowserSession(grant, options) {
+  return connectSession(grant, options, "browser");
 }

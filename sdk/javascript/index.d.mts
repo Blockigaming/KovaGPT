@@ -1,4 +1,10 @@
-export { connectRealtimeSession, type RealtimeSession } from "./realtime.mjs";
+export {
+  connectRealtimeSession,
+  connectBrowserSession,
+  type RealtimeSession,
+  type BrowserSession,
+  type BrowserAction,
+} from "./realtime.mjs";
 export type Operation =
   | "responses"
   | "images"
@@ -126,6 +132,8 @@ export interface BrowserSnapshotInput {
   url: string;
   /** Up to two additional, distinct same-origin HTTPS pages, bound to the same quote. */
   navigate?: string[];
+  /** Interactive mode requires a browser session socket. Mutually exclusive with navigate. */
+  interactive?: true;
 }
 export interface ComputerUseInput {
   model: string;
@@ -260,7 +268,17 @@ export class KovaGPT {
   readonly decisions: { create(input: DecisionInput, options: Budget): Promise<Response> };
   readonly analysis: { create(input: AnalysisInput, options: Budget): Promise<Response> };
   readonly computerUse: { propose(input: ComputerUseInput, options: Budget): Promise<Response> };
-  readonly browser: { snapshot(input: BrowserSnapshotInput, options: Budget): Promise<Response> };
+  readonly browser: {
+    snapshot(input: BrowserSnapshotInput, options: Budget): Promise<Response>;
+    sessions: {
+      create(
+        input?: { origin?: string },
+        options?: { signal?: AbortSignal },
+      ): Promise<Record<string, unknown>>;
+      retrieve(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+      close(id: string, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
+    };
+  };
   readonly agents: {
     create(
       input: { id: string; definition: AgentDefinition },

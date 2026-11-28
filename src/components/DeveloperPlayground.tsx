@@ -1,4 +1,10 @@
-import { connectRealtimeSession, type RealtimeSession } from "../../sdk/javascript/realtime.mjs";
+import {
+  connectRealtimeSession,
+  connectBrowserSession,
+  type RealtimeSession,
+  type BrowserSession,
+  type BrowserAction,
+} from "../../sdk/javascript/realtime.mjs";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,8 +82,16 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
-  const realtimeSession = useRef<RealtimeSession | null>(null);
+  const realtimeSession = useRef<RealtimeSession | BrowserSession | null>(null);
   const [sessionId, setSessionId] = useState("");
+  const [browserView, setBrowserView] = useState<{
+    snapshot_id: string;
+    screenshot: string;
+    url: string;
+  } | null>(null);
+  const [browserPoint, setBrowserPoint] = useState<{ x: number; y: number } | null>(null);
+  const [browserNext, setBrowserNext] = useState("");
+  const [browserActionPending, setBrowserActionPending] = useState(false);
   const [translationLanguage, setTranslationLanguage] = useState("en");
   const [realtimeOutput, setRealtimeOutput] = useState<"text" | "audio">("text");
   const [realtimeInput, setRealtimeInput] = useState<"text" | "audio">("text");
@@ -108,16 +122,32 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
     };
   }, []);
 
+  const submitBrowserAction = (
+    action: BrowserAction,
+    source: "browser" | "computer" = "browser",
+  ) => {
+    const session = realtimeSession.current;
+    if (!browserView || !session || !("act" in session) || browserActionPending) return;
+    try {
+      session.act({ snapshot_id: browserView.snapshot_id, approved: true, source, action });
+      setBrowserActionPending(true);
+    } catch {
+      setError("Browser session unavailable. Check Logs before retrying.");
+    }
+  };
   const resetQuote = () => {
     setQuote(null);
     setOutput("");
     setImages([]);
     setAudio(null);
+    setBrowserView(null);
+    setBrowserPoint(null);
+    setBrowserActionPending(false);
     setError("");
   };
 
   const fetchRequest = async (
-    path: "models" | "quotes" | "realtime-sessions" | Operation,
+    path: "models" | "quotes" | "realtime-sessions" | "browser-sessions" | Operation,
     controller: AbortController,
     body?: string,
     headers?: Record<string, string>,
@@ -144,7 +174,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   };
 
   const request = async (
-    path: "models" | "quotes" | "realtime-sessions" | Operation,
+    path: "models" | "quotes" | "realtime-sessions" | "browser-sessions" | Operation,
     controller: AbortController,
     body?: string,
     headers?: Record<string, string>,
@@ -323,13 +353,23 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                               .split(/\r?\n/)
                               .map((value) => value.trim())
                               .filter(Boolean);
-                            return { model, url, ...(navigate.length ? { navigate } : {}) };
+                            if (sessionId && navigate.length)
+                              throw new Error("Interactive sessions accept one initial URL.");
+                            return {
+                              model,
+                              url,
+                              ...(sessionId
+                                ? { interactive: true }
+                                : navigate.length
+                                  ? { navigate }
+                                  : {}),
+                            };
                           })()
                         : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
-      const session = operation === "realtime" ? realtimeSession.current : null;
+      const session = ["realtime", "browser"].includes(operation) ? realtimeSession.current : null;
       if (session?.closed) throw new Error("Realtime session expired. Open a new session.");
       const closeOnAbort = () => session?.close();
       controller.signal.addEventListener("abort", closeOnAbort, { once: true });
@@ -411,7 +451,9 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
         }
         return;
       }
-      const session = accepted.operation === "realtime" ? realtimeSession.current : null;
+      const session = ["realtime", "browser"].includes(accepted.operation)
+        ? realtimeSession.current
+        : null;
       if (session?.closed) throw new Error("Realtime session expired. Open a new session.");
       let result: unknown;
       if (session && !session.closed) {
@@ -423,6 +465,29 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             quoteToken: accepted.quoteToken,
             requestKey: accepted.requestKey,
             onEvent: (event) => {
+              if (mounted.current && accepted.operation === "browser") {
+                if (
+                  event.type === "turn.delta" &&
+                  event.kind === "browser.snapshot" &&
+                  typeof event.snapshot_id === "string" &&
+                  typeof event.url === "string" &&
+                  typeof event.screenshot === "string" &&
+                  /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(event.screenshot) &&
+                  event.screenshot.length <= 350000
+                ) {
+                  setBrowserView({
+                    snapshot_id: event.snapshot_id,
+                    url: event.url,
+                    screenshot: event.screenshot,
+                  });
+                  setBrowserPoint(null);
+                  setBrowserActionPending(false);
+                }
+                if (event.type === "turn.action_rejected") {
+                  setBrowserActionPending(false);
+                  setError("Browser action rejected by session policy.");
+                }
+              }
               if (
                 event.type === "turn.delta" &&
                 event.kind === "text" &&
@@ -435,6 +500,15 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           });
         } finally {
           controller.signal.removeEventListener("abort", cancel);
+          if (accepted.operation === "browser") {
+            session.close();
+            realtimeSession.current = null;
+            if (mounted.current) {
+              setSessionId("");
+              setBrowserView(null);
+              setBrowserActionPending(false);
+            }
+          }
         }
       } else result = await request(accepted.operation, controller, accepted.requestBody, headers);
       if (!mounted.current || controller.signal.aborted) return;
@@ -513,6 +587,20 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             ? "Image generation completed."
             : "Image response received. This playground only previews PNG image data; use your server integration for other response formats.",
         );
+      } else if (accepted.operation === "browser") {
+        const snapshot = record(record(result).result);
+        const image = snapshot.screenshot;
+        if (
+          typeof image === "string" &&
+          image.length <= 350000 &&
+          /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(image)
+        )
+          setImages([image]);
+        setOutput(
+          [snapshot.url, snapshot.title, snapshot.text]
+            .filter((v) => typeof v === "string")
+            .join("\n\n") || "Browser session completed.",
+        );
       } else {
         setOutput(JSON.stringify(result, null, 2));
       }
@@ -579,7 +667,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               disabled={busy}
               onChange={(event) => {
                 const next = event.target.value as Operation;
-                if (next !== "realtime") {
+                if (next !== operation) {
                   realtimeSession.current?.close();
                   realtimeSession.current = null;
                   setSessionId("");
@@ -720,6 +808,62 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                   ? "Session opened. If it expires, open a new session."
                   : "Request-scoped mode"}
               </p>
+            </div>
+          )}
+          {operation === "browser" && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Open an optional one-use interactive session. Each navigation or viewport action
+                requires confirmation; same-origin read-only sites only.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  disabled={busy || !key.trim()}
+                  onClick={() => {
+                    realtimeSession.current?.close();
+                    realtimeSession.current = null;
+                    setSessionId("");
+                    resetQuote();
+                    setDispatched(false);
+                    void perform(async (controller) => {
+                      const grant = await request(
+                        "browser-sessions",
+                        controller,
+                        JSON.stringify({ origin: window.location.origin }),
+                      );
+                      const session = await connectBrowserSession(grant, {
+                        baseURL: window.location.origin,
+                        signal: controller.signal,
+                      });
+                      realtimeSession.current = session;
+                      setSessionId(session.id);
+                    });
+                  }}
+                >
+                  Open interactive Browser
+                </Button>
+                {sessionId && (
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      realtimeSession.current?.close();
+                      realtimeSession.current = null;
+                      setSessionId("");
+                      resetQuote();
+                      setDispatched(false);
+                    }}
+                  >
+                    Close session
+                  </Button>
+                )}
+              </div>
+              {sessionId && (
+                <p className="text-xs text-muted-foreground">
+                  Session opened. Enter one starting HTTPS URL and confirm the quote.
+                </p>
+              )}
             </div>
           )}
           {!acceptsAudio && (
@@ -1032,6 +1176,114 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             <p role="status" className="text-sm text-muted-foreground">
               Request in progress…
             </p>
+          )}
+          {busy && browserView && (
+            <div className="space-y-3">
+              <p className="break-all text-xs text-muted-foreground">{browserView.url}</p>
+              <button
+                type="button"
+                className="relative block w-full overflow-hidden rounded-lg border"
+                disabled={browserActionPending}
+                aria-label="Select a point on the current browser screenshot"
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  setBrowserPoint({
+                    x: Math.max(
+                      0,
+                      Math.min(839, Math.floor(((event.clientX - rect.left) / rect.width) * 840)),
+                    ),
+                    y: Math.max(
+                      0,
+                      Math.min(539, Math.floor(((event.clientY - rect.top) / rect.height) * 540)),
+                    ),
+                  });
+                }}
+              >
+                <img
+                  src={browserView.screenshot}
+                  alt="Current isolated browser viewport"
+                  className="block h-auto w-full"
+                />
+                {browserPoint && (
+                  <span
+                    className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary"
+                    style={{
+                      left: `${(browserPoint.x / 840) * 100}%`,
+                      top: `${(browserPoint.y / 540) * 100}%`,
+                    }}
+                  />
+                )}
+              </button>
+              <label className="block text-sm">
+                Next approved URL
+                <Input
+                  value={browserNext}
+                  onChange={(e) => setBrowserNext(e.target.value)}
+                  disabled={browserActionPending}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  disabled={browserActionPending || !browserNext.trim()}
+                  onClick={() => submitBrowserAction({ type: "navigate", url: browserNext.trim() })}
+                >
+                  Confirm navigation
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={browserActionPending || !browserPoint}
+                  onClick={() =>
+                    browserPoint &&
+                    submitBrowserAction(
+                      { type: "click", ...browserPoint, button: "left" },
+                      "computer",
+                    )
+                  }
+                >
+                  Confirm computer click
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={browserActionPending || !browserPoint}
+                  onClick={() =>
+                    browserPoint &&
+                    submitBrowserAction({ type: "click", ...browserPoint, button: "left" })
+                  }
+                >
+                  Confirm link click
+                </Button>
+                {[-480, 480].map((scroll_y) => (
+                  <Button
+                    key={scroll_y}
+                    variant="outline"
+                    disabled={browserActionPending}
+                    onClick={() =>
+                      submitBrowserAction({ type: "scroll", x: 420, y: 270, scroll_x: 0, scroll_y })
+                    }
+                  >
+                    {scroll_y < 0 ? "Scroll up" : "Scroll down"}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  disabled={browserActionPending}
+                  onClick={() => submitBrowserAction({ type: "screenshot" })}
+                >
+                  Refresh view
+                </Button>
+                <Button
+                  disabled={browserActionPending}
+                  onClick={() => submitBrowserAction({ type: "finish" })}
+                >
+                  Finish session
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Computer actions require computer_use scope. Only link clicks and read-only viewport
+                operations are permitted.
+              </p>
+            </div>
           )}
           {audio && (
             <audio

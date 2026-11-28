@@ -720,6 +720,15 @@ class Client:
     def embeddings(self, data, **budget):
         return self.run("embeddings", data, **budget)
 
+    def browser_session_create(self, data=None):
+        return self._request("browser-sessions", method="POST", body=_json_body({} if data is None else data, 2048)).json(65536)
+
+    def browser_session_retrieve(self, session_id):
+        return self._get("browser-sessions?id=" + _identifier(session_id, _UUID, "browser_id_invalid"))
+
+    def browser_session_close(self, session_id):
+        return self._request("browser-sessions?id=" + _identifier(session_id, _UUID, "browser_id_invalid"), method="DELETE").json(65536)
+
     def browser_snapshot(self, data, **budget):
         return self.run("browser", data, **budget)
 

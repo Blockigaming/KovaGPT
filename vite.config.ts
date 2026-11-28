@@ -74,6 +74,10 @@ export default defineConfig(({ mode }) => {
         features: { websocket: true },
         handlers: [
           {
+            route: "/api/developer/browser/socket",
+            handler: path.resolve(configDir, "src/lib/pricing/developer-browser-socket.server.ts"),
+          },
+          {
             route: "/api/developer/realtime/socket",
             handler: path.resolve(configDir, "src/lib/pricing/developer-realtime-socket.server.ts"),
           },

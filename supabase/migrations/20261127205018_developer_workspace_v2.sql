@@ -166,6 +166,7 @@ create table public.developer_realtime_sessions_v1 (
   owner_id uuid not null references auth.users(id) on delete cascade,
   project_id uuid not null references public.developer_projects(id) on delete cascade,
   api_key_id uuid not null references public.developer_billing_keys(id) on delete cascade,
+  session_kind text not null default 'realtime' check(session_kind in ('realtime','browser')),
   grant_digest text not null check(grant_digest ~ '^[a-f0-9]{64}$'),
   key_digest text not null check(key_digest ~ '^[a-f0-9]{64}$'),
   origin text check(origin is null or octet_length(origin) between 9 and 512),
@@ -191,8 +192,9 @@ returns jsonb language plpgsql security invoker set search_path='' as $$
 declare
   s public.developer_realtime_sessions_v1%rowtype;
   own uuid; k uuid; proj uuid; acct uuid; secret text; caps text[]; now_at timestamptz;
-  connection uuid; turn uuid;
+  connection uuid; turn uuid; kind text:=coalesce(p_input->>'session_kind','realtime');
 begin
+  if kind not in ('realtime','browser') then raise exception 'developer_realtime_invalid'; end if;
   if p_id is null or jsonb_typeof(p_input) is distinct from 'object' or octet_length(p_input::text)>4096
   then raise exception 'developer_realtime_invalid'; end if;
   if p_operation='issue' then
@@ -204,7 +206,7 @@ begin
   perform pg_advisory_xact_lock(hashtextextended(own::text,20260903204500));
   now_at:=clock_timestamp();
   if p_operation<>'issue' then
-    select * into s from public.developer_realtime_sessions_v1 where id=p_id and owner_id=own for update;
+    select * into s from public.developer_realtime_sessions_v1 where id=p_id and owner_id=own and session_kind=kind for update;
     if not found then raise exception 'developer_realtime_not_found'; end if;
     -- Closing by the established connection is always permitted, including after revocation.
     if p_operation='disconnect' then
@@ -224,7 +226,7 @@ begin
     join public.developer_projects p on p.id=b.project_id and p.account_id=b.account_id
     join public.developer_credit_accounts c on c.id=b.account_id
     where b.id=k and p.id=proj and a.owner_id=own and b.enabled and b.revoked_at is null
-      and b.expires_at>now_at and 'realtime'=any(b.capabilities) and c.suspended_at is null;
+      and b.expires_at>now_at and (case when kind='browser' then 'cloud_browser' else 'realtime' end)=any(b.capabilities) and c.suspended_at is null;
   if acct is null or secret is null then raise exception 'developer_scope_required' using errcode='42501'; end if;
   if p_operation='issue' then
     if coalesce(p_input->>'grant_digest','') !~ '^[a-f0-9]{64}$'
@@ -234,8 +236,8 @@ begin
     if (select count(*) from public.developer_realtime_sessions_v1 where owner_id=own and state<>'closed')>=4
       or (select count(*) from public.developer_realtime_sessions_v1 where owner_id=own)>=64
     then raise exception 'developer_realtime_quota_exceeded'; end if;
-    insert into public.developer_realtime_sessions_v1(id,owner_id,project_id,api_key_id,grant_digest,key_digest,origin,created_at,redeem_by,expires_at)
-      values(p_id,own,proj,k,p_input->>'grant_digest',secret,p_input->>'origin',now_at,now_at+interval '30 seconds',now_at+interval '5 minutes') returning * into s;
+    insert into public.developer_realtime_sessions_v1(id,owner_id,project_id,api_key_id,session_kind,grant_digest,key_digest,origin,created_at,redeem_by,expires_at)
+      values(p_id,own,proj,k,kind,p_input->>'grant_digest',secret,p_input->>'origin',now_at,now_at+interval '30 seconds',now_at+interval '5 minutes') returning * into s;
   else
     if s.key_digest<>secret or s.expires_at<=now_at then raise exception 'developer_realtime_not_found'; end if;
     if p_operation='claim' then
@@ -250,7 +252,7 @@ begin
       then raise exception 'developer_realtime_not_found'; end if;
       if p_operation='begin' then
         turn:=(p_input->>'turn_id')::uuid;
-        if turn is null or s.turn_id is not null or s.turns>=8 then raise exception 'developer_realtime_conflict'; end if;
+        if turn is null or s.turn_id is not null or s.turns>=(case when kind='browser' then 1 else 8 end) then raise exception 'developer_realtime_conflict'; end if;
         update public.developer_realtime_sessions_v1 set turn_id=turn,turns=turns+1 where id=p_id returning * into s;
       elsif p_operation='finish' then
         turn:=(p_input->>'turn_id')::uuid;

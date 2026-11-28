@@ -149,7 +149,7 @@ export function parseDeveloperInput(kind, input) {
                 : kind === "computer-use"
                   ? ["input", "screenshot", "max_output_tokens"]
                   : kind === "browser"
-                    ? ["url", "navigate"]
+                    ? ["url", "navigate", "interactive"]
                     : fail("developer_operation_invalid");
   if (Object.keys(input).some((key) => ![...common, ...fields].includes(key)))
     fail("developer_field_invalid");

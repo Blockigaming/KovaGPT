@@ -1,3 +1,7 @@
+import {
+  developerBrowserChannel,
+  executeInteractiveBrowser,
+} from "./developer-browser-interactive.mjs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -108,6 +112,8 @@ export async function runDeveloperBrowser(
   callerSignal?: AbortSignal,
 ): Promise<Response> {
   if (!validDeveloperBrowserRequest(body)) throw new Error("developer_browser_invalid");
+  const channel = developerBrowserChannel();
+  if (body.interactive === true && !channel) throw Error("developer_browser_session_required");
   const [url] = developerBrowserTargets(body);
   const signal = AbortSignal.any([
     AbortSignal.timeout(45000),
@@ -191,6 +197,81 @@ export async function runDeveloperBrowser(
     await session.context.routeWebSocket("**/*", (socket) => socket.close());
     const tab = await runtime.createTab(sessionId, owner);
     const ownedSession = sessionId;
+    if (body.interactive === true) {
+      if (!channel) throw Error("developer_browser_session_required");
+      const currentPage = () => {
+        const page = runtime.sessions.get(ownedSession, owner).tabs.get(tab.id)?.page;
+        if (!page) throw Error("developer_browser_unavailable");
+        return page;
+      };
+      const navigate = (target: URL) =>
+        runtime.openUrl(ownedSession, owner, tab.id, target.href, 5000);
+      const deadline =
+        Date.now() +
+        Math.max(0, Math.min(25000, Date.parse(descriptor.expiresAt) - Date.now() - 8000));
+      await navigate(url);
+      const final = await executeInteractiveBrowser({
+        initial: url.href,
+        channel,
+        check,
+        signal,
+        deadline,
+        navigate,
+        capture: async (target) => {
+          const page = currentPage();
+          if (page.url() !== target.href) throw Error("developer_browser_unavailable");
+          const image = await page.screenshot({ type: "jpeg", quality: 55, timeout: 2000 });
+          if (image.length > 256 * 1024) throw Error("developer_browser_unavailable");
+          return {
+            url: target.href,
+            title: (await page.title()).slice(0, 180),
+            text: (await page.locator("body").innerText({ timeout: 1500 })).slice(0, 10000),
+            screenshot: "data:image/jpeg;base64," + image.toString("base64"),
+            width: 840,
+            height: 540,
+          };
+        },
+        linkAt: async (x, y) => {
+          const href = await currentPage().evaluate(
+            ({ x, y }) => {
+              const a = document.elementFromPoint(x, y)?.closest("a[href]");
+              if (
+                !(a instanceof HTMLAnchorElement) ||
+                a.hasAttribute("download") ||
+                a.target ||
+                a.hasAttribute("ping")
+              )
+                return null;
+              return a.href;
+            },
+            { x, y },
+          );
+          if (!href) throw Error("developer_browser_invalid");
+          return href;
+        },
+        scroll: async (action) => {
+          const page = currentPage();
+          await page.mouse.move(action.x, action.y);
+          await page.mouse.wheel(action.scroll_x, action.scroll_y);
+        },
+        wait: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        },
+      });
+      await check(developerBrowserUrl(final.url));
+      return Response.json({
+        id: remoteId,
+        model: BROWSER_MODEL,
+        status: "completed",
+        usage: { browser_sessions_60s: 1 },
+        result: {
+          id: randomUUID(),
+          object: "browser.session_result",
+          ...final,
+          observed_at: new Date().toISOString(),
+        },
+      });
+    }
     const snapshots = await executeDeveloperBrowserPlan(body, {
       signal,
       check,

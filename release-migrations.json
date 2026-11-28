@@ -4805,7 +4805,7 @@
       "order": 231,
       "filename": "20261127205018_developer_workspace_v2.sql",
       "timestamp": "20261127205018",
-      "sha256": "1b28e66b57be2535abcd2f6b914802424db2285e9c48396010bb64ba39c3c6c8",
+      "sha256": "e0f6854acec8e65b62c0bad7d5a43aef3f21022539f122d0467a0700982c6502",
       "tables": ["developer_credit_sharing_preferences", "developer_realtime_sessions_v1"],
       "functions": [
         "manage_developer_workspace_v2",

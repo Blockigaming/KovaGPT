@@ -1,13 +1,13 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for native Realtime request-scoped implementation on base 5f2762569ed3a8f9a6bec2858cd525d7fe721898, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for bounded interactive Browser sessions on base 08f3e1ce3acf14277b643fb0711cd328c8d336bb, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 23; partial: 68; missing: 9. Total 100.
-- Verification: 7 targeted requirement-level tested; 1 prior CI verified; 76 narrower evidence; 16 unverified. Total 100.
+- Implemented: 24; partial: 67; missing: 9. Total 100.
+- Verification: 8 targeted requirement-level tested; 1 prior CI verified; 75 narrower evidence; 16 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
@@ -26,6 +26,7 @@ Implementation: I = supported source implementation covers the named requirement
 - Native Realtime batch: 80 focused Node tests and 11 database/canonical tests passed; final SDK/contract regression subset 35 Node tests passed; Python SDK 30 tests passed. No live provider calls. Canonical history forward-extension inventory now pins exact new migration hashes; immutable historical proposal rejection test passed.
 - Realtime session lifecycle: 43 focused protocol, SDK, contract and canonical migration tests; 14 session/database tests (3 protocol tests overlap); 30 Python tests; immutable historical proposal rejection passed. Exact runtime build and provider smoke test pending.
 - Native translation: 53 focused Node tests, 32 route/ingress/identity tests and 31 Python tests passed; fixture-only provider transport. Translation usage derives from submitted frames after graceful close, not a provider invoice. Activation requires explicit approved accounting and provider validation.
+- Interactive Browser and approved viewport actions: 82 focused Node tests, 13 database/canonical tests, 31 Python tests and immutable historical proposal rejection test passed. No real Browserbase sessions or full runtime build executed.
 - Tests listed without a pass count identify existing regression fixtures, not an assertion that every fixture was rerun on this snapshot. No real paid provider calls were made. Superseded 1c3632e full CI canceled; f9a4323 workflows had not registered at observation.
 
 ## Requirement ledger
@@ -48,8 +49,8 @@ Implementation: I = supported source implementation covers the named requirement
 | R14 | P | F | be68daf research-runs and f9a4323 reviewed planner/preparation/synthesis; no autonomous server orchestration yet. |
 | R15 | P | F | Versioned agents and explicit revision-bound turns, d1e5243; orchestration and hosted tool lifecycle incomplete. |
 | R16 | P | F | Persistent conversations and agent turns; full artifacts and redacted traces missing. |
-| R17 | P | F | d6de895 bounded multi-page read-only Browserbase session; interactive persistent lifecycle missing. |
-| R18 | P | F | computer-use proposal contract and safety review; authorized isolated action execution not complete. |
+| R17 | I | T | Bounded interactive isolated Browserbase sessions with separate one-use project grants, approved same-origin navigation/link clicks/viewport actions, snapshot fences, quote-bound 60-second provider budget, cancellation and expiry, JS client, Playground, OpenAPI and Python grant lifecycle. No arbitrary scripts, form submission or authenticated browsing; provider/runtime qualification remains pending. |
+| R18 | P | F | Reviewed computer-use proposals plus authorized read-only browser action execution (link click, scroll, wait, screenshot), computer scope and flag, per-snapshot explicit approval and replay fence. Model proposal-to-action binding and broader isolated GUI execution remain outstanding. |
 | R19 | P | F | 095b037 file-backed isolated analysis; persistent files and hosted shell not complete. |
 | R20 | M | N | No public persistent container lifecycle. Provider containers refresh idle expiry on access and current pricing is duration-based with a five-minute minimum. Existing fixed isolated invocation meter cannot authorize indefinite reuse. Need approved time-based price contract and authoritative billed-duration/cleanup receipts (or separately approved hard-lifetime runner infrastructure). See https://developers.openai.com/api/docs/guides/tools-code-interpreter and https://openai.com/api/pricing/. |
 | R21 | I | F | Decisions route and bounded typed receipts, developer-decisions-policy; dc071f1 queued policy and SDK tests. |

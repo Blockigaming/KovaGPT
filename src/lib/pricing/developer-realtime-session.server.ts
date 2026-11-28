@@ -13,6 +13,8 @@ import {
   executeDeveloper,
   type DeveloperIdentity,
 } from "./developer-platform.server";
+import { withDeveloperBrowserChannel } from "./developer-browser-interactive.mjs";
+import { developerBrowserEnabled } from "./developer-browser.server";
 import { withDeveloperRealtimeEvents } from "./developer-realtime-policy.mjs";
 import {
   createRealtimeConnection,
@@ -23,7 +25,18 @@ import {
   REALTIME_SOCKET_PROTOCOL,
 } from "./developer-realtime-session.mjs";
 
-function enabled() {
+type SessionKind = "realtime" | "browser";
+export const BROWSER_SOCKET_PATH = "/api/developer/browser/socket";
+export const BROWSER_SOCKET_PROTOCOL = "kova.browser.v1";
+const sessionScope = (kind: SessionKind) => (kind === "browser" ? "cloud_browser" : "realtime");
+function enabled(kind: SessionKind = "realtime") {
+  if (kind === "browser")
+    return (
+      developerEnabled() &&
+      developerBrowserEnabled() &&
+      runtimeEnv("KOVA_DEVELOPER_REALTIME_SESSION_SCHEMA_READY") === "true" &&
+      runtimeEnv("KOVA_DEVELOPER_BROWSER_INTERACTIVE_ENABLED") === "true"
+    );
   return (
     developerEnabled() &&
     runtimeEnv("KOVA_DEVELOPER_WORKSPACE_V2") === "true" &&
@@ -33,17 +46,22 @@ function enabled() {
     Boolean(runtimeEnv("OPENAI_API_KEY"))
   );
 }
-function requireEnabled() {
-  if (!enabled()) throw Error("developer_realtime_unavailable");
+function requireEnabled(kind: SessionKind = "realtime") {
+  if (!enabled(kind)) throw Error("developer_realtime_unavailable");
 }
-async function session(operation: string, id: string, input: Record<string, unknown>) {
-  if (operation !== "disconnect") requireEnabled();
+async function session(
+  operation: string,
+  id: string,
+  input: Record<string, unknown>,
+  kind: SessionKind = "realtime",
+) {
+  if (operation !== "disconnect") requireEnabled(kind);
   const db = developerDatabase();
   const { data, error } = await db
     .rpc("manage_developer_realtime_sessions_v1", {
       p_operation: operation,
       p_id: id,
-      p_input: input,
+      p_input: { ...input, session_kind: kind },
     })
     .abortSignal(AbortSignal.timeout(5000));
   if (error || !data || data.id !== id) {
@@ -63,25 +81,29 @@ async function rate(identity: string, action: string, limit: number) {
   if (!(await consumeApplicationRateLimit({ identity, action, limit, windowSeconds: 60 })).allowed)
     throw Error("developer_rate_limit");
 }
-function publicSession(data: Record<string, unknown>) {
+function publicSession(data: Record<string, unknown>, kind: SessionKind) {
   return {
-    object: "realtime.session",
+    object: kind === "browser" ? "browser.session" : "realtime.session",
     id: data.id,
     state: data.state,
     redeem_by: data.redeem_by,
     expires_at: data.expires_at,
     turns: data.turns,
-    maximum_turns: 8,
-    transport: REALTIME_SOCKET_PATH,
-    protocol: REALTIME_SOCKET_PROTOCOL,
+    maximum_turns: kind === "browser" ? 1 : 8,
+    transport: kind === "browser" ? BROWSER_SOCKET_PATH : REALTIME_SOCKET_PATH,
+    protocol: kind === "browser" ? BROWSER_SOCKET_PROTOCOL : REALTIME_SOCKET_PROTOCOL,
   };
 }
-export async function handleDeveloperRealtimeSessions(request: Request) {
+export async function handleDeveloperRealtimeSessions(
+  request: Request,
+  kind: SessionKind = "realtime",
+) {
   try {
-    requireEnabled();
+    requireEnabled(kind);
     const identity = await authenticateDeveloper(request);
-    if (!identity.capabilities.includes("realtime")) throw Error("developer_scope_required");
-    await rate(`developer:${identity.id}`, "developer_realtime_sessions", 12);
+    if (!identity.capabilities.includes(sessionScope(kind)))
+      throw Error("developer_scope_required");
+    await rate(`developer:${identity.id}`, `developer_${kind}_sessions`, 12);
     if (
       request.method === "POST" &&
       request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json"
@@ -101,15 +123,20 @@ export async function handleDeveloperRealtimeSessions(request: Request) {
     };
     if (parsed.operation === "issue") {
       const grant = realtimeGrant();
-      const { data } = await session("issue", grant.id, {
-        ...binding,
-        origin: parsed.origin,
-        grant_digest: grant.digest,
-      });
-      return developerJson({ ...publicSession(data), client_secret: grant.token }, 201);
+      const { data } = await session(
+        "issue",
+        grant.id,
+        {
+          ...binding,
+          origin: parsed.origin,
+          grant_digest: grant.digest,
+        },
+        kind,
+      );
+      return developerJson({ ...publicSession(data, kind), client_secret: grant.token }, 201);
     }
-    const { data } = await session(parsed.operation, parsed.id, binding);
-    return developerJson(publicSession(data));
+    const { data } = await session(parsed.operation, parsed.id, binding, kind);
+    return developerJson(publicSession(data, kind));
   } catch (error) {
     return developerFailure(error);
   }
@@ -119,12 +146,18 @@ async function socketIdentity(
   connection: string,
   operation = "check",
   turn?: string,
+  kind: SessionKind = "realtime",
 ): Promise<DeveloperIdentity> {
-  const { data, db } = await session(operation, id, {
-    connection_id: connection,
-    ...(turn ? { turn_id: turn } : {}),
-  });
-  if (!Array.isArray(data.capabilities) || !data.capabilities.includes("realtime"))
+  const { data, db } = await session(
+    operation,
+    id,
+    {
+      connection_id: connection,
+      ...(turn ? { turn_id: turn } : {}),
+    },
+    kind,
+  );
+  if (!Array.isArray(data.capabilities) || !data.capabilities.includes(sessionScope(kind)))
     throw Error("developer_scope_required");
   if (!(await readAccountIdentity(db, data.owner_id)))
     throw Error("developer_realtime_unauthorized");
@@ -134,7 +167,10 @@ async function socketIdentity(
     account_id: data.account_id,
     project_id: data.project_id,
     ownerId: data.owner_id,
-    capabilities: data.capabilities,
+    capabilities:
+      kind === "browser" && runtimeEnv("KOVA_DEVELOPER_COMPUTER_USE_ENABLED") !== "true"
+        ? data.capabilities.filter((scope: string) => scope !== "computer_use")
+        : data.capabilities,
     db,
   };
 }
@@ -144,54 +180,66 @@ export function createDeveloperRealtimeSocket(
     send: (event: Record<string, unknown>) => void;
     close: (code: number, reason: string) => void;
   },
+  kind: SessionKind = "realtime",
 ) {
-  requireEnabled();
+  requireEnabled(kind);
   const boundOrigin = realtimeOrigin(origin);
   return createRealtimeConnection<DeveloperIdentity>({
     ...transport,
+    kind,
     claim: async (id, digest, connection) => {
-      const { data } = await session("claim", id, {
-        grant_digest: digest,
-        connection_id: connection,
-        origin: boundOrigin,
-      });
+      const { data } = await session(
+        "claim",
+        id,
+        {
+          grant_digest: digest,
+          connection_id: connection,
+          origin: boundOrigin,
+        },
+        kind,
+      );
       try {
-        await socketIdentity(id, connection);
+        await socketIdentity(id, connection, "check", undefined, kind);
         return { id, expiresAt: Date.parse(data.expires_at) };
       } catch (error) {
-        await session("disconnect", id, { connection_id: connection }).catch(() => {});
+        await session("disconnect", id, { connection_id: connection }, kind).catch(() => {});
         throw error;
       }
     },
-    check: (id, connection) => socketIdentity(id, connection),
+    check: (id, connection) => socketIdentity(id, connection, "check", undefined, kind),
     quote: async (identity, input) => {
-      await rate(`developer:${identity.id}`, "developer_realtime_socket_quote", 30);
-      return developerQuote(identity, "realtime", input);
+      await rate(`developer:${identity.id}`, `developer_${kind}_socket_quote`, 30);
+      return developerQuote(identity, kind, input);
     },
     begin: async (id, connection, turn) => {
       try {
-        return await socketIdentity(id, connection, "begin", turn);
+        return await socketIdentity(id, connection, "begin", turn, kind);
       } catch (error) {
-        await session("disconnect", id, { connection_id: connection }).catch(() => {});
+        await session("disconnect", id, { connection_id: connection }, kind).catch(() => {});
         throw error;
       }
     },
-    execute: async (identity, input, key, token, signal, delta) => {
-      await rate(`developer:${identity.id}`, "developer_realtime_socket_turn", 16);
-      return withDeveloperRealtimeEvents(delta, async () => {
-        const response = await executeDeveloper(identity, "realtime", input, key, token, signal);
+    execute: async (identity, input, key, token, signal, delta, channel) => {
+      await rate(`developer:${identity.id}`, `developer_${kind}_socket_turn`, 16);
+      const run = async () => {
+        const response = await executeDeveloper(identity, kind, input, key, token, signal);
         if (!response.ok) {
           await response.body?.cancel().catch(() => {});
           throw Error("developer_realtime_unavailable");
         }
         return response.json();
-      });
+      };
+      if (kind === "browser") {
+        if (!channel) throw Error("developer_browser_session_required");
+        return withDeveloperBrowserChannel(channel, run);
+      }
+      return withDeveloperRealtimeEvents(delta, run);
     },
     finish: (id, connection, turn) =>
-      session("finish", id, { connection_id: connection, turn_id: turn }),
-    disconnect: (id, connection) => session("disconnect", id, { connection_id: connection }),
+      session("finish", id, { connection_id: connection, turn_id: turn }, kind),
+    disconnect: (id, connection) => session("disconnect", id, { connection_id: connection }, kind),
   });
 }
-export function developerRealtimeSessionsEnabled() {
-  return enabled();
+export function developerRealtimeSessionsEnabled(kind: SessionKind = "realtime") {
+  return enabled(kind);
 }

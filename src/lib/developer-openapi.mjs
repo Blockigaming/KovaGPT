@@ -150,6 +150,10 @@ const paid = {
     {
       model,
       url: { ...str(2048), format: "uri", pattern: "^https://" },
+      interactive: {
+        const: true,
+        description: "Requires a browser session WebSocket; cannot be combined with navigate.",
+      },
       navigate: {
         type: "array",
         minItems: 1,
@@ -282,6 +286,7 @@ const batch = (scheduled, research = false) => {
 };
 const bodies = {
   ...paid,
+  "browser-sessions": obj({ origin: { ...str(512), format: "uri", pattern: "^https://" } }, []),
   "realtime-sessions": obj({ origin: { ...str(512), format: "uri", pattern: "^https://" } }, []),
   quotes: union(...Object.entries(paid).map(([operation, input]) => op(operation, { input }))),
   files: obj({
@@ -339,6 +344,7 @@ const bodies = {
 };
 const query = {
   "realtime-sessions": { id: uuid },
+  "browser-sessions": { id: uuid },
   models: { id: model },
   usage: { id: uuid, limit: integer(1, 100), offset: integer(0, 10000) },
   files: { id: uuid, page: integer(0, 4) },
@@ -365,6 +371,31 @@ const open = (properties, required = Object.keys(properties)) => ({
 });
 const list = (data) => open({ object: { const: "list" }, data: { type: "array", items: data } });
 const output = {
+  "browser-sessions": open(
+    {
+      object: { const: "browser.session" },
+      id: uuid,
+      state: choices("issued", "connected", "closed"),
+      redeem_by: str(80),
+      expires_at: str(80),
+      turns: integer(0, 1),
+      maximum_turns: { const: 1 },
+      transport: { const: "/api/developer/browser/socket" },
+      protocol: { const: "kova.browser.v1" },
+      client_secret: str(90),
+    },
+    [
+      "object",
+      "id",
+      "state",
+      "redeem_by",
+      "expires_at",
+      "turns",
+      "maximum_turns",
+      "transport",
+      "protocol",
+    ],
+  ),
   "realtime-sessions": open(
     {
       object: { const: "realtime.session" },
@@ -511,7 +542,7 @@ const output = {
   }),
   browser: open({
     id: uuid,
-    object: { const: "browser.snapshot" },
+    object: choices("browser.snapshot", "browser.session_result"),
     navigation: {
       type: "array",
       minItems: 2,
@@ -602,7 +633,9 @@ export function developerOpenApi() {
             name,
             in: "query",
             schema,
-            required: (method === "DELETE" || key === "realtime-sessions") && name === "id",
+            required:
+              (method === "DELETE" || ["realtime-sessions", "browser-sessions"].includes(key)) &&
+              name === "id",
           });
       }
       if (method === "POST" && paid[key])
@@ -667,6 +700,7 @@ export function developerOpenApi() {
           "agents",
           "skills",
           "realtime-sessions",
+          "browser-sessions",
         ].includes(key)
       )
         responses["201"] = { description: "Resource created.", content };
