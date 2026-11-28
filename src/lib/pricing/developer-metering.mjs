@@ -1,4 +1,52 @@
 import { quoteRequest, reconcileCharge, PricingUnavailableError } from "./cost-plus.mjs";
+import { developerInlineImage } from "./developer-responses-policy.mjs";
+import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
+import { developerSearchOptions } from "./developer-search-policy.mjs";
+import { validModerationRequest, validModerationResult } from "./developer-moderation-policy.mjs";
+import {
+  validDeveloperDecisionRequest,
+  developerDecisionUsage,
+} from "./developer-decisions-policy.mjs";
+import {
+  analysisContainerReceipt,
+  validDeveloperAnalysisRequest,
+} from "./developer-analysis-policy.mjs";
+import { validDeveloperComputerRequest } from "./developer-computer-policy.mjs";
+import {
+  developerTranscriptionAudio,
+  developerTranscriptionReceipt,
+  TRANSCRIPTION_MAX_SECONDS,
+  TRANSCRIPTION_MODEL,
+  validDeveloperTranscriptionRequest,
+} from "./developer-transcription-policy.mjs";
+import {
+  BROWSER_MODEL,
+  developerBrowserReceipt,
+  validDeveloperBrowserRequest,
+} from "./developer-browser-policy.mjs";
+
+import {
+  SPEECH_MODEL,
+  SPEECH_MAX_CHARACTERS,
+  validDeveloperSpeechRequest,
+  developerSpeechReceipt,
+} from "./developer-speech-policy.mjs";
+
+import {
+  REALTIME_MODEL,
+  REALTIME_DIMENSIONS,
+  developerRealtimeUsage,
+  validDeveloperRealtimeRequest,
+} from "./developer-realtime-policy.mjs";
+
+import {
+  TRANSLATION_MODEL,
+  TRANSLATION_ACCOUNTING,
+  TRANSLATION_MAX_SECONDS,
+  validDeveloperTranslationRequest,
+  developerTranslationSeconds,
+  developerTranslationReceipt,
+} from "./developer-translation-policy.mjs";
 
 const fail = (code) => {
   throw new PricingUnavailableError(code);
@@ -9,7 +57,22 @@ const finite = (value, maximum = 1e9) =>
 const integer = (value) => finite(value, 1e7) && Number.isSafeInteger(value);
 const dimensionsByMeter = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_computer: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
+  responses_analysis: [
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "container_1g_sessions",
+  ],
   embedding_tokens: ["input_tokens"],
+  decisions_tokens: ["decision_input_tokens"],
+  moderation_requests: ["moderation_requests"],
+  realtime_tokens: REALTIME_DIMENSIONS,
+  translation_duration: ["translation_seconds"],
+  speech_character_credits: ["speech_character_credits"],
+  transcription_duration: ["transcription_seconds"],
+  browser_sessions: ["browser_sessions_60s"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
 
@@ -36,7 +99,39 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     );
   if (!contract || !dimensionsByMeter[contract.meter] || !object(contract.maximumUsage))
     fail("billing_contract_missing");
+  const imageEdit = request.body.image !== undefined;
+  const editTokens = contract.maximumImageEditInputTokens;
+  if (
+    request.body.mask !== undefined ||
+    (editTokens !== undefined &&
+      (contract.meter !== "image_tokens" ||
+        request.provider !== "openai" ||
+        !integer(editTokens) ||
+        editTokens < 1 ||
+        editTokens > contract.maximumUsage.image_input_tokens)) ||
+    (imageEdit && !editTokens)
+  )
+    fail("billing_image_edit_contract_invalid");
+  if (imageEdit) {
+    try {
+      developerImageEditValue(request.body.image);
+    } catch {
+      fail("billing_image_edit_contract_invalid");
+    }
+  }
   const dimensions = dimensionsByMeter[contract.meter];
+  const moderationMeter = contract.meter === "moderation_requests";
+  const transcriptionMeter = contract.meter === "transcription_duration";
+  const translationMeter = contract.meter === "translation_duration";
+  const realtimeMeter = contract.meter === "realtime_tokens";
+  const speechMeter = contract.meter === "speech_character_credits";
+  const browserMeter = contract.meter === "browser_sessions";
+  const decisionsMeter = contract.meter === "decisions_tokens";
+  const searchMeter = contract.meter === "responses_search";
+  const analysisMeter = contract.meter === "responses_analysis";
+  const computerMeter = contract.meter === "responses_computer";
+  const responsesMeter =
+    searchMeter || analysisMeter || computerMeter || contract.meter === "responses_tokens";
   if (
     Object.keys(contract.maximumUsage).sort().join() !== [...dimensions].sort().join() ||
     dimensions.some((key) => !integer(contract.maximumUsage[key])) ||
@@ -57,9 +152,19 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       ))
   )
     fail("billing_model_identity_missing");
+  const textBody = { ...request.body };
+  if (imageEdit) delete textBody.image;
   if (
-    new TextEncoder().encode(JSON.stringify(request.body)).byteLength >
-    contract.maximumUsage.input_tokens
+    !moderationMeter &&
+    !transcriptionMeter &&
+    !speechMeter &&
+    !realtimeMeter &&
+    !translationMeter &&
+    !browserMeter &&
+    new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
+      (decisionsMeter
+        ? contract.maximumUsage.decision_input_tokens
+        : contract.maximumUsage.input_tokens)
   )
     fail("billing_input_bound_exceeded");
   if (
@@ -75,24 +180,228 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
-  if (contract.meter === "responses_tokens") {
+  if (
+    translationMeter !== (request.capability === "audio_translation") ||
+    (translationMeter &&
+      (request.provider !== "openai" ||
+        contract.translationAccounting !== TRANSLATION_ACCOUNTING ||
+        !validDeveloperTranslationRequest(request.body) ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== TRANSLATION_MODEL ||
+        contract.maximumUsage.translation_seconds < 1 ||
+        contract.maximumUsage.translation_seconds > TRANSLATION_MAX_SECONDS ||
+        developerTranslationSeconds(request.body) > contract.maximumUsage.translation_seconds))
+  )
+    fail("billing_translation_contract_invalid");
+  if (
+    realtimeMeter !== (request.capability === "realtime") ||
+    (realtimeMeter &&
+      (request.provider !== "openai" ||
+        !validDeveloperRealtimeRequest(request.body) ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== REALTIME_MODEL ||
+        contract.maximumUsage.realtime_text_input_tokens < 2048 ||
+        contract.maximumUsage.realtime_cached_text_tokens < 2048 ||
+        contract.maximumUsage.realtime_audio_input_tokens < 5000 ||
+        contract.maximumUsage.realtime_cached_audio_tokens < 5000 ||
+        contract.maximumUsage.realtime_text_output_tokens < request.body.max_output_tokens ||
+        contract.maximumUsage.realtime_audio_output_tokens < request.body.max_output_tokens))
+  )
+    fail("billing_realtime_contract_invalid");
+  if (
+    browserMeter !== (request.capability === "cloud_browser") ||
+    browserMeter !== (request.provider === "browserbase") ||
+    (browserMeter &&
+      (contract.maximumUsage.browser_sessions_60s !== 1 ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== BROWSER_MODEL ||
+        !validDeveloperBrowserRequest(request.body)))
+  )
+    fail("billing_browser_contract_invalid");
+  if (
+    moderationMeter !== (request.capability === "moderation") ||
+    (moderationMeter &&
+      (request.provider !== "openai" ||
+        contract.maximumUsage.moderation_requests !== 1 ||
+        !validModerationRequest(request.body)))
+  )
+    fail("billing_moderation_contract_invalid");
+  if (
+    transcriptionMeter !== (request.capability === "audio_transcription") ||
+    (transcriptionMeter &&
+      (request.provider !== "openai" ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== TRANSCRIPTION_MODEL ||
+        contract.maximumUsage.transcription_seconds < 1 ||
+        contract.maximumUsage.transcription_seconds > TRANSCRIPTION_MAX_SECONDS ||
+        !validDeveloperTranscriptionRequest(request.body) ||
+        Math.ceil(developerTranscriptionAudio(request.body.audio).seconds) >
+          contract.maximumUsage.transcription_seconds))
+  )
+    fail("billing_transcription_contract_invalid");
+  if (
+    speechMeter !== (request.capability === "audio_speech") ||
+    speechMeter !== (request.provider === "elevenlabs") ||
+    (speechMeter &&
+      (!validDeveloperSpeechRequest(request.body) ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== SPEECH_MODEL ||
+        contract.maximumUsage.speech_character_credits < 1 ||
+        contract.maximumUsage.speech_character_credits > SPEECH_MAX_CHARACTERS ||
+        Buffer.byteLength(request.body.input) > contract.maximumUsage.speech_character_credits))
+  )
+    fail("billing_speech_contract_invalid");
+  if (
+    decisionsMeter !== (request.capability === "decisions") ||
+    (decisionsMeter &&
+      (request.provider !== "openai" || !validDeveloperDecisionRequest(request.body)))
+  )
+    fail("billing_decision_contract_invalid");
+  if (
+    analysisMeter !== (request.capability === "file_analysis") ||
+    (analysisMeter &&
+      (request.provider !== "openai" ||
+        contract.maximumUsage.container_1g_sessions !== 1 ||
+        !integer(contract.maximumAnalysisInputTokens) ||
+        contract.maximumAnalysisInputTokens < 1 ||
+        new TextEncoder().encode(JSON.stringify(request.body)).byteLength +
+          contract.maximumAnalysisInputTokens >
+          contract.maximumUsage.input_tokens ||
+        !validDeveloperAnalysisRequest(request.body))) ||
+    (!analysisMeter && contract.maximumAnalysisInputTokens !== undefined)
+  )
+    fail("billing_analysis_contract_invalid");
+  if (
+    computerMeter !== (request.capability === "computer_use") ||
+    (computerMeter &&
+      (request.provider !== "openai" ||
+        !integer(contract.maximumComputerInputTokens) ||
+        contract.maximumComputerInputTokens < 1 ||
+        !integer(contract.maximumInlineImageTokens) ||
+        contract.maximumInlineImageTokens < 1 ||
+        !validDeveloperComputerRequest(request.body))) ||
+    (!computerMeter && contract.maximumComputerInputTokens !== undefined)
+  )
+    fail("billing_computer_contract_invalid");
+  let search;
+  try {
+    search = analysisMeter ? null : developerSearchOptions(request.body);
+  } catch {
+    fail("billing_dimensions_unsupported");
+  }
+  if (search && !searchMeter) fail("billing_dimensions_unsupported");
+  if (
+    searchMeter &&
+    (request.provider !== "openai" ||
+      request.capability !== "chat" ||
+      request.body.stream === true ||
+      contract.searchContentAccounting !== "included_in_input_tokens" ||
+      !integer(contract.maximumWebSearchInputTokens) ||
+      contract.maximumWebSearchInputTokens < 1 ||
+      contract.maximumWebSearchInputTokens > contract.maximumUsage.input_tokens ||
+      contract.maximumUsage.web_search_calls < 1 ||
+      contract.maximumUsage.web_search_calls > 3 ||
+      /^gpt-(?:4o-mini|4\.1-mini)(?:-|$)/.test(request.body.model))
+  )
+    fail("billing_search_contract_invalid");
+  if (
+    !searchMeter &&
+    (contract.maximumWebSearchInputTokens !== undefined ||
+      contract.searchContentAccounting !== undefined)
+  )
+    fail("billing_search_contract_invalid");
+  if (search) {
+    const bytes = new TextEncoder().encode(JSON.stringify(request.body)).byteLength;
     if (
-      !["chat", "streaming", "reasoning", "tool_calls", "vision", "file_analysis"].includes(
-        request.capability,
-      ) ||
+      search.max_tool_calls > contract.maximumUsage.web_search_calls ||
+      bytes + contract.maximumWebSearchInputTokens > contract.maximumUsage.input_tokens
+    )
+      fail("billing_search_bound_exceeded");
+  }
+  const inlineImageTokens = contract.maximumInlineImageTokens;
+  if (
+    inlineImageTokens !== undefined &&
+    ((contract.meter !== "responses_tokens" && !computerMeter) ||
+      !integer(inlineImageTokens) ||
+      inlineImageTokens < 1 ||
+      inlineImageTokens > contract.maximumUsage.input_tokens)
+  )
+    fail("billing_vision_contract_invalid");
+  const allowedEfforts = contract.allowedReasoningEfforts;
+  if (
+    allowedEfforts !== undefined &&
+    (!responsesMeter ||
+      !Array.isArray(allowedEfforts) ||
+      !allowedEfforts.length ||
+      new Set(allowedEfforts).size !== allowedEfforts.length ||
+      allowedEfforts.some(
+        (effort) => !["none", "minimal", "low", "medium", "high", "xhigh"].includes(effort),
+      ))
+  )
+    fail("billing_reasoning_contract_invalid");
+  if (request.body.reasoning !== undefined) {
+    const reasoning = request.body.reasoning;
+    if (
+      !object(reasoning) ||
+      Object.keys(reasoning).length !== 1 ||
+      !Array.isArray(allowedEfforts) ||
+      !allowedEfforts.includes(reasoning.effort)
+    )
+      fail("billing_reasoning_effort_unapproved");
+  }
+  if (responsesMeter) {
+    if (
+      ![
+        "chat",
+        "streaming",
+        "reasoning",
+        "tool_calls",
+        "vision",
+        "file_analysis",
+        "computer_use",
+      ].includes(request.capability) ||
       !integer(request.body.max_output_tokens) ||
       request.body.max_output_tokens < 1 ||
       request.body.max_output_tokens > contract.maximumUsage.output_tokens
     )
       fail("billing_output_unbounded");
-    // Hosted tools and media have additional charges; no token-only guess is accepted.
+    // Inline images and web search require their separately approved contracts.
+    // Other hosted tools and media remain fail-closed.
+    const images = Array.isArray(request.body.input)
+      ? request.body.input.flatMap((item) =>
+          Array.isArray(item?.content)
+            ? item.content.filter((part) => part?.type === "input_image")
+            : [],
+        )
+      : [];
+    const encodedInput = JSON.stringify(request.body.input);
+    const imageMarkers = encodedInput?.match(/"type"\s*:\s*"input_image"/g)?.length ?? 0;
     if (
-      request.body.tools?.some((tool) => tool.type !== "function") ||
-      /"type"\s*:\s*"(?:input_image|input_file|input_audio)"/.test(
-        JSON.stringify(request.body.input),
-      )
+      (!search &&
+        !analysisMeter &&
+        !computerMeter &&
+        request.body.tools?.some((tool) => tool.type !== "function")) ||
+      /"type"\s*:\s*"(?:input_file|input_audio)"/.test(encodedInput) ||
+      imageMarkers !== images.length ||
+      images.length > 1
     )
       fail("billing_dimensions_unsupported");
+    if (images.length) {
+      if (!inlineImageTokens) fail("billing_dimensions_unsupported");
+      try {
+        developerInlineImage(images[0]);
+      } catch {
+        fail("billing_dimensions_unsupported");
+      }
+      const requestBytes = new TextEncoder().encode(JSON.stringify(request.body)).byteLength;
+      if (
+        requestBytes +
+          inlineImageTokens +
+          (computerMeter ? contract.maximumComputerInputTokens : 0) >
+        contract.maximumUsage.input_tokens
+      )
+        fail("billing_input_bound_exceeded");
+    }
   } else if (contract.meter === "embedding_tokens" && request.capability !== "embeddings")
     fail("billing_contract_invalid");
   else if (contract.meter === "image_tokens" && request.capability !== "image_generation")
@@ -167,7 +476,16 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     provider: request.provider,
     upstreamModel: request.body.model,
     currency: version.currency,
-    usage: { capability: request.capability, dimensions: contract.maximumUsage },
+    usage: {
+      capability: request.capability,
+      dimensions: translationMeter
+        ? { translation_seconds: developerTranslationSeconds(request.body) }
+        : speechMeter
+          ? { speech_character_credits: Buffer.byteLength(request.body.input) }
+          : searchMeter
+            ? { ...contract.maximumUsage, web_search_calls: search?.max_tool_calls ?? 0 }
+            : contract.maximumUsage,
+    },
     allowances: version.allowance_configuration,
     pricingVersion: { id: version.id, status: version.status, marginFloor: version.margin_floor },
     publicPrice: { model: contract.publicModel, meter: contract.meter },
@@ -183,16 +501,22 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     quote: { ...quote, acceptedPricing: { ...options, at: at.toISOString() } },
     options,
     contract,
+    imageEdit,
   };
 }
 
 export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   const response = value?.response ?? value;
-  if (!object(response?.usage) || (expectedModels && !expectedModels.includes(response.model)))
+  if (!object(response) || (expectedModels && !expectedModels.includes(response.model)))
     return null;
+  if (meter !== "moderation_requests" && !object(response.usage)) return null;
   const usage = response.usage;
   let dimensions;
-  if (meter === "responses_tokens") {
+  if (
+    ["responses_tokens", "responses_search", "responses_analysis", "responses_computer"].includes(
+      meter,
+    )
+  ) {
     if (!["completed", "incomplete"].includes(response.status)) return null;
     const cached = usage.input_tokens_details?.cached_tokens;
     if (
@@ -205,6 +529,49 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
       cached_input_tokens: cached,
       output_tokens: usage.output_tokens,
     };
+    if (meter === "responses_analysis") {
+      if (!analysisContainerReceipt(response.output)) return null;
+      dimensions.container_1g_sessions = 1;
+    }
+    if (meter === "responses_search") {
+      if (!Array.isArray(response.output) || response.output.length > 256) return null;
+      const ids = new Set();
+      for (const item of response.output) {
+        if (!object(item)) return null;
+        if (item.type === "web_search_call") {
+          if (
+            typeof item.id !== "string" ||
+            !/^ws_[A-Za-z0-9_-]{1,180}$/.test(item.id) ||
+            ids.has(item.id) ||
+            item.status !== "completed"
+          )
+            return null;
+          ids.add(item.id);
+        } else if (!["message", "reasoning", "function_call"].includes(item.type)) return null;
+      }
+      dimensions.web_search_calls = ids.size;
+    }
+  } else if (meter === "browser_sessions") {
+    if (!developerBrowserReceipt(response)) return null;
+    dimensions = { browser_sessions_60s: 1 };
+  } else if (meter === "translation_duration") {
+    dimensions = developerTranslationReceipt(response);
+    if (!dimensions) return null;
+  } else if (meter === "realtime_tokens") {
+    dimensions = developerRealtimeUsage(response);
+    if (!dimensions) return null;
+  } else if (meter === "speech_character_credits") {
+    dimensions = developerSpeechReceipt(response);
+    if (!dimensions) return null;
+  } else if (meter === "transcription_duration") {
+    dimensions = developerTranscriptionReceipt(response);
+    if (!dimensions) return null;
+  } else if (meter === "moderation_requests") {
+    if (!validModerationResult(response)) return null;
+    dimensions = { moderation_requests: 1 };
+  } else if (meter === "decisions_tokens") {
+    dimensions = developerDecisionUsage(usage);
+    if (!dimensions) return null;
   } else if (meter === "embedding_tokens") {
     if (!integer(usage.prompt_tokens)) return null;
     dimensions = { input_tokens: usage.prompt_tokens };
@@ -266,9 +633,11 @@ export function settleDeveloperQuote(prepared, actual) {
   };
 }
 
-/** Retain only top-level accounting fields; image bytes and model output are never buffered. */
-export function createUsageCollector() {
+/** Retain accounting fields. Only the search meter temporarily collects bounded output metadata. */
+export function createUsageCollector(includeOutput = false, includeResults = false) {
   const selected = new Set(["usage", "id", "status", "model"]);
+  if (includeOutput) selected.add("output");
+  if (includeResults) selected.add("results");
   let depth = 0,
     inString = false,
     escaped = false,
@@ -364,7 +733,7 @@ export function createUsageCollector() {
         }
         if (selected.has(key)) {
           token += character;
-          if (token.length > 16384) {
+          if (token.length > (key === "output" ? 1048576 : 16384)) {
             bad = true;
             return;
           }
@@ -413,7 +782,10 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
       response.headers.get("x-request-id") || response.headers.get("apim-request-id");
     const reader = response.body.getReader(),
       decoder = new TextDecoder(),
-      collector = createUsageCollector();
+      collector = createUsageCollector(
+        ["responses_search", "responses_analysis"].includes(prepared.contract.meter),
+        prepared.contract.meter === "moderation_requests",
+      );
     const streaming = response.headers.get("content-type")?.includes("text/event-stream");
     let pending = "",
       overflow = false;
@@ -462,6 +834,31 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
           fallbackId,
           prepared.contract.expectedResponseModels,
         );
+      const requestedSearch =
+        prepared.contract.meter === "responses_search" &&
+        prepared.options.usage.dimensions.web_search_calls > 0;
+      if (requestedSearch && actual?.dimensions.web_search_calls === 0) actual = null;
+      if (prepared.imageEdit && actual?.dimensions.image_input_tokens === 0) actual = null;
+      if (
+        prepared.contract.meter === "speech_character_credits" &&
+        actual?.dimensions.speech_character_credits >
+          prepared.options.usage.dimensions.speech_character_credits
+      )
+        actual = null;
+      if (
+        prepared.contract.meter === "translation_duration" &&
+        actual?.dimensions.translation_seconds !==
+          prepared.options.usage.dimensions.translation_seconds
+      )
+        actual = null;
+      if (
+        prepared.contract.meter === "realtime_tokens" &&
+        actual &&
+        Object.entries(actual.dimensions).some(
+          ([key, value]) => value > prepared.options.usage.dimensions[key],
+        )
+      )
+        actual = null;
       if (actual) await finalize("settled", settleDeveloperQuote(prepared, actual));
       else await finalize("uncertain");
     };

@@ -38,10 +38,13 @@ test("external assistant and developer surfaces do not publish unfinished integr
   assert.match(developers, /No official SDK is published yet/);
   assert.match(developers, /noindex, nofollow/);
   assert.match(developerDoc, /throw notFound\(\)/);
-  assert.match(developerDoc, /DEVELOPER_DOC_BY_SLUG/);
+  assert.match(developerDoc, /DEVELOPER_REFERENCE_BY_SLUG/);
   assert.match(developerDoc, /noindex, follow/);
   assert.doesNotMatch(developerDoc, /noindex, nofollow/);
-  assert.match(developerDoc, /Browser OAuth discovery\s+is available only when/);
+  assert.match(
+    read("src/lib/developer-reference.mjs"),
+    /Browser OAuth discovery is available only when/,
+  );
 });
 
 test("draft review pages cannot be returned through the generic public route", () => {

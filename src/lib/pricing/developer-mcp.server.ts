@@ -9,6 +9,7 @@ import {
   developerJson,
   developerQuote,
   executeDeveloper,
+  executeDeveloperFileSearch,
 } from "./developer-platform.server";
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { developerFileTools, executeDeveloperMcpFile } from "./developer-mcp-files.server";
@@ -85,50 +86,244 @@ const inputSchema = {
   },
   required: ["model"],
 };
-const definitions = [
-  ...developerFileTools,
+const model = { type: "string", minLength: 2, maxLength: 80 };
+const text = (maxLength: number) => ({ type: "string", minLength: 1, maxLength });
+const integer = (maximum: number) => ({ type: "integer", minimum: 1, maximum });
+const objectSchema = (properties: Record<string, unknown>, required: string[]) => ({
+  type: "object",
+  properties,
+  required,
+  additionalProperties: false,
+});
+const fileSearchTool = {
+  name: "kova_search_files",
+  fileOperation: "search",
+  scope: "files",
+  description:
+    "Search up to four explicitly selected private developer text files in this project. Returns source snippets, not generated answers. No inference quote is required.",
+  inputSchema: objectSchema(
+    {
+      query: text(256),
+      file_ids: {
+        type: "array",
+        minItems: 1,
+        maxItems: 4,
+        uniqueItems: true,
+        items: { type: "string", format: "uuid" },
+      },
+      limit: integer(10),
+    },
+    ["query", "file_ids"],
+  ),
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+};
+const paidTools = [
+  { name: "kova_generate_text", operation: "responses", scope: "chat", schema: inputSchema },
   {
-    name: "kova_quote",
-    description:
-      "Create a two-minute signed maximum-price quote. This does not start generation or spend credit.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        operation: { enum: ["responses", "images", "embeddings"] },
-        input: inputSchema,
-      },
-      required: ["operation", "input"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    name: "kova_generate_image",
+    operation: "images",
+    scope: "image_generation",
+    schema: inputSchema,
   },
-  ...[
-    ["kova_generate_text", "responses", "chat"],
-    ["kova_generate_image", "images", "image_generation"],
-    ["kova_embed", "embeddings", "embeddings"],
-  ].map(([name, operation, scope]) => ({
-    name,
-    operation,
-    scope,
-    description: `Execute ${operation} with a previously accepted signed quote and a unique retry key; this spends prepaid API credit.`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        input: inputSchema,
-        quoteToken: { type: "string" },
-        requestKey: { type: "string", maxLength: 128 },
+  { name: "kova_embed", operation: "embeddings", scope: "embeddings", schema: inputSchema },
+  {
+    name: "kova_search",
+    operation: "search",
+    scope: "chat",
+    schema: objectSchema(
+      { model, query: text(8000), max_output_tokens: integer(32768), max_tool_calls: integer(3) },
+      ["model", "query", "max_output_tokens", "max_tool_calls"],
+    ),
+  },
+  {
+    name: "kova_moderate",
+    operation: "moderations",
+    scope: "moderation",
+    schema: objectSchema({ model, input: text(8000) }, ["model", "input"]),
+  },
+  {
+    name: "kova_decide",
+    operation: "decisions",
+    scope: "decisions",
+    schema: objectSchema(
+      {
+        model,
+        input: text(16000),
+        questions: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: {
+            type: "object",
+            properties: {
+              type: { enum: ["predicate", "choice", "score"] },
+              name: text(64),
+              instructions: text(2000),
+              choices: {
+                type: "array",
+                minItems: 2,
+                maxItems: 10,
+                items: objectSchema(
+                  {
+                    value: { anyOf: [{ type: "string", maxLength: 160 }, { type: "boolean" }] },
+                    description: text(500),
+                  },
+                  ["value"],
+                ),
+              },
+              levels: {
+                type: "array",
+                minItems: 2,
+                maxItems: 10,
+                items: objectSchema({ label: text(160), description: text(500) }, ["label"]),
+              },
+            },
+            required: ["type", "name", "instructions"],
+            additionalProperties: false,
+          },
+        },
       },
-      required: ["input", "quoteToken", "requestKey"],
-      additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  })),
+      ["model", "input", "questions"],
+    ),
+  },
+  {
+    name: "kova_analyze",
+    operation: "analysis",
+    scope: "file_analysis",
+    schema: objectSchema(
+      {
+        model,
+        input: text(16000),
+        max_output_tokens: integer(2048),
+        file_ids: {
+          type: "array",
+          minItems: 1,
+          maxItems: 4,
+          uniqueItems: true,
+          items: { type: "string", format: "uuid" },
+        },
+      },
+      ["model", "input", "max_output_tokens"],
+    ),
+  },
+  {
+    name: "kova_speech",
+    operation: "audio/speech",
+    scope: "audio_speech",
+    schema: objectSchema(
+      { model, input: text(1000), voice: { const: "default" }, response_format: { const: "mp3" } },
+      ["model", "input", "voice"],
+    ),
+  },
+  {
+    name: "kova_browse",
+    operation: "browser",
+    scope: "cloud_browser",
+    schema: objectSchema(
+      {
+        model,
+        url: { ...text(2048), format: "uri" },
+        navigate: {
+          type: "array",
+          minItems: 1,
+          maxItems: 2,
+          uniqueItems: true,
+          items: { ...text(2048), format: "uri" },
+        },
+      },
+      ["model", "url"],
+    ),
+  },
+  {
+    name: "kova_propose_computer_action",
+    operation: "computer-use",
+    scope: "computer_use",
+    schema: objectSchema(
+      {
+        model,
+        input: text(8000),
+        screenshot: { ...text(50000), pattern: "^data:image/png;base64," },
+        max_output_tokens: integer(2048),
+      },
+      ["model", "input", "screenshot", "max_output_tokens"],
+    ),
+  },
+  {
+    name: "kova_agent_turn",
+    operation: "agent-turns",
+    scope: "chat",
+    schema: objectSchema(
+      { agent_id: { type: "string", format: "uuid" }, version: integer(20), input: text(16000) },
+      ["agent_id", "version", "input"],
+    ),
+  },
 ];
+const connectionTools = [
+  {
+    name: "kova_mcp_connections_list",
+    scope: "mcp_read",
+    connectionOperation: "list" as const,
+    description: "Discover reviewed read tools delegated to this key.",
+    inputSchema: objectSchema({}, []),
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  {
+    name: "kova_mcp_read",
+    scope: "mcp_read",
+    connectionOperation: "invoke" as const,
+    description:
+      "Invoke an explicitly owner-delegated read tool after approval. Third-party charges may apply; no arbitrary URL or write.",
+    inputSchema: objectSchema(
+      {
+        id: { type: "string", format: "uuid" },
+        tool: text(128),
+        query: text(300),
+        approved: { const: true },
+      },
+      ["id", "tool", "query", "approved"],
+    ),
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+];
+function definitionsForScopes(scopes: string[]) {
+  const permitted = paidTools.filter((tool) => scopes.includes(tool.scope));
+  return [
+    ...connectionTools.filter((tool) => scopes.includes(tool.scope)),
+    ...[...developerFileTools, fileSearchTool].filter((tool) => scopes.includes(tool.scope)),
+    ...(permitted.length
+      ? [
+          {
+            name: "kova_quote",
+            description:
+              "Create a two-minute signed maximum-price quote for an authorized operation. This does not spend credit. Model eligibility and feature gates apply.",
+            inputSchema: objectSchema(
+              {
+                operation: { enum: permitted.map((tool) => tool.operation) },
+                input: { type: "object" },
+              },
+              ["operation", "input"],
+            ),
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+          },
+        ]
+      : []),
+    ...permitted.map(({ schema, ...tool }) => ({
+      ...tool,
+      description: `Execute ${tool.operation} with a previously accepted signed quote and a unique retry key; this spends prepaid API credit. Model eligibility and feature gates apply.`,
+      inputSchema: objectSchema({ input: schema, quoteToken: text(32768), requestKey: text(128) }, [
+        "input",
+        "quoteToken",
+        "requestKey",
+      ]),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    })),
+  ];
+}
 export async function handleDeveloperMcp(request: Request) {
   const challenge = mcpOAuthAnonymousChallenge(request);
   if (challenge) return challenge;
@@ -152,7 +347,7 @@ async function handleMcpMessage(request: Request) {
     const accept = request.headers.get("accept") ?? "";
     if (!accept.includes("application/json") || !accept.includes("text/event-stream"))
       return developerJson({ error: "mcp_accept_required" }, 406);
-    const body = await readBoundedJsonObject(request, 70000);
+    const body = await readBoundedJsonObject(request, 70000, request.signal);
     const id = body.id;
     const error = (code: number, message: string) =>
       developerJson({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
@@ -167,6 +362,7 @@ async function handleMcpMessage(request: Request) {
         ? new Response(null, { status: 202, headers: { "Cache-Control": "no-store" } })
         : error(-32600, "Notification unsupported");
     const params = body.params as Record<string, unknown> | undefined;
+    const definitions = definitionsForScopes(identity.capabilities);
     let result: unknown;
     if (body.method === "initialize") {
       const negotiated =
@@ -183,22 +379,41 @@ async function handleMcpMessage(request: Request) {
     } else if (body.method === "ping") result = {};
     else if (body.method === "tools/list")
       result = {
-        tools: definitions
-          .filter((tool) => !("scope" in tool) || identity.capabilities.includes(tool.scope))
-          .map(({ name, description, inputSchema, annotations }) => ({
-            name,
-            description,
-            inputSchema,
-            annotations,
-          })),
+        tools: definitions.map(({ name, description, inputSchema, annotations }) => ({
+          name,
+          description,
+          inputSchema,
+          annotations,
+        })),
       };
     else if (body.method === "tools/call") {
       const tool = definitions.find((item) => item.name === params?.name);
       const args = params?.arguments as Record<string, unknown> | undefined;
       if (!tool || !args || typeof args !== "object" || Array.isArray(args))
         return error(-32602, "Invalid tool arguments");
-      if ("scope" in tool && !identity.capabilities.includes(tool.scope))
+      if (
+        tool.name === "kova_quote" &&
+        !paidTools.some(
+          (item) => item.operation === args.operation && identity.capabilities.includes(item.scope),
+        )
+      )
         return error(-32602, "Tool scope unavailable");
+      if (!("fileOperation" in tool) && !("connectionOperation" in tool)) {
+        const allowed =
+          tool.name === "kova_quote"
+            ? ["operation", "input"]
+            : ["input", "quoteToken", "requestKey"];
+        if (
+          Object.keys(args).length !== allowed.length ||
+          allowed.some((key) => !Object.hasOwn(args, key))
+        )
+          return error(-32602, "Invalid tool arguments");
+        if (
+          tool.name !== "kova_quote" &&
+          (typeof args.quoteToken !== "string" || typeof args.requestKey !== "string")
+        )
+          return error(-32602, "Invalid tool arguments");
+      }
       try {
         if (
           args.input &&
@@ -206,21 +421,40 @@ async function handleMcpMessage(request: Request) {
           (args.input as Record<string, unknown>).stream === true
         )
           throw new Error("developer_mcp_stream_invalid");
-        const output =
-          "fileOperation" in tool
-            ? await executeDeveloperMcpFile(identity, tool.fileOperation, args)
-            : tool.name === "kova_quote"
-              ? await developerQuote(identity, String(args.operation), args.input)
-              : await (
-                  await executeDeveloper(
-                    identity,
-                    "operation" in tool ? tool.operation : "",
-                    args.input,
-                    String(args.requestKey ?? ""),
-                    typeof args.quoteToken === "string" ? args.quoteToken : null,
-                    request.signal,
-                  )
-                ).json();
+        request.signal.throwIfAborted();
+        let output: unknown;
+        if ("connectionOperation" in tool) {
+          const { executeDeveloperMcpConnection } =
+            await import("./developer-mcp-connections.server");
+          output = await executeDeveloperMcpConnection(
+            identity,
+            tool.connectionOperation,
+            args,
+            request.signal,
+          );
+        } else if ("fileOperation" in tool) {
+          output =
+            tool.fileOperation === "search"
+              ? await executeDeveloperFileSearch(identity, args, request.signal)
+              : await executeDeveloperMcpFile(identity, tool.fileOperation, args);
+        } else if (tool.name === "kova_quote") {
+          output = await developerQuote(identity, String(args.operation), args.input);
+        } else {
+          const response = await executeDeveloper(
+            identity,
+            "operation" in tool ? tool.operation : "",
+            args.input,
+            String(args.requestKey ?? ""),
+            typeof args.quoteToken === "string" ? args.quoteToken : null,
+            request.signal,
+          );
+          if (!response.ok) {
+            await response.body?.cancel().catch(() => {});
+            throw new Error("developer_provider_unavailable");
+          }
+          output = await response.json();
+        }
+        request.signal.throwIfAborted();
         result = {
           content: [{ type: "text", text: JSON.stringify(output) }],
           structuredContent: output,

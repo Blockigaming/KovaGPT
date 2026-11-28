@@ -1638,13 +1638,7 @@ function KovaGPT() {
 
   const saveTemporaryChat = useCallback(async () => {
     if (!active?.temporary || isStreaming || retryTimerRef.current !== null) return;
-    // A scheduled retry still carries the immutable temporary-context closure.
-    // Cancel it before conversion so no old temporary turn can land past the
-    // new memory boundary and later be persisted as regular-chat memory.
-    if (retryTimerRef.current !== null) {
-      window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    // The guard above excludes scheduled retries; there is no await before it.
     const generation = storageGenerationRef.current;
     const nextConversations = await persistTemporaryConversation(userKey, active, conversations);
     if (generation !== storageGenerationRef.current) return;
@@ -2870,6 +2864,9 @@ function KovaGPT() {
     return inFlightRef.current;
   };
 
+  const focusComposer = () =>
+    document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')?.focus();
+
   const renderTranscriptMessage: TranscriptMessageRenderer = (m, i, ChatMessage, onBranch) => {
     if (!active) return null;
     const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
@@ -3006,13 +3003,7 @@ function KovaGPT() {
                 setEditingMessage((previous) =>
                   beginChatEdit(previous, storagePrincipal, active.id, m.id, input, attachments),
                 );
-                window.setTimeout(
-                  () =>
-                    document
-                      .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
-                      ?.focus(),
-                  0,
-                );
+                window.setTimeout(focusComposer, 0);
               }
             : undefined
         }
@@ -3470,13 +3461,7 @@ function KovaGPT() {
                       setEditingMessage(null);
                       setInput(restored?.text ?? "");
                       setAttachments(restored?.attachments ?? []);
-                      window.requestAnimationFrame(() =>
-                        document
-                          .querySelector<HTMLTextAreaElement>(
-                            'textarea[aria-label="Message KovaGPT"]',
-                          )
-                          ?.focus(),
-                      );
+                      window.requestAnimationFrame(focusComposer);
                     }}
                   >
                     Cancel

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
 import { createHash } from "node:crypto";
+import { expandDeveloperFileContent } from "../../src/lib/pricing/developer-file-policy.mjs";
 const slot = Symbol.for("kova.developer-ingress-test");
 async function fixture(options = {}) {
   const version = {
@@ -60,10 +61,19 @@ async function fixture(options = {}) {
   );
   const state = { version, registry, calls: [], contexts: [], rows: {}, queries: [] };
   const db = {
+    rpc(name, args) {
+      return {
+        abortSignal: async () =>
+          options.rpc
+            ? options.rpc(name, args)
+            : { error: { message: "unexpected_rpc" }, data: null },
+      };
+    },
     from(table) {
       let range, registryIds;
       const orders = [];
-      state.queries.push({ table, orders });
+      const filters = [];
+      state.queries.push({ table, orders, filters });
       const raw = () =>
         state.rows[table] ??
         (table === "developer_credit_accounts"
@@ -71,15 +81,30 @@ async function fixture(options = {}) {
           : table === "api_pricing_versions"
             ? state.version
             : state.registry);
-      const result = () => ({
-        data:
-          registryIds && table === "upstream_price_registry"
-            ? raw().filter((row) => registryIds.includes(row.id))
-            : range
-              ? raw().slice(range[0], range[1] + 1)
-              : raw(),
-        error: null,
-      });
+      const result = () => {
+        let rows = raw();
+        if (registryIds && table === "upstream_price_registry") {
+          rows = rows.filter((row) => registryIds.includes(row.id));
+        }
+        if (table === "developer_api_requests") {
+          rows = rows.filter((row) =>
+            filters.every(([operator, column, value]) =>
+              operator === "in"
+                ? value.includes(row[column])
+                : operator === "eq"
+                  ? row[column] === value
+                  : operator === "gte"
+                    ? row[column] >= value
+                    : operator === "lt"
+                      ? row[column] < value
+                      : operator === "lte"
+                        ? row[column] <= value
+                        : true,
+            ),
+          );
+        }
+        return { data: range ? rows.slice(range[0], range[1] + 1) : rows, error: null };
+      };
       const q = {
         maybeSingle: async () => result(),
         then(resolve) {
@@ -90,8 +115,15 @@ async function fixture(options = {}) {
         q[method] = () => q;
       q.in = (column, ids) => {
         if (column === "id") registryIds = ids;
+        filters.push(["in", column, ids]);
         return q;
       };
+      for (const method of ["eq", "gte", "lt", "lte"]) {
+        q[method] = (column, value) => {
+          filters.push([method, column, value]);
+          return q;
+        };
+      }
       q.order = (name) => {
         orders.push(name);
         return q;
@@ -105,6 +137,8 @@ async function fixture(options = {}) {
   };
   globalThis[slot] = {
     ...state,
+    env: options.env ?? {},
+    providerConfig: options.providerConfig ?? { provider: "azure_openai" },
     loadFiles: async (body, ids) => ({ body, bindings: [], expiresAt: null }),
     db,
     async provider(body) {
@@ -123,34 +157,62 @@ async function fixture(options = {}) {
   source = source.replace(/import\s*\{[^}]+\}\s*from\s*"([^"]+)";/g, (full, path) => {
     if (path === "node:crypto") return full;
     if (
+      path === "./developer-http-errors.mjs" ||
+      path === "./developer-prompt-policy.mjs" ||
       path === "./developer-metering.mjs" ||
       path === "./developer-platform-policy.mjs" ||
       path === "./pricing-administration.mjs" ||
       path === "./developer-funding-allowance.mjs" ||
-      path === "./developer-file-policy.mjs"
+      path === "./developer-file-policy.mjs" ||
+      path === "./developer-usage-summary.mjs" ||
+      path === "./developer-request-trace.mjs" ||
+      path === "./developer-image-edit-policy.mjs" ||
+      path === "./developer-api-aliases.mjs" ||
+      path === "./developer-chat-compat.mjs" ||
+      path === "./developer-file-search-policy.mjs" ||
+      path === "./developer-decisions-policy.mjs" ||
+      path === "./developer-agent-policy.mjs" ||
+      path === "./developer-skill-policy.mjs" ||
+      path === "./developer-batch-policy.mjs" ||
+      path === "./developer-analysis-policy.mjs" ||
+      path === "./developer-computer-policy.mjs" ||
+      path === "./developer-browser-policy.mjs" ||
+      path === "./developer-conversation-policy.mjs" ||
+      path === "./developer-transcription-policy.mjs" ||
+      path === "./developer-speech-policy.mjs" ||
+      path === "./developer-realtime-policy.mjs" ||
+      path === "./developer-translation-policy.mjs" ||
+      path === "./developer-browser-interactive.mjs"
     )
       return full.replace(
         JSON.stringify(path),
         JSON.stringify(new URL(`../../src/lib/pricing/${path.slice(2)}`, import.meta.url).href),
       );
     if (path === "./developer-file-content.server")
-      return 'const loadDeveloperFileContent=async(identity,body,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].loadFiles(body,ids);';
+      return 'const loadDeveloperFileContent=async(identity,body,ids,kind)=>globalThis[Symbol.for("kova.developer-ingress-test")].loadFiles(body,ids,kind),readDeveloperFileRecords=async(identity,ids)=>globalThis[Symbol.for("kova.developer-ingress-test")].readFiles(identity,ids);';
     if (path === "@supabase/supabase-js")
       return 'const createClient=()=>globalThis[Symbol.for("kova.developer-ingress-test")].db;';
     if (path === "@/lib/api-auth.server")
       return 'const requireVerifiedUser=async()=>({userId:globalThis[Symbol.for("kova.developer-ingress-test")].owner});';
     if (path === "@/lib/distributed-rate-limit.server")
-      return "const consumeApplicationRateLimit=async()=>({allowed:true});";
+      return 'const consumeApplicationRateLimit=async()=>({allowed:true,status:"allowed"});';
     if (path === "@/lib/auth-security.mjs") return "const isCrossSiteMutation=()=>false;";
-    if (path === "@/lib/runtime-env.server") return 'const runtimeEnv=()=>"p".repeat(64);';
+    if (path === "@/lib/runtime-env.server")
+      return 'const runtimeEnv=(name)=>globalThis[Symbol.for("kova.developer-ingress-test")].env[name]??"p".repeat(64);';
     if (path === "@/lib/ai/provider.server" && options.providerUrl)
       return full.replace(JSON.stringify(path), JSON.stringify(options.providerUrl));
     if (path === "@/lib/ai/provider.server")
-      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),embeddings=developerResponses,imageGenerations=developerResponses,getAiProviderConfig=()=>({provider:"azure_openai"}),providerModelId=(model)=>model;';
+      return 'const developerResponses=(body)=>globalThis[Symbol.for("kova.developer-ingress-test")].provider(body),developerDecisions=developerResponses,developerAnalysis=developerResponses,developerComputerUse=developerResponses,deleteDeveloperAnalysisContainer=async()=>{},developerModerations=developerResponses,developerTranscriptions=developerResponses,embeddings=developerResponses,imageGenerations=developerResponses,imageEdits=developerResponses,getAiProviderConfig=()=>globalThis[Symbol.for("kova.developer-ingress-test")].providerConfig,providerModelId=(model)=>model;';
+    if (path === "./developer-browser.server")
+      return 'const developerBrowserEnabled=()=>false,assertDeveloperBrowserAuthority=async()=>{throw Error("developer_browser_unavailable")},runDeveloperBrowser=async()=>{throw Error("developer_browser_unavailable")};';
     if (path === "./developer-billing.server")
-      return 'const withDeveloperBilling=(identity,callback)=>globalThis[Symbol.for("kova.developer-ingress-test")].billing(identity,callback);';
+      return 'const withDeveloperBilling=(identity,callback)=>globalThis[Symbol.for("kova.developer-ingress-test")].billing(identity,callback),meterProviderRequest=async()=>{throw Error("developer_browser_unavailable")};';
     return "";
   });
+  source = source.replaceAll(
+    'await import("./developer-mcp-connections.server")',
+    "({ developerMcpReadEnabled: () => false })",
+  );
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;
@@ -341,6 +403,112 @@ test("console paginates every stored budget deterministically beyond the first h
   );
 });
 
+test("console filters owner-scoped API history before pagination and rejects foreign accounts", async () => {
+  const f = await fixture();
+  globalThis[slot].owner = "owner-a";
+  const account = "11111111-1111-4111-8111-111111111111";
+  const other = "22222222-2222-4222-8222-222222222222";
+  const project = "33333333-3333-4333-8333-333333333333";
+  const key = "44444444-4444-4444-8444-444444444444";
+  const row = {
+    account_id: account,
+    project_id: project,
+    api_key_id: key,
+    public_model: "kova-argon-4.6",
+    capability: "chat",
+    settlement_state: "settled",
+    created_at: "2026-11-26T12:00:00.000Z",
+  };
+  f.state.rows = {
+    developer_account_owners: [{ account_id: account, name: "Owner" }],
+    developer_projects: [],
+    developer_billing_keys: [],
+    developer_billing_limits: [],
+    developer_credit_accounts: [],
+    developer_api_requests: [
+      { ...row, account_id: other, id: "foreign" },
+      { ...row, project_id: other, id: "other-project" },
+      { ...row, api_key_id: other, id: "other-key" },
+      { ...row, public_model: "other-model", id: "other-model" },
+      { ...row, created_at: "2026-11-27T00:00:00.000Z", id: "after" },
+      ...Array.from({ length: 105 }, (_, id) => ({ ...row, id })),
+    ],
+  };
+  const page = (params) =>
+    f.module.handleDeveloperConsole(
+      new Request("https://kovagpt.com/api/developer/console?" + new URLSearchParams(params), {
+        headers: { "x-kova-expected-user": "owner-a" },
+      }),
+    );
+  const filters = {
+    usageAccount: account,
+    usageProject: project,
+    usageKey: key,
+    usageModel: row.public_model,
+    usageService: row.capability,
+    usageStatus: row.settlement_state,
+    usageFrom: "2026-11-26",
+    usageThrough: "2026-11-26",
+  };
+  const first = await (await page(filters)).json();
+  const last = await (await page({ ...filters, usagePage: "1" })).json();
+  assert.equal(first.usage.length, 100);
+  assert.equal(first.usageHasMore, true);
+  assert.equal(last.usage.length, 5);
+  assert.equal(last.usageHasMore, false);
+  assert.equal(last.usage[0].id, 100);
+  assert.ok(first.usage.every((item) => item.account_id === account));
+  assert.ok(
+    f.state.queries
+      .filter((query) => query.table === "developer_api_requests")
+      .every((query) => query.orders.join() === "created_at,id"),
+  );
+  assert.equal((await page({ usageAccount: other })).status, 403);
+  assert.equal((await page({ usageFrom: "2026-02-30" })).status, 400);
+  assert.equal((await page({ usagePage: "-1" })).status, 400);
+});
+
+test("usage summary includes all filtered records beyond one page without exposing another account", async () => {
+  const f = await fixture();
+  globalThis[slot].owner = "owner-a";
+  const account = "11111111-1111-4111-8111-111111111111";
+  const other = "22222222-2222-4222-8222-222222222222";
+  const row = {
+    account_id: account,
+    public_model: "kova-argon-4.6",
+    capability: "chat",
+    settlement_state: "settled",
+    currency: "USD",
+    final_customer_charge: "1.25",
+    authoritative_usage: { input_tokens: 4, cached_input_tokens: 2, output_tokens: 3 },
+    created_at: "2026-11-01T12:00:00.000Z",
+  };
+  f.state.rows = {
+    developer_account_owners: [{ account_id: account, name: "Owner" }],
+    developer_api_requests: [
+      { ...row, account_id: other, id: "foreign" },
+      { ...row, created_at: "2026-10-31T23:59:59.000Z", id: "outside" },
+      ...Array.from({ length: 505 }, (_, id) => ({ ...row, id })),
+    ],
+  };
+  const response = await f.module.handleDeveloperConsole(
+    new Request(
+      "https://kovagpt.com/api/developer/console?usageSummary=1&usageFrom=2026-11-01&usageThrough=2026-11-02",
+      {
+        headers: { "x-kova-expected-user": "owner-a" },
+      },
+    ),
+  );
+  assert.equal(response.status, 200);
+  const { summary } = await response.json();
+  assert.equal(summary.requests, 505);
+  assert.equal(summary.tokens.input_tokens, 2020);
+  assert.equal(summary.tokens.cached_input_tokens, 1010);
+  assert.deepEqual(summary.charges, [{ currency: "USD", amount: "631.25000000" }]);
+  assert.equal(summary.days.length, 1);
+  assert.equal(summary.models[0].label, "kova-argon-4.6");
+});
+
 test("configured Azure aliases remain identical from accepted quote through meter to outbound provider body", async () => {
   const providerSlot = Symbol.for("kova.provider-alias-test");
   const outbound = [],
@@ -503,4 +671,463 @@ test("file quotes cap expiry and bind expanded immutable bytes through the last-
   assert.deepEqual(f.state.contexts[0].fileBindings, [
     { id, digest: createHash("sha256").update(content).digest("hex") },
   ]);
+});
+
+test("key usage detail is isolated by account, project, key and request id", async () => {
+  const f = await fixture();
+  const identity = { ...f.identity, project_id: "project-a" };
+  const id = (n) => `11111111-1111-4111-8111-00000000000${n}`;
+  const row = {
+    id: id(1),
+    account_id: identity.account_id,
+    project_id: identity.project_id,
+    api_key_id: identity.id,
+    settlement_state: "settled",
+    authoritative_usage: { input_tokens: 12, internal: "hidden" },
+  };
+  f.state.rows.developer_api_requests = [
+    row,
+    { ...row, id: id(2), account_id: "other" },
+    { ...row, id: id(3), project_id: "other" },
+    { ...row, id: id(4), api_key_id: "other" },
+  ];
+  const read = (query) =>
+    f.module.developerKeyUsage(identity, new Request(`https://kovagpt.com/api/v1/usage?${query}`));
+  const response = await read(`id=${id(1)}`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const detail = await response.json();
+  assert.equal(detail.object, "usage");
+  assert.equal(detail.data.id, id(1));
+  assert.equal(detail.data.input_tokens, 12);
+  assert.equal(detail.data.authoritative_usage, undefined);
+  assert.equal(detail.data.internal, undefined);
+  for (const n of [2, 3, 4, 5]) {
+    const missing = await read(`id=${id(n)}`);
+    assert.equal(missing.status, 404);
+    assert.equal((await missing.json()).error.code, "developer_request_not_found");
+  }
+  for (const query of ["id=bad", `id=${id(1)}&limit=1`, `id=${id(1)}&id=${id(2)}`]) {
+    await assert.rejects(() => read(query), /developer_(id|input)_invalid/);
+  }
+  const list = await (await read("limit=25&offset=0")).json();
+  assert.deepEqual(
+    list.data.map((entry) => entry.id),
+    [id(1)],
+  );
+  assert.equal(f.state.calls.length, 0);
+  assert.equal(f.state.contexts.length, 0);
+});
+
+test("model catalog detail returns only approved key-scoped aliases and rejects ambiguous selectors", async () => {
+  const f = await fixture();
+  const contract = f.state.version.public_price_configuration.contracts[0];
+  f.state.version.public_price_configuration.contracts.push(
+    { ...contract, capability: "streaming" },
+    { ...contract, publicModel: "kova-hidden", capability: "embeddings" },
+  );
+  const read = (query = "") =>
+    f.module.developerModels(f.identity, new Request(`https://kovagpt.com/api/v1/models${query}`));
+  const listed = await (await read()).json();
+  assert.deepEqual(
+    listed.data.map((model) => model.id),
+    ["kova-fast"],
+  );
+  const detail = await (await read("?id=kova-fast")).json();
+  assert.deepEqual(detail.data, listed.data);
+  for (const id of ["kova-hidden", "kova-missing"]) {
+    const missing = await read(`?id=${id}`);
+    assert.equal(missing.status, 404);
+    assert.equal((await missing.json()).error.code, "developer_model_not_found");
+  }
+  for (const query of ["?id=", "?id=../models", "?id=kova-fast&id=kova-hidden", "?page=1"])
+    await assert.rejects(() => read(query), /developer_(model|input)_invalid/);
+  assert.equal(f.state.calls.length, 0);
+  assert.equal(f.state.contexts.length, 0);
+});
+
+test("compatibility aliases use the canonical provider meter and cannot reuse a different API quote", async () => {
+  const f = await fixture();
+  const chat = {
+    model: f.input.model,
+    messages: [{ role: "user", content: "hello" }],
+    max_completion_tokens: 100,
+  };
+  const quote = await f.module.developerQuote(f.identity, "chat/completions", chat);
+  const native = { ...f.input, input: chat.messages };
+  await assert.rejects(
+    f.module.executeDeveloper(f.identity, "responses", native, "alias", quote.quoteToken),
+    /quote_changed/,
+  );
+  await assert.rejects(
+    f.module.executeDeveloper(
+      f.identity,
+      "chat/completions",
+      { ...chat, messages: [{ role: "user", content: "changed" }] },
+      "alias",
+      quote.quoteToken,
+    ),
+    /quote_changed/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  globalThis[slot].provider = async (body) => {
+    f.state.calls.push(body);
+    return Response.json({
+      id: "resp_fixture",
+      created_at: 1795651200,
+      model: "gpt-5.6-luna",
+      status: "completed",
+      output: [
+        { type: "message", role: "assistant", content: [{ type: "output_text", text: "Hi" }] },
+      ],
+      usage: { input_tokens: 10, output_tokens: 2, total_tokens: 12 },
+    });
+  };
+  const result = await f.module.executeDeveloper(
+    f.identity,
+    "chat/completions",
+    chat,
+    "alias",
+    quote.quoteToken,
+  );
+  assert.equal((await result.json()).model, f.input.model);
+  assert.equal(f.state.calls[0].store, false);
+  assert.deepEqual(f.state.calls[0].input, chat.messages);
+  assert.equal(f.state.contexts.length, 1);
+  await assert.rejects(
+    f.module.developerQuote(f.identity, "search", {
+      model: f.input.model,
+      query: "test",
+      max_output_tokens: 100,
+      max_tool_calls: 1,
+    }),
+    /web_search_unavailable/,
+  );
+  assert.equal(f.state.calls.length, 1);
+});
+
+test("versioned agent sessions recheck conversation identity and revision before queued execution", async () => {
+  const id = "44444444-4444-4444-8444-444444444444";
+  const project = "55555555-5555-4555-8555-555555555555";
+  const owner = "66666666-6666-4666-8666-666666666666";
+  const batch = "77777777-7777-4777-8777-777777777777";
+  const item = "88888888-8888-4888-8888-888888888888";
+  const created_at = new Date(Date.now() - 1000).toISOString();
+  const expiresAt = Date.now() + 30000;
+  let revision = 1;
+  let foreign = false;
+  const f = await fixture({
+    env: {
+      KOVA_DEVELOPER_AGENT_SCHEMA_READY: "true",
+      KOVA_DEVELOPER_AGENTS_ENABLED: "true",
+      KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY: "true",
+      KOVA_DEVELOPER_CONVERSATIONS_ENABLED: "true",
+    },
+    rpc(name, args) {
+      assert.equal(args.p_owner, owner);
+      assert.equal(args.p_project, project);
+      assert.equal(args.p_operation, "get");
+      if (name === "manage_developer_agents_v1") {
+        assert.deepEqual(args.p_input, { id, version: 1 });
+        return {
+          data: {
+            id,
+            version: 1,
+            created_at,
+            definition: {
+              name: "Review",
+              model: "kova-fast",
+              instructions: "Summarize",
+              max_output_tokens: 100,
+            },
+          },
+          error: null,
+        };
+      }
+      assert.equal(name, "manage_developer_conversations_v1");
+      assert.deepEqual(args.p_input, { id });
+      return {
+        data: {
+          id,
+          project_id: foreign ? item : project,
+          revision,
+          created_at,
+          expires_at: new Date(expiresAt).toISOString(),
+          items: [{ id: item, role: "assistant", content: "Previous answer" }],
+        },
+        error: null,
+      };
+    },
+  });
+  const identity = { ...f.identity, project_id: project, ownerId: owner };
+  const input = { agent_id: id, version: 1, input: "Continue", conversation: { id, revision: 1 } };
+  const quote = await f.module.developerQuote(identity, "agent-turns", input);
+  assert.equal(quote.expiresAt, expiresAt);
+  const job = await f.module.authorizeDeveloperBatchItem(
+    identity,
+    batch,
+    { id: item, operation: "agent-turns", input, quote_token: quote.quoteToken },
+    "USD",
+    Date.now() + 86400000,
+  );
+  const execute = () =>
+    f.module.executeAuthorizedBatchItem(
+      identity,
+      batch,
+      item,
+      input,
+      job.authorization,
+      "USD",
+      job.maximum_ticks,
+      "agent-turns",
+      null,
+    );
+  revision = 2;
+  await assert.rejects(execute(), /conversation_conflict/);
+  revision = 1;
+  foreign = true;
+  await assert.rejects(execute(), /conversation_conflict/);
+  foreign = false;
+  assert.equal(f.state.calls.length, 0);
+  assert.equal(f.state.contexts.length, 0);
+  await execute();
+  assert.deepEqual(f.state.calls[0].input, [
+    { role: "assistant", content: "Previous answer" },
+    { role: "user", content: "Continue" },
+  ]);
+  assert.equal(f.state.calls[0].instructions, "Summarize");
+  assert.equal(f.state.contexts[0].requestKey, "batch:" + batch + ":" + item);
+});
+
+test("structured background response authorizations bind every function argument and schema byte", async () => {
+  const f = await fixture();
+  const batch = "77777777-7777-4777-8777-777777777777";
+  const item = "88888888-8888-4888-8888-888888888888";
+  const identity = { ...f.identity, project_id: batch };
+  const schema = {
+    type: "object",
+    properties: { answer: { type: "string" } },
+    required: ["answer"],
+    additionalProperties: false,
+  };
+  const input = {
+    ...f.input,
+    text: { format: { type: "json_schema", name: "answer", strict: true, schema } },
+    tools: [{ type: "function", name: "lookup", parameters: schema, strict: true }],
+  };
+  const quote = await f.module.developerQuote(identity, "responses", input);
+  const job = await f.module.authorizeDeveloperBatchItem(
+    identity,
+    batch,
+    { id: item, operation: "responses", input, quote_token: quote.quoteToken },
+    "USD",
+    Date.now() + 86400000,
+  );
+  const execute = (value) =>
+    f.module.executeAuthorizedBatchItem(
+      identity,
+      batch,
+      item,
+      value,
+      job.authorization,
+      "USD",
+      job.maximum_ticks,
+      "responses",
+      null,
+    );
+  await assert.rejects(
+    execute({ ...input, text: { format: { ...input.text.format, name: "changed" } } }),
+    /quote_changed/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  await execute(input);
+  assert.deepEqual(f.state.calls[0].text, input.text);
+  assert.deepEqual(f.state.calls[0].tools, input.tools);
+});
+
+test("analysis file quotes bind expanded data and require the same ownership and settlement path", async () => {
+  const f = await fixture({
+    env: { KOVA_DEVELOPER_WORKSPACE_V2: "true", KOVA_DEVELOPER_ANALYSIS_ENABLED: "true" },
+    providerConfig: { provider: "openai", configured: true, capabilities: ["file_analysis"] },
+  });
+  f.identity.capabilities = ["file_analysis", "files"];
+  const c = f.state.version.public_price_configuration.contracts[0];
+  Object.assign(c, {
+    provider: "openai",
+    capability: "file_analysis",
+    meter: "responses_analysis",
+    maximumAnalysisInputTokens: 1000,
+    maximumUsage: {
+      input_tokens: 4000,
+      cached_input_tokens: 4000,
+      output_tokens: 100,
+      container_1g_sessions: 1,
+    },
+  });
+  for (const row of f.state.registry) row.provider = "openai";
+  const registryId = "33333333-3333-4333-8333-333333333334";
+  f.state.version.public_price_configuration.registryIds.push(registryId);
+  f.state.registry.push({
+    ...f.state.registry[0],
+    id: registryId,
+    billing_dimension: "container_1g_sessions",
+    unit_quantity: 1,
+    unit_price: 3,
+  });
+  const id = "55555555-5555-4555-8555-555555555555";
+  const expiresAt = Date.now() + 30000;
+  let content = "A,1";
+  globalThis[slot].loadFiles = async (body, ids, kind) => {
+    assert.deepEqual(ids, [id]);
+    assert.equal(kind, "analysis");
+    if (!f.identity.capabilities.includes("files")) throw Error("developer_scope_required");
+    return expandDeveloperFileContent(
+      body,
+      [
+        {
+          id,
+          filename: "report.csv",
+          content,
+          byte_size: Buffer.byteLength(content),
+          content_digest: createHash("sha256").update(content).digest("hex"),
+          expires_at: new Date(expiresAt).toISOString(),
+        },
+      ],
+      Date.now(),
+      kind,
+    );
+  };
+  globalThis[slot].provider = async (body) => {
+    f.state.calls.push(body);
+    return Response.json({
+      id: "resp_test",
+      model: body.model,
+      status: "completed",
+      usage: {
+        input_tokens: 100,
+        output_tokens: 2,
+        total_tokens: 102,
+        input_tokens_details: { cached_tokens: 0 },
+      },
+      output: [
+        {
+          type: "code_interpreter_call",
+          id: "ci_test",
+          container_id: "cntr_test",
+          status: "completed",
+        },
+        { type: "message", role: "assistant", content: [{ type: "output_text", text: "Result." }] },
+      ],
+    });
+  };
+  const request = { ...f.input, file_ids: [id] };
+  const quote = await f.module.developerQuote(f.identity, "analysis", request);
+  assert.equal(quote.expiresAt, expiresAt);
+  content = "A,2";
+  await assert.rejects(
+    f.module.executeDeveloper(f.identity, "analysis", request, "analysis-retry", quote.quoteToken),
+    /quote_changed/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  content = "A,1";
+  f.identity.capabilities = ["file_analysis"];
+  await assert.rejects(
+    f.module.executeDeveloper(f.identity, "analysis", request, "analysis-retry", quote.quoteToken),
+    /scope_required/,
+  );
+  assert.equal(f.state.calls.length, 0);
+  f.identity.capabilities = ["file_analysis", "files"];
+  const result = await (
+    await f.module.executeDeveloper(
+      f.identity,
+      "analysis",
+      request,
+      "analysis-retry",
+      quote.quoteToken,
+    )
+  ).json();
+  assert.equal(result.text, "Result.");
+  assert.equal(result.usage.container_1g_sessions, 1);
+  assert.equal(JSON.parse(f.state.calls[0].input).attachments[0].content, "A,1");
+  assert.deepEqual(f.state.contexts[0].fileBindings, [
+    { id, digest: createHash("sha256").update(content).digest("hex") },
+  ]);
+});
+
+test("autonomous research cannot obtain a paid quote while its release gates are closed", async () => {
+  const f = await fixture();
+  await assert.rejects(
+    f.module.developerQuote(f.identity, "search", {
+      model: f.input.model,
+      query: "test",
+      max_output_tokens: 100,
+      max_tool_calls: 2,
+      research: true,
+    }),
+    /batch_unavailable/,
+  );
+  assert.equal(f.state.calls.length, 0);
+});
+
+test("owner trace is scoped before retrieval and projects only public diagnostics", async () => {
+  const f = await fixture();
+  globalThis[slot].owner = "owner-a";
+  const account = "11111111-1111-4111-8111-111111111111";
+  const project = "22222222-2222-4222-8222-222222222222";
+  const id = "33333333-3333-4333-8333-333333333333";
+  const foreign = "44444444-4444-4444-8444-444444444444";
+  const row = {
+    id,
+    account_id: account,
+    project_id: project,
+    public_model: "kova-fast",
+    capability: "chat",
+    settlement_state: "settled",
+    terminal_outcome: "settled",
+    currency: "USD",
+    maximum_reserved_charge: "5",
+    final_customer_charge: "2",
+    created_at: new Date(Date.now() - 2000).toISOString(),
+    dispatched_at: new Date(Date.now() - 1000).toISOString(),
+    settled_at: new Date(Date.now() - 500).toISOString(),
+    provider_response_id: "private-provider-id",
+    request_fingerprint: "private-fingerprint",
+    terminal_result: { secret: "private-output" },
+    final_upstream_cost: "private-cost",
+    authoritative_usage: { input_tokens: 0, output_tokens: 12, hidden: "private-meter" },
+  };
+  f.state.rows = {
+    developer_account_owners: [{ account_id: account }],
+    developer_api_requests: [
+      row,
+      { ...row, id: foreign, account_id: foreign },
+      { ...row, id: "different-project", project_id: foreign },
+      { ...row, id: "different-service", capability: "embeddings" },
+      { ...row, id: "old", created_at: "2026-01-01T00:00:00.000Z" },
+    ],
+  };
+  const read = (query, owner = "owner-a") =>
+    f.module.handleDeveloperConsole(
+      new Request("https://kovagpt.com/api/developer/console?" + query, {
+        headers: { "x-kova-expected-user": owner },
+      }),
+    );
+  const response = await read("trace=" + id);
+  assert.equal(response.status, 200);
+  const trace = await response.json();
+  assert.equal(trace.request.id, id);
+  assert.equal(trace.meters.input_tokens, 0);
+  assert.equal(trace.meters.output_tokens, 12);
+  assert.equal(trace.meters.translation_seconds, null);
+  assert.deepEqual(
+    trace.timeline.map((x) => x.stage),
+    ["Reserved", "Dispatched", "Settled"],
+  );
+  assert.equal(trace.serviceObservation.sampleSize, 1);
+  assert.equal(trace.serviceObservation.counts.settled, 1);
+  assert.equal(trace.serviceObservation.providerHealth, "unknown");
+  assert.doesNotMatch(JSON.stringify(trace), /private-/);
+  assert.equal((await read("trace=" + foreign)).status, 404);
+  assert.equal((await read("trace=" + id + "&trace=" + foreign)).status, 400);
+  assert.equal((await read("trace=" + id, "owner-b")).status, 409);
 });

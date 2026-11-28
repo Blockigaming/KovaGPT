@@ -40,15 +40,7 @@ const workspaceRoutes = [
 
 function watchErrors(page: Page) {
   const errors: string[] = [];
-  // WebKit reports this benign layout notification as a page error; it is not a
-  // script exception and fires at random during resizes.
   page.on("pageerror", (error) => {
-    if (
-      /^ResizeObserver loop (completed with undelivered notifications|limit exceeded)/.test(
-        error.message,
-      )
-    )
-      return;
     errors.push(error.message);
   });
   return errors;

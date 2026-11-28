@@ -22,6 +22,7 @@ export interface CreateSessionOptions extends SessionIdentity {
   idleTimeoutMs?: number;
   hardExpiresAt?: number;
   readOnly?: boolean;
+  requireRemote?: boolean;
   onClosed?: () => Promise<void>;
   permissions: PermissionPolicy;
 }
@@ -103,6 +104,7 @@ export interface RuntimeSession {
   tabs: Map<string, { page: Page; descriptor: TabDescriptor }>;
   storagePath: string;
   closing?: Promise<void>;
+  providerSessionId?: string;
   releaseRemote?: () => Promise<void>;
   remoteHeartbeat?: ReturnType<typeof setInterval>;
   hardExpiresAt?: number;

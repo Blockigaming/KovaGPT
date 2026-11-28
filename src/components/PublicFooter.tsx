@@ -3,7 +3,10 @@ import { useId, useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { PUBLIC_WEBSITE_FOOTER, PUBLIC_WEBSITE_PAGES } from "@/lib/public-website-catalog.mjs";
+import {
+  PUBLIC_WEBSITE_FOOTER,
+  PUBLIC_WEBSITE_ROUTE_INDEX,
+} from "@/lib/public-website-route-index.mjs";
 import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
 import { requiresAppAccount } from "@/lib/app-access-policy.mjs";
 
@@ -34,7 +37,7 @@ export function PublicFooter() {
         ],
       ),
     );
-    for (const page of PUBLIC_WEBSITE_PAGES)
+    for (const page of PUBLIC_WEBSITE_ROUTE_INDEX)
       entries.set(page.path, { to: page.path, label: page.title });
     for (const group of PUBLIC_WEBSITE_FOOTER)
       for (const link of group.links) entries.set(link.to, link);

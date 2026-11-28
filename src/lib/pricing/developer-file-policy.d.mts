@@ -8,8 +8,14 @@ export function developerFileUpload(input: unknown): {
   mimeType: string;
   text: string;
 };
+export function readDeveloperMultipartFile(request: Request): Promise<{
+  filename: string;
+  mimeType: string;
+  text: string;
+}>;
 export function expandDeveloperFileContent(
   body: Record<string, unknown>,
   files: Record<string, unknown>[],
   now?: number,
+  kind?: string,
 ): { body: Record<string, unknown>; bindings: FileBinding[]; expiresAt: number | null };

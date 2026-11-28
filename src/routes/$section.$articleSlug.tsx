@@ -4,13 +4,17 @@ import { PublicDetailPageView, PublicPageView } from "@/components/public/Public
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 import { ReviewWorkspace } from "@/components/public/ReviewWorkspace";
 import { findReviewPage } from "@/lib/review-page-content";
-import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
+import { PUBLIC_WEBSITE_ROUTE_BY_PATH } from "@/lib/public-website-route-index.mjs";
 import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
 export const Route = createFileRoute("/$section/$articleSlug")({
   loader: async ({ params }) => {
     const key = publicationKey(params.section, params.articleSlug);
-    const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/${key}`);
-    if (websitePage) return { kind: "website" as const, item: websitePage };
+    const websitePath = `/${key}`;
+    if (PUBLIC_WEBSITE_ROUTE_BY_PATH.has(websitePath)) {
+      const { PUBLIC_WEBSITE_PAGE_BY_PATH } = await import("@/lib/public-website-catalog.mjs");
+      const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(websitePath);
+      if (websitePage) return { kind: "website" as const, item: websitePage };
+    }
     const reviewPage = findReviewPage(key);
     if (reviewPage) return { kind: "review" as const, item: reviewPage };
     const aliases: Record<string, string> = {

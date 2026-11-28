@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { pricingRegistryIds } from "./pricing-administration.mjs";
 import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
+import { bindDeveloperImageInput } from "./developer-image-edit-policy.mjs";
 import {
   prepareDeveloperQuote,
   runMeteredProvider,
@@ -82,8 +83,40 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
 
 export async function recoverDeveloperBilling(): Promise<number> {
   // Retention/accounting maintenance remains available while paid generation is disabled.
-  const recovered = await rpc<number>("recover_developer_billing", { p_limit: 100 });
+  const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
+  const recovered = await rpc<number>(
+    creditLots ? "recover_developer_billing_v2" : "recover_developer_billing",
+    { p_limit: 100 },
+  );
+  if (creditLots) {
+    // Each owner is handled in a separate transaction, so maintenance never
+    // holds several owners' locks while waiting for a billing lock.
+    const due = await rpc<{ owner_id: string; account_id: string }[]>(
+      "developer_due_wallet_refresh_v2",
+      { p_limit: 5 },
+    );
+    let failures = 0;
+    for (const wallet of due) {
+      try {
+        await rpc("developer_refresh_wallet_v2", {
+          p_owner: wallet.owner_id,
+          p_account: wallet.account_id,
+        });
+      } catch {
+        failures++;
+      }
+    }
+    if (failures) console.warn("[developer-billing] credit refresh failed", { failures });
+  }
   await rpc<number>("expire_developer_files", { p_limit: 100 });
+  if (runtimeEnv("KOVA_DEVELOPER_UPLOAD_SCHEMA_READY") === "true")
+    await rpc<number>("expire_developer_uploads_v1", { p_limit: 100 });
+  if (runtimeEnv("KOVA_DEVELOPER_VECTOR_SCHEMA_READY") === "true")
+    await rpc<number>("expire_developer_vector_stores_v1", { p_limit: 100 });
+  if (runtimeEnv("KOVA_DEVELOPER_CONVERSATION_SCHEMA_READY") === "true")
+    await rpc<number>("expire_developer_conversations_v1", { p_limit: 100 });
+  if (runtimeEnv("KOVA_DEVELOPER_REALTIME_SESSION_SCHEMA_READY") === "true")
+    await rpc<number>("expire_developer_realtime_sessions_v1", { p_limit: 100 });
   await rpc<number>("expire_discovery_usage", { p_limit: 100 });
   const administrators = (runtimeEnv("KOVA_ADMIN_USER_IDS") ?? "")
     .split(",")
@@ -99,13 +132,93 @@ export async function recoverDeveloperBilling(): Promise<number> {
 }
 
 export async function meterProviderRequest(
-  input: MeterRequest & { send: () => Promise<Response>; signal?: AbortSignal },
+  input: MeterRequest & {
+    send: () => Promise<Response>;
+    signal?: AbortSignal;
+    imageInputs?: {
+      image: { bytes: Uint8Array; contentType: string };
+      mask?: { bytes: Uint8Array; contentType: string };
+    };
+  },
 ): Promise<Response> {
   const current = context.getStore();
   // Consumer plan accounting remains owned by acquire/finalizeGeneration.
-  if (!current) return input.send();
+  if (!current) {
+    if (
+      [
+        "cloud_browser",
+        "audio_transcription",
+        "audio_speech",
+        "realtime",
+        "audio_translation",
+      ].includes(input.capability)
+    )
+      throw new Error("developer_billing_disabled");
+    return input.send();
+  }
   if (runtimeEnv("KOVA_DEVELOPER_BILLING_ENABLED") !== "true")
     throw new Error("developer_billing_disabled");
+  if (input.imageInputs) {
+    if (
+      runtimeEnv("KOVA_DEVELOPER_IMAGE_EDITS_ENABLED") !== "true" ||
+      runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") === "false" ||
+      input.provider !== "openai" ||
+      input.capability !== "image_generation"
+    )
+      throw new Error("developer_image_edits_unavailable");
+    input = { ...input, body: bindDeveloperImageInput(input.body, input.imageInputs) };
+  } else if (input.body.image !== undefined || input.body.mask !== undefined) {
+    throw new Error("developer_image_invalid");
+  }
+  if (
+    input.capability !== "file_analysis" &&
+    input.body.max_tool_calls !== undefined &&
+    runtimeEnv("KOVA_DEVELOPER_WEB_SEARCH_ENABLED") !== "true"
+  )
+    throw new Error("developer_web_search_unavailable");
+  if (
+    input.capability === "moderation" &&
+    runtimeEnv("KOVA_DEVELOPER_MODERATION_ENABLED") !== "true"
+  )
+    throw new Error("developer_moderation_unavailable");
+  if (input.capability === "decisions" && runtimeEnv("KOVA_DEVELOPER_DECISIONS_ENABLED") !== "true")
+    throw new Error("developer_decision_unavailable");
+  if (
+    input.capability === "file_analysis" &&
+    (input.provider !== "openai" || runtimeEnv("KOVA_DEVELOPER_ANALYSIS_ENABLED") !== "true")
+  )
+    throw new Error("developer_analysis_unavailable");
+  if (
+    input.capability === "computer_use" &&
+    (input.provider !== "openai" || runtimeEnv("KOVA_DEVELOPER_COMPUTER_USE_ENABLED") !== "true")
+  )
+    throw new Error("developer_computer_unavailable");
+  if (
+    input.capability === "cloud_browser" &&
+    (input.provider !== "browserbase" || runtimeEnv("KOVA_DEVELOPER_BROWSER_ENABLED") !== "true")
+  )
+    throw new Error("developer_browser_unavailable");
+  if (
+    input.capability === "audio_transcription" &&
+    (input.provider !== "openai" || runtimeEnv("KOVA_DEVELOPER_TRANSCRIPTION_ENABLED") !== "true")
+  )
+    throw new Error("developer_transcription_unavailable");
+  if (
+    input.capability === "audio_speech" &&
+    (input.provider !== "elevenlabs" || runtimeEnv("KOVA_DEVELOPER_SPEECH_ENABLED") !== "true")
+  )
+    throw new Error("developer_speech_unavailable");
+  if (
+    input.capability === "audio_translation" &&
+    (input.provider !== "openai" || runtimeEnv("KOVA_DEVELOPER_TRANSLATION_ENABLED") !== "true")
+  )
+    throw new Error("developer_translation_unavailable");
+  if (
+    input.capability === "realtime" &&
+    (input.provider !== "openai" || runtimeEnv("KOVA_DEVELOPER_REALTIME_ENABLED") !== "true")
+  )
+    throw new Error("developer_realtime_unavailable");
+  const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
   const call = current.nextCall++;
   if (call >= 16) throw new Error("developer_call_limit");
   input.signal?.throwIfAborted();
@@ -182,22 +295,27 @@ export async function meterProviderRequest(
     signal: input.signal,
     send: input.send,
     admit: () =>
-      rpc<DeveloperAdmission>("admit_developer_billing", {
-        p_key: current.keyId,
-        p_request_key: `${requestKey}:${call}`,
-        p_fingerprint: fingerprint,
-        p_provider: input.provider,
-        p_model: input.body.model,
-        p_capability: input.capability,
-        p_version: version.id,
-        p_quote: prepared.quote,
-        p_limits: prepared.contract.maximumUsage,
-      }),
+      rpc<DeveloperAdmission>(
+        creditLots ? "admit_developer_billing_v2" : "admit_developer_billing",
+        {
+          p_key: current.keyId,
+          p_request_key: `${requestKey}:${call}`,
+          p_fingerprint: fingerprint,
+          p_provider: input.provider,
+          p_model: input.body.model,
+          p_capability: input.capability,
+          p_version: version.id,
+          p_quote: prepared.quote,
+          p_limits: prepared.contract.maximumUsage,
+        },
+      ),
     dispatch: (admission) =>
       rpc<boolean>(
-        current.fileBindings?.length
-          ? "dispatch_developer_billing_with_files"
-          : "dispatch_developer_billing",
+        creditLots
+          ? "dispatch_developer_billing_v2"
+          : current.fileBindings?.length
+            ? "dispatch_developer_billing_with_files"
+            : "dispatch_developer_billing",
         {
           p_request: admission.request_id,
           p_lease: admission.lease_token,
@@ -205,12 +323,15 @@ export async function meterProviderRequest(
         },
       ),
     finish: async (admission, outcome, result) => {
-      const ok = await rpc<boolean>("finish_developer_billing", {
-        p_request: admission.request_id,
-        p_lease: admission.lease_token,
-        p_outcome: outcome,
-        p_result: result ?? {},
-      });
+      const ok = await rpc<boolean>(
+        creditLots ? "finish_developer_billing_v2" : "finish_developer_billing",
+        {
+          p_request: admission.request_id,
+          p_lease: admission.lease_token,
+          p_outcome: outcome,
+          p_result: result ?? {},
+        },
+      );
       if (!ok) throw new Error("developer_settlement_unavailable");
     },
   });

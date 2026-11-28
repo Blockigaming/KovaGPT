@@ -302,3 +302,508 @@ test("unexpected response model, mixed image-output prices and impossible reques
     null,
   );
 });
+
+test("reasoning settings require an explicitly approved model contract and the same token bound", () => {
+  const f = fixture();
+  const at = new Date("2026-09-05");
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  f.request.body.reasoning = { effort: "high" };
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_reasoning_effort_unapproved/,
+  );
+  contract.allowedReasoningEfforts = ["low", "high"];
+  const quote = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(quote.quote.maximumReservedCharge, prepared().quote.maximumReservedCharge);
+  f.request.body.reasoning = { effort: "xhigh" };
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_reasoning_effort_unapproved/,
+  );
+  delete f.request.body.reasoning;
+  contract.allowedReasoningEfforts = ["high", "high"];
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_reasoning_contract_invalid/,
+  );
+});
+
+test("inline vision requires a reviewed token upper bound and cannot bypass reservation", () => {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  const at = new Date("2026-09-05");
+  const image = {
+    type: "input_image",
+    detail: "low",
+    image_url:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+  };
+  f.request.body.input = [{ role: "user", content: [image] }];
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_dimensions_unsupported/,
+  );
+  contract.maximumInlineImageTokens = 100;
+  const quote = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(quote.quote.maximumReservedCharge, prepared().quote.maximumReservedCharge);
+  contract.maximumInlineImageTokens = contract.maximumUsage.input_tokens;
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_input_bound_exceeded/,
+  );
+  contract.maximumInlineImageTokens = 100;
+  f.request.body.input[0].content.push(image);
+  assert.throws(
+    () => prepareDeveloperQuote(f.config, f.request, at),
+    /billing_dimensions_unsupported/,
+  );
+});
+
+function searchFixture() {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  contract.provider = "openai";
+  contract.meter = "responses_search";
+  contract.searchContentAccounting = "included_in_input_tokens";
+  contract.maximumWebSearchInputTokens = 100;
+  contract.maximumUsage.web_search_calls = 3;
+  f.request.provider = "openai";
+  Object.assign(f.request.body, {
+    tools: [{ type: "web_search", search_context_size: "low" }],
+    max_tool_calls: 2,
+    tool_choice: "required",
+    stream: false,
+  });
+  for (const row of f.config.registry) row.provider = "openai";
+  f.config.registry.push({
+    ...f.config.registry[0],
+    billing_dimension: "web_search_calls",
+    unit_quantity: 1,
+    unit_price: 2,
+  });
+  return f;
+}
+
+test("hosted search reserves its separate per-call price and requires reviewed token bounds", () => {
+  const at = new Date("2026-09-05");
+  const f = searchFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(p.options.usage.dimensions.web_search_calls, 2);
+  assert.equal(p.quote.upstreamBreakdown.web_search_calls, 4);
+  for (const mutate of [
+    (v) => v.config.registry.pop(),
+    (v) => (v.request.body.max_tool_calls = 4),
+    (v) => (v.request.body.stream = true),
+    (v) => {
+      v.config.version.public_price_configuration.contracts[0].maximumWebSearchInputTokens = 1000;
+    },
+    (v) => {
+      delete v.config.version.public_price_configuration.contracts[0].searchContentAccounting;
+    },
+  ]) {
+    const bad = searchFixture();
+    mutate(bad);
+    assert.throws(() => prepareDeveloperQuote(bad.config, bad.request, at));
+  }
+  delete f.request.body.tools;
+  delete f.request.body.tool_choice;
+  delete f.request.body.max_tool_calls;
+  const plain = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(plain.options.usage.dimensions.web_search_calls, 0);
+  assert.equal(plain.quote.upstreamBreakdown.web_search_calls, undefined);
+});
+
+test("hosted search settles authoritative completed tool calls, not client estimates", async () => {
+  const f = searchFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  const call = { id: "ws_fixture", type: "web_search_call", status: "completed" };
+  const value = { ...responseValue, output: [call, { type: "message" }] };
+  const collector = createUsageCollector(true);
+  const serialized = JSON.stringify(value);
+  for (let i = 0; i < serialized.length; i += 7) collector.push(serialized.slice(i, i + 7));
+  const actual = authoritativeUsage(collector.value(), "responses_search");
+  assert.equal(actual.dimensions.web_search_calls, 1);
+  const { calls, options } = harness({ prepared: p, send: async () => Response.json(value) });
+  await (await runMeteredProvider(options)).json();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].outcome, "settled");
+  assert.equal(calls[0].result.usage.web_search_calls, 1);
+  for (const output of [
+    undefined,
+    [call, call],
+    [{ ...call, status: "failed" }],
+    [{ type: "code_interpreter_call" }],
+  ]) {
+    assert.equal(authoritativeUsage({ ...value, output }, "responses_search"), null);
+  }
+  const uncertain = harness({
+    prepared: p,
+    send: async () => Response.json({ ...value, output: [{ type: "message" }] }),
+  });
+  await (await runMeteredProvider(uncertain.options)).json();
+  assert.equal(uncertain.calls[0].outcome, "uncertain");
+});
+
+function moderationFixture() {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  Object.assign(contract, {
+    provider: "openai",
+    upstreamModel: "omni-moderation-latest",
+    publicModel: "kova-moderation",
+    capability: "moderation",
+    meter: "moderation_requests",
+    expectedResponseModels: ["omni-moderation-2024-09-26"],
+    maximumUsage: { moderation_requests: 1 },
+  });
+  f.request = {
+    provider: "openai",
+    capability: "moderation",
+    body: { model: "omni-moderation-latest", input: "Synthetic test" },
+  };
+  f.config.registry = [
+    {
+      ...f.config.registry[0],
+      provider: "openai",
+      upstream_model: "omni-moderation-latest",
+      billing_dimension: "moderation_requests",
+      unit_quantity: 1,
+      unit_price: 0,
+    },
+  ];
+  return f;
+}
+
+test("moderation requires an explicitly approved per-request contract and price", () => {
+  const at = new Date("2026-09-05");
+  const f = moderationFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, at);
+  assert.equal(p.options.usage.dimensions.moderation_requests, 1);
+  assert.ok(p.quote.maximumReservedCharge > 0);
+  for (const mutate of [
+    (v) => (v.config.registry = []),
+    (v) => (v.request.body.input = []),
+    (v) => (v.request.body.stream = true),
+    (v) => (v.request.provider = "azure_openai"),
+    (v) => {
+      v.config.version.public_price_configuration.contracts[0].maximumUsage = {
+        moderation_requests: 2,
+      };
+    },
+  ]) {
+    const bad = moderationFixture();
+    mutate(bad);
+    assert.throws(() => prepareDeveloperQuote(bad.config, bad.request, at));
+  }
+});
+
+test("moderation settles one validated response without inventing token usage", async () => {
+  const f = moderationFixture();
+  const p = prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  const value = {
+    id: "modr-fixture",
+    model: "omni-moderation-2024-09-26",
+    results: [
+      {
+        flagged: false,
+        categories: { hate: false, harassment: false },
+        category_scores: { hate: 0.001, harassment: 0.002 },
+      },
+    ],
+  };
+  const collector = createUsageCollector(false, true);
+  const encoded = JSON.stringify(value);
+  for (let i = 0; i < encoded.length; i += 3) collector.push(encoded.slice(i, i + 3));
+  const actual = authoritativeUsage(collector.value(), "moderation_requests");
+  assert.deepEqual(actual.dimensions, { moderation_requests: 1 });
+  const { calls, options } = harness({ prepared: p, send: async () => Response.json(value) });
+  await (await runMeteredProvider(options)).json();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].outcome, "settled");
+  assert.deepEqual(calls[0].result.usage, { moderation_requests: 1 });
+  for (const result of [
+    [],
+    [value.results[0], value.results[0]],
+    [{ ...value.results[0], flagged: true }],
+    [{ ...value.results[0], category_scores: { hate: 2, harassment: 0 } }],
+  ]) {
+    assert.equal(authoritativeUsage({ ...value, results: result }, "moderation_requests"), null);
+  }
+  const unknown = harness({
+    prepared: p,
+    send: async () => Response.json({ ...value, results: [] }),
+  });
+  await (await runMeteredProvider(unknown.options)).json();
+  assert.equal(unknown.calls[0].outcome, "uncertain");
+});
+
+test("image editing reserves reviewed image token bounds without treating base64 as prompt tokens", () => {
+  const f = fixture();
+  const c = f.config.version.public_price_configuration.contracts[0];
+  Object.assign(c, {
+    provider: "openai",
+    capability: "image_generation",
+    meter: "image_tokens",
+    maximumUsage: { input_tokens: 120, image_input_tokens: 2000, output_tokens: 3000 },
+    maximumImageEditInputTokens: 2000,
+    maximumImages: 1,
+    allowedSizes: ["1024x1024"],
+    allowedQualities: ["medium"],
+  });
+  f.config.registry = ["input_tokens", "image_input_tokens", "output_tokens"].map((dimension) => ({
+    ...f.config.registry[0],
+    provider: "openai",
+    billing_dimension: dimension,
+  }));
+  f.request = {
+    provider: "openai",
+    capability: "image_generation",
+    body: {
+      model: c.upstreamModel,
+      prompt: "edit",
+      n: 1,
+      size: "1024x1024",
+      quality: "medium",
+      image:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+    },
+  };
+  const quote = () => prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  assert.equal(quote().imageEdit, true);
+  assert.equal(quote().options.usage.dimensions.image_input_tokens, 2000);
+  delete c.maximumImageEditInputTokens;
+  assert.throws(quote, /image_edit_contract_invalid/);
+  c.maximumImageEditInputTokens = 2001;
+  assert.throws(quote, /image_edit_contract_invalid/);
+  c.maximumImageEditInputTokens = 2000;
+  f.request.body.image = "https://example.invalid/image.png";
+  assert.throws(quote, /image_edit_contract_invalid/);
+});
+
+test("analysis container sessions need separate approved pricing and completed tool receipts", async () => {
+  const { developerAnalysisFields } =
+    await import("../../src/lib/pricing/developer-analysis-policy.mjs");
+  const { config, request } = fixture();
+  const c = config.version.public_price_configuration.contracts[0];
+  c.provider = request.provider = "openai";
+  c.capability = request.capability = "file_analysis";
+  c.meter = "responses_analysis";
+  c.maximumUsage.input_tokens = 4000;
+  c.maximumUsage.container_1g_sessions = 1;
+  c.maximumAnalysisInputTokens = 1000;
+  for (const row of config.registry) row.provider = "openai";
+  config.registry.push({
+    ...config.registry[0],
+    billing_dimension: "container_1g_sessions",
+    unit_quantity: 1,
+    unit_price: 3,
+  });
+  request.body = {
+    model: c.upstreamModel,
+    ...developerAnalysisFields({ input: "Analyze data.", max_output_tokens: 100 }),
+  };
+  const at = new Date("2026-09-05");
+  const quoted = prepareDeveloperQuote(config, request, at);
+  assert.equal(quoted.options.usage.dimensions.container_1g_sessions, 1);
+  const receipt = {
+    ...responseValue,
+    output: [
+      {
+        type: "code_interpreter_call",
+        id: "ci_test",
+        status: "completed",
+        container_id: "cntr_test",
+      },
+    ],
+  };
+  assert.equal(
+    authoritativeUsage(receipt, "responses_analysis").dimensions.container_1g_sessions,
+    1,
+  );
+  assert.equal(authoritativeUsage({ ...receipt, output: [] }, "responses_analysis"), null);
+  const h = harness({ prepared: quoted, send: async () => Response.json(receipt) });
+  await (await runMeteredProvider(h.options)).json();
+  assert.equal(h.calls[0].outcome, "settled");
+  assert.throws(() =>
+    prepareDeveloperQuote({ ...config, registry: config.registry.slice(0, -1) }, request, at),
+  );
+});
+
+test("browser snapshots require an approved fixed session price and a valid receipt", async () => {
+  const { BROWSER_MODEL, developerBrowserFields } =
+    await import("../../src/lib/pricing/developer-browser-policy.mjs");
+  const { config, request } = fixture();
+  const contract = config.version.public_price_configuration.contracts[0];
+  contract.provider = request.provider = "browserbase";
+  contract.upstreamModel = BROWSER_MODEL;
+  contract.expectedResponseModels = [BROWSER_MODEL];
+  contract.capability = request.capability = "cloud_browser";
+  contract.meter = "browser_sessions";
+  contract.maximumUsage = { browser_sessions_60s: 1 };
+  config.registry = [
+    {
+      ...config.registry[0],
+      provider: "browserbase",
+      upstream_model: BROWSER_MODEL,
+      billing_dimension: "browser_sessions_60s",
+      unit_quantity: 1,
+    },
+  ];
+  request.body = {
+    model: BROWSER_MODEL,
+    ...developerBrowserFields({ url: "https://www.example.com/" }),
+  };
+  const quote = prepareDeveloperQuote(config, request, new Date("2026-09-05"));
+  const receipt = {
+    id: "11111111-1111-4111-8111-111111111111",
+    model: BROWSER_MODEL,
+    status: "completed",
+    usage: { browser_sessions_60s: 1 },
+  };
+  assert.equal(quote.options.usage.dimensions.browser_sessions_60s, 1);
+  assert.equal(authoritativeUsage(receipt, "browser_sessions").dimensions.browser_sessions_60s, 1);
+  const h = harness({ prepared: quote, send: async () => Response.json(receipt) });
+  await (await runMeteredProvider(h.options)).json();
+  assert.equal(h.calls[0].outcome, "settled");
+  request.body = {
+    model: BROWSER_MODEL,
+    ...developerBrowserFields({
+      url: "https://www.example.com/",
+      navigate: ["https://www.example.com/docs"],
+    }),
+  };
+  const plan = prepareDeveloperQuote(config, request, new Date("2026-09-05"));
+  assert.equal(plan.options.usage.dimensions.browser_sessions_60s, 1);
+  assert.equal(plan.quote.maximumReservedCharge, quote.quote.maximumReservedCharge);
+  request.body.navigate = ["https://other.com/"];
+  assert.throws(
+    () => prepareDeveloperQuote(config, request, new Date("2026-09-05")),
+    /browser_contract_invalid/,
+  );
+  delete request.body.navigate;
+  request.body.session_seconds = 61;
+  assert.throws(() => prepareDeveloperQuote(config, request, new Date("2026-09-05")));
+});
+
+test("transcription reserves approved duration and settles only from a valid provider receipt", async () => {
+  const { config, request } = fixture();
+  const contract = config.version.public_price_configuration.contracts[0];
+  contract.provider = request.provider = "openai";
+  contract.upstreamModel = "gpt-transcribe";
+  contract.expectedResponseModels = ["gpt-transcribe"];
+  contract.capability = request.capability = "audio_transcription";
+  contract.meter = "transcription_duration";
+  contract.maximumUsage = { transcription_seconds: 20 };
+  contract.maximumRequestBytes = 1048576;
+  config.registry = [
+    {
+      ...config.registry[0],
+      provider: "openai",
+      upstream_model: "gpt-transcribe",
+      billing_dimension: "transcription_seconds",
+      unit_quantity: 60,
+      unit_price: 1,
+    },
+  ];
+  const wave = Buffer.alloc(32044);
+  wave.write("RIFF");
+  wave.writeUInt32LE(wave.length - 8, 4);
+  wave.write("WAVEfmt ", 8);
+  wave.writeUInt32LE(16, 16);
+  wave.writeUInt16LE(1, 20);
+  wave.writeUInt16LE(1, 22);
+  wave.writeUInt32LE(16000, 24);
+  wave.writeUInt32LE(32000, 28);
+  wave.writeUInt16LE(2, 32);
+  wave.writeUInt16LE(16, 34);
+  wave.write("data", 36);
+  wave.writeUInt32LE(32000, 40);
+  request.body = {
+    model: "gpt-transcribe",
+    response_format: "json",
+    audio: "data:audio/wav;base64," + wave.toString("base64"),
+  };
+  const at = new Date("2026-09-05");
+  const quote = prepareDeveloperQuote(config, request, at);
+  assert.equal(quote.options.usage.dimensions.transcription_seconds, 20);
+  const receipt = {
+    id: "req_audio_test",
+    model: "gpt-transcribe",
+    status: "completed",
+    text: "Example transcript",
+    usage: { type: "duration", seconds: 1 },
+  };
+  assert.deepEqual(authoritativeUsage(receipt, "transcription_duration").dimensions, {
+    transcription_seconds: 1,
+  });
+  const h = harness({ prepared: quote, send: async () => Response.json(receipt) });
+  await (await runMeteredProvider(h.options)).json();
+  assert.equal(h.calls[0].outcome, "settled");
+  assert.deepEqual(h.calls[0].result.usage, { transcription_seconds: 1 });
+  const bad = { ...receipt, usage: { type: "tokens", seconds: 1 } };
+  assert.equal(authoritativeUsage(bad, "transcription_duration"), null);
+  assert.throws(() => prepareDeveloperQuote({ ...config, registry: [] }, request, at));
+  contract.maximumUsage.transcription_seconds = 21;
+  assert.throws(() => prepareDeveloperQuote(config, request, at));
+});
+
+test("speech quotes reserve the bounded input and only settle actual provider character credits", async () => {
+  const f = fixture();
+  const contract = f.config.version.public_price_configuration.contracts[0];
+  Object.assign(contract, {
+    provider: "elevenlabs",
+    upstreamModel: "eleven_flash_v2_5",
+    publicModel: "speech",
+    capability: "audio_speech",
+    meter: "speech_character_credits",
+    expectedResponseModels: ["eleven_flash_v2_5"],
+    maximumUsage: { speech_character_credits: 1000 },
+  });
+  f.config.registry = [
+    {
+      ...f.config.registry[0],
+      provider: "elevenlabs",
+      upstream_model: "eleven_flash_v2_5",
+      billing_dimension: "speech_character_credits",
+    },
+  ];
+  f.request = {
+    provider: "elevenlabs",
+    capability: "audio_speech",
+    body: {
+      model: "eleven_flash_v2_5",
+      input: "hello world",
+      voice: "default",
+      response_format: "mp3",
+      provider_voice: "approved",
+    },
+  };
+  const p = prepareDeveloperQuote(f.config, f.request, new Date("2026-09-05"));
+  assert.deepEqual(p.options.usage.dimensions, { speech_character_credits: 11 });
+  const receipt = {
+    id: "provider-request",
+    model: "eleven_flash_v2_5",
+    status: "completed",
+    usage: { speech_character_credits: 5 },
+    audio: "//uAAA==",
+  };
+  const h = harness({ prepared: p, send: async () => Response.json(receipt) });
+  await (await runMeteredProvider(h.options)).json();
+  assert.equal(h.calls[0].outcome, "settled");
+  assert.deepEqual(h.calls[0].result.usage, { speech_character_credits: 5 });
+  const bad = harness({
+    prepared: p,
+    send: async () => Response.json({ ...receipt, usage: { speech_character_credits: 12 } }),
+  });
+  await (await runMeteredProvider(bad.options)).json();
+  assert.equal(bad.calls[0].outcome, "uncertain");
+  assert.throws(
+    () =>
+      prepareDeveloperQuote(
+        f.config,
+        { ...f.request, body: { ...f.request.body, provider_voice: "../wrong" } },
+        new Date("2026-09-05"),
+      ),
+    /speech_contract_invalid/,
+  );
+});

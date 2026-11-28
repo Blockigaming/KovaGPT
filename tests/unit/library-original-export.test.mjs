@@ -18,6 +18,7 @@ function loader() {
     original = "%PDF-1.7 exact original bytes";
   const modules = {
     "@/lib/account-export-identity.mjs": exportIdentity,
+    "@/lib/runtime-env.server": { runtimeEnv: () => undefined },
     "./library-original-policy.mjs": policy,
     "node:buffer": buffer,
     "node:crypto": crypto,

@@ -1,5 +1,6 @@
 import "./public-website.css";
 import { Link } from "@tanstack/react-router";
+import { DeveloperServiceStatus } from "@/components/DeveloperServiceStatus";
 import { PhonePageOutline } from "./PhonePageOutline";
 import { PublicShell } from "./PublicShell";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
@@ -40,6 +41,16 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
         <nav className="public-website-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">KovaGPT</Link>
           <span aria-hidden="true"> / </span>
+          {category === "developers" && (
+            <>
+              <Link to="/developers">Developers</Link>
+              <span aria-hidden="true"> / </span>
+              <Link to="/developers/$docSlug" params={{ docSlug: "docs" }}>
+                Documentation
+              </Link>
+              <span aria-hidden="true"> / </span>
+            </>
+          )}
           <span aria-current="page">{item.title}</span>
         </nav>
         <p className="public-article-label">
@@ -55,6 +66,7 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
         <p className="public-article-lede">{item.description}</p>
         {item.availability && <p className="public-availability">{item.availability}</p>}
         {item.review && <p className="public-availability">{item.review}</p>}
+        {item.path === "/developers/status" && <DeveloperServiceStatus />}
         <PhonePageOutline sections={item.sections} />
         <div className="public-article-body">
           <div>
@@ -81,6 +93,20 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
             ))}
           </aside>
         </div>
+        {!!item.sources?.length && (
+          <section aria-label="Source changes">
+            <h2>Source commits</h2>
+            <ul>
+              {item.sources.map((source) => (
+                <li key={source.href}>
+                  <a className="inline-flex min-h-11 items-center underline" href={source.href}>
+                    {source.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {item.related.length > 0 && (
           <section aria-label="Continue exploring" className="public-directory-links">
             {item.related.map((related, index) => (

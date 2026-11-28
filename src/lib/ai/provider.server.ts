@@ -1,6 +1,11 @@
 import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { meterProviderRequest } from "@/lib/pricing/developer-billing.server";
+import {
+  developerTranscriptionAudio,
+  developerTranscriptionResult,
+  validDeveloperTranscriptionRequest,
+} from "@/lib/pricing/developer-transcription-policy.mjs";
 
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
@@ -34,10 +39,14 @@ export type ProviderCapability =
   | "reasoning"
   | "tool_calls"
   | "web_search"
+  | "moderation"
+  | "decisions"
   | "embeddings"
   | "image_generation"
   | "vision"
-  | "file_analysis";
+  | "file_analysis"
+  | "computer_use"
+  | "audio_transcription";
 
 export type ProviderErrorCode =
   "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
@@ -168,6 +177,18 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 }
 
 function providerTarget(capability?: ProviderCapability): ProviderTarget {
+  if (
+    capability === "moderation" ||
+    capability === "decisions" ||
+    capability === "computer_use" ||
+    capability === "audio_transcription"
+  ) {
+    return {
+      provider: "openai",
+      baseUrl: OPENAI_API_BASE_URL,
+      auth: env("OPENAI_API_KEY") ? "openai_api_key" : "missing",
+    };
+  }
   // Explicit capability cutovers; embedding routing remains independent.
   const imageCapability = capability === "image_generation";
   const embeddingCapability = capability === "embeddings";
@@ -288,7 +309,15 @@ function parseTimeout(value: string | undefined): number {
 
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
-  const allowed = new Set<ProviderCapability>(DEFAULT_CAPABILITIES.concat("web_search"));
+  const allowed = new Set<ProviderCapability>(
+    DEFAULT_CAPABILITIES.concat(
+      "web_search",
+      "moderation",
+      "decisions",
+      "computer_use",
+      "audio_transcription",
+    ),
+  );
   const configured = value
     .split(",")
     .map((item) => item.trim())
@@ -648,6 +677,7 @@ async function providerFetch(
       provider: target.provider,
       capability,
       body: requestBody,
+      ...(images ? { imageInputs: images } : {}),
       signal: deadline.signal,
       send: () =>
         fetchWithDeadline(
@@ -725,6 +755,31 @@ export function providerErrorResponse(error: unknown, fallbackStatus = 502): Res
 /** Versioned developer ingress uses the native, metered Responses contract. */
 export async function developerResponses(body: JsonObject, init?: RequestInit): Promise<Response> {
   return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
+}
+
+export async function developerComputerUse(
+  body: JsonObject,
+  init?: RequestInit,
+): Promise<Response> {
+  return providerFetch("/responses", "computer_use", body, init);
+}
+
+export async function developerAnalysis(body: JsonObject, init?: RequestInit): Promise<Response> {
+  if (providerTarget("file_analysis").provider !== "openai")
+    throw new Error("developer_analysis_unavailable");
+  return providerFetch("/responses", "file_analysis", body, init);
+}
+export async function deleteDeveloperAnalysisContainer(container: string): Promise<void> {
+  if (!/^cntr_[A-Za-z0-9_-]{1,180}$/.test(container)) throw new Error("developer_analysis_invalid");
+  try {
+    const { createOpenAiServiceClient } = await import("./openai-services.server.mjs");
+    await createOpenAiServiceClient(env("OPENAI_API_KEY")).containers.delete(container, {
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    console.error("[developer-analysis] container cleanup unconfirmed", { container });
+    throw new Error("developer_analysis_cleanup_unavailable");
+  }
 }
 
 export async function chatCompletions(
@@ -1065,4 +1120,69 @@ export async function embeddings(body: JsonObject, init?: RequestInit): Promise<
   return bufferSuccessfulProviderResponse(
     await providerFetch("/embeddings", "embeddings", body, init),
   );
+}
+
+export async function developerModerations(
+  body: JsonObject,
+  init?: RequestInit,
+): Promise<Response> {
+  return providerFetch("/moderations", "moderation", body, init);
+}
+
+export async function developerDecisions(body: JsonObject, init?: RequestInit): Promise<Response> {
+  return providerFetch("/decisions", "decisions", body, init);
+}
+
+/** Recorded-audio execution is developer-only and settles from provider duration receipts. */
+export async function developerTranscriptions(
+  body: JsonObject,
+  init?: RequestInit,
+): Promise<Response> {
+  const capture = env("KOVA_REQUEST_CAPTURE_ENABLED");
+  const acceptance = env("KOVA_GENERATION_ACCEPTANCE_ENABLED");
+  if (
+    (capture && capture !== "false") ||
+    (acceptance && acceptance !== "false") ||
+    env("KOVA_DEVELOPER_TRANSCRIPTION_ENABLED") !== "true" ||
+    !validDeveloperTranscriptionRequest(body)
+  )
+    throw new Error("developer_transcription_unavailable");
+  const unavailable = providerUnavailableEnvelope("audio_transcription");
+  if (unavailable) throw new AiProviderError(unavailable);
+  const audio = developerTranscriptionAudio(body.audio);
+  const target = providerTarget("audio_transcription");
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(getAiProviderConfig("audio_transcription").timeoutMs),
+    ...(init?.signal ? [init.signal] : []),
+  ]);
+  return meterProviderRequest({
+    provider: "openai",
+    capability: "audio_transcription",
+    body,
+    signal,
+    send: async () => {
+      const headers = new Headers(await providerHeaders(target, signal));
+      headers.delete("content-type");
+      const form = new FormData();
+      form.set("model", String(body.model));
+      form.set("response_format", "json");
+      form.set("file", new Blob([audio.bytes as BlobPart], { type: "audio/wav" }), "audio.wav");
+      const response = await fetch(target.baseUrl + "/audio/transcriptions", {
+        method: "POST",
+        redirect: "error",
+        headers,
+        body: form,
+        signal,
+      });
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
+        throw new Error("developer_transcription_unavailable");
+      }
+      const bytes = await readResponseBytesBounded(response, 131072, { signal });
+      const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      return Response.json(
+        developerTranscriptionResult(value, response.headers.get("x-request-id")),
+      );
+    },
+  });
 }

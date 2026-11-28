@@ -1,3 +1,4 @@
+import { developerRateError } from "./developer-http-errors.mjs";
 import { createHash } from "node:crypto";
 import { requireVerifiedUser } from "@/lib/api-auth.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
@@ -11,7 +12,7 @@ import {
   developerJson,
 } from "./developer-platform.server";
 import { developerUuid, developerRequestKey } from "./developer-platform-policy.mjs";
-import { developerFileUpload } from "./developer-file-policy.mjs";
+import { developerFileUpload, readDeveloperMultipartFile } from "./developer-file-policy.mjs";
 
 export async function handleDeveloperFiles(request: Request, ownerConsole = false) {
   try {
@@ -19,6 +20,23 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
       keyId: string | null = null,
       projectId: string | null = null;
     const url = new URL(request.url);
+    const params = url.searchParams;
+    const allowed = new Set(
+      request.method === "POST"
+        ? ownerConsole
+          ? ["project", "key"]
+          : []
+        : [
+            ...(ownerConsole ? ["project"] : []),
+            "id",
+            ...(request.method === "GET" ? ["page"] : []),
+          ],
+    );
+    for (const name of params.keys()) {
+      if (!allowed.has(name) || params.getAll(name).length !== 1)
+        throw new Error("developer_input_invalid");
+    }
+    if (params.has("id") && params.has("page")) throw new Error("developer_input_invalid");
     if (ownerConsole) {
       if (isCrossSiteMutation(request)) throw new Error("developer_origin_invalid");
       const caller = await requireVerifiedUser(request);
@@ -34,7 +52,8 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
         limit: 60,
         windowSeconds: 60,
       });
-      if (!rate.allowed) throw new Error("developer_rate_limit");
+      const rateError = developerRateError(rate);
+      if (rateError) throw rateError;
     } else {
       const identity = await authenticateDeveloper(request);
       if (!identity.capabilities.includes("files")) throw new Error("developer_scope_required");
@@ -45,27 +64,32 @@ export async function handleDeveloperFiles(request: Request, ownerConsole = fals
     const db = developerDatabase();
     let operation: string, input: Record<string, unknown>;
     if (request.method === "POST") {
-      if (ownerConsole) throw new Error("developer_operation_invalid");
       if (runtimeEnv("KOVA_DEVELOPER_FILES_ENABLED") !== "true")
         throw new Error("developer_files_disabled");
-      if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json")
-        throw new Error("developer_json_required");
+      const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim();
+      if (contentType !== "application/json" && contentType !== "multipart/form-data")
+        throw new Error("developer_input_invalid");
       operation = "create";
+      if (ownerConsole) {
+        if (!projectId) throw new Error("developer_scope_required");
+        keyId = developerUuid(url.searchParams.get("key"));
+      }
       const requestKey = developerRequestKey(request.headers.get("idempotency-key"));
       input = {
-        ...developerFileUpload(await readBoundedJsonObject(request, 131072)),
-        requestDigest: createHash("sha256").update(requestKey).digest("hex"),
+        ...(contentType === "multipart/form-data"
+          ? await readDeveloperMultipartFile(request)
+          : developerFileUpload(await readBoundedJsonObject(request, 131072, request.signal))),
+        requestDigest: createHash("sha256")
+          .update(ownerConsole ? `owner-console:${requestKey}` : requestKey)
+          .digest("hex"),
       };
     } else if (["GET", "DELETE"].includes(request.method)) {
-      const id = url.searchParams.get("id");
-      if (request.method === "DELETE" && !id) throw new Error("developer_id_invalid");
-      operation = id ? (request.method === "DELETE" ? "delete" : "get") : "list";
-      input = id ? { id: developerUuid(id) } : { page: Number(url.searchParams.get("page") ?? 0) };
-      if (
-        operation === "list" &&
-        (!Number.isSafeInteger(input.page) || Number(input.page) < 0 || Number(input.page) > 4)
-      )
-        throw new Error("developer_page_invalid");
+      const id = params.has("id") ? developerUuid(params.get("id")) : null;
+      if (request.method === "DELETE" && id === null) throw new Error("developer_id_invalid");
+      const page = params.get("page") ?? "0";
+      if (!/^[0-4]$/.test(page)) throw new Error("developer_page_invalid");
+      operation = id === null ? "list" : request.method === "DELETE" ? "delete" : "get";
+      input = id === null ? { page: Number(page) } : { id };
     } else throw new Error("developer_operation_invalid");
     const result = await db
       .rpc("manage_developer_files", {

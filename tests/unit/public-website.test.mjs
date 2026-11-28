@@ -5,6 +5,11 @@ import {
   PUBLIC_WEBSITE_PAGE_BY_PATH,
   PUBLIC_WEBSITE_FOOTER,
 } from "../../src/lib/public-website-catalog.mjs";
+import {
+  PUBLIC_WEBSITE_ROUTE_INDEX,
+  PUBLIC_WEBSITE_ROUTE_BY_PATH,
+  PUBLIC_WEBSITE_INDEXABLE_PATHS,
+} from "../../src/lib/public-website-route-index.mjs";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "../../src/lib/seo-policy.mjs";
 import {
   createHookHarness,
@@ -13,6 +18,18 @@ import {
   loadUiModule,
   settle,
 } from "../helpers/ui-state-harness.mjs";
+
+test("lightweight route metadata exactly matches the lazy article catalog", () => {
+  assert.deepEqual(
+    PUBLIC_WEBSITE_ROUTE_INDEX,
+    PUBLIC_WEBSITE_PAGES.map(({ path, title, indexable }) => ({ path, title, indexable })),
+  );
+  assert.equal(PUBLIC_WEBSITE_ROUTE_BY_PATH.size, PUBLIC_WEBSITE_PAGES.length);
+  assert.deepEqual(
+    PUBLIC_WEBSITE_INDEXABLE_PATHS,
+    PUBLIC_WEBSITE_PAGES.filter((page) => page.indexable).map((page) => page.path),
+  );
+});
 
 test("public information has distinct content, valid paths, honest status, and controlled indexing", () => {
   assert.ok(PUBLIC_WEBSITE_PAGES.length >= 100);

@@ -4,6 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/endpoint-reliability.mjs";
+import * as transcription from "../../src/lib/pricing/developer-transcription-policy.mjs";
 
 function loadModule(path, modules, env) {
   const output = ts.transpileModule(fs.readFileSync(path, "utf8"), {
@@ -28,6 +29,7 @@ function subject(env = {}) {
     "src/lib/ai/provider.server.ts",
     {
       "@/lib/endpoint-reliability.mjs": bounded,
+      "@/lib/pricing/developer-transcription-policy.mjs": transcription,
       "@/lib/runtime-env.server": { runtimeEnv: (key) => env[key]?.trim() || undefined },
       "@/lib/pricing/developer-billing.server": {},
       "@/lib/ai/responses-compat.server.mjs": {},

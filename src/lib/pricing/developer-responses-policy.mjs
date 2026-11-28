@@ -1,3 +1,5 @@
+import { developerSearchOptions } from "./developer-search-policy.mjs";
+
 const fail = () => {
   throw new Error("developer_responses_invalid");
 };
@@ -120,11 +122,41 @@ export function developerJsonSchema(schema) {
   return structuredClone(schema);
 }
 
+// Inline images are deliberately bounded. Never dereference a client URL or
+// accept a provider-owned file ID. The upstream decoder validates the PNG body.
+export function developerInlineImage(part) {
+  exact(part, ["type", "image_url", "detail"]);
+  if (
+    part.type !== "input_image" ||
+    part.detail !== "low" ||
+    typeof part.image_url !== "string" ||
+    part.image_url.length > 43714
+  )
+    fail();
+  const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(part.image_url);
+  if (!match) fail();
+  const bytes = Buffer.from(match[1], "base64");
+  if (
+    bytes.length < 45 ||
+    bytes.length > 32768 ||
+    bytes.toString("base64") !== match[1] ||
+    bytes.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" ||
+    bytes.readUInt32BE(8) !== 13 ||
+    bytes.toString("ascii", 12, 16) !== "IHDR"
+  )
+    fail();
+  const width = bytes.readUInt32BE(16);
+  const height = bytes.readUInt32BE(20);
+  if (width < 1 || height < 1 || width > 512 || height > 512) fail();
+  return { type: "input_image", image_url: part.image_url, detail: "low" };
+}
+
 export function developerResponseInput(value) {
   if (typeof value === "string") return text(value);
   if (!Array.isArray(value) || !value.length || value.length > 100) fail();
   const calls = new Map(),
     completed = new Set();
+  let imageCount = 0;
   return value.map((item) => {
     if (item?.type === "function_call") {
       exact(item, ["type", "id", "call_id", "name", "arguments", "status"]);
@@ -185,6 +217,19 @@ export function developerResponseInput(value) {
     let content = item.content;
     if (Array.isArray(content)) {
       if (!content.length || content.length > 32) fail();
+      if (content.some((part) => part?.type === "input_image")) {
+        if (item.role !== "user") fail();
+        const parts = content.map((part) => {
+          if (part?.type === "input_image") {
+            if (++imageCount > 1) fail();
+            return developerInlineImage(part);
+          }
+          exact(part, ["type", "text"]);
+          if (part.type !== "input_text") fail();
+          return { type: "input_text", text: text(part.text) };
+        });
+        return { role: item.role, content: parts };
+      }
       content = content
         .map((part) => {
           exact(part, ["type", "text", "annotations", "logprobs"]);
@@ -204,6 +249,14 @@ export function developerResponseInput(value) {
 
 export function developerResponseFeatures(input) {
   const result = {};
+  if (input.reasoning !== undefined) {
+    exact(input.reasoning, ["effort"]);
+    if (!["none", "minimal", "low", "medium", "high", "xhigh"].includes(input.reasoning.effort))
+      fail();
+    result.reasoning = { effort: input.reasoning.effort };
+  }
+  const search = developerSearchOptions(input);
+  if (search) return { ...result, ...search };
   if (input.tools !== undefined) {
     if (!Array.isArray(input.tools) || input.tools.length > 32) fail();
     const names = new Set();

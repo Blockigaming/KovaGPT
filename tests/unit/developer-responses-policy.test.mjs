@@ -116,3 +116,114 @@ test("schema and tool-result bytes consume the total request bound", () => {
     /too_large/,
   );
 });
+
+test("reasoning effort is explicit, bounded and cannot introduce other provider fields", () => {
+  for (const effort of ["none", "minimal", "low", "medium", "high", "xhigh"]) {
+    const value = parseDeveloperInput("responses", { ...input, reasoning: { effort } });
+    assert.deepEqual(value.body.reasoning, { effort });
+    assert.equal(value.body.store, false);
+  }
+  for (const reasoning of [
+    null,
+    {},
+    "high",
+    { effort: "unlimited" },
+    { effort: "high", budget: 1000000 },
+  ]) {
+    assert.throws(
+      () => parseDeveloperInput("responses", { ...input, reasoning }),
+      /responses_invalid/,
+    );
+  }
+});
+
+test("inline vision accepts one bounded PNG and rejects external URLs and unsupported media", () => {
+  const image = {
+    type: "input_image",
+    image_url:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+    detail: "low",
+  };
+  const body = {
+    ...input,
+    input: [
+      {
+        role: "user",
+        content: [{ type: "input_text", text: "Describe this." }, image],
+      },
+    ],
+  };
+  const parsed = parseDeveloperInput("responses", body);
+  assert.deepEqual(parsed.body.input[0].content[1], image);
+  for (const invalid of [
+    { ...image, detail: "high" },
+    { ...image, image_url: "https://example.invalid/image.png" },
+    { ...image, file_id: "file_external" },
+    { ...image, image_url: "data:image/png;base64,AAAA" },
+  ]) {
+    assert.throws(
+      () =>
+        parseDeveloperInput("responses", {
+          ...body,
+          input: [{ role: "user", content: [invalid] }],
+        }),
+      /responses_invalid/,
+    );
+  }
+  assert.throws(
+    () =>
+      parseDeveloperInput("responses", {
+        ...body,
+        input: [{ role: "user", content: [image, image] }],
+      }),
+    /responses_invalid/,
+  );
+});
+
+test("explicit bounded web search uses only the native nonstream hosted tool", () => {
+  const search = {
+    ...input,
+    tools: [{ type: "web_search", search_context_size: "low" }],
+    max_tool_calls: 2,
+  };
+  const value = parseDeveloperInput("responses", search);
+  assert.equal(value.capability, "chat");
+  assert.equal(value.body.store, false);
+  assert.equal(value.body.stream, false);
+  assert.equal(value.body.max_tool_calls, 2);
+  assert.equal(value.body.tool_choice, "required");
+  assert.deepEqual(value.body.tools, search.tools);
+  for (const patch of [
+    { max_tool_calls: 4 },
+    { max_tool_calls: 0 },
+    { max_tool_calls: undefined },
+    { stream: true },
+    { tool_choice: "none" },
+    { parallel_tool_calls: false },
+    { tools: [{ type: "web_search", search_context_size: "high" }] },
+    { tools: [...search.tools, tool] },
+    { tools: [{ ...search.tools[0], user_location: {} }] },
+  ]) {
+    assert.throws(
+      () => parseDeveloperInput("responses", { ...search, ...patch }),
+      /responses_invalid/,
+    );
+  }
+});
+
+test("standalone moderation requires a bounded text input and its own key capability", () => {
+  const body = { model: "kova-moderation", input: "Synthetic test" };
+  assert.deepEqual(parseDeveloperInput("moderations", body), {
+    body,
+    publicModel: body.model,
+    capability: "moderation",
+  });
+  for (const invalid of [
+    { ...body, input: [] },
+    { ...body, input: " " },
+    { ...body, input: "x".repeat(8001) },
+    { ...body, stream: true },
+    { ...body, file_ids: ["fixture"] },
+  ])
+    assert.throws(() => parseDeveloperInput("moderations", invalid));
+});

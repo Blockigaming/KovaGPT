@@ -22,6 +22,58 @@ const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4
 // exception to its exact body instead of admitting arbitrary non-Kova files.
 const reviewedForwardMigrations = new Map([
   [
+    "20261128124018_developer_webhook_retry_v1.sql",
+    "69f53825cd2a1681a0ddfbcfaba065a1a2735264ffcee88e51fa54ddb269f39f",
+  ],
+  [
+    "20261128115506_developer_uploads_v1.sql",
+    "4ed6b5ac7f692266d743bf4155c2b38f840dda404133eb9edb761fa2358f5840",
+  ],
+  [
+    "20261128114651_developer_prompts_v1.sql",
+    "22b7a4b8f6b5c50a74fa175700780e698ab6d7f315c87f5189fd20745cd0bbd6",
+  ],
+  [
+    "20261128105700_developer_mcp_connections_v1.sql",
+    "0f876bffb7b0ad5527d1ac506846b77536935a4de38133c7244b5675090eaa40",
+  ],
+  [
+    "20261127205018_developer_workspace_v2.sql",
+    "5218e6c48dd8e0586795f5ba6ce91bcb43939b62c225b7dc086a7589987a0c74",
+  ],
+  [
+    "20261127205021_developer_credit_lots_v2.sql",
+    "59a7b519ed956ba1c3c3349bbbff8a09a03392578a349ed0c1715a0163fd86bb",
+  ],
+  [
+    "20261127205023_developer_credit_lot_integration_v2.sql",
+    "a86d1a7483d8118a320927a6aa22a8ef64b974325f44b9650474a4d53835a1fc",
+  ],
+  [
+    "20261127205025_developer_vector_stores_v1.sql",
+    "788c8f56f45ecf1ea4d4386c3cabd886798825e009b8d8f049a9c30475b64eb2",
+  ],
+  [
+    "20261127205027_developer_conversations_v1.sql",
+    "7874e06f616d5ef31495d1e305db8df04ca50af831256c7f0cefcba325066f6e",
+  ],
+  [
+    "20261127205029_developer_agents_v1.sql",
+    "8c404f1a6bbe850d5f8d3349d608c756f89c5f25a6c68d4b2be10fabca35ceab",
+  ],
+  [
+    "20261127205031_developer_skills_v1.sql",
+    "1ef5debaf89e90d6d473794e573c392e2f7f74188a8c5d52b64f33fb00f65e37",
+  ],
+  [
+    "20261127205033_developer_webhooks_v1.sql",
+    "6c5bc91124b9efe955aee3a48297b1972caba927734e25da12023487ac64281d",
+  ],
+  [
+    "20261127205035_developer_batches_v1.sql",
+    "9c23d08d8dbe60d899ec373f3cb2ad8442024f4ea4167ae54c1411ff047c6944",
+  ],
+  [
     "20261108034500_team_email_invitations.sql",
     "7add335e9ec75a86c8c1c3c907bc224071785bf7fc7e09f755c4ae69d4408a38",
   ],

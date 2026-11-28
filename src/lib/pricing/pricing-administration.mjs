@@ -1,4 +1,13 @@
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
+import { developerAnalysisFields } from "./developer-analysis-policy.mjs";
+import { developerComputerFields } from "./developer-computer-policy.mjs";
+import { BROWSER_MODEL, developerBrowserFields } from "./developer-browser-policy.mjs";
+import { TRANSCRIPTION_MODEL } from "./developer-transcription-policy.mjs";
+
+import { SPEECH_MODEL } from "./developer-speech-policy.mjs";
+
+import { TRANSLATION_MODEL, TRANSLATION_ACCOUNTING } from "./developer-translation-policy.mjs";
+import { REALTIME_MODEL, REALTIME_DIMENSIONS } from "./developer-realtime-policy.mjs";
 
 const fail = (code) => {
   throw new Error(`pricing_admin_${code}`);
@@ -15,7 +24,22 @@ const number = (v, max = 1e9) =>
 const keys = (v, allowed) => object(v) && Object.keys(v).every((key) => allowed.includes(key));
 const meters = {
   responses_tokens: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_computer: ["input_tokens", "cached_input_tokens", "output_tokens"],
+  responses_search: ["input_tokens", "cached_input_tokens", "output_tokens", "web_search_calls"],
+  responses_analysis: [
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "container_1g_sessions",
+  ],
   embedding_tokens: ["input_tokens"],
+  decisions_tokens: ["decision_input_tokens"],
+  moderation_requests: ["moderation_requests"],
+  realtime_tokens: REALTIME_DIMENSIONS,
+  translation_duration: ["translation_seconds"],
+  speech_character_credits: ["speech_character_credits"],
+  transcription_duration: ["transcription_seconds"],
+  browser_sessions: ["browser_sessions_60s"],
   image_tokens: ["input_tokens", "image_input_tokens", "output_tokens"],
 };
 export function canonicalPricingJson(value) {
@@ -119,7 +143,7 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "expires_at",
         "evidence",
       ]) ||
-      !["azure_openai", "openai"].includes(row.provider) ||
+      !["azure_openai", "openai", "browserbase", "elevenlabs"].includes(row.provider) ||
       !text(row.upstream_model) ||
       !text(row.billing_dimension, 80) ||
       !text(row.unit, 80) ||
@@ -176,8 +200,16 @@ export function validatePricingProposal(raw, now = Date.now()) {
         "maximumImages",
         "allowedSizes",
         "allowedQualities",
+        "allowedReasoningEfforts",
+        "maximumInlineImageTokens",
+        "maximumImageEditInputTokens",
+        "maximumWebSearchInputTokens",
+        "maximumAnalysisInputTokens",
+        "maximumComputerInputTokens",
+        "searchContentAccounting",
+        "translationAccounting",
       ]) ||
-      !["azure_openai", "openai"].includes(c.provider) ||
+      !["azure_openai", "openai", "browserbase", "elevenlabs"].includes(c.provider) ||
       !text(c.upstreamModel) ||
       !text(c.publicModel) ||
       !text(c.capability, 80) ||
@@ -200,8 +232,79 @@ export function validatePricingProposal(raw, now = Date.now()) {
         c.allowedQualities.some((x) => !["auto", "low", "medium", "high"].includes(x)))
     )
       fail("image_bounds_invalid");
-    const body = { model: c.upstreamModel, input: "" };
-    if (c.meter === "responses_tokens") body.max_output_tokens = 1;
+    const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
+    if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "translation_duration") {
+      if (
+        c.upstreamModel !== TRANSLATION_MODEL ||
+        c.translationAccounting !== TRANSLATION_ACCOUNTING
+      )
+        fail("contract_invalid");
+      delete body.input;
+      Object.assign(body, { audio: Buffer.alloc(9600).toString("base64"), target_language: "en" });
+    }
+    if (c.meter === "realtime_tokens") {
+      if (c.upstreamModel !== REALTIME_MODEL) fail("contract_invalid");
+      Object.assign(body, { input: "test", output_modality: "text", max_output_tokens: 1 });
+    }
+    if (c.meter === "speech_character_credits") {
+      if (c.upstreamModel !== SPEECH_MODEL) fail("contract_invalid");
+      Object.assign(body, {
+        input: "a",
+        voice: "default",
+        response_format: "mp3",
+        provider_voice: "review-preview",
+      });
+    }
+    if (c.meter === "transcription_duration") {
+      if (c.upstreamModel !== TRANSCRIPTION_MODEL) fail("contract_invalid");
+      const wave = Buffer.alloc(3244);
+      wave.write("RIFF");
+      wave.writeUInt32LE(wave.length - 8, 4);
+      wave.write("WAVEfmt ", 8);
+      wave.writeUInt32LE(16, 16);
+      wave.writeUInt16LE(1, 20);
+      wave.writeUInt16LE(1, 22);
+      wave.writeUInt32LE(16000, 24);
+      wave.writeUInt32LE(32000, 28);
+      wave.writeUInt16LE(2, 32);
+      wave.writeUInt16LE(16, 34);
+      wave.write("data", 36);
+      wave.writeUInt32LE(3200, 40);
+      delete body.input;
+      body.audio = "data:audio/wav;base64," + wave.toString("base64");
+      body.response_format = "json";
+    }
+    if (c.meter === "browser_sessions") {
+      if (c.upstreamModel !== BROWSER_MODEL) fail("contract_invalid");
+      delete body.input;
+      Object.assign(body, developerBrowserFields({ url: "https://www.example.com/" }));
+    }
+    if (c.meter === "responses_computer")
+      Object.assign(
+        body,
+        developerComputerFields({
+          input: "test",
+          screenshot:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=",
+          max_output_tokens: 1,
+        }),
+      );
+    if (c.meter === "responses_analysis")
+      Object.assign(body, developerAnalysisFields({ input: "test", max_output_tokens: 1 }));
+    if (c.meter === "responses_search")
+      Object.assign(body, {
+        tools: [{ type: "web_search", search_context_size: "low" }],
+        tool_choice: "required",
+        max_tool_calls: c.maximumUsage?.web_search_calls,
+        stream: false,
+      });
+    if (c.meter === "decisions_tokens")
+      Object.assign(body, {
+        input: "test",
+        questions: [{ type: "predicate", name: "test", instructions: "Is the input text?" }],
+        prompt_cache_options: { mode: "explicit" },
+      });
     if (c.meter === "image_tokens")
       Object.assign(body, { n: 1, size: c.allowedSizes[0], quality: c.allowedQualities[0] });
     try {

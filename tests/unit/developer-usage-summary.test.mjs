@@ -1,0 +1,137 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { summarizeDeveloperUsage } from "../../src/lib/pricing/developer-usage-summary.mjs";
+
+const row = {
+  public_model: "kova-argon-4.6",
+  capability: "chat",
+  settlement_state: "settled",
+  created_at: "2026-11-01T00:00:00.000Z",
+  currency: "USD",
+};
+
+test("usage aggregation preserves decimal charges and separates currencies and missing meters", () => {
+  const summary = summarizeDeveloperUsage([
+    {
+      ...row,
+      final_customer_charge: "0.1",
+      authoritative_usage: { input_tokens: 4, cached_input_tokens: 2, output_tokens: 1 },
+    },
+    { ...row, final_customer_charge: "0.2" },
+    { ...row, final_customer_charge: 1e-8 },
+    { ...row, currency: "EUR", final_customer_charge: "2.00000000" },
+    {
+      ...row,
+      settlement_state: "reserved",
+      final_customer_charge: null,
+      maximum_reserved_charge: 99,
+    },
+  ]);
+  assert.equal(summary.requests, 5);
+  assert.equal(summary.measuredRequests, 1);
+  assert.deepEqual(summary.charges, [
+    { currency: "EUR", amount: "2.00000000" },
+    { currency: "USD", amount: "0.30000001" },
+  ]);
+  assert.deepEqual(summary.tokens, {
+    input_tokens: 4,
+    cached_input_tokens: 2,
+    image_input_tokens: 0,
+    output_tokens: 1,
+  });
+  assert.equal(summary.models[0].requests, 5);
+  assert.equal(summary.days[0].label, "2026-11-01");
+  assert.equal(summary.statuses.find((item) => item.label === "reserved").charges.length, 0);
+});
+test("empty summaries never imply metered usage or a charge", () => {
+  const summary = summarizeDeveloperUsage([]);
+  assert.equal(summary.requests, 0);
+  assert.equal(summary.measuredRequests, 0);
+  assert.deepEqual(summary.charges, []);
+  assert.deepEqual(summary.models, []);
+});
+
+test("search calls are reported separately from token quantities and absent measurements", () => {
+  const summary = summarizeDeveloperUsage([
+    { ...row, authoritative_usage: { input_tokens: 4, web_search_calls: 2 } },
+    { ...row, authoritative_usage: { web_search_calls: 0 } },
+    { ...row, authoritative_usage: { web_search_calls: -1 } },
+    { ...row },
+  ]);
+  assert.equal(summary.measuredRequests, 1);
+  assert.equal(summary.measuredSearchRequests, 2);
+  assert.equal(summary.webSearchCalls, 2);
+  assert.equal(summary.tokens.input_tokens, 4);
+  assert.equal(summary.models[0].webSearchCalls, 2);
+  assert.equal(summary.days[0].measuredSearchRequests, 2);
+});
+
+test("moderation requests remain a separate usage dimension, not a token count", () => {
+  const summary = summarizeDeveloperUsage([
+    { ...row, capability: "moderation", authoritative_usage: { moderation_requests: 1 } },
+    { ...row, capability: "moderation", authoritative_usage: { moderation_requests: 0 } },
+    { ...row, capability: "moderation" },
+  ]);
+  assert.equal(summary.measuredRequests, 0);
+  assert.equal(summary.measuredModerationRequests, 2);
+  assert.equal(summary.moderationRequests, 1);
+  assert.equal(summary.services[0].moderationRequests, 1);
+});
+
+test("audio duration is aggregated separately from tokens and missing receipts", () => {
+  const summary = summarizeDeveloperUsage([
+    {
+      ...row,
+      capability: "audio_transcription",
+      authoritative_usage: { transcription_seconds: 1.25 },
+    },
+    {
+      ...row,
+      capability: "audio_transcription",
+      authoritative_usage: { transcription_seconds: 2.5 },
+    },
+    {
+      ...row,
+      capability: "audio_transcription",
+      authoritative_usage: { transcription_seconds: -1 },
+    },
+    { ...row, capability: "audio_transcription" },
+  ]);
+  assert.equal(summary.measuredRequests, 0);
+  assert.equal(summary.measuredTranscriptionRequests, 2);
+  assert.equal(summary.transcriptionSeconds, 3.75);
+  assert.equal(summary.services[0].transcriptionSeconds, 3.75);
+});
+
+test("every authoritative dimension is counted independently, including zero and missing", () => {
+  const summary = summarizeDeveloperUsage([
+    {
+      ...row,
+      authoritative_usage: {
+        realtime_audio_input_tokens: 12,
+        realtime_cached_audio_tokens: 3,
+        speech_character_credits: 5,
+        translation_seconds: 1.25,
+        container_1g_sessions: 1,
+        browser_sessions_60s: 1,
+      },
+    },
+    {
+      ...row,
+      authoritative_usage: {
+        realtime_audio_input_tokens: 0,
+        translation_seconds: 2.5,
+        container_1g_sessions: -1,
+        browser_sessions_60s: 0,
+      },
+    },
+    { ...row, authoritative_usage: { realtime_audio_input_tokens: 1.5, translation_seconds: 11 } },
+  ]);
+  assert.deepEqual(summary.dimensions.realtime_audio_input_tokens, { measured: 2, total: 12 });
+  assert.deepEqual(summary.dimensions.translation_seconds, { measured: 2, total: 3.75 });
+  assert.deepEqual(summary.dimensions.speech_character_credits, { measured: 1, total: 5 });
+  assert.deepEqual(summary.dimensions.container_1g_sessions, { measured: 1, total: 1 });
+  assert.deepEqual(summary.dimensions.browser_sessions_60s, { measured: 2, total: 1 });
+  assert.deepEqual(summary.dimensions.output_tokens, { measured: 0, total: 0 });
+  assert.deepEqual(summary.days[0].dimensions, summary.dimensions);
+});

@@ -4,6 +4,7 @@ export const Route = createFileRoute("/api/developer/files")({
   server: {
     handlers: {
       GET: ({ request }) => handleDeveloperFiles(request, true),
+      POST: ({ request }) => handleDeveloperFiles(request, true),
       DELETE: ({ request }) => handleDeveloperFiles(request, true),
     },
   },

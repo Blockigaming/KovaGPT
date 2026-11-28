@@ -43,6 +43,7 @@ function fixture(
       };
     },
     projectTeamStripeEvent: async () => false,
+    persistDeveloperProInvoice: async () => undefined,
     durableStripeBillingEnabled: () => enabled,
     monthlyIntroBillingEnabled: () => monthlyIntro,
     createStripeClient: () => {

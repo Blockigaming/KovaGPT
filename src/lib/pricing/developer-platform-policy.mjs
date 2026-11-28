@@ -2,6 +2,18 @@ import {
   developerResponseInput,
   developerResponseFeatures,
 } from "./developer-responses-policy.mjs";
+import { developerImageEditValue } from "./developer-image-edit-policy.mjs";
+import { developerDecisionFields } from "./developer-decisions-policy.mjs";
+import { developerAnalysisFields } from "./developer-analysis-policy.mjs";
+import { developerComputerFields } from "./developer-computer-policy.mjs";
+import { developerBrowserFields } from "./developer-browser-policy.mjs";
+import {
+  developerTranscriptionFields,
+  TRANSCRIPTION_BODY_LIMIT,
+} from "./developer-transcription-policy.mjs";
+import { developerTranslationFields } from "./developer-translation-policy.mjs";
+import { developerRealtimeFields } from "./developer-realtime-policy.mjs";
+import { developerSpeechFields } from "./developer-speech-policy.mjs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fail = (code) => {
   throw new Error(code);
@@ -11,6 +23,16 @@ export const DEVELOPER_SCOPES = Object.freeze([
   "streaming",
   "image_generation",
   "embeddings",
+  "moderation",
+  "decisions",
+  "file_analysis",
+  "computer_use",
+  "cloud_browser",
+  "audio_transcription",
+  "audio_speech",
+  "realtime",
+  "audio_translation",
+  "mcp_read",
   "files",
 ]);
 export function developerUuid(value) {
@@ -45,6 +67,61 @@ export function parseDeveloperLimits(value) {
 }
 export function parseDeveloperInput(kind, input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) fail("developer_input_invalid");
+  if (kind === "audio/transcriptions") {
+    if (
+      typeof input.model !== "string" ||
+      input.model.length < 2 ||
+      input.model.length > 80 ||
+      !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+    )
+      fail("developer_model_invalid");
+    const body = { model: input.model, ...developerTranscriptionFields(input) };
+    if (new TextEncoder().encode(JSON.stringify(body)).length > TRANSCRIPTION_BODY_LIMIT)
+      fail("developer_input_too_large");
+    return { body, capability: "audio_transcription", publicModel: input.model };
+  }
+  if (kind === "audio/translations") {
+    if (
+      typeof input.model !== "string" ||
+      input.model.length < 2 ||
+      input.model.length > 80 ||
+      !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+    )
+      fail("developer_model_invalid");
+    return {
+      body: { model: input.model, ...developerTranslationFields(input) },
+      capability: "audio_translation",
+      publicModel: input.model,
+    };
+  }
+  if (kind === "realtime") {
+    if (
+      typeof input.model !== "string" ||
+      input.model.length < 2 ||
+      input.model.length > 80 ||
+      !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+    )
+      fail("developer_model_invalid");
+    return {
+      body: { model: input.model, ...developerRealtimeFields(input) },
+      capability: "realtime",
+      publicModel: input.model,
+    };
+  }
+  if (kind === "audio/speech") {
+    if (
+      typeof input.model !== "string" ||
+      input.model.length < 2 ||
+      input.model.length > 80 ||
+      !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+    )
+      fail("developer_model_invalid");
+    return {
+      body: { model: input.model, ...developerSpeechFields(input) },
+      capability: "audio_speech",
+      publicModel: input.model,
+    };
+  }
   const common = ["model"];
   const fields =
     kind === "responses"
@@ -56,16 +133,33 @@ export function parseDeveloperInput(kind, input) {
           "tools",
           "tool_choice",
           "parallel_tool_calls",
+          "max_tool_calls",
+          "reasoning",
           "text",
         ]
       : kind === "images"
-        ? ["prompt", "n", "size", "quality"]
+        ? ["prompt", "n", "size", "quality", "image"]
         : kind === "embeddings"
           ? ["input", "dimensions"]
-          : fail("developer_operation_invalid");
+          : kind === "moderations"
+            ? ["input"]
+            : kind === "decisions"
+              ? ["input", "questions"]
+              : kind === "analysis"
+                ? ["input", "max_output_tokens"]
+                : kind === "computer-use"
+                  ? ["input", "screenshot", "max_output_tokens"]
+                  : kind === "browser"
+                    ? ["url", "navigate", "interactive"]
+                    : fail("developer_operation_invalid");
   if (Object.keys(input).some((key) => ![...common, ...fields].includes(key)))
     fail("developer_field_invalid");
-  if (typeof input.model !== "string" || !/^[a-z][a-z0-9-]{1,79}$/.test(input.model))
+  if (
+    typeof input.model !== "string" ||
+    input.model.length < 2 ||
+    input.model.length > 80 ||
+    !/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*$/.test(input.model)
+  )
     fail("developer_model_invalid");
   const text = (value, max = 32000) => {
     if (
@@ -102,7 +196,23 @@ export function parseDeveloperInput(kind, input) {
     if (!["low", "medium", "high"].includes(input.quality)) fail("developer_quality_invalid");
     body.size = input.size;
     body.quality = input.quality;
+    if (input.image !== undefined) body.image = developerImageEditValue(input.image);
     capability = "image_generation";
+  } else if (kind === "browser") {
+    Object.assign(body, developerBrowserFields(input));
+    capability = "cloud_browser";
+  } else if (kind === "computer-use") {
+    Object.assign(body, developerComputerFields(input));
+    capability = "computer_use";
+  } else if (kind === "analysis") {
+    Object.assign(body, developerAnalysisFields(input));
+    capability = "file_analysis";
+  } else if (kind === "decisions") {
+    Object.assign(body, developerDecisionFields(input));
+    capability = "decisions";
+  } else if (kind === "moderations") {
+    body.input = text(input.input, 8000);
+    capability = "moderation";
   } else {
     body.input = Array.isArray(input.input)
       ? input.input.map((value) => text(value, 8000))

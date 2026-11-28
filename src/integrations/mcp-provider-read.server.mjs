@@ -59,10 +59,13 @@ async function readRpcSse(response, expectedId, signal) {
   }
 }
 
-function createMcpClient({ url, token, fetchImpl, beforeRequest }) {
+function createMcpClient({ url, token, fetchImpl, beforeRequest, parentSignal }) {
   if (typeof token !== "string" || !/^[A-Za-z0-9._~+\/=-]{8,8192}$/u.test(token))
     throw new Error("invalid_connection_credential");
-  const signal = AbortSignal.timeout(14_000);
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(14_000),
+    ...(parentSignal ? [parentSignal] : []),
+  ]);
   let version;
   let session;
   async function send(method, params, notification = false) {
@@ -193,8 +196,14 @@ const TANA_CONFIG = {
   isTana: true,
 };
 
-async function readMcpTool(config, token, query, fetchImpl, beforeRequest) {
-  const client = createMcpClient({ url: config.url, token, fetchImpl, beforeRequest });
+async function readMcpTool(config, token, query, fetchImpl, beforeRequest, parentSignal) {
+  const client = createMcpClient({
+    url: config.url,
+    token,
+    fetchImpl,
+    beforeRequest,
+    parentSignal,
+  });
   try {
     await client.start();
     await findReadTool(client, config);
@@ -357,6 +366,7 @@ export function readMcpConnection(
   fetchImpl,
   beforeRequest,
   customTransport = fetchApprovedMcp,
+  parentSignal,
 ) {
   if (
     typeof query !== "string" ||
@@ -371,5 +381,5 @@ export function readMcpConnection(
   const config = approvedMcpServers().get(serverId);
   if (!config || config.fingerprint !== bindingHash)
     throw new Error("connection_changed_or_expired");
-  return readMcpTool(config, apiKey, query.trim(), customTransport, beforeRequest);
+  return readMcpTool(config, apiKey, query.trim(), customTransport, beforeRequest, parentSignal);
 }

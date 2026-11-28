@@ -101,3 +101,36 @@ test("spending ceilings require ordered positive limits and bounded integral con
   ])
     assert.throws(() => parseDeveloperLimits({ ...limits, ...patch }), /limits_invalid/);
 });
+
+test("versioned Kova model identifiers are accepted but URLs and malformed versions are rejected", () => {
+  for (const model of ["kova-argon-4.6", "kova-neon-4.5", "kova-xenon-6.1", "kova-xenon-5"]) {
+    const result = parseDeveloperInput("responses", {
+      model,
+      input: "test",
+      max_output_tokens: 10,
+    });
+    assert.equal(result.publicModel, model);
+  }
+  for (const model of ["https://example.com", "../kova", "kova..4", "kova.", "a".repeat(81)]) {
+    assert.throws(
+      () => parseDeveloperInput("responses", { model, input: "test", max_output_tokens: 10 }),
+      /developer_model_invalid/,
+    );
+  }
+});
+
+test("bounded image edits reject remote or malformed input and preserve exact inline source bytes", () => {
+  const image =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9h8AAAAASUVORK5CYII=";
+  const input = {
+    model: "kova-image",
+    prompt: "Change background",
+    size: "1024x1024",
+    quality: "medium",
+    image,
+  };
+  assert.equal(parseDeveloperInput("images", input).body.image, image);
+  for (const bad of ["https://example.invalid/image.png", "data:image/png;base64,AAAA", null])
+    assert.throws(() => parseDeveloperInput("images", { ...input, image: bad }), /image_invalid/);
+  assert.throws(() => parseDeveloperInput("images", { ...input, mask: image }), /field_invalid/);
+});

@@ -152,6 +152,7 @@ import { Route as ApiDeveloperConsoleRouteImport } from './routes/api/developer/
 import { Route as ApiDeveloperFilesRouteImport } from './routes/api/developer/files'
 import { Route as ApiDeveloperFundingRouteImport } from './routes/api/developer/funding'
 import { Route as ApiDeveloperMcpRouteImport } from './routes/api/developer/mcp'
+import { Route as ApiDeveloperOpenapiRouteImport } from './routes/api/developer/openapi'
 import { Route as ApiFinancesExchangeRouteImport } from './routes/api/finances/exchange'
 import { Route as ApiFinancesLinkTokenRouteImport } from './routes/api/finances/link-token'
 import { Route as ApiFinancesManageRouteImport } from './routes/api/finances/manage'
@@ -197,12 +198,36 @@ import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/hel
 import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
+import { Route as ApiV1AgentTurnsRouteImport } from './routes/api/v1/agent-turns'
+import { Route as ApiV1AgentsRouteImport } from './routes/api/v1/agents'
+import { Route as ApiV1BrowserRouteImport } from './routes/api/v1/browser'
+import { Route as ApiV1ComputerUseRouteImport } from './routes/api/v1/computer-use'
+import { Route as ApiV1AnalysisRouteImport } from './routes/api/v1/analysis'
+import { Route as ApiV1AutomationsRouteImport } from './routes/api/v1/automations'
+import { Route as ApiV1BatchesRouteImport } from './routes/api/v1/batches'
+import { Route as ApiV1ResponseJobsRouteImport } from './routes/api/v1/response-jobs'
+import { Route as ApiV1RealtimeSessionsRouteImport } from './routes/api/v1/realtime-sessions'
+import { Route as ApiV1BrowserSessionsRouteImport } from './routes/api/v1/browser-sessions'
+import { Route as ApiV1RealtimeRouteImport } from './routes/api/v1/realtime'
+import { Route as ApiV1ResearchRunsRouteImport } from './routes/api/v1/research-runs'
+import { Route as ApiV1McpConnectionsRouteImport } from './routes/api/v1/mcp-connections'
+import { Route as ApiV1ConversationsRouteImport } from './routes/api/v1/conversations'
+import { Route as ApiV1DecisionsRouteImport } from './routes/api/v1/decisions'
 import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
+import { Route as ApiV1FileSearchRouteImport } from './routes/api/v1/file-search'
 import { Route as ApiV1FilesRouteImport } from './routes/api/v1/files'
 import { Route as ApiV1ImagesRouteImport } from './routes/api/v1/images'
 import { Route as ApiV1ModelsRouteImport } from './routes/api/v1/models'
+import { Route as ApiV1ModerationsRouteImport } from './routes/api/v1/moderations'
+import { Route as ApiV1PromptsRouteImport } from './routes/api/v1/prompts'
 import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
 import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
+import { Route as ApiV1SearchRouteImport } from './routes/api/v1/search'
+import { Route as ApiV1SkillsRouteImport } from './routes/api/v1/skills'
+import { Route as ApiV1UploadsRouteImport } from './routes/api/v1/uploads'
+import { Route as ApiV1UsageRouteImport } from './routes/api/v1/usage'
+import { Route as ApiV1VectorStoresRouteImport } from './routes/api/v1/vector-stores'
+import { Route as ApiV1WebhooksRouteImport } from './routes/api/v1/webhooks'
 import { Route as ApiWorkBrowserRouteImport } from './routes/api/work/browser'
 import { Route as ApiWorkExecutionRouteImport } from './routes/api/work/execution'
 import { Route as ApiWorkOutputRouteImport } from './routes/api/work/output'
@@ -230,6 +255,10 @@ import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
+import { Route as ApiV1AudioSpeechRouteImport } from './routes/api/v1/audio/speech'
+import { Route as ApiV1AudioTranscriptionsRouteImport } from './routes/api/v1/audio/transcriptions'
+import { Route as ApiV1AudioTranslationsRouteImport } from './routes/api/v1/audio/translations'
+import { Route as ApiV1ChatCompletionsRouteImport } from './routes/api/v1/chat/completions'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as ApiAuthMfaRecoveryRegenerateRouteImport } from './routes/api/auth/mfa/recovery/regenerate'
 import { Route as ApiAuthPasskeysLoginOptionsRouteImport } from './routes/api/auth/passkeys/login/options'
@@ -963,6 +992,11 @@ const ApiDeveloperMcpRoute = ApiDeveloperMcpRouteImport.update({
   path: '/api/developer/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeveloperOpenapiRoute = ApiDeveloperOpenapiRouteImport.update({
+  id: '/api/developer/openapi',
+  path: '/api/developer/openapi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFinancesExchangeRoute = ApiFinancesExchangeRouteImport.update({
   id: '/api/finances/exchange',
   path: '/api/finances/exchange',
@@ -1201,9 +1235,89 @@ const ApiTasksEventSourcesRoute = ApiTasksEventSourcesRouteImport.update({
   path: '/api/tasks/event-sources',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1AgentTurnsRoute = ApiV1AgentTurnsRouteImport.update({
+  id: '/api/v1/agent-turns',
+  path: '/api/v1/agent-turns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AgentsRoute = ApiV1AgentsRouteImport.update({
+  id: '/api/v1/agents',
+  path: '/api/v1/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1BrowserRoute = ApiV1BrowserRouteImport.update({
+  id: '/api/v1/browser',
+  path: '/api/v1/browser',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ComputerUseRoute = ApiV1ComputerUseRouteImport.update({
+  id: '/api/v1/computer-use',
+  path: '/api/v1/computer-use',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AnalysisRoute = ApiV1AnalysisRouteImport.update({
+  id: '/api/v1/analysis',
+  path: '/api/v1/analysis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AutomationsRoute = ApiV1AutomationsRouteImport.update({
+  id: '/api/v1/automations',
+  path: '/api/v1/automations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1BatchesRoute = ApiV1BatchesRouteImport.update({
+  id: '/api/v1/batches',
+  path: '/api/v1/batches',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ResponseJobsRoute = ApiV1ResponseJobsRouteImport.update({
+  id: '/api/v1/response-jobs',
+  path: '/api/v1/response-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RealtimeSessionsRoute = ApiV1RealtimeSessionsRouteImport.update({
+  id: '/api/v1/realtime-sessions',
+  path: '/api/v1/realtime-sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1BrowserSessionsRoute = ApiV1BrowserSessionsRouteImport.update({
+  id: '/api/v1/browser-sessions',
+  path: '/api/v1/browser-sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RealtimeRoute = ApiV1RealtimeRouteImport.update({
+  id: '/api/v1/realtime',
+  path: '/api/v1/realtime',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ResearchRunsRoute = ApiV1ResearchRunsRouteImport.update({
+  id: '/api/v1/research-runs',
+  path: '/api/v1/research-runs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1McpConnectionsRoute = ApiV1McpConnectionsRouteImport.update({
+  id: '/api/v1/mcp-connections',
+  path: '/api/v1/mcp-connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ConversationsRoute = ApiV1ConversationsRouteImport.update({
+  id: '/api/v1/conversations',
+  path: '/api/v1/conversations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1DecisionsRoute = ApiV1DecisionsRouteImport.update({
+  id: '/api/v1/decisions',
+  path: '/api/v1/decisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1EmbeddingsRoute = ApiV1EmbeddingsRouteImport.update({
   id: '/api/v1/embeddings',
   path: '/api/v1/embeddings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1FileSearchRoute = ApiV1FileSearchRouteImport.update({
+  id: '/api/v1/file-search',
+  path: '/api/v1/file-search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiV1FilesRoute = ApiV1FilesRouteImport.update({
@@ -1221,6 +1335,16 @@ const ApiV1ModelsRoute = ApiV1ModelsRouteImport.update({
   path: '/api/v1/models',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1ModerationsRoute = ApiV1ModerationsRouteImport.update({
+  id: '/api/v1/moderations',
+  path: '/api/v1/moderations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1PromptsRoute = ApiV1PromptsRouteImport.update({
+  id: '/api/v1/prompts',
+  path: '/api/v1/prompts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1QuotesRoute = ApiV1QuotesRouteImport.update({
   id: '/api/v1/quotes',
   path: '/api/v1/quotes',
@@ -1229,6 +1353,36 @@ const ApiV1QuotesRoute = ApiV1QuotesRouteImport.update({
 const ApiV1ResponsesRoute = ApiV1ResponsesRouteImport.update({
   id: '/api/v1/responses',
   path: '/api/v1/responses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1SearchRoute = ApiV1SearchRouteImport.update({
+  id: '/api/v1/search',
+  path: '/api/v1/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1SkillsRoute = ApiV1SkillsRouteImport.update({
+  id: '/api/v1/skills',
+  path: '/api/v1/skills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1UploadsRoute = ApiV1UploadsRouteImport.update({
+  id: '/api/v1/uploads',
+  path: '/api/v1/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1UsageRoute = ApiV1UsageRouteImport.update({
+  id: '/api/v1/usage',
+  path: '/api/v1/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1VectorStoresRoute = ApiV1VectorStoresRouteImport.update({
+  id: '/api/v1/vector-stores',
+  path: '/api/v1/vector-stores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1WebhooksRoute = ApiV1WebhooksRouteImport.update({
+  id: '/api/v1/webhooks',
+  path: '/api/v1/webhooks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWorkBrowserRoute = ApiWorkBrowserRouteImport.update({
@@ -1371,6 +1525,26 @@ const ApiPublicPaymentsWebhookRoute =
 const ApiTasksEventsProviderRoute = ApiTasksEventsProviderRouteImport.update({
   id: '/api/tasks/events/$provider',
   path: '/api/tasks/events/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AudioSpeechRoute = ApiV1AudioSpeechRouteImport.update({
+  id: '/api/v1/audio/speech',
+  path: '/api/v1/audio/speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AudioTranscriptionsRoute = ApiV1AudioTranscriptionsRouteImport.update({
+  id: '/api/v1/audio/transcriptions',
+  path: '/api/v1/audio/transcriptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AudioTranslationsRoute = ApiV1AudioTranslationsRouteImport.update({
+  id: '/api/v1/audio/translations',
+  path: '/api/v1/audio/translations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ChatCompletionsRoute = ApiV1ChatCompletionsRouteImport.update({
+  id: '/api/v1/chat/completions',
+  path: '/api/v1/chat/completions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsProjectIdChatChatIdRoute =
@@ -1566,6 +1740,7 @@ export interface FileRoutesByFullPath {
   '/api/developer/files': typeof ApiDeveloperFilesRoute
   '/api/developer/funding': typeof ApiDeveloperFundingRoute
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
+  '/api/developer/openapi': typeof ApiDeveloperOpenapiRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -1611,12 +1786,36 @@ export interface FileRoutesByFullPath {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
+  '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/browser': typeof ApiV1BrowserRoute
+  '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
+  '/api/v1/analysis': typeof ApiV1AnalysisRoute
+  '/api/v1/automations': typeof ApiV1AutomationsRoute
+  '/api/v1/batches': typeof ApiV1BatchesRoute
+  '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
+  '/api/v1/realtime-sessions': typeof ApiV1RealtimeSessionsRoute
+  '/api/v1/browser-sessions': typeof ApiV1BrowserSessionsRoute
+  '/api/v1/realtime': typeof ApiV1RealtimeRoute
+  '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
+  '/api/v1/mcp-connections': typeof ApiV1McpConnectionsRoute
+  '/api/v1/conversations': typeof ApiV1ConversationsRoute
+  '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/moderations': typeof ApiV1ModerationsRoute
+  '/api/v1/prompts': typeof ApiV1PromptsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/search': typeof ApiV1SearchRoute
+  '/api/v1/skills': typeof ApiV1SkillsRoute
+  '/api/v1/uploads': typeof ApiV1UploadsRoute
+  '/api/v1/usage': typeof ApiV1UsageRoute
+  '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
+  '/api/v1/webhooks': typeof ApiV1WebhooksRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -1643,6 +1842,10 @@ export interface FileRoutesByFullPath {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/audio/speech': typeof ApiV1AudioSpeechRoute
+  '/api/v1/audio/transcriptions': typeof ApiV1AudioTranscriptionsRoute
+  '/api/v1/audio/translations': typeof ApiV1AudioTranslationsRoute
+  '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
@@ -1797,6 +2000,7 @@ export interface FileRoutesByTo {
   '/api/developer/files': typeof ApiDeveloperFilesRoute
   '/api/developer/funding': typeof ApiDeveloperFundingRoute
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
+  '/api/developer/openapi': typeof ApiDeveloperOpenapiRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -1842,12 +2046,36 @@ export interface FileRoutesByTo {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
+  '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/browser': typeof ApiV1BrowserRoute
+  '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
+  '/api/v1/analysis': typeof ApiV1AnalysisRoute
+  '/api/v1/automations': typeof ApiV1AutomationsRoute
+  '/api/v1/batches': typeof ApiV1BatchesRoute
+  '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
+  '/api/v1/realtime-sessions': typeof ApiV1RealtimeSessionsRoute
+  '/api/v1/browser-sessions': typeof ApiV1BrowserSessionsRoute
+  '/api/v1/realtime': typeof ApiV1RealtimeRoute
+  '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
+  '/api/v1/mcp-connections': typeof ApiV1McpConnectionsRoute
+  '/api/v1/conversations': typeof ApiV1ConversationsRoute
+  '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/moderations': typeof ApiV1ModerationsRoute
+  '/api/v1/prompts': typeof ApiV1PromptsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/search': typeof ApiV1SearchRoute
+  '/api/v1/skills': typeof ApiV1SkillsRoute
+  '/api/v1/uploads': typeof ApiV1UploadsRoute
+  '/api/v1/usage': typeof ApiV1UsageRoute
+  '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
+  '/api/v1/webhooks': typeof ApiV1WebhooksRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -1874,6 +2102,10 @@ export interface FileRoutesByTo {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/audio/speech': typeof ApiV1AudioSpeechRoute
+  '/api/v1/audio/transcriptions': typeof ApiV1AudioTranscriptionsRoute
+  '/api/v1/audio/translations': typeof ApiV1AudioTranslationsRoute
+  '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/auth/passkeys': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
@@ -2029,6 +2261,7 @@ export interface FileRoutesById {
   '/api/developer/files': typeof ApiDeveloperFilesRoute
   '/api/developer/funding': typeof ApiDeveloperFundingRoute
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
+  '/api/developer/openapi': typeof ApiDeveloperOpenapiRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -2074,12 +2307,36 @@ export interface FileRoutesById {
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/agent-turns': typeof ApiV1AgentTurnsRoute
+  '/api/v1/agents': typeof ApiV1AgentsRoute
+  '/api/v1/browser': typeof ApiV1BrowserRoute
+  '/api/v1/computer-use': typeof ApiV1ComputerUseRoute
+  '/api/v1/analysis': typeof ApiV1AnalysisRoute
+  '/api/v1/automations': typeof ApiV1AutomationsRoute
+  '/api/v1/batches': typeof ApiV1BatchesRoute
+  '/api/v1/response-jobs': typeof ApiV1ResponseJobsRoute
+  '/api/v1/realtime-sessions': typeof ApiV1RealtimeSessionsRoute
+  '/api/v1/browser-sessions': typeof ApiV1BrowserSessionsRoute
+  '/api/v1/realtime': typeof ApiV1RealtimeRoute
+  '/api/v1/research-runs': typeof ApiV1ResearchRunsRoute
+  '/api/v1/mcp-connections': typeof ApiV1McpConnectionsRoute
+  '/api/v1/conversations': typeof ApiV1ConversationsRoute
+  '/api/v1/decisions': typeof ApiV1DecisionsRoute
   '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/file-search': typeof ApiV1FileSearchRoute
   '/api/v1/files': typeof ApiV1FilesRoute
   '/api/v1/images': typeof ApiV1ImagesRoute
   '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/moderations': typeof ApiV1ModerationsRoute
+  '/api/v1/prompts': typeof ApiV1PromptsRoute
   '/api/v1/quotes': typeof ApiV1QuotesRoute
   '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/v1/search': typeof ApiV1SearchRoute
+  '/api/v1/skills': typeof ApiV1SkillsRoute
+  '/api/v1/uploads': typeof ApiV1UploadsRoute
+  '/api/v1/usage': typeof ApiV1UsageRoute
+  '/api/v1/vector-stores': typeof ApiV1VectorStoresRoute
+  '/api/v1/webhooks': typeof ApiV1WebhooksRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
@@ -2106,6 +2363,10 @@ export interface FileRoutesById {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/api/v1/audio/speech': typeof ApiV1AudioSpeechRoute
+  '/api/v1/audio/transcriptions': typeof ApiV1AudioTranscriptionsRoute
+  '/api/v1/audio/translations': typeof ApiV1AudioTranslationsRoute
+  '/api/v1/chat/completions': typeof ApiV1ChatCompletionsRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
@@ -2262,6 +2523,7 @@ export interface FileRouteTypes {
     | '/api/developer/files'
     | '/api/developer/funding'
     | '/api/developer/mcp'
+    | '/api/developer/openapi'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2307,12 +2569,36 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/agent-turns'
+    | '/api/v1/agents'
+    | '/api/v1/browser'
+    | '/api/v1/computer-use'
+    | '/api/v1/analysis'
+    | '/api/v1/automations'
+    | '/api/v1/batches'
+    | '/api/v1/response-jobs'
+    | '/api/v1/realtime-sessions'
+    | '/api/v1/browser-sessions'
+    | '/api/v1/realtime'
+    | '/api/v1/research-runs'
+    | '/api/v1/mcp-connections'
+    | '/api/v1/conversations'
+    | '/api/v1/decisions'
     | '/api/v1/embeddings'
+    | '/api/v1/file-search'
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
+    | '/api/v1/moderations'
+    | '/api/v1/prompts'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/search'
+    | '/api/v1/skills'
+    | '/api/v1/uploads'
+    | '/api/v1/usage'
+    | '/api/v1/vector-stores'
+    | '/api/v1/webhooks'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2339,6 +2625,10 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/audio/speech'
+    | '/api/v1/audio/transcriptions'
+    | '/api/v1/audio/translations'
+    | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
     | '/api/auth/passkeys/'
     | '/api/auth/mfa/recovery/regenerate'
@@ -2493,6 +2783,7 @@ export interface FileRouteTypes {
     | '/api/developer/files'
     | '/api/developer/funding'
     | '/api/developer/mcp'
+    | '/api/developer/openapi'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2538,12 +2829,36 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/agent-turns'
+    | '/api/v1/agents'
+    | '/api/v1/browser'
+    | '/api/v1/computer-use'
+    | '/api/v1/analysis'
+    | '/api/v1/automations'
+    | '/api/v1/batches'
+    | '/api/v1/response-jobs'
+    | '/api/v1/realtime-sessions'
+    | '/api/v1/browser-sessions'
+    | '/api/v1/realtime'
+    | '/api/v1/research-runs'
+    | '/api/v1/mcp-connections'
+    | '/api/v1/conversations'
+    | '/api/v1/decisions'
     | '/api/v1/embeddings'
+    | '/api/v1/file-search'
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
+    | '/api/v1/moderations'
+    | '/api/v1/prompts'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/search'
+    | '/api/v1/skills'
+    | '/api/v1/uploads'
+    | '/api/v1/usage'
+    | '/api/v1/vector-stores'
+    | '/api/v1/webhooks'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2570,6 +2885,10 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/audio/speech'
+    | '/api/v1/audio/transcriptions'
+    | '/api/v1/audio/translations'
+    | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
     | '/api/auth/passkeys'
     | '/api/auth/mfa/recovery/regenerate'
@@ -2724,6 +3043,7 @@ export interface FileRouteTypes {
     | '/api/developer/files'
     | '/api/developer/funding'
     | '/api/developer/mcp'
+    | '/api/developer/openapi'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2769,12 +3089,36 @@ export interface FileRouteTypes {
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
+    | '/api/v1/agent-turns'
+    | '/api/v1/agents'
+    | '/api/v1/browser'
+    | '/api/v1/computer-use'
+    | '/api/v1/analysis'
+    | '/api/v1/automations'
+    | '/api/v1/batches'
+    | '/api/v1/response-jobs'
+    | '/api/v1/realtime-sessions'
+    | '/api/v1/browser-sessions'
+    | '/api/v1/realtime'
+    | '/api/v1/research-runs'
+    | '/api/v1/mcp-connections'
+    | '/api/v1/conversations'
+    | '/api/v1/decisions'
     | '/api/v1/embeddings'
+    | '/api/v1/file-search'
     | '/api/v1/files'
     | '/api/v1/images'
     | '/api/v1/models'
+    | '/api/v1/moderations'
+    | '/api/v1/prompts'
     | '/api/v1/quotes'
     | '/api/v1/responses'
+    | '/api/v1/search'
+    | '/api/v1/skills'
+    | '/api/v1/uploads'
+    | '/api/v1/usage'
+    | '/api/v1/vector-stores'
+    | '/api/v1/webhooks'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
@@ -2801,6 +3145,10 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/api/v1/audio/speech'
+    | '/api/v1/audio/transcriptions'
+    | '/api/v1/audio/translations'
+    | '/api/v1/chat/completions'
     | '/projects/$projectId/chat/$chatId'
     | '/api/auth/passkeys/'
     | '/api/auth/mfa/recovery/regenerate'
@@ -2949,6 +3297,7 @@ export interface RootRouteChildren {
   ApiDeveloperFilesRoute: typeof ApiDeveloperFilesRoute
   ApiDeveloperFundingRoute: typeof ApiDeveloperFundingRoute
   ApiDeveloperMcpRoute: typeof ApiDeveloperMcpRoute
+  ApiDeveloperOpenapiRoute: typeof ApiDeveloperOpenapiRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
   ApiFinancesLinkTokenRoute: typeof ApiFinancesLinkTokenRoute
   ApiFinancesManageRoute: typeof ApiFinancesManageRoute
@@ -2991,12 +3340,36 @@ export interface RootRouteChildren {
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
+  ApiV1AgentTurnsRoute: typeof ApiV1AgentTurnsRoute
+  ApiV1AgentsRoute: typeof ApiV1AgentsRoute
+  ApiV1BrowserRoute: typeof ApiV1BrowserRoute
+  ApiV1ComputerUseRoute: typeof ApiV1ComputerUseRoute
+  ApiV1AnalysisRoute: typeof ApiV1AnalysisRoute
+  ApiV1AutomationsRoute: typeof ApiV1AutomationsRoute
+  ApiV1BatchesRoute: typeof ApiV1BatchesRoute
+  ApiV1ResponseJobsRoute: typeof ApiV1ResponseJobsRoute
+  ApiV1RealtimeSessionsRoute: typeof ApiV1RealtimeSessionsRoute
+  ApiV1BrowserSessionsRoute: typeof ApiV1BrowserSessionsRoute
+  ApiV1RealtimeRoute: typeof ApiV1RealtimeRoute
+  ApiV1ResearchRunsRoute: typeof ApiV1ResearchRunsRoute
+  ApiV1McpConnectionsRoute: typeof ApiV1McpConnectionsRoute
+  ApiV1ConversationsRoute: typeof ApiV1ConversationsRoute
+  ApiV1DecisionsRoute: typeof ApiV1DecisionsRoute
   ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
+  ApiV1FileSearchRoute: typeof ApiV1FileSearchRoute
   ApiV1FilesRoute: typeof ApiV1FilesRoute
   ApiV1ImagesRoute: typeof ApiV1ImagesRoute
   ApiV1ModelsRoute: typeof ApiV1ModelsRoute
+  ApiV1ModerationsRoute: typeof ApiV1ModerationsRoute
+  ApiV1PromptsRoute: typeof ApiV1PromptsRoute
   ApiV1QuotesRoute: typeof ApiV1QuotesRoute
   ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
+  ApiV1SearchRoute: typeof ApiV1SearchRoute
+  ApiV1SkillsRoute: typeof ApiV1SkillsRoute
+  ApiV1UploadsRoute: typeof ApiV1UploadsRoute
+  ApiV1UsageRoute: typeof ApiV1UsageRoute
+  ApiV1VectorStoresRoute: typeof ApiV1VectorStoresRoute
+  ApiV1WebhooksRoute: typeof ApiV1WebhooksRoute
   ApiWorkBrowserRoute: typeof ApiWorkBrowserRoute
   ApiWorkExecutionRoute: typeof ApiWorkExecutionRoute
   ApiWorkOutputRoute: typeof ApiWorkOutputRoute
@@ -3022,6 +3395,10 @@ export interface RootRouteChildren {
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
+  ApiV1AudioSpeechRoute: typeof ApiV1AudioSpeechRoute
+  ApiV1AudioTranscriptionsRoute: typeof ApiV1AudioTranscriptionsRoute
+  ApiV1AudioTranslationsRoute: typeof ApiV1AudioTranslationsRoute
+  ApiV1ChatCompletionsRoute: typeof ApiV1ChatCompletionsRoute
   ApiAuthPasskeysIndexRoute: typeof ApiAuthPasskeysIndexRoute
   ApiAuthMfaRecoveryRegenerateRoute: typeof ApiAuthMfaRecoveryRegenerateRoute
   ApiAuthPasskeysLoginOptionsRoute: typeof ApiAuthPasskeysLoginOptionsRoute
@@ -4035,6 +4412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeveloperMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/developer/openapi': {
+      id: '/api/developer/openapi'
+      path: '/api/developer/openapi'
+      fullPath: '/api/developer/openapi'
+      preLoaderRoute: typeof ApiDeveloperOpenapiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/finances/exchange': {
       id: '/api/finances/exchange'
       path: '/api/finances/exchange'
@@ -4350,11 +4734,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTasksEventSourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/agent-turns': {
+      id: '/api/v1/agent-turns'
+      path: '/api/v1/agent-turns'
+      fullPath: '/api/v1/agent-turns'
+      preLoaderRoute: typeof ApiV1AgentTurnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/agents': {
+      id: '/api/v1/agents'
+      path: '/api/v1/agents'
+      fullPath: '/api/v1/agents'
+      preLoaderRoute: typeof ApiV1AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/browser': {
+      id: '/api/v1/browser'
+      path: '/api/v1/browser'
+      fullPath: '/api/v1/browser'
+      preLoaderRoute: typeof ApiV1BrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/computer-use': {
+      id: '/api/v1/computer-use'
+      path: '/api/v1/computer-use'
+      fullPath: '/api/v1/computer-use'
+      preLoaderRoute: typeof ApiV1ComputerUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/analysis': {
+      id: '/api/v1/analysis'
+      path: '/api/v1/analysis'
+      fullPath: '/api/v1/analysis'
+      preLoaderRoute: typeof ApiV1AnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/automations': {
+      id: '/api/v1/automations'
+      path: '/api/v1/automations'
+      fullPath: '/api/v1/automations'
+      preLoaderRoute: typeof ApiV1AutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/batches': {
+      id: '/api/v1/batches'
+      path: '/api/v1/batches'
+      fullPath: '/api/v1/batches'
+      preLoaderRoute: typeof ApiV1BatchesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/response-jobs': {
+      id: '/api/v1/response-jobs'
+      path: '/api/v1/response-jobs'
+      fullPath: '/api/v1/response-jobs'
+      preLoaderRoute: typeof ApiV1ResponseJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/realtime-sessions': {
+      id: '/api/v1/realtime-sessions'
+      path: '/api/v1/realtime-sessions'
+      fullPath: '/api/v1/realtime-sessions'
+      preLoaderRoute: typeof ApiV1RealtimeSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/browser-sessions': {
+      id: '/api/v1/browser-sessions'
+      path: '/api/v1/browser-sessions'
+      fullPath: '/api/v1/browser-sessions'
+      preLoaderRoute: typeof ApiV1BrowserSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/realtime': {
+      id: '/api/v1/realtime'
+      path: '/api/v1/realtime'
+      fullPath: '/api/v1/realtime'
+      preLoaderRoute: typeof ApiV1RealtimeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/research-runs': {
+      id: '/api/v1/research-runs'
+      path: '/api/v1/research-runs'
+      fullPath: '/api/v1/research-runs'
+      preLoaderRoute: typeof ApiV1ResearchRunsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/mcp-connections': {
+      id: '/api/v1/mcp-connections'
+      path: '/api/v1/mcp-connections'
+      fullPath: '/api/v1/mcp-connections'
+      preLoaderRoute: typeof ApiV1McpConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/conversations': {
+      id: '/api/v1/conversations'
+      path: '/api/v1/conversations'
+      fullPath: '/api/v1/conversations'
+      preLoaderRoute: typeof ApiV1ConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/decisions': {
+      id: '/api/v1/decisions'
+      path: '/api/v1/decisions'
+      fullPath: '/api/v1/decisions'
+      preLoaderRoute: typeof ApiV1DecisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/embeddings': {
       id: '/api/v1/embeddings'
       path: '/api/v1/embeddings'
       fullPath: '/api/v1/embeddings'
       preLoaderRoute: typeof ApiV1EmbeddingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/file-search': {
+      id: '/api/v1/file-search'
+      path: '/api/v1/file-search'
+      fullPath: '/api/v1/file-search'
+      preLoaderRoute: typeof ApiV1FileSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/files': {
@@ -4378,6 +4874,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/moderations': {
+      id: '/api/v1/moderations'
+      path: '/api/v1/moderations'
+      fullPath: '/api/v1/moderations'
+      preLoaderRoute: typeof ApiV1ModerationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/prompts': {
+      id: '/api/v1/prompts'
+      path: '/api/v1/prompts'
+      fullPath: '/api/v1/prompts'
+      preLoaderRoute: typeof ApiV1PromptsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/quotes': {
       id: '/api/v1/quotes'
       path: '/api/v1/quotes'
@@ -4390,6 +4900,48 @@ declare module '@tanstack/react-router' {
       path: '/api/v1/responses'
       fullPath: '/api/v1/responses'
       preLoaderRoute: typeof ApiV1ResponsesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/search': {
+      id: '/api/v1/search'
+      path: '/api/v1/search'
+      fullPath: '/api/v1/search'
+      preLoaderRoute: typeof ApiV1SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/skills': {
+      id: '/api/v1/skills'
+      path: '/api/v1/skills'
+      fullPath: '/api/v1/skills'
+      preLoaderRoute: typeof ApiV1SkillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/uploads': {
+      id: '/api/v1/uploads'
+      path: '/api/v1/uploads'
+      fullPath: '/api/v1/uploads'
+      preLoaderRoute: typeof ApiV1UploadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/usage': {
+      id: '/api/v1/usage'
+      path: '/api/v1/usage'
+      fullPath: '/api/v1/usage'
+      preLoaderRoute: typeof ApiV1UsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/vector-stores': {
+      id: '/api/v1/vector-stores'
+      path: '/api/v1/vector-stores'
+      fullPath: '/api/v1/vector-stores'
+      preLoaderRoute: typeof ApiV1VectorStoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/webhooks': {
+      id: '/api/v1/webhooks'
+      path: '/api/v1/webhooks'
+      fullPath: '/api/v1/webhooks'
+      preLoaderRoute: typeof ApiV1WebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/work/browser': {
@@ -4579,6 +5131,34 @@ declare module '@tanstack/react-router' {
       path: '/api/tasks/events/$provider'
       fullPath: '/api/tasks/events/$provider'
       preLoaderRoute: typeof ApiTasksEventsProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/audio/speech': {
+      id: '/api/v1/audio/speech'
+      path: '/api/v1/audio/speech'
+      fullPath: '/api/v1/audio/speech'
+      preLoaderRoute: typeof ApiV1AudioSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/audio/transcriptions': {
+      id: '/api/v1/audio/transcriptions'
+      path: '/api/v1/audio/transcriptions'
+      fullPath: '/api/v1/audio/transcriptions'
+      preLoaderRoute: typeof ApiV1AudioTranscriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/audio/translations': {
+      id: '/api/v1/audio/translations'
+      path: '/api/v1/audio/translations'
+      fullPath: '/api/v1/audio/translations'
+      preLoaderRoute: typeof ApiV1AudioTranslationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/chat/completions': {
+      id: '/api/v1/chat/completions'
+      path: '/api/v1/chat/completions'
+      fullPath: '/api/v1/chat/completions'
+      preLoaderRoute: typeof ApiV1ChatCompletionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId/chat/$chatId': {
@@ -4899,6 +5479,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeveloperFilesRoute: ApiDeveloperFilesRoute,
   ApiDeveloperFundingRoute: ApiDeveloperFundingRoute,
   ApiDeveloperMcpRoute: ApiDeveloperMcpRoute,
+  ApiDeveloperOpenapiRoute: ApiDeveloperOpenapiRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,
   ApiFinancesLinkTokenRoute: ApiFinancesLinkTokenRoute,
   ApiFinancesManageRoute: ApiFinancesManageRoute,
@@ -4942,12 +5523,36 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
+  ApiV1AgentTurnsRoute: ApiV1AgentTurnsRoute,
+  ApiV1AgentsRoute: ApiV1AgentsRoute,
+  ApiV1BrowserRoute: ApiV1BrowserRoute,
+  ApiV1ComputerUseRoute: ApiV1ComputerUseRoute,
+  ApiV1AnalysisRoute: ApiV1AnalysisRoute,
+  ApiV1AutomationsRoute: ApiV1AutomationsRoute,
+  ApiV1BatchesRoute: ApiV1BatchesRoute,
+  ApiV1ResponseJobsRoute: ApiV1ResponseJobsRoute,
+  ApiV1RealtimeSessionsRoute: ApiV1RealtimeSessionsRoute,
+  ApiV1BrowserSessionsRoute: ApiV1BrowserSessionsRoute,
+  ApiV1RealtimeRoute: ApiV1RealtimeRoute,
+  ApiV1ResearchRunsRoute: ApiV1ResearchRunsRoute,
+  ApiV1McpConnectionsRoute: ApiV1McpConnectionsRoute,
+  ApiV1ConversationsRoute: ApiV1ConversationsRoute,
+  ApiV1DecisionsRoute: ApiV1DecisionsRoute,
   ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,
+  ApiV1FileSearchRoute: ApiV1FileSearchRoute,
   ApiV1FilesRoute: ApiV1FilesRoute,
   ApiV1ImagesRoute: ApiV1ImagesRoute,
   ApiV1ModelsRoute: ApiV1ModelsRoute,
+  ApiV1ModerationsRoute: ApiV1ModerationsRoute,
+  ApiV1PromptsRoute: ApiV1PromptsRoute,
   ApiV1QuotesRoute: ApiV1QuotesRoute,
   ApiV1ResponsesRoute: ApiV1ResponsesRoute,
+  ApiV1SearchRoute: ApiV1SearchRoute,
+  ApiV1SkillsRoute: ApiV1SkillsRoute,
+  ApiV1UploadsRoute: ApiV1UploadsRoute,
+  ApiV1UsageRoute: ApiV1UsageRoute,
+  ApiV1VectorStoresRoute: ApiV1VectorStoresRoute,
+  ApiV1WebhooksRoute: ApiV1WebhooksRoute,
   ApiWorkBrowserRoute: ApiWorkBrowserRoute,
   ApiWorkExecutionRoute: ApiWorkExecutionRoute,
   ApiWorkOutputRoute: ApiWorkOutputRoute,
@@ -4974,6 +5579,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
+  ApiV1AudioSpeechRoute: ApiV1AudioSpeechRoute,
+  ApiV1AudioTranscriptionsRoute: ApiV1AudioTranscriptionsRoute,
+  ApiV1AudioTranslationsRoute: ApiV1AudioTranslationsRoute,
+  ApiV1ChatCompletionsRoute: ApiV1ChatCompletionsRoute,
   ApiAuthPasskeysIndexRoute: ApiAuthPasskeysIndexRoute,
   ApiAuthMfaRecoveryRegenerateRoute: ApiAuthMfaRecoveryRegenerateRoute,
   ApiAuthPasskeysLoginOptionsRoute: ApiAuthPasskeysLoginOptionsRoute,

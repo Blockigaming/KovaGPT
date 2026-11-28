@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 230,
-  "latest": "20261123214500_kova_plaid_granola_connector_writes.sql",
+  "count": 243,
+  "latest": "20261128124018_developer_webhook_retry_v1.sql",
   "migrations": [
     {
       "order": 1,
@@ -4796,6 +4796,266 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 231,
+      "filename": "20261127205018_developer_workspace_v2.sql",
+      "timestamp": "20261127205018",
+      "sha256": "5218e6c48dd8e0586795f5ba6ce91bcb43939b62c225b7dc086a7589987a0c74",
+      "tables": ["developer_credit_sharing_preferences", "developer_realtime_sessions_v1"],
+      "functions": [
+        "manage_developer_workspace_v2",
+        "manage_developer_workspace",
+        "manage_developer_realtime_sessions_v1",
+        "expire_developer_realtime_sessions_v1"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_credit_sharing_preferences", "developer_realtime_sessions_v1"],
+      "policies": [],
+      "indexes": [
+        "developer_realtime_sessions_owner_v1_idx",
+        "developer_realtime_sessions_expiry_v1_idx"
+      ]
+    },
+    {
+      "order": 232,
+      "filename": "20261127205021_developer_credit_lots_v2.sql",
+      "timestamp": "20261127205021",
+      "sha256": "59a7b519ed956ba1c3c3349bbbff8a09a03392578a349ed0c1715a0163fd86bb",
+      "tables": [
+        "developer_credit_lot_accounts_v2",
+        "developer_credit_lots_v2",
+        "developer_credit_holds_v2",
+        "developer_credit_hold_lots_v2",
+        "developer_credit_reversals_v2",
+        "developer_pro_charge_blocks_v2",
+        "developer_paid_pro_invoices_v2"
+      ],
+      "functions": [
+        "developer_credit_expire_v2",
+        "developer_record_paid_pro_invoice_v2",
+        "developer_record_pro_charge_block_v2",
+        "developer_pro_period_v2",
+        "developer_refresh_pro_v2",
+        "developer_record_purchase_v2",
+        "developer_reserve_lots_v2",
+        "developer_dispatch_lots_v2",
+        "developer_finish_lots_v2"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "developer_credit_lot_accounts_v2",
+        "developer_credit_lots_v2",
+        "developer_credit_holds_v2",
+        "developer_credit_hold_lots_v2",
+        "developer_credit_reversals_v2",
+        "developer_paid_pro_invoices_v2",
+        "developer_pro_charge_blocks_v2"
+      ],
+      "policies": [],
+      "indexes": ["developer_credit_lots_v2_spend_idx", "developer_paid_pro_period_v2_idx"]
+    },
+    {
+      "order": 233,
+      "filename": "20261127205023_developer_credit_lot_integration_v2.sql",
+      "timestamp": "20261127205023",
+      "sha256": "a86d1a7483d8118a320927a6aa22a8ef64b974325f44b9650474a4d53835a1fc",
+      "tables": ["developer_credit_api_hold_links_v2"],
+      "functions": [
+        "developer_enable_credit_lots_v2",
+        "developer_credit_lot_write_guard_v2",
+        "developer_sync_credit_lots_v2",
+        "admit_developer_billing_v2",
+        "dispatch_developer_billing_v2",
+        "finish_developer_billing_v2",
+        "recover_developer_billing_v2",
+        "complete_developer_funding_v2",
+        "developer_credit_wallet_status_v2",
+        "developer_refresh_wallet_v2",
+        "developer_due_wallet_refresh_v2"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_credit_api_hold_links_v2"],
+      "policies": [],
+      "indexes": ["developer_credit_lot_refresh_due_idx"]
+    },
+    {
+      "order": 234,
+      "filename": "20261127205025_developer_vector_stores_v1.sql",
+      "timestamp": "20261127205025",
+      "sha256": "788c8f56f45ecf1ea4d4386c3cabd886798825e009b8d8f049a9c30475b64eb2",
+      "tables": ["developer_vector_stores_v1", "developer_vector_entries_v1"],
+      "functions": [
+        "developer_normalize_vector_v1",
+        "manage_developer_vector_stores_v1",
+        "expire_developer_vector_stores_v1"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_vector_stores_v1", "developer_vector_entries_v1"],
+      "policies": [],
+      "indexes": [
+        "developer_vector_stores_owner_v1_idx",
+        "developer_vector_stores_expiry_v1_idx",
+        "developer_vector_entries_file_v1_idx"
+      ]
+    },
+    {
+      "order": 235,
+      "filename": "20261127205027_developer_conversations_v1.sql",
+      "timestamp": "20261127205027",
+      "sha256": "7874e06f616d5ef31495d1e305db8df04ca50af831256c7f0cefcba325066f6e",
+      "tables": ["developer_conversations_v1"],
+      "functions": ["manage_developer_conversations_v1", "expire_developer_conversations_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_conversations_v1"],
+      "policies": [],
+      "indexes": ["developer_conversations_owner_v1_idx", "developer_conversations_expiry_v1_idx"]
+    },
+    {
+      "order": 236,
+      "filename": "20261127205029_developer_agents_v1.sql",
+      "timestamp": "20261127205029",
+      "sha256": "8c404f1a6bbe850d5f8d3349d608c756f89c5f25a6c68d4b2be10fabca35ceab",
+      "tables": ["developer_agent_versions_v1"],
+      "functions": ["manage_developer_agents_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_agent_versions_v1"],
+      "policies": [],
+      "indexes": ["developer_agent_versions_owner_v1_idx"]
+    },
+    {
+      "order": 237,
+      "filename": "20261127205031_developer_skills_v1.sql",
+      "timestamp": "20261127205031",
+      "sha256": "1ef5debaf89e90d6d473794e573c392e2f7f74188a8c5d52b64f33fb00f65e37",
+      "tables": ["developer_skill_versions_v1"],
+      "functions": ["manage_developer_skills_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_skill_versions_v1"],
+      "policies": [],
+      "indexes": ["developer_skill_versions_owner_v1_idx"]
+    },
+    {
+      "order": 238,
+      "filename": "20261127205033_developer_webhooks_v1.sql",
+      "timestamp": "20261127205033",
+      "sha256": "6c5bc91124b9efe955aee3a48297b1972caba927734e25da12023487ac64281d",
+      "tables": ["developer_webhook_endpoints_v1", "developer_webhook_deliveries_v1"],
+      "functions": [
+        "developer_webhook_key_active_v1",
+        "manage_developer_webhooks_v1",
+        "claim_developer_webhooks_v1",
+        "validate_developer_webhook_claim_v1",
+        "finish_developer_webhook_v1"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_webhook_endpoints_v1", "developer_webhook_deliveries_v1"],
+      "policies": [],
+      "indexes": [
+        "developer_webhook_owner_v1_idx",
+        "developer_webhook_due_v1_idx",
+        "developer_webhook_expiry_v1_idx",
+        "developer_webhook_requests_v1_idx"
+      ]
+    },
+    {
+      "order": 239,
+      "filename": "20261127205035_developer_batches_v1.sql",
+      "timestamp": "20261127205035",
+      "sha256": "9c23d08d8dbe60d899ec373f3cb2ad8442024f4ea4167ae54c1411ff047c6944",
+      "tables": ["developer_batches_v1", "developer_batch_items_v1"],
+      "functions": [
+        "developer_batch_key_active_v1",
+        "manage_developer_batches_v1",
+        "claim_developer_batch_v1",
+        "validate_developer_batch_claim_v1",
+        "finish_developer_batch_v1"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_batches_v1", "developer_batch_items_v1"],
+      "policies": [],
+      "indexes": [
+        "developer_batches_owner_v1_idx",
+        "developer_batches_expiry_v1_idx",
+        "developer_batch_items_state_v1_idx"
+      ]
+    },
+    {
+      "order": 240,
+      "filename": "20261128105700_developer_mcp_connections_v1.sql",
+      "timestamp": "20261128105700",
+      "sha256": "0f876bffb7b0ad5527d1ac506846b77536935a4de38133c7244b5675090eaa40",
+      "tables": ["developer_mcp_connections_v1"],
+      "functions": ["manage_developer_mcp_connections_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_mcp_connections_v1"],
+      "policies": [],
+      "indexes": [
+        "developer_mcp_connections_owner_project_idx",
+        "developer_mcp_connections_key_idx"
+      ]
+    },
+    {
+      "order": 241,
+      "filename": "20261128114651_developer_prompts_v1.sql",
+      "timestamp": "20261128114651",
+      "sha256": "22b7a4b8f6b5c50a74fa175700780e698ab6d7f315c87f5189fd20745cd0bbd6",
+      "tables": ["developer_prompt_versions_v1"],
+      "functions": ["manage_developer_prompts_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_prompt_versions_v1"],
+      "policies": [],
+      "indexes": ["developer_prompt_versions_owner_v1_idx"]
+    },
+    {
+      "order": 242,
+      "filename": "20261128115506_developer_uploads_v1.sql",
+      "timestamp": "20261128115506",
+      "sha256": "4ed6b5ac7f692266d743bf4155c2b38f840dda404133eb9edb761fa2358f5840",
+      "tables": ["developer_uploads_v1"],
+      "functions": ["manage_developer_uploads_v1", "expire_developer_uploads_v1"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_uploads_v1"],
+      "policies": [],
+      "indexes": ["developer_uploads_owner_v1_idx", "developer_uploads_expiry_v1_idx"]
+    },
+    {
+      "order": 243,
+      "filename": "20261128124018_developer_webhook_retry_v1.sql",
+      "timestamp": "20261128124018",
+      "sha256": "69f53825cd2a1681a0ddfbcfaba065a1a2735264ffcee88e51fa54ddb269f39f",
+      "tables": [],
+      "functions": ["retry_developer_webhook_v1"],
+      "destructive": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

@@ -7,10 +7,12 @@ let source = await readFile(
   new URL("../../src/routes/developers.console.tsx", import.meta.url),
   "utf8",
 );
+source = source.replace('import "@/styles/developer-console.css";', "");
 source = source.replace(/import\s*\{[^}]+\}\s*from\s*"([^"]+)";/g, (full, path) => {
   if (path === "react")
     return full.replace('"react"', JSON.stringify(import.meta.resolve("react")));
-  if (path === "@tanstack/react-router") return "const createFileRoute=()=>()=>({});";
+  if (path === "@tanstack/react-router")
+    return "const createFileRoute=()=>()=>({useSearch:()=>({})});";
   if (path === "@/components/auth/ClerkSafe")
     return 'const useUser=()=>({isSignedIn:true,user:{id:globalThis[Symbol.for("kova.console-principal-test")]}});';
   return "";

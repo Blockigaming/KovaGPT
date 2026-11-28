@@ -26,8 +26,9 @@ function DevelopersOverview() {
       <article className="rounded-2xl border border-border bg-background p-6">
         <h2 className="text-xl font-semibold">Current status</h2>
         <p className="mt-3 leading-7 text-muted-foreground">
-          The versioned API supports quoted text generation, image generation, and embeddings. The
-          console shows whether paid execution is enabled. No official SDK is published yet.
+          The versioned source contracts cover quoted generation, retrieval, resource management and
+          durable background jobs. Availability depends on the console, approved model catalog and
+          runtime gates. No official SDK is published yet.
         </p>
         <Link to="/developers/console" className="mt-4 inline-flex min-h-11 items-center underline">
           Open developer console
@@ -39,6 +40,36 @@ function DevelopersOverview() {
         >
           Read the quickstart
         </Link>
+      </article>
+      <article className="rounded-2xl border border-border bg-background p-6">
+        <h2 className="text-xl font-semibold">Explore the developer documentation</h2>
+        <p className="mt-3 leading-7 text-muted-foreground">
+          Search endpoint request contracts, lifecycle guides, SDK instructions and troubleshooting.
+          Preview documentation does not imply a production launch.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <Link
+            to="/developers/$docSlug"
+            params={{ docSlug: "docs" }}
+            className="inline-flex min-h-11 items-center underline"
+          >
+            Search documentation
+          </Link>
+          <Link
+            to="/developers/$docSlug"
+            params={{ docSlug: "api-reference" }}
+            className="inline-flex min-h-11 items-center underline"
+          >
+            API reference
+          </Link>
+          <Link
+            to="/developers/$docSlug"
+            params={{ docSlug: "api-pricing" }}
+            className="inline-flex min-h-11 items-center underline"
+          >
+            Pricing
+          </Link>
+        </div>
       </article>
       <article className="rounded-2xl border border-border bg-background p-6">
         <h2 className="text-xl font-semibold">Questions about integrations?</h2>

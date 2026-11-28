@@ -4,6 +4,7 @@ import { loose } from "@/lib/supabase-loose";
 import {
   createStripeClient,
   type StripeEnv,
+  type VerifiedStripeEvent,
   StripeWebhookVerificationError,
   verifyWebhook,
   durableStripeBillingEnabled,
@@ -16,6 +17,13 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { processStripeEvent, WebhookProcessingError } from "@/lib/webhook-reliability.mjs";
 import { projectLegacyStripeEvent } from "@/lib/stripe-legacy-projection.server";
 import { reconcileMonthlyIntroCheckout } from "@/lib/billing-policy.mjs";
+import { runtimeEnv } from "@/lib/runtime-env.server";
+import {
+  normalizeDeveloperProInvoice,
+  developerProPaymentReference,
+  qualifyDeveloperProCharge,
+  normalizeDeveloperProReversal,
+} from "@/lib/pricing/developer-pro-invoice-policy.mjs";
 
 type StripeLineItemLike = {
   price?: {
@@ -64,6 +72,49 @@ async function priceIdFrom(value: unknown, environment: StripeEnv): Promise<stri
   return candidates.some((candidate) => resolveBillingPlan(candidate)) ? priceId : undefined;
 }
 
+async function persistDeveloperProInvoice(event: VerifiedStripeEvent, environment: StripeEnv) {
+  if (runtimeEnv("KOVA_DEVELOPER_PRO_RECEIPTS_V2") !== "true") return;
+  const reversal = normalizeDeveloperProReversal(event, environment);
+  if (reversal) {
+    const result = await loose(supabaseAdmin)
+      .rpc("developer_record_pro_charge_block_v2", reversal)
+      .abortSignal(AbortSignal.timeout(10000));
+    if (result.error || result.data !== true)
+      throw new WebhookProcessingError("developer_pro_reversal_record_failed", 503);
+    return;
+  }
+  const proof = normalizeDeveloperProInvoice(event, environment);
+  if (!proof) return;
+  const registered = await loose(supabaseAdmin)
+    .from("billing_plan_tiers")
+    .select("stripe_price_id")
+    .eq("environment", "live")
+    .eq("tier", "pro")
+    .eq("lookup_key", "pro_monthly")
+    .eq("stripe_price_id", proof.p_price)
+    .maybeSingle();
+  if (registered.error) throw new WebhookProcessingError("developer_pro_price_lookup_failed", 503);
+  if (registered.data?.stripe_price_id !== proof.p_price) return;
+  const stripe = createStripeClient(environment);
+  const payments = await stripe.invoicePayments.list({
+    invoice: proof.p_invoice,
+    status: "paid",
+    limit: 2,
+  });
+  const reference = developerProPaymentReference(proof, payments);
+  if (!reference) return;
+  const intent = await stripe.paymentIntents.retrieve(reference.p_intent, {
+    expand: ["latest_charge"],
+  });
+  const captured = qualifyDeveloperProCharge(proof, reference, intent);
+  if (!captured) return;
+  const result = await loose(supabaseAdmin)
+    .rpc("developer_record_paid_pro_invoice_v2", { ...proof, ...captured })
+    .abortSignal(AbortSignal.timeout(10000));
+  if (result.error || typeof result.data !== "boolean")
+    throw new WebhookProcessingError("developer_pro_invoice_record_failed", 503);
+}
+
 export async function handleWebhook(
   req: Request,
   env: StripeEnv,
@@ -95,12 +146,14 @@ export async function handleWebhook(
     }
     // Existing trials, renewal/cancellation events and entitlement projection
     // continue through the versioned legacy schema. Coupon redemption is separate.
-    return projectLegacyStripeEvent(event, env, correlationId);
+    const result = await projectLegacyStripeEvent(event, env, correlationId);
+    if (!result.orphaned) await persistDeveloperProInvoice(event, env);
+    return result;
   }
   if (!durableStripeBillingEnabled())
     throw new WebhookProcessingError("billing_rollout_pending", 503);
   const stripe = createStripeClient(env);
-  return processStripeEvent({
+  const result = await processStripeEvent({
     supabase: supabaseAdmin,
     event,
     environment: env,
@@ -109,6 +162,8 @@ export async function handleWebhook(
     billingOutcome,
     correlationId,
   });
+  if (!result.orphaned) await persistDeveloperProInvoice(event, env);
+  return result;
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({

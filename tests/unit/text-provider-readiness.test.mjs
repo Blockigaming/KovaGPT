@@ -5,6 +5,7 @@ import ts from "typescript";
 import { z } from "zod";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/endpoint-reliability.mjs";
+import * as transcription from "../../src/lib/pricing/developer-transcription-policy.mjs";
 import * as hosted from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 
 // Execute the actual startup, readiness, runtime configuration and provider
@@ -69,6 +70,7 @@ function pipeline(overrides = {}) {
     "src/lib/ai/provider.server.ts",
     {
       "@/lib/endpoint-reliability.mjs": bounded,
+      "@/lib/pricing/developer-transcription-policy.mjs": transcription,
       "@/lib/runtime-env.server": runtime,
       "@/lib/pricing/developer-billing.server": {
         meterProviderRequest: async (input) => input.send(),

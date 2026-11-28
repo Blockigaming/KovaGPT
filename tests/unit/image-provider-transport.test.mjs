@@ -4,6 +4,7 @@ import fs from "node:fs";
 import ts from "typescript";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/endpoint-reliability.mjs";
+import * as transcription from "../../src/lib/pricing/developer-transcription-policy.mjs";
 function loadProvider(env, fetcher) {
   const output = ts.transpileModule(fs.readFileSync("src/lib/ai/provider.server.ts", "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -13,6 +14,7 @@ function loadProvider(env, fetcher) {
     exports = {};
   const modules = {
     "@/lib/endpoint-reliability.mjs": bounded,
+    "@/lib/pricing/developer-transcription-policy.mjs": transcription,
     "@/lib/runtime-env.server": { runtimeEnv: (key) => env[key] },
     "@/lib/pricing/developer-billing.server": {
       meterProviderRequest: async (input) => {

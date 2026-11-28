@@ -13,8 +13,9 @@ let transformed = source.replace(
  const authenticateDeveloper=async()=>{if(!state.enabled)throw new Error('developer_platform_disabled');return {capabilities:state.scopes,ownerId:"owner",project_id:"project",id:"key"};};
  const developerJson=(value,status=200)=>Response.json(value,{status});
  const developerFailure=(error)=>developerJson({error:{message:error.message}},503);
- const developerQuote=async()=>({quoteToken:'signed',maximumCharge:10});
- const executeDeveloper=async()=>{state.calls++;return Response.json({output:'text'});};
+ const developerQuote=async()=>{state.quotes=(state.quotes??0)+1;return {quoteToken:'signed',maximumCharge:10};};
+ const executeDeveloper=async(identity,operation,input,key,quote)=>{state.calls++;state.last={identity,operation,input,key,quote};return state.failedResponse?Response.json({secret:"upstream-private"},{status:502}):Response.json({output:'text'});};
+ const executeDeveloperFileSearch=async(identity,args,signal)=>{signal.throwIfAborted();state.fileCalls.push({identity,operation:"search",args});return {object:"list",data:[]};};
 `,
 );
 transformed = transformed.replace(
@@ -30,6 +31,10 @@ transformed = transformed.replace(
   `const mcpOAuthAnonymousChallenge=()=>null;
    const authenticateMcpOAuth=async()=>({capabilities:['embeddings']});
    const mcpOAuthResponseHeaders=(_request,response)=>{response.headers.set('X-Mcp-Auth-Wrapper','applied');return response;};`,
+);
+transformed = transformed.replace(
+  'await import("./developer-mcp-connections.server")',
+  '({executeDeveloperMcpConnection:async(identity,operation,args)=>{state.connectionCall={identity,operation,args};return {object:"list",data:[]};}})',
 );
 const compiled = ts.transpileModule(transformed, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
@@ -64,7 +69,7 @@ test("MCP negotiates a supported version and exposes only authenticated key scop
   ).json();
   assert.deepEqual(
     tools.result.tools.map((item) => item.name),
-    ["kova_quote", "kova_generate_text"],
+    ["kova_quote", "kova_generate_text", "kova_search", "kova_agent_turn"],
   );
   assert.equal(
     (await handleDeveloperMcp(request({ jsonrpc: "2.0", method: "notifications/initialized" })))
@@ -162,7 +167,7 @@ test("MCP files remain hidden without consent and route scoped calls without cre
         "kova_read_file",
         "kova_upload_text_file",
         "kova_delete_file",
-        "kova_quote",
+        "kova_search_files",
       ],
     );
     assert.equal(
@@ -188,4 +193,191 @@ test("MCP OAuth bearer uses its granted scope and applies the same response wrap
     (await response.json()).result.tools.map((tool) => tool.name),
     ["kova_quote", "kova_embed"],
   );
+});
+
+test("additional MCP tools use the same scope, quote and metered execution boundary", async () => {
+  const invoke = (name, args) =>
+    handleDeveloperMcp(
+      request({ jsonrpc: "2.0", id: 10, method: "tools/call", params: { name, arguments: args } }),
+    );
+  const before = state.calls;
+  const quotes = state.quotes ?? 0;
+  try {
+    state.scopes = ["moderation", "decisions", "file_analysis"];
+    const list = await (
+      await handleDeveloperMcp(request({ jsonrpc: "2.0", id: 11, method: "tools/list" }))
+    ).json();
+    assert.deepEqual(
+      list.result.tools.map((t) => t.name),
+      ["kova_quote", "kova_moderate", "kova_decide", "kova_analyze"],
+    );
+    assert.deepEqual(list.result.tools[0].inputSchema.properties.operation.enum, [
+      "moderations",
+      "decisions",
+      "analysis",
+    ]);
+    assert.equal(
+      (await (await invoke("kova_quote", { operation: "search", input: {} })).json()).error.code,
+      -32602,
+    );
+    assert.equal(state.quotes ?? 0, quotes);
+    for (const [tool, operation, input] of [
+      ["kova_moderate", "moderations", { model: "moderation", input: "test" }],
+      ["kova_decide", "decisions", { model: "decisions", input: "test", questions: [] }],
+      ["kova_analyze", "analysis", { model: "analysis", input: "test", max_output_tokens: 10 }],
+    ]) {
+      assert.equal(
+        (await (await invoke("kova_quote", { operation, input })).json()).result.structuredContent
+          .quoteToken,
+        "signed",
+      );
+      assert.equal(
+        (await (await invoke(tool, { input, quoteToken: "signed", requestKey: "stable" })).json())
+          .result.structuredContent.output,
+        "text",
+      );
+      assert.equal(state.last.operation, operation);
+      assert.equal(state.last.identity.project_id, "project");
+      assert.deepEqual(state.last.input, input);
+      assert.equal(state.last.quote, "signed");
+    }
+    assert.equal(state.calls, before + 3);
+    assert.equal(
+      (
+        await (
+          await invoke("kova_search", { input: {}, quoteToken: "signed", requestKey: "stable" })
+        ).json()
+      ).error.code,
+      -32602,
+    );
+    assert.equal(
+      (
+        await (
+          await invoke("kova_analyze", {
+            input: {},
+            quoteToken: "signed",
+            requestKey: "stable",
+            project_id: "foreign",
+          })
+        ).json()
+      ).error.code,
+      -32602,
+    );
+    assert.equal(state.calls, before + 3);
+  } finally {
+    state.scopes = ["chat"];
+  }
+});
+
+test("hosted MCP tools share current scopes, paid quotes and redacted terminal errors", async () => {
+  const invoke = (name, args) =>
+    handleDeveloperMcp(
+      request({ jsonrpc: "2.0", id: 12, method: "tools/call", params: { name, arguments: args } }),
+    );
+  const before = state.calls;
+  try {
+    state.scopes = ["audio_speech", "cloud_browser", "computer_use", "files"];
+    const list = await (
+      await handleDeveloperMcp(request({ jsonrpc: "2.0", id: 13, method: "tools/list" }))
+    ).json();
+    assert.deepEqual(
+      list.result.tools.filter((t) => t.name.startsWith("kova_")).map((t) => t.name),
+      [
+        "kova_list_files",
+        "kova_read_file",
+        "kova_upload_text_file",
+        "kova_delete_file",
+        "kova_search_files",
+        "kova_quote",
+        "kova_speech",
+        "kova_browse",
+        "kova_propose_computer_action",
+      ],
+    );
+    assert.equal(
+      (await (await invoke("kova_search_files", { query: "test", file_ids: ["file"] })).json())
+        .result.structuredContent.object,
+      "list",
+    );
+    assert.equal(state.fileCalls.at(-1).operation, "search");
+    assert.equal(state.calls, before);
+    for (const [tool, operation, input] of [
+      ["kova_speech", "audio/speech", { model: "voice", input: "test", voice: "default" }],
+      ["kova_browse", "browser", { model: "browser", url: "https://example.com" }],
+      [
+        "kova_propose_computer_action",
+        "computer-use",
+        {
+          model: "computer",
+          input: "test",
+          screenshot: "data:image/png;base64,test",
+          max_output_tokens: 100,
+        },
+      ],
+    ]) {
+      assert.equal(
+        (await (await invoke("kova_quote", { operation, input })).json()).result.structuredContent
+          .quoteToken,
+        "signed",
+      );
+      const args = { input, quoteToken: "signed", requestKey: "stable" };
+      assert.equal(
+        (await (await invoke(tool, args)).json()).result.structuredContent.output,
+        "text",
+      );
+      assert.equal(state.last.operation, operation);
+      state.failedResponse = true;
+      const failure = await (await invoke(tool, args)).json();
+      assert.equal(failure.result.isError, true);
+      assert.equal(failure.result.structuredContent, undefined);
+      assert.ok(!JSON.stringify(failure).includes("upstream-private"));
+      state.failedResponse = false;
+    }
+    state.scopes = [];
+    assert.equal(
+      (
+        await (
+          await invoke("kova_browse", { input: {}, quoteToken: "signed", requestKey: "stable" })
+        ).json()
+      ).error.code,
+      -32602,
+    );
+    assert.equal(
+      (await (await invoke("kova_search_files", { query: "test", file_ids: ["file"] })).json())
+        .error.code,
+      -32602,
+    );
+    assert.equal(state.calls, before + 6);
+  } finally {
+    state.scopes = ["chat"];
+    state.failedResponse = false;
+  }
+});
+
+test("MCP outbound tools are advertised only to delegated-key scope", async () => {
+  state.scopes = ["mcp_read"];
+  try {
+    const list = await (
+      await handleDeveloperMcp(request({ jsonrpc: "2.0", id: 9, method: "tools/list" }))
+    ).json();
+    assert.deepEqual(
+      list.result.tools.map((t) => t.name),
+      ["kova_mcp_connections_list", "kova_mcp_read"],
+    );
+    const invoke = await (
+      await handleDeveloperMcp(
+        request({
+          jsonrpc: "2.0",
+          id: 10,
+          method: "tools/call",
+          params: { name: "kova_mcp_connections_list", arguments: {} },
+        }),
+      )
+    ).json();
+    assert.equal(invoke.result.structuredContent.object, "list");
+    assert.equal(state.connectionCall.operation, "list");
+    assert.equal(state.connectionCall.identity.id, "key");
+  } finally {
+    state.scopes = ["chat"];
+  }
 });

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
+import { DEVELOPER_SCOPES } from "../../src/lib/pricing/developer-platform-policy.mjs";
 const id = (n) => `${String(n).padStart(8, "0")}-1111-4111-8111-111111111111`;
 const owner = id(1),
   other = id(2),
@@ -349,6 +350,255 @@ test("a full workspace can rotate one key atomically while new growth and stale 
         .enabled,
       false,
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("staged v2 auto-provisioning is repeatable, adopts existing accounts and creates no money", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const v2 = async (operation, input = {}, user = owner) =>
+      (
+        await db.query("select public.manage_developer_workspace_v2($1,$2,$3) result", [
+          user,
+          operation,
+          input,
+        ])
+      ).rows[0].result;
+    const results = await Promise.all([v2("ensure_workspace"), v2("ensure_workspace")]);
+    assert.deepEqual(results[0], results[1]);
+    assert.equal(
+      (await db.query("select count(*)::int n from developer_credit_accounts")).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (await db.query("select available_amount::float8 balance from developer_credit_accounts"))
+        .rows[0].balance,
+      0,
+    );
+    const old = await manage(
+      db,
+      "create_account",
+      { name: "Existing workspace", currency: "EUR" },
+      other,
+    );
+    assert.deepEqual(await v2("ensure_workspace", {}, other), old);
+    const a = results[0];
+    const project = { accountId: a.accountId, projectId: id(15), name: "Server application" };
+    const first = await v2("create_project", project);
+    assert.deepEqual(await v2("create_project", project), first);
+    await assert.rejects(
+      v2("create_project", { ...project, name: "Other name" }),
+      /project_conflict/,
+    );
+    await assert.rejects(
+      v2("rename_project", { ...project, name: "Foreign edit" }, other),
+      /owner_required/,
+    );
+    await v2("rename_project", { ...project, name: "Renamed application" });
+    assert.equal(
+      (await db.query("select name from developer_projects where id=$1", [project.projectId]))
+        .rows[0].name,
+      "Renamed application",
+    );
+    assert.equal(
+      (await db.query("select count(*)::int n from developer_credit_sharing_preferences")).rows[0]
+        .n,
+      0,
+    );
+    assert.deepEqual(await v2("set_credit_sharing", { enabled: true }), {
+      consumerCreditSharing: true,
+    });
+    assert.equal(
+      (
+        await db.query(
+          "select allow_consumer_usage from developer_credit_sharing_preferences where owner_id=$1",
+          [owner],
+        )
+      ).rows[0].allow_consumer_usage,
+      true,
+    );
+    await assert.rejects(v2("set_credit_sharing", { enabled: "true" }), /input_invalid/);
+    await v2("set_credit_sharing", { enabled: false });
+    assert.equal(
+      (
+        await db.query(
+          "select allow_consumer_usage from developer_credit_sharing_preferences where owner_id=$1",
+          [owner],
+        )
+      ).rows[0].allow_consumer_usage,
+      false,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int n from developer_credit_sharing_preferences where owner_id=$1",
+          [other],
+        )
+      ).rows[0].n,
+      0,
+    );
+    await db.exec("reset role;set role authenticated");
+    await assert.rejects(v2("ensure_workspace"), /permission denied/);
+    await assert.rejects(
+      db.query("select * from developer_credit_sharing_preferences"),
+      /permission denied/,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("v2 key issuance accepts every supported scope and rejects malformed scopes and banned owners", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const a = await account(db);
+    await manage(db, "issue_key", keyInput(a, { scopes: DEVELOPER_SCOPES }));
+    assert.deepEqual(
+      (await db.query("select capabilities from developer_billing_keys where id=$1", [key])).rows[0]
+        .capabilities,
+      DEVELOPER_SCOPES,
+    );
+    for (const scopes of [[null], ["chat", "chat"], [["chat"]], { scope: "chat" }])
+      await assert.rejects(
+        manage(db, "issue_key", keyInput(a, { scopes, keyId: id(7), rotateKeyId: key })),
+        /key_invalid/,
+      );
+    assert.equal(
+      (await db.query("select enabled from developer_billing_keys where id=$1", [key])).rows[0]
+        .enabled,
+      true,
+    );
+    await db.exec("reset role");
+    await db.query("insert into banned_users values($1)", [owner]);
+    await db.exec("set role service_role");
+    await assert.rejects(
+      manage(db, "issue_key", keyInput(a, { keyId: id(7) })),
+      /owner_unavailable/,
+    );
+    await assert.rejects(
+      manage(db, "set_limits", { accountId: a.accountId, scope: "key", scopeId: key, limits }),
+      /owner_unavailable/,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int n from developer_billing_keys")).rows[0].n,
+      1,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("Realtime grants are project scoped, single redemption, fenced and revocable", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const a = await account(db);
+    await manage(db, "issue_key", keyInput(a, { scopes: ["realtime"] }));
+    const grant = id(20),
+      connection = id(21),
+      turn = id(22);
+    const rpc = async (op, input, g = grant) =>
+      (
+        await db.query("select public.manage_developer_realtime_sessions_v1($1,$2,$3) result", [
+          op,
+          g,
+          input,
+        ])
+      ).rows[0].result;
+    const binding = { owner_id: owner, api_key_id: key, project_id: a.projectId };
+    const issue = { ...binding, grant_digest: "b".repeat(64), origin: "https://example.com" };
+    const claim = {
+      grant_digest: issue.grant_digest,
+      origin: issue.origin,
+      connection_id: connection,
+    };
+    assert.equal((await rpc("issue", issue)).state, "issued");
+    await assert.rejects(rpc("get", { ...binding, owner_id: other }), /not_found/);
+    await assert.rejects(rpc("claim", { ...claim, origin: null }), /not_found/);
+    await assert.rejects(rpc("claim", { ...claim, grant_digest: "c".repeat(64) }), /not_found/);
+    assert.equal((await rpc("claim", claim)).state, "connected");
+    await assert.rejects(rpc("claim", claim), /not_found/);
+    const turnBinding = { connection_id: connection, turn_id: turn };
+    for (let i = 0; i < 8; i++) {
+      assert.equal((await rpc("begin", turnBinding)).turns, i + 1);
+      await assert.rejects(rpc("begin", turnBinding), /conflict/);
+      await assert.rejects(rpc("finish", { ...turnBinding, turn_id: id(23) }), /conflict/);
+      await rpc("finish", turnBinding);
+    }
+    await assert.rejects(rpc("begin", turnBinding), /conflict/);
+    await manage(db, "revoke_key", { accountId: a.accountId, keyId: key });
+    await assert.rejects(rpc("check", { connection_id: connection }), /scope_required/);
+    assert.equal((await rpc("disconnect", { connection_id: connection })).state, "closed");
+    await db.exec("reset role;set role authenticated");
+    await assert.rejects(
+      db.query("select * from public.developer_realtime_sessions_v1"),
+      /permission denied/,
+    );
+    await assert.rejects(rpc("get", binding), /permission denied/);
+  } finally {
+    await db.close();
+  }
+});
+
+test("browser grants cannot be redeemed through Realtime and authorize exactly one metered turn", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(await readFile("supabase/pending/developer_workspace_v2.sql", "utf8"));
+    await db.exec("set role service_role");
+    const a = await account(db);
+    await manage(db, "issue_key", keyInput(a, { scopes: ["cloud_browser", "computer_use"] }));
+    const grant = id(20),
+      connection = id(21),
+      turn = id(22);
+    const rpc = async (op, input, g = grant) =>
+      (
+        await db.query("select public.manage_developer_realtime_sessions_v1($1,$2,$3) result", [
+          op,
+          g,
+          input,
+        ])
+      ).rows[0].result;
+    const binding = {
+      owner_id: owner,
+      api_key_id: key,
+      project_id: a.projectId,
+      session_kind: "browser",
+    };
+    const issue = { ...binding, grant_digest: "b".repeat(64), origin: "https://example.com" };
+    const claim = {
+      session_kind: "browser",
+      grant_digest: issue.grant_digest,
+      origin: issue.origin,
+      connection_id: connection,
+    };
+    await assert.rejects(
+      rpc("issue", { ...issue, session_kind: "realtime" }, id(24)),
+      /scope_required/,
+    );
+    assert.equal((await rpc("issue", issue)).state, "issued");
+    await assert.rejects(rpc("get", { ...binding, session_kind: "realtime" }), /not_found/);
+    await assert.rejects(rpc("get", { ...binding, owner_id: other }), /not_found/);
+    await assert.rejects(rpc("claim", { ...claim, session_kind: "realtime" }), /not_found/);
+    assert.equal((await rpc("claim", claim)).state, "connected");
+    await assert.rejects(rpc("claim", claim), /not_found/);
+    const fence = { session_kind: "browser", connection_id: connection, turn_id: turn };
+    assert.equal((await rpc("begin", fence)).turns, 1);
+    await rpc("finish", fence);
+    await assert.rejects(rpc("begin", fence), /conflict/);
+    await manage(db, "revoke_key", { accountId: a.accountId, keyId: key });
+    await assert.rejects(rpc("check", fence), /scope_required/);
+    assert.equal((await rpc("disconnect", fence)).state, "closed");
   } finally {
     await db.close();
   }
