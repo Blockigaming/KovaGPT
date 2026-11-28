@@ -4,6 +4,7 @@ import {
   createAckCache,
   createAcknowledgmentPolicy,
   ackClipUrl,
+  ACK_VARIANTS,
 } from "../../src/lib/voice/acknowledgments.mjs";
 import {
   createStreamingVoicePlayback,
@@ -491,13 +492,14 @@ test("acknowledgments rotate among variants for the same voice and cache each fi
     },
   });
   const sizes = [];
-  for (let i = 0; i < 4; i++) sizes.push((await cache.get("jessica", "search")).bytes.byteLength);
-  assert.deepEqual(sizes, [16000, 32000, 48000, 16000]);
-  assert.deepEqual(urls, [
-    "/voice-acks/jessica/check.mp3",
-    "/voice-acks/jessica/look-more.mp3",
-    "/voice-acks/jessica/check-details.mp3",
-  ]);
+  for (let i = 0; i <= ACK_VARIANTS.search.length; i++)
+    sizes.push((await cache.get("jessica", "search")).bytes.byteLength);
+  assert.deepEqual(sizes.slice(0, 3), [16000, 32000, 48000]);
+  assert.equal(sizes.at(-1), sizes[0]);
+  assert.deepEqual(
+    urls,
+    ACK_VARIANTS.search.map((entry) => `/voice-acks/jessica/${entry.id}.mp3`),
+  );
   assert.equal(ackClipUrl("jessica", "search", 99), null);
   assert.equal(ackClipUrl("jessica", "__proto__"), null);
 });
@@ -512,7 +514,36 @@ test("missing alternatives fall back to the existing clip without switching voic
         : new Response(null, { status: 404 });
     },
   });
-  for (let i = 0; i < 3; i++) assert.equal((await cache.get("lauren", "search")).bytes.byteLength, 16000);
+  for (let i = 0; i < 3; i++)
+    assert.equal((await cache.get("lauren", "search")).bytes.byteLength, 16000);
   assert.equal(urls.length, 3);
   assert.ok(urls.every((url) => url.startsWith("/voice-acks/lauren/")));
+});
+
+test("the expanded acknowledgment catalog has exactly 59 distinct phrases and valid asset IDs", () => {
+  const entries = Object.values(ACK_VARIANTS).flat();
+  assert.equal(entries.length, 59);
+  assert.equal(new Set(entries.map((entry) => entry.id)).size, 59);
+  assert.equal(new Set(entries.map((entry) => entry.text)).size, 59);
+  assert.deepEqual(Object.values(ACK_VARIANTS).map((entries) => entries.length), [21, 20, 18]);
+  for (const entry of entries) {
+    assert.match(entry.id, /^[a-z0-9-]+$/u);
+    assert.ok(entry.text.length <= 48);
+  }
+});
+
+test("warming a voice fetches only the three original clips, not all 59 alternatives", async () => {
+  const urls = [];
+  const cache = createAckCache({
+    fetchImpl: async (url) => {
+      urls.push(url);
+      return new Response(new Uint8Array(16000), { headers: { "Content-Type": "audio/mpeg" } });
+    },
+  });
+  await cache.warm("jessica");
+  assert.deepEqual(urls, [
+    "/voice-acks/jessica/check.mp3",
+    "/voice-acks/jessica/think.mp3",
+    "/voice-acks/jessica/moment.mp3",
+  ]);
 });

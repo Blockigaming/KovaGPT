@@ -53,9 +53,12 @@ Each segment is sent with the previous segment as `previous_text` so intonation 
 
 ## Acknowledgments
 
-Each of three delay categories has three phrases, including "Let me look more into that." Clips are rotated
-within the selected voice, never across voices. The original nine files are retained until the owner
-generates the expanded catalog. Missing variants fall back to available same-voice clips.
+The catalog contains 59 distinct phrases per configured voice: 21 search, 20 reasoning and 18
+general delay acknowledgments. This includes "Let me look more into that." Clips rotate within
+the selected voice, never across voices. The original nine files are retained until the owner
+generates the expanded catalog. Only the three original clips are preloaded per voice; each turn
+loads at most one alternative and its original same-voice fallback, preventing a burst of requests
+when new assets are missing. With the current three voices, the full catalog requires 177 recordings.
 
 Run the generator in an authorized environment with the existing catalog configured. Preview first;
 it makes no provider calls. The printed character count covers all missing or unverified clips.
