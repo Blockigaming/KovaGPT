@@ -11,7 +11,13 @@ export type Operation =
   | "computer-use"
   | "browser"
   | "audio/transcriptions"
-  | "audio/speech";
+  | "audio/speech"
+  | "realtime";
+export type RealtimeInput = {
+  model: string;
+  output_modality: "text" | "audio";
+  max_output_tokens: number;
+} & ({ input: string; audio?: never } | { audio: string; input?: never });
 export interface Quote {
   quoteToken: string;
   pricingVersion: string;
@@ -218,6 +224,12 @@ export interface DeveloperUsage {
   moderation_requests: number | null;
   transcription_seconds: number | null;
   speech_character_credits: number | null;
+  realtime_text_input_tokens: number | null;
+  realtime_cached_text_tokens: number | null;
+  realtime_audio_input_tokens: number | null;
+  realtime_cached_audio_tokens: number | null;
+  realtime_text_output_tokens: number | null;
+  realtime_audio_output_tokens: number | null;
 }
 export class KovaError extends Error {
   code: string;
@@ -225,6 +237,7 @@ export class KovaError extends Error {
   requestMayHaveStarted: boolean;
 }
 export class KovaGPT {
+  readonly realtime: { create(input: RealtimeInput, options: Budget): Promise<Response> };
   readonly decisions: { create(input: DecisionInput, options: Budget): Promise<Response> };
   readonly analysis: { create(input: AnalysisInput, options: Budget): Promise<Response> };
   readonly computerUse: { propose(input: ComputerUseInput, options: Budget): Promise<Response> };

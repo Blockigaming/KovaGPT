@@ -128,6 +128,14 @@ class SDKTests(unittest.TestCase):
         self.assertEqual(self.calls[1][1], "/api/v1/analysis")
         self.assertEqual(json.loads(self.calls[1][2]), data)
 
+    def test_realtime_uses_exact_quoted_input(self):
+        data = {"model": "kova-realtime", "audio": "AAAA" * 30000, "output_modality": "audio", "max_output_tokens": 64}
+        self.responses.extend([FakeResponse(quote()), FakeResponse({"text": "result"})])
+        self.assertEqual(self.client.realtime(data, **BUDGET).json()["text"], "result")
+        self.assertEqual(json.loads(self.calls[0][2]), {"operation": "realtime", "input": data})
+        self.assertEqual(self.calls[1][1], "/api/v1/realtime")
+        self.assertEqual(json.loads(self.calls[1][2]), data)
+
     def test_speech_uses_exact_quoted_input(self):
         data = {"model": "speech", "input": "hello", "voice": "default"}
         self.responses.extend([FakeResponse(quote()), FakeResponse({"audio": "//uAAA=="})])

@@ -15,7 +15,8 @@ type Operation =
   | "audio/transcriptions"
   | "audio/speech"
   | "analysis"
-  | "browser";
+  | "browser"
+  | "realtime";
 type Model = {
   id: string;
   capability: string;
@@ -45,6 +46,7 @@ const capability: Record<Operation, string> = {
   search: "chat",
   analysis: "file_analysis",
   browser: "cloud_browser",
+  realtime: "realtime",
 };
 
 function eligibleModel(item: Model, operation: Operation) {
@@ -71,6 +73,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [maxOutput, setMaxOutput] = useState("256");
+  const [realtimeOutput, setRealtimeOutput] = useState<"text" | "audio">("text");
+  const [realtimeInput, setRealtimeInput] = useState<"text" | "audio">("text");
   const [maxSearchCalls, setMaxSearchCalls] = useState("1");
   const [analysisFileIds, setAnalysisFileIds] = useState("");
   const [effort, setEffort] = useState("");
@@ -210,7 +214,8 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
   const textOperation = operation === "responses" || operation === "streaming";
   const acceptsImage = textOperation && selectedModel?.inlineImageInput === true;
   const acceptsEdit = operation === "images" && selectedModel?.imageEdits === true;
-  const acceptsAudio = operation === "audio/transcriptions";
+  const acceptsAudio =
+    operation === "audio/transcriptions" || (operation === "realtime" && realtimeInput === "audio");
   const getQuote = () =>
     perform(async (controller) => {
       resetQuote();
@@ -235,7 +240,20 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
             },
           ];
       }
-      if (acceptsAudio) {
+      if (acceptsAudio && operation === "realtime") {
+        if (
+          !mediaFile ||
+          mediaFile.size < 4800 ||
+          mediaFile.size > 240000 ||
+          mediaFile.size % 2 !== 0
+        )
+          throw new Error("Select raw PCM16 mono audio at 24 kHz (0.1–5 seconds).");
+        const bytes = new Uint8Array(await mediaFile.arrayBuffer());
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 16384)
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + 16384));
+        sourceAudio = btoa(binary);
+      } else if (acceptsAudio) {
         if (!mediaFile || mediaFile.size < 3244 || mediaFile.size > 640044)
           throw new Error("Select a WAV recording of 0.1–20 seconds (16 kHz mono PCM).");
         const bytes = new Uint8Array(await mediaFile.arrayBuffer());
@@ -263,28 +281,35 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
                 max_output_tokens: Number(maxOutput),
                 max_tool_calls: Number(maxSearchCalls),
               }
-            : acceptsAudio
-              ? { model, audio: sourceAudio }
-              : operation === "audio/speech"
-                ? { model, input: prompt, voice: "default", response_format: "mp3" }
-                : operation === "analysis"
-                  ? {
-                      model,
-                      input: prompt,
-                      max_output_tokens: Number(maxOutput),
-                      ...(analysisFileIds.trim()
-                        ? { file_ids: analysisFileIds.trim().split(/[\s,]+/) }
-                        : {}),
-                    }
-                  : operation === "browser"
-                    ? (() => {
-                        const [url, ...navigate] = prompt
-                          .split(/\r?\n/)
-                          .map((value) => value.trim())
-                          .filter(Boolean);
-                        return { model, url, ...(navigate.length ? { navigate } : {}) };
-                      })()
-                    : { model, input: prompt };
+            : operation === "realtime"
+              ? {
+                  model,
+                  ...(acceptsAudio ? { audio: sourceAudio } : { input: prompt }),
+                  output_modality: realtimeOutput,
+                  max_output_tokens: Number(maxOutput),
+                }
+              : acceptsAudio
+                ? { model, audio: sourceAudio }
+                : operation === "audio/speech"
+                  ? { model, input: prompt, voice: "default", response_format: "mp3" }
+                  : operation === "analysis"
+                    ? {
+                        model,
+                        input: prompt,
+                        max_output_tokens: Number(maxOutput),
+                        ...(analysisFileIds.trim()
+                          ? { file_ids: analysisFileIds.trim().split(/[\s,]+/) }
+                          : {}),
+                      }
+                    : operation === "browser"
+                      ? (() => {
+                          const [url, ...navigate] = prompt
+                            .split(/\r?\n/)
+                            .map((value) => value.trim())
+                            .filter(Boolean);
+                          return { model, url, ...(navigate.length ? { navigate } : {}) };
+                        })()
+                      : { model, input: prompt };
       const requestBody = JSON.stringify(input);
       const apiOperation = operation === "streaming" ? "responses" : operation;
       const quoteBody = JSON.stringify({ operation: apiOperation, input });
@@ -361,7 +386,49 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
       }
       const result = await request(accepted.operation, controller, accepted.requestBody, headers);
       if (!mounted.current || controller.signal.aborted) return;
-      if (accepted.operation === "audio/speech") {
+      if (accepted.operation === "realtime") {
+        const value = record(result);
+        if (!["completed", "incomplete"].includes(String(value.status)))
+          throw new Error("Realtime response did not complete. Check Logs before retrying.");
+        if (typeof value.audio === "string") {
+          if (
+            value.format !== "pcm16" ||
+            value.sample_rate !== 24000 ||
+            value.audio.length > 1280000 ||
+            !/^[A-Za-z0-9+/]+={0,2}$/.test(value.audio)
+          )
+            throw new Error("Invalid Realtime audio. Check Logs before retrying.");
+          const raw = atob(value.audio);
+          if (!raw.length || raw.length % 2 !== 0) throw new Error("Invalid Realtime audio.");
+          const wave = new Uint8Array(44 + raw.length);
+          const view = new DataView(wave.buffer);
+          const put = (offset: number, text: string) => {
+            for (let i = 0; i < text.length; i++) wave[offset + i] = text.charCodeAt(i);
+          };
+          put(0, "RIFF");
+          view.setUint32(4, 36 + raw.length, true);
+          put(8, "WAVEfmt ");
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, 1, true);
+          view.setUint32(24, 24000, true);
+          view.setUint32(28, 48000, true);
+          view.setUint16(32, 2, true);
+          view.setUint16(34, 16, true);
+          put(36, "data");
+          view.setUint32(40, raw.length, true);
+          for (let i = 0; i < raw.length; i++) wave[44 + i] = raw.charCodeAt(i);
+          let binary = "";
+          for (let offset = 0; offset < wave.length; offset += 16384)
+            binary += String.fromCharCode(...wave.subarray(offset, offset + 16384));
+          setAudio(`data:audio/wav;base64,${btoa(binary)}`);
+          setOutput(
+            typeof value.transcript === "string" ? value.transcript : "AI-generated audio.",
+          );
+        } else setOutput(typeof value.text === "string" ? value.text : "No text output.");
+        if (value.status === "incomplete")
+          setError("Response incomplete. Check Logs for settlement.");
+      } else if (accepted.operation === "audio/speech") {
         const encoded = record(result).audio;
         if (
           typeof encoded !== "string" ||
@@ -472,6 +539,7 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               <option value="analysis">Isolated code analysis</option>
               <option value="browser">Cloud Browser navigation</option>
               <option value="audio/speech">Speech generation</option>
+              <option value="realtime">Native Realtime turn</option>
               <option value="audio/transcriptions">Audio transcription</option>
             </select>
           </label>
@@ -499,6 +567,46 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               ))}
             </select>
           </label>
+          {operation === "realtime" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1 text-sm">
+                <span>Realtime input</span>
+                <select
+                  className="block min-h-11 w-full rounded-full border border-input bg-background px-4"
+                  value={realtimeInput}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setRealtimeInput(event.target.value as "text" | "audio");
+                    setMediaFile(null);
+                    setDispatched(false);
+                    resetQuote();
+                  }}
+                >
+                  <option value="text">Text</option>
+                  <option value="audio">Recorded PCM16 audio</option>
+                </select>
+              </label>
+              <label className="block space-y-1 text-sm">
+                <span>Realtime output</span>
+                <select
+                  className="block min-h-11 w-full rounded-full border border-input bg-background px-4"
+                  value={realtimeOutput}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setRealtimeOutput(event.target.value as "text" | "audio");
+                    setDispatched(false);
+                    resetQuote();
+                  }}
+                >
+                  <option value="text">Text</option>
+                  <option value="audio">AI-generated speech</option>
+                </select>
+              </label>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                One quoted native provider turn. No persistent live microphone session.
+              </p>
+            </div>
+          )}
           {!acceptsAudio && (
             <label className="block space-y-1 text-sm">
               <span>
@@ -525,11 +633,15 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
           )}
           {acceptsAudio && (
             <label className="block min-w-0 space-y-1 text-sm">
-              <span>WAV recording (16 kHz mono PCM, 0.1–20 seconds)</span>
+              <span>
+                {operation === "realtime"
+                  ? "Raw PCM16 recording (24 kHz mono, 0.1–5 seconds)"
+                  : "WAV recording (16 kHz mono PCM, 0.1–20 seconds)"}
+              </span>
               <Input
                 ref={mediaInput}
                 type="file"
-                accept=".wav,audio/wav,audio/x-wav"
+                accept={operation === "realtime" ? ".pcm,.raw" : ".wav,audio/wav,audio/x-wav"}
                 disabled={busy}
                 onChange={(event) => {
                   setMediaFile(event.target.files?.[0] ?? null);
@@ -542,13 +654,16 @@ export function DeveloperPlayground({ enabled }: { enabled: boolean }) {
               </p>
             </label>
           )}
-          {(textOperation || operation === "search" || operation === "analysis") && (
+          {(textOperation ||
+            operation === "search" ||
+            operation === "analysis" ||
+            operation === "realtime") && (
             <label className="block space-y-1 text-sm">
               <span>Maximum output tokens</span>
               <Input
                 type="number"
                 min={1}
-                max={operation === "analysis" ? 2048 : 32768}
+                max={operation === "realtime" ? 512 : operation === "analysis" ? 2048 : 32768}
                 value={maxOutput}
                 disabled={busy}
                 onChange={(event) => {

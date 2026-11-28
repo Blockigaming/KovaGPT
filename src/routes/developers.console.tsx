@@ -61,6 +61,12 @@ const CSV_FIELDS = [
   "moderation_requests",
   "transcription_seconds",
   "speech_character_credits",
+  "realtime_text_input_tokens",
+  "realtime_cached_text_tokens",
+  "realtime_audio_input_tokens",
+  "realtime_cached_audio_tokens",
+  "realtime_text_output_tokens",
+  "realtime_audio_output_tokens",
   "final_customer_charge",
   "maximum_reserved_charge",
   "currency",
@@ -88,6 +94,7 @@ type ConsoleData = {
   moderationEnabled?: boolean;
   transcriptionEnabled?: boolean;
   speechEnabled?: boolean;
+  realtimeEnabled?: boolean;
   decisionsEnabled?: boolean;
   analysisEnabled?: boolean;
   computerEnabled?: boolean;
@@ -1281,6 +1288,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "cloud_browser",
                     "audio_transcription",
                     "audio_speech",
+                    "realtime",
                   ]
                     .filter(
                       (scope) =>
@@ -1290,7 +1298,8 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                         (scope !== "computer_use" || data?.computerEnabled) &&
                         (scope !== "cloud_browser" || data?.browserEnabled) &&
                         (scope !== "audio_transcription" || data?.transcriptionEnabled) &&
-                        (scope !== "audio_speech" || data?.speechEnabled),
+                        (scope !== "audio_speech" || data?.speechEnabled) &&
+                        (scope !== "realtime" || data?.realtimeEnabled),
                     )
                     .map((scope) => (
                       <label key={scope} className="mr-5 inline-flex min-h-11 items-center gap-2">
@@ -1538,6 +1547,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     "cloud_browser",
                     "audio_transcription",
                     "audio_speech",
+                    "realtime",
                   ].map((item) => (
                     <option key={item} value={item}>
                       {item}

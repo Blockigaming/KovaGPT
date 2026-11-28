@@ -1,13 +1,13 @@
 # Developer platform implementation evidence — PR #779
 
-Snapshot of source at f9a43238dcef42ce96bd040ac23de9c0d121e708, 2026-11-27. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for native Realtime request-scoped implementation on base 5f2762569ed3a8f9a6bec2858cd525d7fe721898, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 21; partial: 69; missing: 10. Total 100.
-- Verification: 5 targeted requirement-level tested; 1 prior CI verified; 77 narrower evidence; 17 unverified. Total 100.
+- Implemented: 21; partial: 70; missing: 9. Total 100.
+- Verification: 5 targeted requirement-level tested; 1 prior CI verified; 78 narrower evidence; 16 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
@@ -23,6 +23,7 @@ Implementation: I = supported source implementation covers the named requirement
 - d6de895: 46 Node tests passing (developer-browser-policy, developer-metering, developer-platform-ingress, developer-openapi, developer-reference).
 - f9a4323: 26 Node SDK tests and 29 Python SDK tests passing (developer-sdk.test.mjs and sdk/python unittest suite).
 - Latest MCP batch: 31 focused Node tests passing (MCP, MCP files, OAuth transport, developer platform ingress and file search); shared scope and rate checks, revoked-scope denial and redacted terminal errors.
+- Native Realtime batch: 80 focused Node tests and 11 database/canonical tests passed; final SDK/contract regression subset 35 Node tests passed; Python SDK 30 tests passed. No live provider calls. Canonical history forward-extension inventory now pins exact new migration hashes; immutable historical proposal rejection test passed.
 - Tests listed without a pass count identify existing regression fixtures, not an assertion that every fixture was rerun on this snapshot. No real paid provider calls were made. Superseded 1c3632e full CI canceled; f9a4323 workflows had not registered at observation.
 
 ## Requirement ledger
@@ -40,7 +41,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R09 | P | F | Generation and edit policies/meters exist; model-specific streaming not complete. |
 | R10 | I | F | Embeddings route, bounded batch inputs and dimension checks; dc071f1 SDK/policy tests. |
 | R11 | P | F | 8fec7aa speech/transcription, f9a4323 recorded transcript translation workflow; native audio translation and complete consent lifecycle not finished. |
-| R12 | M | N | No versioned Realtime session API; must have server-held credentials, bounded transport and verified settlement before enablement. |
+| R12 | P | F | Native upstream WebSocket, POST /api/v1/realtime, one quoted bounded text/audio turn with token-modality receipts, abort/cleanup, SDKs, console and schema implemented. Tests use simulated provider events. Full-duplex multi-turn ingress and persistent session accounting are not implemented. |
 | R13 | I | F | Search route, bounded calls, source receipts and metering; dc071f1 queue tests. Provider verification remains open separately. |
 | R14 | P | F | be68daf research-runs and f9a4323 reviewed planner/preparation/synthesis; no autonomous server orchestration yet. |
 | R15 | P | F | Versioned agents and explicit revision-bound turns, d1e5243; orchestration and hosted tool lifecycle incomplete. |

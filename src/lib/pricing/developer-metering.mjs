@@ -32,6 +32,13 @@ import {
   developerSpeechReceipt,
 } from "./developer-speech-policy.mjs";
 
+import {
+  REALTIME_MODEL,
+  REALTIME_DIMENSIONS,
+  developerRealtimeUsage,
+  validDeveloperRealtimeRequest,
+} from "./developer-realtime-policy.mjs";
+
 const fail = (code) => {
   throw new PricingUnavailableError(code);
 };
@@ -52,6 +59,7 @@ const dimensionsByMeter = {
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
+  realtime_tokens: REALTIME_DIMENSIONS,
   speech_character_credits: ["speech_character_credits"],
   transcription_duration: ["transcription_seconds"],
   browser_sessions: ["browser_sessions_60s"],
@@ -104,6 +112,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
   const dimensions = dimensionsByMeter[contract.meter];
   const moderationMeter = contract.meter === "moderation_requests";
   const transcriptionMeter = contract.meter === "transcription_duration";
+  const realtimeMeter = contract.meter === "realtime_tokens";
   const speechMeter = contract.meter === "speech_character_credits";
   const browserMeter = contract.meter === "browser_sessions";
   const decisionsMeter = contract.meter === "decisions_tokens";
@@ -138,6 +147,7 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
     !moderationMeter &&
     !transcriptionMeter &&
     !speechMeter &&
+    !realtimeMeter &&
     !browserMeter &&
     new TextEncoder().encode(JSON.stringify(textBody)).byteLength >
       (decisionsMeter
@@ -158,6 +168,21 @@ export function prepareDeveloperQuote(config, request, at = new Date()) {
       !contract.allowedQualities.includes(request.body.quality ?? "auto"))
   )
     fail("billing_image_bound_missing");
+  if (
+    realtimeMeter !== (request.capability === "realtime") ||
+    (realtimeMeter &&
+      (request.provider !== "openai" ||
+        !validDeveloperRealtimeRequest(request.body) ||
+        contract.expectedResponseModels.length !== 1 ||
+        contract.expectedResponseModels[0] !== REALTIME_MODEL ||
+        contract.maximumUsage.realtime_text_input_tokens < 2048 ||
+        contract.maximumUsage.realtime_cached_text_tokens < 2048 ||
+        contract.maximumUsage.realtime_audio_input_tokens < 5000 ||
+        contract.maximumUsage.realtime_cached_audio_tokens < 5000 ||
+        contract.maximumUsage.realtime_text_output_tokens < request.body.max_output_tokens ||
+        contract.maximumUsage.realtime_audio_output_tokens < request.body.max_output_tokens))
+  )
+    fail("billing_realtime_contract_invalid");
   if (
     browserMeter !== (request.capability === "cloud_browser") ||
     browserMeter !== (request.provider === "browserbase") ||
@@ -502,6 +527,9 @@ export function authoritativeUsage(value, meter, fallbackId, expectedModels) {
   } else if (meter === "browser_sessions") {
     if (!developerBrowserReceipt(response)) return null;
     dimensions = { browser_sessions_60s: 1 };
+  } else if (meter === "realtime_tokens") {
+    dimensions = developerRealtimeUsage(response);
+    if (!dimensions) return null;
   } else if (meter === "speech_character_credits") {
     dimensions = developerSpeechReceipt(response);
     if (!dimensions) return null;
@@ -785,6 +813,14 @@ export async function runMeteredProvider({ prepared, admit, dispatch, finish, se
         prepared.contract.meter === "speech_character_credits" &&
         actual?.dimensions.speech_character_credits >
           prepared.options.usage.dimensions.speech_character_credits
+      )
+        actual = null;
+      if (
+        prepared.contract.meter === "realtime_tokens" &&
+        actual &&
+        Object.entries(actual.dimensions).some(
+          ([key, value]) => value > prepared.options.usage.dimensions[key],
+        )
       )
         actual = null;
       if (actual) await finalize("settled", settleDeveloperQuote(prepared, actual));

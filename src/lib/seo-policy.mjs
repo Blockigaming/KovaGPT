@@ -652,6 +652,7 @@ const PUBLIC_REVIEW_PATHS = Object.freeze([
       "moderations",
       "audio-transcription",
       "audio-speech",
+      "realtime",
       "decisions",
       "analysis",
       "browser",

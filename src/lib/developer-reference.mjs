@@ -74,6 +74,14 @@ export const DEVELOPER_ENDPOINTS = [
     "One classification result is required for settlement. This endpoint does not provide image moderation or bulk classification. Consult approved pricing rather than assuming the service is free.",
   ),
   endpoint(
+    "realtime",
+    "Native Realtime turns",
+    "realtime",
+    "POST",
+    "Quote one text input (up to 1000 UTF-8 bytes) or raw base64 PCM16 mono audio (24 kHz, 0.1–5 seconds). Select text or audio output and max_output_tokens from 1–512.",
+    "Opens a native provider WebSocket server-side for one bounded turn, returns text or base64 PCM16 audio and validated usage, and closes the connection. Separate text, audio and cached-token pricing requires approval. This is a request-scoped turn, not an interactive multi-turn WebSocket proxy.",
+  ),
+  endpoint(
     "audio-speech",
     "Speech generation",
     "audio/speech",

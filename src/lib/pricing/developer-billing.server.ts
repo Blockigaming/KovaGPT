@@ -140,7 +140,11 @@ export async function meterProviderRequest(
   const current = context.getStore();
   // Consumer plan accounting remains owned by acquire/finalizeGeneration.
   if (!current) {
-    if (["cloud_browser", "audio_transcription", "audio_speech"].includes(input.capability))
+    if (
+      ["cloud_browser", "audio_transcription", "audio_speech", "realtime"].includes(
+        input.capability,
+      )
+    )
       throw new Error("developer_billing_disabled");
     return input.send();
   }
@@ -196,6 +200,11 @@ export async function meterProviderRequest(
     (input.provider !== "elevenlabs" || runtimeEnv("KOVA_DEVELOPER_SPEECH_ENABLED") !== "true")
   )
     throw new Error("developer_speech_unavailable");
+  if (
+    input.capability === "realtime" &&
+    (input.provider !== "openai" || runtimeEnv("KOVA_DEVELOPER_REALTIME_ENABLED") !== "true")
+  )
+    throw new Error("developer_realtime_unavailable");
   const creditLots = runtimeEnv("KOVA_DEVELOPER_CREDIT_LOTS_V2") === "true";
   const call = current.nextCall++;
   if (call >= 16) throw new Error("developer_call_limit");

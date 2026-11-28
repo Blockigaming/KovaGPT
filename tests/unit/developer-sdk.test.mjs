@@ -655,3 +655,19 @@ test("research planning, quote-only preparation and separately authorized synthe
   assert.equal(JSON.parse(JSON.parse(f.calls[12].body).input).evidence.length, 1);
   assert.ok(!f.calls[12].body.includes("NOT SETTLED"));
 });
+
+test("Realtime SDK binds native text or audio to exact quotes and stable retry keys", async () => {
+  const f = fixture();
+  const body = {
+    model: "kova-realtime",
+    audio: Buffer.alloc(120000).toString("base64"),
+    output_modality: "audio",
+    max_output_tokens: 64,
+  };
+  await assert.rejects(f.client.realtime.create(body, {}), /budget_required/);
+  assert.equal(f.calls.length, 0);
+  await f.client.realtime.create(body, options);
+  assert.deepEqual(JSON.parse(f.calls[0].body), { operation: "realtime", input: body });
+  assert.deepEqual(JSON.parse(f.calls[1].body), body);
+  assert.equal(f.calls[1].url, "https://kovagpt.com/api/v1/realtime");
+});

@@ -57,5 +57,8 @@ test("paid operations and quote schemas agree with the JavaScript SDK operation 
       .properties.voice.enum[0],
     "default",
   );
-  assert.ok(!spec.paths["/api/v1/realtime"]);
+  assert.equal(
+    spec.paths["/api/v1/realtime"].post.requestBody.content["application/json"].schema.oneOf.length,
+    2,
+  );
 });

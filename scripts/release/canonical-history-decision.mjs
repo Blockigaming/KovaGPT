@@ -22,6 +22,42 @@ const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4
 // exception to its exact body instead of admitting arbitrary non-Kova files.
 const reviewedForwardMigrations = new Map([
   [
+    "20261127205018_developer_workspace_v2.sql",
+    "ea594a5c9bd4a4d0d1ce6cc4a361655f326e46f2e53bf509ca0c9c1c64e52ed6",
+  ],
+  [
+    "20261127205021_developer_credit_lots_v2.sql",
+    "59a7b519ed956ba1c3c3349bbbff8a09a03392578a349ed0c1715a0163fd86bb",
+  ],
+  [
+    "20261127205023_developer_credit_lot_integration_v2.sql",
+    "a86d1a7483d8118a320927a6aa22a8ef64b974325f44b9650474a4d53835a1fc",
+  ],
+  [
+    "20261127205025_developer_vector_stores_v1.sql",
+    "788c8f56f45ecf1ea4d4386c3cabd886798825e009b8d8f049a9c30475b64eb2",
+  ],
+  [
+    "20261127205027_developer_conversations_v1.sql",
+    "7874e06f616d5ef31495d1e305db8df04ca50af831256c7f0cefcba325066f6e",
+  ],
+  [
+    "20261127205029_developer_agents_v1.sql",
+    "8c404f1a6bbe850d5f8d3349d608c756f89c5f25a6c68d4b2be10fabca35ceab",
+  ],
+  [
+    "20261127205031_developer_skills_v1.sql",
+    "1ef5debaf89e90d6d473794e573c392e2f7f74188a8c5d52b64f33fb00f65e37",
+  ],
+  [
+    "20261127205033_developer_webhooks_v1.sql",
+    "6c5bc91124b9efe955aee3a48297b1972caba927734e25da12023487ac64281d",
+  ],
+  [
+    "20261127205035_developer_batches_v1.sql",
+    "aff2b09b2b5540e797ff86483f390d7af9c1205ac8abeee95f55dfbbd25e853d",
+  ],
+  [
     "20261108034500_team_email_invitations.sql",
     "7add335e9ec75a86c8c1c3c907bc224071785bf7fc7e09f755c4ae69d4408a38",
   ],

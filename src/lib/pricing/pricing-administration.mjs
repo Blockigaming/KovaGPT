@@ -6,6 +6,8 @@ import { TRANSCRIPTION_MODEL } from "./developer-transcription-policy.mjs";
 
 import { SPEECH_MODEL } from "./developer-speech-policy.mjs";
 
+import { REALTIME_MODEL, REALTIME_DIMENSIONS } from "./developer-realtime-policy.mjs";
+
 const fail = (code) => {
   throw new Error(`pricing_admin_${code}`);
 };
@@ -32,6 +34,7 @@ const meters = {
   embedding_tokens: ["input_tokens"],
   decisions_tokens: ["decision_input_tokens"],
   moderation_requests: ["moderation_requests"],
+  realtime_tokens: REALTIME_DIMENSIONS,
   speech_character_credits: ["speech_character_credits"],
   transcription_duration: ["transcription_seconds"],
   browser_sessions: ["browser_sessions_60s"],
@@ -228,6 +231,10 @@ export function validatePricingProposal(raw, now = Date.now()) {
       fail("image_bounds_invalid");
     const body = { model: c.upstreamModel, input: c.meter === "moderation_requests" ? "test" : "" };
     if (["responses_tokens", "responses_search"].includes(c.meter)) body.max_output_tokens = 1;
+    if (c.meter === "realtime_tokens") {
+      if (c.upstreamModel !== REALTIME_MODEL) fail("contract_invalid");
+      Object.assign(body, { input: "test", output_modality: "text", max_output_tokens: 1 });
+    }
     if (c.meter === "speech_character_credits") {
       if (c.upstreamModel !== SPEECH_MODEL) fail("contract_invalid");
       Object.assign(body, {

@@ -11,7 +11,7 @@ import time
 from urllib.parse import urlsplit
 
 __all__ = ["Client", "KovaError", "APIResponse", "response_events", "chat_completion_events", "verify_webhook_signature"]
-_OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions", "decisions", "agent-turns", "analysis", "computer-use", "browser", "audio/transcriptions", "audio/speech"))
+_OPERATIONS = frozenset(("responses", "images", "embeddings", "moderations", "search", "chat/completions", "decisions", "agent-turns", "analysis", "computer-use", "browser", "audio/transcriptions", "audio/speech", "realtime"))
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", re.I)
 _MODEL = re.compile(r"[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*")
 _KEY = re.compile(r"kova_[0-9a-f-]{36}_[A-Za-z0-9_-]{43}")
@@ -667,7 +667,7 @@ class Client:
 
     def quote(self, operation, data):
         _require(isinstance(operation, str) and operation in _OPERATIONS, "operation_invalid")
-        limit = 1048576 if operation == "audio/transcriptions" else 65536
+        limit = 1048576 if operation in ("audio/transcriptions", "realtime") else 65536
         snapshot = _json_body(data, limit)
         payload = b'{"operation":' + json.dumps(operation).encode("ascii") + b',"input":' + snapshot + b'}'
         _require(len(payload) <= limit, "input_too_large")
@@ -688,13 +688,13 @@ class Client:
         _require(isinstance(token, str) and len(token) <= 2048 and _QUOTE.fullmatch(token)
                  and _number(charge) and charge <= maximum_charge and quote.get("currency") == currency
                  and type(expires) is int and now < expires <= now + 120000, "quote_outside_budget")
-        limit = 1048576 if operation == "audio/transcriptions" else 65536
+        limit = 1048576 if operation in ("audio/transcriptions", "realtime") else 65536
         return self._request(operation, method="POST", body=_json_body(data, limit), paid=True,
                              headers={"Idempotency-Key": key, "X-Kova-Quote": token})
 
     def run(self, operation, data, *, currency, maximum_charge, idempotency_key):
         self._budget(currency, maximum_charge, idempotency_key)
-        limit = 1048576 if operation == "audio/transcriptions" else 65536
+        limit = 1048576 if operation in ("audio/transcriptions", "realtime") else 65536
         snapshot = json.loads(_json_body(data, limit))
         quote = self.quote(operation, snapshot)
         return self.execute(operation, snapshot, quote=quote, currency=currency,
@@ -731,6 +731,9 @@ class Client:
 
     def decisions(self, data, **budget):
         return self.run("decisions", data, **budget)
+
+    def realtime(self, data, **budget):
+        return self.run("realtime", data, **budget)
 
     def speech(self, data, **budget):
         return self.run("audio/speech", data, **budget)
