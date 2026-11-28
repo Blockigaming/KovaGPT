@@ -56,7 +56,6 @@ test("short replies fit content, icons are compact, selection is native and menu
     "Hi! How can I help?",
   );
   const more = actions.getByRole("button", { name: "More actions", exact: true });
-  await more.click();
   const menu = await expectResponseMoreActions(page, more);
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();

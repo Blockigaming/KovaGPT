@@ -108,7 +108,6 @@ test("response More provides the appropriate actions and returns focus on dismis
     .getByRole("toolbar", { name: "Response actions", exact: true })
     .last()
     .getByRole("button", { name: "More actions", exact: true });
-  await trigger.click();
   const menu = await expectResponseMoreActions(page, trigger);
   await expect(menu.getByText("Practice this explanation", { exact: true })).toHaveCount(0);
   await capture(page, info, "minimal-response-menu");

@@ -177,7 +177,10 @@ export async function chooseSettingsSection(page: Page, section: string) {
 // The phone action sheet intentionally provides touch-accessible shortcuts;
 // the desktop dropdown remains the minimal two-action menu.
 export async function expectResponseMoreActions(page: Page, trigger: Locator) {
+  // Read the trigger before opening a modal: Radix hides the underlying
+  // accessibility tree while its menu or dialog owns focus.
   const sheet = (await trigger.getAttribute("aria-haspopup")) === "dialog";
+  await trigger.click();
   const menu = sheet
     ? page.getByRole("dialog", { name: "Message actions", exact: true })
     : page.getByRole("menu");

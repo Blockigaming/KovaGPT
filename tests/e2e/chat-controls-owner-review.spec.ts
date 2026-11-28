@@ -87,7 +87,6 @@ test("response is unboxed with five ordered actions, public sharing, and a bookm
   ).toHaveAttribute("aria-pressed", "false");
   expect({ saved, removed, savedBookmark }).toEqual({ saved: 1, removed: 1, savedBookmark: null });
   const more = toolbar.getByRole("button", { name: "More actions", exact: true });
-  await more.click();
   const actionsMenu = await expectResponseMoreActions(page, more);
   await page.keyboard.press("Escape");
   await expect(actionsMenu).toBeHidden();
