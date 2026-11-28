@@ -1,4 +1,7 @@
+export const developerUsageDimensions: Readonly<Record<string, string>>;
+export function developerUsageDimension(usage: unknown, key: string): number | null;
 export type DeveloperUsageTotals = {
+  dimensions: Record<string, { measured: number; total: number }>;
   requests: number;
   measuredRequests: number;
   measuredSearchRequests: number;

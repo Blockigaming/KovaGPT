@@ -28,7 +28,11 @@ import { meterProviderRequest, withDeveloperBilling } from "./developer-billing.
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
 import { pricingRegistryIds } from "./pricing-administration.mjs";
 import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
-import { summarizeDeveloperUsage } from "./developer-usage-summary.mjs";
+import {
+  summarizeDeveloperUsage,
+  developerUsageDimensions,
+  developerUsageDimension,
+} from "./developer-usage-summary.mjs";
 import { developerFileReferences } from "./developer-file-policy.mjs";
 import { developerImageEditBytes } from "./developer-image-edit-policy.mjs";
 import {
@@ -36,11 +40,7 @@ import {
   bindDeveloperSpeechVoice,
   runDeveloperSpeech,
 } from "./developer-speech-policy.mjs";
-import {
-  REALTIME_MODEL,
-  REALTIME_DIMENSIONS,
-  runDeveloperRealtime,
-} from "./developer-realtime-policy.mjs";
+import { REALTIME_MODEL, runDeveloperRealtime } from "./developer-realtime-policy.mjs";
 import { developerBrowserChannel } from "./developer-browser-interactive.mjs";
 import { TRANSLATION_MODEL, runDeveloperTranslation } from "./developer-translation-policy.mjs";
 import { TRANSCRIPTION_BODY_LIMIT } from "./developer-transcription-policy.mjs";
@@ -1126,34 +1126,14 @@ const publicUsage = (row: Record<string, unknown>) => {
     authoritative_usage && typeof authoritative_usage === "object"
       ? (authoritative_usage as Record<string, unknown>)
       : {};
-  const dimension = (name: string) => {
-    const value = usage[name];
-    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
-  };
   return {
     ...rest,
-    input_tokens: dimension("input_tokens") ?? dimension("decision_input_tokens"),
-    cached_input_tokens: dimension("cached_input_tokens"),
-    image_input_tokens: dimension("image_input_tokens"),
-    output_tokens: dimension("output_tokens"),
-    web_search_calls: dimension("web_search_calls"),
-    moderation_requests: dimension("moderation_requests"),
-    transcription_seconds:
-      typeof usage.transcription_seconds === "number" &&
-      Number.isFinite(usage.transcription_seconds) &&
-      usage.transcription_seconds > 0
-        ? usage.transcription_seconds
-        : null,
-    translation_seconds:
-      typeof usage.translation_seconds === "number" &&
-      Number.isFinite(usage.translation_seconds) &&
-      usage.translation_seconds > 0
-        ? usage.translation_seconds
-        : null,
-    speech_character_credits: dimension("speech_character_credits"),
-    ...Object.fromEntries(REALTIME_DIMENSIONS.map((key) => [key, dimension(key)])),
-    container_1g_sessions: dimension("container_1g_sessions"),
-    browser_sessions_60s: dimension("browser_sessions_60s"),
+    ...Object.fromEntries(
+      Object.keys(developerUsageDimensions).map((key) => [
+        key,
+        developerUsageDimension(usage, key),
+      ]),
+    ),
   };
 };
 export async function developerKeyUsage(identity: DeveloperIdentity, request: Request) {

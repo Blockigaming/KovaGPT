@@ -41,8 +41,11 @@ import {
   developerResourceSections,
   type DeveloperResourceSection,
 } from "@/lib/pricing/developer-resource-console.mjs";
-import { KOVA_MODEL_LABELS } from "@/lib/kova-foundation-models.mjs";
-import type { DeveloperUsageSummary } from "@/lib/pricing/developer-usage-summary.mjs";
+import { DeveloperModelCatalog } from "@/components/DeveloperModelCatalog";
+import {
+  developerUsageDimensions,
+  type DeveloperUsageSummary,
+} from "@/lib/pricing/developer-usage-summary.mjs";
 type Row = Record<string, string | number | boolean | null | string[]>;
 const CSV_FIELDS = [
   "id",
@@ -69,6 +72,8 @@ const CSV_FIELDS = [
   "realtime_cached_audio_tokens",
   "realtime_text_output_tokens",
   "realtime_audio_output_tokens",
+  "container_1g_sessions",
+  "browser_sessions_60s",
   "final_customer_charge",
   "maximum_reserved_charge",
   "currency",
@@ -365,7 +370,6 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
     [scopes, setScopes] = useState<string[]>(["chat"]);
   const [modelFilter, setModelFilter] = useState("");
   const [modelDraft, setModelDraft] = useState("");
-  const [catalogFilter, setCatalogFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -866,72 +870,19 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
             />
           )}
           {section === "models" && (
-            <section className="min-w-0 space-y-6">
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Models</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Explore the Kova model families. An approved pricing contract and enabled API key
-                  are required before a model can be used.
-                </p>
-              </div>
-              <Input
-                aria-label="Search models"
-                placeholder="Search models"
-                value={catalogFilter}
-                onChange={(event) => setCatalogFilter(event.target.value)}
-              />
-              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {Object.entries(KOVA_MODEL_LABELS)
-                  .filter(([id, label]) =>
-                    (id + " " + label).toLowerCase().includes(catalogFilter.trim().toLowerCase()),
-                  )
-                  .map(([id, label]) => (
-                    <article
-                      key={id}
-                      className="min-w-0 space-y-2 rounded-[var(--kova-radius-card)] border border-border bg-background p-5"
-                    >
-                      <Layers3 className="size-5 text-muted-foreground" aria-hidden="true" />
-                      <h2 className="font-semibold">{label}</h2>
-                      <p className="break-all font-mono text-xs text-muted-foreground">{id}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Text / reasoning · API availability must be confirmed with GET
-                        /api/v1/models.
-                      </p>
-                    </article>
-                  ))}
-              </div>
-              <Link
-                to="/developers/$docSlug"
-                params={{ docSlug: "models" }}
-                className="inline-flex min-h-10 items-center text-sm underline"
-              >
-                Model API documentation
-              </Link>
-              <section className="space-y-3">
-                <h2 className="text-lg font-semibold">Other API capabilities</h2>
-                <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-                  {(
-                    [
-                      ["Image generation", "images"],
-                      ["Embeddings", "api-reference"],
-                      ["Files", "files"],
-                      ["Web search", "search"],
-                      ["Agents", "agents"],
-                      ["Webhooks", "webhooks"],
-                    ] as const
-                  ).map(([label, slug]) => (
-                    <Link
-                      key={slug}
-                      to="/developers/$docSlug"
-                      params={{ docSlug: slug }}
-                      className="min-w-0 rounded-[var(--kova-radius-card)] border border-border p-4 text-sm hover:bg-muted"
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            </section>
+            <DeveloperModelCatalog
+              key={userId + ":" + account + ":" + project}
+              enabled={data?.enabled === true && Boolean(project)}
+              keys={(data?.keys ?? [])
+                .filter(
+                  (key) =>
+                    key.project_id === project &&
+                    key.enabled === true &&
+                    !key.revoked_at &&
+                    Date.parse(String(key.expires_at)) > Date.now(),
+                )
+                .map((key) => String(key.id))}
+            />
           )}
           {section === "settings" && (
             <section className="min-w-0 space-y-6">
@@ -1767,25 +1718,28 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                       {currentSummary.data.measuredRequests.toLocaleString()} requests with measured
                       tokens
                     </p>
-                    {(currentSummary.data.measuredSearchRequests ?? 0) > 0 && (
-                      <p className="text-sm tabular-nums">
-                        {currentSummary.data.webSearchCalls.toLocaleString()} recorded search calls
-                      </p>
-                    )}
-                    {(currentSummary.data.measuredModerationRequests ?? 0) > 0 && (
-                      <p className="text-sm tabular-nums">
-                        {currentSummary.data.moderationRequests.toLocaleString()} moderation
-                        requests
-                      </p>
-                    )}
-                    {(currentSummary.data.measuredTranscriptionRequests ?? 0) > 0 && (
-                      <p className="text-sm tabular-nums">
-                        {currentSummary.data.transcriptionSeconds.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
-                        })}{" "}
-                        seconds of transcription
-                      </p>
-                    )}
+                    <dl className="grid gap-2 sm:grid-cols-2">
+                      {Object.entries(developerUsageDimensions).map(([key, label]) => {
+                        const meter = currentSummary.data.dimensions?.[key];
+                        return (
+                          <div key={key} className="rounded-lg border p-3">
+                            <dt className="text-xs text-muted-foreground">{label}</dt>
+                            <dd className="tabular-nums">
+                              {meter?.measured
+                                ? meter.total.toLocaleString(undefined, {
+                                    maximumFractionDigits: 3,
+                                  })
+                                : "Not measured"}
+                            </dd>
+                            {!!meter?.measured && (
+                              <dd className="text-xs text-muted-foreground">
+                                {meter.measured} measured requests
+                              </dd>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </dl>
                     {(["days", "models", "services", "statuses"] as const).map((group) => {
                       const rows = currentSummary.data[group];
                       const max = Math.max(1, ...rows.map((row) => row.requests));
@@ -1814,17 +1768,16 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                                   />
                                 </div>
                                 <p className="text-muted-foreground">
-                                  {row.measuredRequests
-                                    ? `${Object.values(row.tokens)
-                                        .reduce((sum, value) => sum + value, 0)
-                                        .toLocaleString()} measured tokens`
-                                    : "No measured tokens"}
-                                  {(row.measuredSearchRequests ?? 0) > 0 &&
-                                    ` · ${row.webSearchCalls.toLocaleString()} search calls`}
-                                  {(row.measuredModerationRequests ?? 0) > 0 &&
-                                    ` · ${row.moderationRequests.toLocaleString()} moderations`}
-                                  {(row.measuredTranscriptionRequests ?? 0) > 0 &&
-                                    ` · ${row.transcriptionSeconds.toLocaleString(undefined, { maximumFractionDigits: 3 })} transcription seconds`}
+                                  {Object.entries(developerUsageDimensions)
+                                    .flatMap(([key, label]) => {
+                                      const meter = row.dimensions?.[key];
+                                      return meter?.measured
+                                        ? [
+                                            `${label}: ${meter.total.toLocaleString(undefined, { maximumFractionDigits: 3 })}`,
+                                          ]
+                                        : [];
+                                    })
+                                    .join(" · ") || "No measured usage"}
                                   {row.charges.length
                                     ? ` · ${row.charges.map((charge) => `${charge.amount} ${charge.currency} minor units`).join(" · ")}`
                                     : ""}

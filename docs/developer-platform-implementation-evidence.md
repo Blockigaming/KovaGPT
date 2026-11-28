@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for resumable uploads on base 2da44babfcef22165a6c26d408155a1c7e2c9781, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for model discovery and usage dimensions on base ae0b0f25bff40a2b69554b5a56b2a4273d1080d9, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 29; partial: 63; missing: 8. Total 100.
-- Verification: 13 targeted requirement-level tested; 1 prior CI verified; 71 narrower evidence; 15 unverified. Total 100.
+- Implemented: 32; partial: 60; missing: 8. Total 100.
+- Verification: 16 targeted requirement-level tested; 1 prior CI verified; 68 narrower evidence; 15 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Model discovery and usage: 26 focused Node tests passed; TS/TSX syntax transpilation passed. Project-key-scoped model eligibility replaces static consumer labels; filter by capability and search aliases, inspect contract features. Every existing authoritative public meter appears in filtered summaries and CSV, with zero distinguished from unmeasured and independent currency totals. R37/R54/R61 source coverage; authenticated browser/build qualification and full CI pending. No provider calls or spending.
 
 - Resumable uploads: dedicated bounded byte-chunk lifecycle, SHA-256 and UTF-8 validation, idempotent completion into the existing private-file quota, cancellation erasure, one-hour expiry and maintenance, scoped SDK and console operations. 48 focused Node checks, one PGlite lifecycle test, 37 Python SDK tests and 12 canonical-history/migration checks passed; database references verified. Canonical version uses observed UTC time; full isolated Supabase replay and browser qualification remain pending. Upload gates remain off.
 
@@ -81,7 +83,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R34 | P | F | Owner/project/key management in workspace v2; organization membership, invitations and service accounts incomplete. |
 | R35 | P | F | Scope and retention guards; complete audit/privacy configuration incomplete. |
 | R36 | P | F | Budget and concurrency limits; full notification/alert lifecycle incomplete. |
-| R37 | P | F | Usage route and summaries, UTC filtering/export; complete dimensions and analytic views not qualified. |
+| R37 | I | T | Owner-scoped UTC/account/project/key/model/service/status filters, stable bounded pages and complete observed range summary/export, independent currency totals, all existing authoritative usage dimensions, daily/model/service/status cost breakdowns. Focused summary tests passed; browser and live qualification pending. |
 | R38 | P | F | Credit lots, expiry and wallet controls; legacy reconciliation and consumer integration remain gated. |
 | R39 | P | F | Funding/payment event handling; live receipts, refunds/disputes and reconciliation not fully qualified. |
 | R40 | P | F | Versioned JS package, declarations and streaming; f9a4323 26 SDK tests. Missing families still lack SDK parity. |
@@ -98,14 +100,14 @@ Implementation: I = supported source implementation covers the named requirement
 | R51 | P | F | Console overview and navigation exist; complete URL-addressable section and real metric qualification pending. |
 | R52 | P | F | Playground supports text, images, audio, isolated analysis and browser; agent/session UX and full browser checks incomplete. |
 | R53 | I | T | Dedicated project-scoped saved prompts with immutable revision create/update/retrieve/list/delete, bounded text and owner quotas, exact retry/revision fences, structured console view, JS and sync/async Python SDK, OpenAPI, public guide and export/erasure. Local PostgreSQL fixture and SDK/console tests passed. Full replay and browser qualification remain release gates. |
-| R54 | P | F | Approved catalog and scoped details; full search/filter/live eligibility views incomplete. |
+| R54 | I | T | Actual selected-project bearer model discovery, bounded response, alias search, capability filter, reasoning/image/search detail, loading/error/empty states and pricing version. No static eligibility claims. Policy fixtures passed; authenticated browser qualification pending. |
 | R55 | P | F | Agent definitions and session-bound turns; run/artifact/trace viewer incomplete. |
 | R56 | I | F | DeveloperFilesPanel and vector-store resource CRUD/index controls; dc071f1 and resource-console tests. |
 | R57 | I | F | Batch/background Responses resource controls with explicit quote submission, status and cancellation; d1e5243 console/policy tests. |
 | R58 | P | F | Browser Playground and analysis exist; no persistent container/browser lifecycle UI. |
 | R59 | P | F | Skills controls and DeveloperMcpAccess; full outbound connection management/discovery missing. |
 | R60 | P | F | Automation and webhook resource controls; complete retry/delivery management UX pending. |
-| R61 | P | F | Usage summary and logs, filtered CSV; complete dimensions and UI validation pending. |
+| R61 | I | T | Owner-scoped UTC time series, account/project/key/model/service/status filters, pagination, redacted rows, independently measured totals for all existing meters, complete filtered CSV including isolated container/browser counts. Focused analytics tests passed; browser qualification pending. |
 | R62 | P | F | Request detail ownership check; full redacted trace/health diagnostics missing. |
 | R63 | P | F | Project selection and owner controls; full organization/member invitation and role management missing. |
 | R64 | P | F | Scoped developer keys and rotation/revocation; service accounts and audit views incomplete. |

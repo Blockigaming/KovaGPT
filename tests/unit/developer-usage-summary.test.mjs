@@ -102,3 +102,36 @@ test("audio duration is aggregated separately from tokens and missing receipts",
   assert.equal(summary.transcriptionSeconds, 3.75);
   assert.equal(summary.services[0].transcriptionSeconds, 3.75);
 });
+
+test("every authoritative dimension is counted independently, including zero and missing", () => {
+  const summary = summarizeDeveloperUsage([
+    {
+      ...row,
+      authoritative_usage: {
+        realtime_audio_input_tokens: 12,
+        realtime_cached_audio_tokens: 3,
+        speech_character_credits: 5,
+        translation_seconds: 1.25,
+        container_1g_sessions: 1,
+        browser_sessions_60s: 1,
+      },
+    },
+    {
+      ...row,
+      authoritative_usage: {
+        realtime_audio_input_tokens: 0,
+        translation_seconds: 2.5,
+        container_1g_sessions: -1,
+        browser_sessions_60s: 0,
+      },
+    },
+    { ...row, authoritative_usage: { realtime_audio_input_tokens: 1.5, translation_seconds: 11 } },
+  ]);
+  assert.deepEqual(summary.dimensions.realtime_audio_input_tokens, { measured: 2, total: 12 });
+  assert.deepEqual(summary.dimensions.translation_seconds, { measured: 2, total: 3.75 });
+  assert.deepEqual(summary.dimensions.speech_character_credits, { measured: 1, total: 5 });
+  assert.deepEqual(summary.dimensions.container_1g_sessions, { measured: 1, total: 1 });
+  assert.deepEqual(summary.dimensions.browser_sessions_60s, { measured: 2, total: 1 });
+  assert.deepEqual(summary.dimensions.output_tokens, { measured: 0, total: 0 });
+  assert.deepEqual(summary.days[0].dimensions, summary.dimensions);
+});
