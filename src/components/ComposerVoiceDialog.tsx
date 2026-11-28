@@ -480,6 +480,10 @@ export function ComposerVoiceDialog({
           const selection = preferredVoice(scope.userId, voices, defaultId);
           selectedVoice.current = selection;
           setSelectedVoiceId(selection);
+          // Warm only static, same-voice acknowledgment assets in parallel
+          // with microphone startup. No paid provider request is made here.
+          if (mode === "voice" && selection && result.conversation === true)
+            void ackCache.warm(selection).catch(() => undefined);
           setCapabilities({
             voices,
             defaultVoiceId: defaultId,

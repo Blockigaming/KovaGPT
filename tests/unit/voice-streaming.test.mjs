@@ -238,3 +238,18 @@ test("segment limits cap index, length and total characters per reply", async ()
   const long = "a".repeat(1001);
   assert.equal((await f.handler(post(segmentBody(0, long)))).status, 400);
 });
+
+test("short complete opening sentences can reach synthesis before the remaining reply", () => {
+  const s = createSpeechSegmenter();
+  assert.deepEqual(s.push("Of course! "), ["Of course!"]);
+  assert.deepEqual(s.push("Here are the details."), []);
+  assert.deepEqual(s.flush(), ["Here are the details."]);
+});
+
+test("early sentence segmentation does not cut a short opening clause or decimal", () => {
+  const s = createSpeechSegmenter();
+  assert.deepEqual(s.push("Sure, "), []);
+  assert.deepEqual(s.push("the value is 3."), []);
+  assert.deepEqual(s.push("5 volts. "), ["Sure, the value is 3.5 volts."]);
+  assert.deepEqual(s.flush(), []);
+});

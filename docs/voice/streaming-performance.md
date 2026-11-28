@@ -83,6 +83,13 @@ Policy (`acknowledgments.mjs`):
 
 ## Experience
 
+Realtime Scribe VAD uses an explicit 0.8-second silence threshold instead of the provider's
+1.5-second documented default. This reduces the configured endpointing wait by 0.7 seconds;
+physical-device testing must check that normal pauses are not cut short. The first complete spoken
+sentence can be emitted at eight characters rather than twenty, while the minimum opening-clause
+length remains twenty. Static acknowledgment warmup runs alongside microphone startup, not on the
+reply's critical path. These are configuration/implementation changes, not measured live latency.
+
 - One glow stays visible through connecting, listening, thinking, searching and speaking (breathing while
   not audio-driven, audio-reactive while listening and speaking).
 - No visible "Starting Voice…", "Kova is speaking…" or "Resume" text. Status is still announced via a
