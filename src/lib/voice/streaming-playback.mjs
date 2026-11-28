@@ -233,10 +233,10 @@ export function createStreamingVoicePlayback({
   const fireAcknowledgment = async () => {
     timer = null;
     const kind = policy.due();
-    if (!kind || !live || closed || realAudioReady || !ackCache) return;
+    if (!kind || !live || realAudioReady || !ackCache) return;
     const clip = await ackCache.get(voiceId, kind);
     // Real audio may have arrived while the clip loaded; then skip it.
-    if (!clip || !live || closed || realAudioReady || wroteAnything) return;
+    if (!clip || !live || realAudioReady || wroteAnything) return;
     wroteAnything = true;
     ackDurationMs = clip.durationMs;
     ackAudibleAt = now();
