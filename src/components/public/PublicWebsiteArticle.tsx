@@ -1,5 +1,6 @@
 import "./public-website.css";
 import { Link } from "@tanstack/react-router";
+import { DeveloperServiceStatus } from "@/components/DeveloperServiceStatus";
 import { PhonePageOutline } from "./PhonePageOutline";
 import { PublicShell } from "./PublicShell";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
@@ -65,6 +66,7 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
         <p className="public-article-lede">{item.description}</p>
         {item.availability && <p className="public-availability">{item.availability}</p>}
         {item.review && <p className="public-availability">{item.review}</p>}
+        {item.path === "/developers/status" && <DeveloperServiceStatus />}
         <PhonePageOutline sections={item.sections} />
         <div className="public-article-body">
           <div>

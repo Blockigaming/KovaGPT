@@ -33,6 +33,7 @@ import { meterProviderRequest, withDeveloperBilling } from "./developer-billing.
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
 import { pricingRegistryIds } from "./pricing-administration.mjs";
 import { fundingAdjustedVersion } from "./developer-funding-allowance.mjs";
+import { developerRequestTrace } from "./developer-request-trace.mjs";
 import {
   summarizeDeveloperUsage,
   developerUsageDimensions,
@@ -1348,6 +1349,7 @@ export async function handleDeveloperConsole(request: Request) {
   try {
     if (request.method === "GET") {
       const params = new URL(request.url).searchParams;
+      if (params.has("trace") && params.size !== 1) throw new Error("developer_input_invalid");
       if (params.has("mcpProject")) {
         const { manageOwnerMcpConnections } = await import("./developer-mcp-connections.server");
         return developerJson(
@@ -1398,6 +1400,41 @@ export async function handleDeveloperConsole(request: Request) {
         .limit(10);
       if (accounts.error) throw new Error("developer_storage_unavailable");
       const ids = (accounts.data ?? []).map((row) => row.account_id);
+      if (params.has("trace")) {
+        const id = developerUuid(params.get("trace"));
+        if (!ids.length) throw new Error("developer_request_not_found");
+        const trace = await db
+          .from("developer_api_requests")
+          .select(
+            "id,account_id,project_id,api_key_id,public_model,capability,currency,settlement_state,maximum_reserved_charge,final_customer_charge,created_at,dispatched_at,settled_at,terminal_outcome,authoritative_usage",
+          )
+          .in("account_id", ids)
+          .eq("id", id)
+          .range(0, 0)
+          .abortSignal(AbortSignal.any([request.signal, AbortSignal.timeout(10000)]));
+        if (trace.error || !trace.data) throw new Error("developer_storage_unavailable");
+        if (trace.data.length !== 1) throw new Error("developer_request_not_found");
+        const row = trace.data[0];
+        const observedAt = new Date().toISOString();
+        const since = new Date(Date.parse(observedAt) - 86400000).toISOString();
+        let observations = db
+          .from("developer_api_requests")
+          .select("settlement_state")
+          .eq("account_id", row.account_id)
+          .eq("capability", row.capability);
+        observations = row.project_id
+          ? observations.eq("project_id", row.project_id)
+          : observations.is("project_id", null);
+        const recent = await observations
+          .gte("created_at", since)
+          .lte("created_at", observedAt)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(0, 100)
+          .abortSignal(AbortSignal.any([request.signal, AbortSignal.timeout(10000)]));
+        if (recent.error || !recent.data) throw new Error("developer_storage_unavailable");
+        return developerJson(developerRequestTrace(row, recent.data, observedAt));
+      }
       let consumerCreditSharing = false;
       if (workspaceV2) {
         const preference = await db

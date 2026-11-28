@@ -165,6 +165,7 @@ async function fixture(options = {}) {
       path === "./developer-funding-allowance.mjs" ||
       path === "./developer-file-policy.mjs" ||
       path === "./developer-usage-summary.mjs" ||
+      path === "./developer-request-trace.mjs" ||
       path === "./developer-image-edit-policy.mjs" ||
       path === "./developer-api-aliases.mjs" ||
       path === "./developer-chat-compat.mjs" ||
@@ -1066,4 +1067,67 @@ test("autonomous research cannot obtain a paid quote while its release gates are
     /batch_unavailable/,
   );
   assert.equal(f.state.calls.length, 0);
+});
+
+test("owner trace is scoped before retrieval and projects only public diagnostics", async () => {
+  const f = await fixture();
+  globalThis[slot].owner = "owner-a";
+  const account = "11111111-1111-4111-8111-111111111111";
+  const project = "22222222-2222-4222-8222-222222222222";
+  const id = "33333333-3333-4333-8333-333333333333";
+  const foreign = "44444444-4444-4444-8444-444444444444";
+  const row = {
+    id,
+    account_id: account,
+    project_id: project,
+    public_model: "kova-fast",
+    capability: "chat",
+    settlement_state: "settled",
+    terminal_outcome: "settled",
+    currency: "USD",
+    maximum_reserved_charge: "5",
+    final_customer_charge: "2",
+    created_at: new Date(Date.now() - 2000).toISOString(),
+    dispatched_at: new Date(Date.now() - 1000).toISOString(),
+    settled_at: new Date(Date.now() - 500).toISOString(),
+    provider_response_id: "private-provider-id",
+    request_fingerprint: "private-fingerprint",
+    terminal_result: { secret: "private-output" },
+    final_upstream_cost: "private-cost",
+    authoritative_usage: { input_tokens: 0, output_tokens: 12, hidden: "private-meter" },
+  };
+  f.state.rows = {
+    developer_account_owners: [{ account_id: account }],
+    developer_api_requests: [
+      row,
+      { ...row, id: foreign, account_id: foreign },
+      { ...row, id: "different-project", project_id: foreign },
+      { ...row, id: "different-service", capability: "embeddings" },
+      { ...row, id: "old", created_at: "2026-01-01T00:00:00.000Z" },
+    ],
+  };
+  const read = (query, owner = "owner-a") =>
+    f.module.handleDeveloperConsole(
+      new Request("https://kovagpt.com/api/developer/console?" + query, {
+        headers: { "x-kova-expected-user": owner },
+      }),
+    );
+  const response = await read("trace=" + id);
+  assert.equal(response.status, 200);
+  const trace = await response.json();
+  assert.equal(trace.request.id, id);
+  assert.equal(trace.meters.input_tokens, 0);
+  assert.equal(trace.meters.output_tokens, 12);
+  assert.equal(trace.meters.translation_seconds, null);
+  assert.deepEqual(
+    trace.timeline.map((x) => x.stage),
+    ["Reserved", "Dispatched", "Settled"],
+  );
+  assert.equal(trace.serviceObservation.sampleSize, 1);
+  assert.equal(trace.serviceObservation.counts.settled, 1);
+  assert.equal(trace.serviceObservation.providerHealth, "unknown");
+  assert.doesNotMatch(JSON.stringify(trace), /private-/);
+  assert.equal((await read("trace=" + foreign)).status, 404);
+  assert.equal((await read("trace=" + id + "&trace=" + foreign)).status, 400);
+  assert.equal((await read("trace=" + id, "owner-b")).status, 409);
 });

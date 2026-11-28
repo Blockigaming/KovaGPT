@@ -42,6 +42,7 @@ import {
   type DeveloperResourceSection,
 } from "@/lib/pricing/developer-resource-console.mjs";
 import { DeveloperModelCatalog } from "@/components/DeveloperModelCatalog";
+import { DeveloperRequestTrace } from "@/components/DeveloperRequestTrace";
 import {
   developerUsageDimensions,
   type DeveloperUsageSummary,
@@ -154,8 +155,16 @@ export const Route = createFileRoute("/developers/console")({
   ): {
     section?: WorkspaceSection;
     funding?: "returned" | "canceled";
+    trace?: string;
   } => ({
     section: WORKSPACE_SECTIONS.find((section) => section === search.section),
+    trace:
+      typeof search.trace === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        search.trace,
+      )
+        ? search.trace.toLowerCase()
+        : undefined,
     funding:
       search.funding === "returned" || search.funding === "canceled" ? search.funding : undefined,
   }),
@@ -328,9 +337,18 @@ function DeveloperWorkspace({
 function DeveloperConsole() {
   const { isSignedIn, user } = useUser();
   const search = Route.useSearch();
-  const section = search.section ?? (search.funding ? "billing" : "overview");
+  const section = search.trace
+    ? "logs"
+    : (search.section ?? (search.funding ? "billing" : "overview"));
   if (isSignedIn && user?.id)
-    return <OwnedDeveloperConsole key={user.id} userId={user.id} section={section} />;
+    return (
+      <OwnedDeveloperConsole
+        key={user.id}
+        userId={user.id}
+        section={section}
+        trace={search.trace}
+      />
+    );
   return (
     <DeveloperWorkspace>
       <section id="overview" className="space-y-4 rounded-xl border border-border p-6">
@@ -345,7 +363,15 @@ function DeveloperConsole() {
     </DeveloperWorkspace>
   );
 }
-function OwnedDeveloperConsole({ userId, section }: { userId: string; section: WorkspaceSection }) {
+function OwnedDeveloperConsole({
+  userId,
+  section,
+  trace,
+}: {
+  userId: string;
+  section: WorkspaceSection;
+  trace?: string;
+}) {
   const isSignedIn = true;
   const ownerRef = useRef<string | null>(userId);
   const [limitsPage, setLimitsPage] = useState(0);
@@ -773,9 +799,14 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               ["Projects", data?.projects.length],
               [
                 "API keys",
-                data?.keys.filter((key) => !key.revoked_at && key.enabled === true).length,
+                data?.keys.filter(
+                  (key) =>
+                    !key.revoked_at &&
+                    key.enabled === true &&
+                    Date.parse(String(key.expires_at)) > Date.now(),
+                ).length,
               ],
-              ["Requests in current view", usageReady ? visibleUsage.length : undefined],
+              ["Requests on current page", usageReady ? visibleUsage.length : undefined],
             ] as const
           ).map(([label, value]) => (
             <div
@@ -787,6 +818,51 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
             </div>
           ))}
         </div>
+        {selected && (
+          <div className="space-y-2 rounded-lg border border-border p-4">
+            <h2 className="font-semibold">Selected account</h2>
+            <dl className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Available credit</dt>
+                <dd>
+                  {selected.available_amount} {selected.currency} minor units
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Reserved credit</dt>
+                <dd>
+                  {selected.reserved_amount} {selected.currency} minor units
+                </dd>
+              </div>
+            </dl>
+            <Link
+              to="/developers/console"
+              search={{ section: "billing" }}
+              className="inline-flex min-h-11 items-center underline text-sm"
+            >
+              View billing
+            </Link>
+          </div>
+        )}
+        <nav aria-label="Workspace shortcuts" className="flex flex-wrap gap-4 text-sm">
+          {(
+            [
+              ["Projects", "projects"],
+              ["Usage", "usage"],
+              ["Request diagnostics", "logs"],
+              ["Spending limits", "limits"],
+            ] as const
+          ).map(([label, target]) => (
+            <Link
+              key={target}
+              to="/developers/console"
+              search={{ section: target }}
+              className="inline-flex min-h-11 items-center underline"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
       </section>
       {!isSignedIn ? (
         <SignInButton mode="modal">
@@ -1480,6 +1556,13 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
               Filter your API request history. Page totals cover up to 100 records; generate a
               date-range summary to see all matching records within the supported range.
             </p>
+            {section === "logs" && (
+              <DeveloperRequestTrace
+                key={userId + ":" + (trace ?? "search")}
+                userId={userId}
+                requestId={trace}
+              />
+            )}
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <label className="space-y-1 text-sm">
                 <span>Model ID</span>
@@ -1897,6 +1980,13 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     {row.final_customer_charge ?? `Held: ${row.maximum_reserved_charge}`}{" "}
                     {row.currency} minor units
                   </p>
+                  <Link
+                    to="/developers/console"
+                    search={{ section: "logs", trace: String(row.id) }}
+                    className="inline-flex min-h-11 items-center underline text-sm"
+                  >
+                    Inspect request
+                  </Link>
                 </article>
               ))}
             </div>
@@ -1909,6 +1999,7 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                     <th className="p-2">Time (UTC)</th>
                     <th className="p-2">Status</th>
                     <th className="p-2">Charge (minor units)</th>
+                    <th className="p-2">Diagnostics</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1921,6 +2012,15 @@ function OwnedDeveloperConsole({ userId, section }: { userId: string; section: W
                       <td className="p-2">
                         {row.final_customer_charge ?? `Held: ${row.maximum_reserved_charge}`}{" "}
                         {row.currency}
+                      </td>
+                      <td className="p-2">
+                        <Link
+                          to="/developers/console"
+                          search={{ section: "logs", trace: String(row.id) }}
+                          className="inline-flex min-h-11 items-center underline"
+                        >
+                          Inspect
+                        </Link>
                       </td>
                     </tr>
                   ))}

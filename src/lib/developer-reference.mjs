@@ -397,7 +397,7 @@ export const DEVELOPER_GUIDES = [
     "status",
     "Service status",
     "Use the console to determine whether the authenticated account is enabled and GET /api/v1/models to discover currently approved capabilities.",
-    "This documentation does not provide live uptime telemetry or a service-level guarantee. Treat unavailable or unknown status as unverified; contact support with request identifiers.",
+    "Run the current public liveness, platform readiness and developer authentication-gate checks below without credentials or billable model calls. These point-in-time observations do not establish provider health, historical uptime or a service-level guarantee. Treat unknown status as unverified; contact support with request identifiers.",
   ),
   guide(
     "release-notes",
