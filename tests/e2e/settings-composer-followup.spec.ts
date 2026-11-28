@@ -103,7 +103,10 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   await page.addInitScript(() => {
     Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
       configurable: true,
-      value: async () => ({ getTracks: () => [{ stop() {} }] }),
+      value: async () => {
+        const track = { enabled: true, stop() {}, addEventListener() {} };
+        return { getTracks: () => [track], getAudioTracks: () => [track] };
+      },
     });
     Object.defineProperty(window, "MediaRecorder", {
       configurable: true,

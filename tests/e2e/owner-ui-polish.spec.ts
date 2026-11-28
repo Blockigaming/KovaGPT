@@ -2,6 +2,7 @@ import { usesCompactSettings } from "./settings-layout-fixture";
 import { test, expect } from "@playwright/test";
 import { fixture, owner, functionNames } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { expectResponseMoreActions } from "./current-ui";
 
 async function setup(page: import("@playwright/test").Page, saved = false) {
   await fixture(page, "dark", true, saved);
@@ -54,12 +55,11 @@ test("short replies fit content, icons are compact, selection is native and menu
   expect(await page.evaluate(() => window.getSelection()?.toString())).toContain(
     "Hi! How can I help?",
   );
-  await actions.getByRole("button", { name: "More actions", exact: true }).click();
-  const menu = page.locator(".kova-response-menu");
-  await expect(menu.locator("time")).toHaveCount(0);
-  await expect(menu.getByRole("menuitem")).toHaveCount(2);
-  await expect(menu.getByRole("menuitem")).toHaveText(["Try again", "Branch into new chat"]);
+  const more = actions.getByRole("button", { name: "More actions", exact: true });
+  await more.click();
+  const menu = await expectResponseMoreActions(page, more);
   await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
   await expect(actions.getByRole("button", { name: "More actions", exact: true })).toBeFocused();
   await screenshot(page, "response");
 });

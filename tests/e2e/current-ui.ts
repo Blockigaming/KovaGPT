@@ -173,3 +173,41 @@ export async function chooseSettingsSection(page: Page, section: string) {
   await expect(surface.getByRole("tabpanel").first()).toBeVisible();
   return surface;
 }
+
+// The phone action sheet intentionally provides touch-accessible shortcuts;
+// the desktop dropdown remains the minimal two-action menu.
+export async function expectResponseMoreActions(page: Page, trigger: Locator) {
+  const sheet = (await trigger.getAttribute("aria-haspopup")) === "dialog";
+  const menu = sheet
+    ? page.getByRole("dialog", { name: "Message actions", exact: true })
+    : page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  if (sheet) {
+    for (const name of [
+      /^(Copy|Copied)$/,
+      "Share",
+      /^(Regenerate response|Retry response)$/,
+      "Branch in new chat",
+      "Search the web",
+      /^(Save to Library|Remove from Library)$/,
+    ]) {
+      await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
+    }
+    await expect(menu.getByRole("button", { name: "Close sheet", exact: true })).toBeVisible();
+  } else {
+    const actions = menu.getByRole("menuitem");
+    await expect(actions).toHaveCount(2);
+    await expect(actions).toHaveText(["Try again", "Branch into new chat"]);
+  }
+  await expect(menu.locator("time")).toHaveCount(0);
+  return menu;
+}
+
+export async function confirmChatDeletionIfDrawer(page: Page) {
+  if (!(await usesSidebarDrawer(page))) return;
+  const confirmation = page.getByRole("dialog", { name: "Delete chat?", exact: true });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.getByRole("button", { name: "Cancel", exact: true })).toBeEnabled();
+  await confirmation.getByRole("button", { name: "Delete chat", exact: true }).click();
+  await expect(confirmation).toBeHidden();
+}

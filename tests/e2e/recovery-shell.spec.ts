@@ -95,7 +95,9 @@ for (const input of ["pointer", "keyboard"] as const) {
     await waitForKovaHydration(page);
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
     const sidebar = page.locator("#kova-primary-navigation");
-    await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
+    // The sidebar search is now dedicated to chat history; the workspace
+    // command palette is still available through the explicit shortcut.
+    await page.keyboard.press("Control+K");
     const search = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
     await expect(search).toBeVisible();
     const action = search.getByRole("option", {

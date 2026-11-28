@@ -3,7 +3,12 @@ import { coreFixture } from "./core-app-fixture";
 import { owner, chatA } from "./actual-app-fixture";
 import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { revealSidebar, usesSidebarDrawer } from "./current-ui";
+import {
+  confirmChatDeletionIfDrawer,
+  expectResponseMoreActions,
+  revealSidebar,
+  usesSidebarDrawer,
+} from "./current-ui";
 
 test("response is unboxed with five ordered actions, public sharing, and a bookmark that saves and removes", async ({
   page,
@@ -81,13 +86,12 @@ test("response is unboxed with five ordered actions, public sharing, and a bookm
     toolbar.getByRole("button", { name: "Save to Library", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
   expect({ saved, removed, savedBookmark }).toEqual({ saved: 1, removed: 1, savedBookmark: null });
-  await toolbar.getByRole("button", { name: "More actions", exact: true }).click();
-  await expect(page.getByRole("menuitem")).toHaveCount(2);
-  await expect(page.getByRole("menuitem", { name: "Try again", exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("menuitem", { name: "Branch into new chat", exact: true }),
-  ).toBeVisible();
+  const more = toolbar.getByRole("button", { name: "More actions", exact: true });
+  await more.click();
+  const actionsMenu = await expectResponseMoreActions(page, more);
   await page.keyboard.press("Escape");
+  await expect(actionsMenu).toBeHidden();
+  await expect(more).toBeFocused();
   await expect(
     page.getByRole("button", { name: "Prepare or manage Work", exact: true }),
   ).toHaveCount(0);
@@ -183,6 +187,7 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
     expect(menu!.x).toBeGreaterThanOrEqual(sidebar!.x + sidebar!.width);
   }
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await confirmChatDeletionIfDrawer(page);
   await expect(page.getByText("Chat deleted", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   // Sonner keeps the dismissed toast mounted briefly for its exit animation.
@@ -195,6 +200,7 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   ).toBeVisible();
   await options.click();
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await confirmChatDeletionIfDrawer(page);
   await expect(page.getByText("Chat deleted", { exact: true })).toBeVisible();
   await expect
     .poll(
@@ -271,9 +277,15 @@ test("activity shows default sections and progress and recorded browser sessions
         return rect.y + rect.height;
       })
       .toBeLessThanOrEqual(page.viewportSize()!.height + 1);
-    // Wait for the sheet's entrance motion to settle before measuring it.
-    await expect.poll(async () => (await sheet.boundingBox())!.y).toBe(0);
+    // The touch Activity panel is a bottom sheet, not a full-screen dialog.
+    await expect
+      .poll(async () => {
+        const rect = (await sheet.boundingBox())!;
+        return Math.abs(rect.y + rect.height - page.viewportSize()!.height);
+      })
+      .toBeLessThanOrEqual(1);
     const bounds = (await sheet.boundingBox())!;
+    expect(bounds.y).toBeGreaterThanOrEqual(0);
     expect(bounds.x).toBe(0);
     expect(bounds.width).toBe(page.viewportSize()!.width);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
@@ -288,7 +300,7 @@ test("activity shows default sections and progress and recorded browser sessions
       page.getByRole("button", { name: "Activity", exact: true }).filter({ visible: true }),
     ).toBeFocused();
     const title = page.locator("[data-kova-navigation-heading]").filter({ visible: true });
-    await expect(title).toHaveText("KovaGPT");
+    await expect(title).toHaveText("Composer review chat");
     await expect(title).toHaveCSS("text-overflow", "ellipsis");
     const titleBox = (await title.boundingBox())!;
     const header = page.locator(".kova-topbar-inner:visible");

@@ -1,4 +1,4 @@
-import { revealContinueWorking, revealSidebar } from "./current-ui";
+import { confirmChatDeletionIfDrawer, revealContinueWorking, revealSidebar } from "./current-ui";
 import { test, expect, type Page } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { functionNames } from "./actual-app-fixture";
@@ -187,7 +187,10 @@ test("sidebar deletion from Library permanently removes a chat without Trash", a
   // Observe before clicking because the toast disappears after five seconds.
   await Promise.all([
     expect(page.getByText("Chat deleted", { exact: true })).toBeVisible({ timeout: 10000 }),
-    deleteAction.click(),
+    (async () => {
+      await deleteAction.click();
+      await confirmChatDeletionIfDrawer(page);
+    })(),
   ]);
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0, {
     timeout: 10000,
