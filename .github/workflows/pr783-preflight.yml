@@ -1,0 +1,37 @@
+name: PR 783 preflight
+on:
+  push:
+    branches:
+      - diag/pr783-preflight-20261128
+permissions:
+  contents: read
+jobs:
+  format-and-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format candidate sources and print exact patch
+        run: |
+          npx --no-install prettier --write src/components/SettingsDialog.tsx src/lib/inbox.functions.ts src/lib/inbox.server.ts src/lib/settings-search.mjs src/routes/inbox.tsx tests/e2e/owner-inbox-review.spec.ts tests/unit/inbox-sidebar.test.mjs
+          git diff --no-ext-diff -- src/ tests/
+          npm run format:check
+      - name: Check TypeScript
+        if: always()
+        run: npm run typecheck
+      - name: Run focused unit tests
+        if: always()
+        run: node --test tests/unit/inbox-sidebar.test.mjs tests/unit/settings-search-relevance.test.mjs
+      - name: Compile application
+        if: always()
+        env:
+          AI_GENERATION_ENABLED: "false"
+          KOVA_GENERATION_DISABLED: "true"
+        run: npm run build
