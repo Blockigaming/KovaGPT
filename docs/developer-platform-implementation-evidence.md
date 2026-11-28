@@ -1,16 +1,18 @@
 # Developer platform implementation evidence — PR #779
 
-Updated for error and rate-limit contracts on base dfb196cb9795e04c44df77b7468039458a4bedcb, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
+Updated for support, source changelog, search and route inventory on base 6488d5c08c2244c132a0db1196d3f4729c0cd300, 2026-11-28. This is a living evidence record, not a replacement for the [frozen 100 requirements](developer-platform-production-checklist.md). Update affected rows after every implementation batch; preserve prior relevant test evidence and its commit. Never mark a production gate accepted without exact supporting evidence.
 
 Implementation: I = supported source implementation covers the named requirement, P = partial, M = missing core implementation or not performed gate. Verification: T = targeted tests demonstrate the core requirement, F = narrower focused evidence or existing regression fixtures (not a full requirement-level pass), C = prior CI verified, N = verification not established. Counts classify source coverage, not production readiness. Provider and browser qualification remain separate. R44 is the sole formally accepted checklist item; its prior accepted replay is not exact-head qualification. Tests can overlap across rows. N does not mean no test exists.
 
 ## Counts
 
-- Implemented: 34; partial: 58; missing: 8. Total 100.
-- Verification: 18 targeted requirement-level tested; 1 prior CI verified; 66 narrower evidence; 15 unverified. Total 100.
+- Implemented: 38; partial: 54; missing: 8. Total 100.
+- Verification: 22 targeted requirement-level tested; 1 prior CI verified; 64 narrower evidence; 13 unverified. Total 100.
 - Formally accepted: 1/100. No production activation.
 
 ## Reusable evidence
+
+- Public developer documentation: 12 reference and OpenAPI tests passed. Exact frozen 29-page baseline and 66 source pages, method coverage, related links, full-content search including detailed FAQ and changelog, accessible breadcrumb and search markup, source commit links and dates (not production release dates). R79/R87/R88/R89 source coverage; authenticated and responsive browser qualification remains pending.
 
 - Error and rate-limit contracts: 103 focused Node tests and 39 Python SDK tests passed. Stable sanitized error mapping, distributed limiter exhaustion vs outage, conservative REST Retry-After, both SDKs expose delay without automatic paid retry, documented source ceilings and recovery examples. Funding driver fixture needs the unavailable Stripe package; full CI pending. R82/R84 source coverage. No provider calls or spending.
 
@@ -127,7 +129,7 @@ Implementation: I = supported source implementation covers the named requirement
 | R76 | P | F | Reference guides and SDK examples exist; substantive verified end-to-end cookbook coverage incomplete. |
 | R77 | P | N | Public article catalog exists; developer engineering publication coverage incomplete. |
 | R78 | M | N | No verified deployed release to attach dated notes; do not invent launch. |
-| R79 | P | N | Changelog content exists; complete version history and source links incomplete. |
+| R79 | I | T | Dated source-candidate history with compatibility changes, fixes and actual source links; explicitly distinct from deployed releases. Focused history/reference tests. |
 | R80 | P | N | Migration guidance exists; all supported upgrade paths and validation missing. |
 | R81 | P | N | Lifecycle guidance exists; verified complete deprecation notices not established. |
 | R82 | I | T | Sanitized public error mapping, SDK retry metadata, documented status/code and request-ID recovery examples; focused ingress and SDK tests. |
@@ -135,9 +137,9 @@ Implementation: I = supported source implementation covers the named requirement
 | R84 | I | T | Source-backed service and concurrency matrix, budget/quote semantics, fail-closed rate limits and Retry-After in REST/OpenAPI and SDKs; focused tests. |
 | R85 | P | F | Private files and scope/retention docs; complete capability-specific privacy/security disclosures pending. |
 | R86 | M | N | No verified measured developer service-status surface. |
-| R87 | P | N | Support entry and FAQ content exist; complete actionable developer incident-reporting guidance pending. |
-| R88 | P | F | Searchable references implemented 43a29aa; breadcrumbs/accessibility and full browser validation incomplete. |
-| R89 | P | F | developer-reference and OpenAPI route tests; frozen 29-baseline inventory plus expanded navigation still incomplete. |
+| R87 | I | T | Actual support route and address, actionable credential/quote/upload/billing recovery FAQs and redacted incident report guidance. Reference tests. |
+| R88 | I | T | Search indexes detailed sections and resource fields; responsive directory, accessible search status/control association and developer breadcrumbs. Source tests; browser qualification pending. |
+| R89 | I | T | Frozen 29 baseline paths and 66 unique source paths enumerated; dedicated route, reference coverage, methods and related-link integrity tests. |
 | R90 | P | F | 1c3632e contract/SDK checks and d6de895 schema sync; full pricing/method/schema/doc parity pending. |
 | R91 | I | T | Signed quote, exact input, idempotency and admission locks; d6de895 ingress and prior replay fixtures. |
 | R92 | I | F | Metered settlement, uncertain states and original-lot accounting; 8c14be3 and be68daf queue/accounting regressions. |

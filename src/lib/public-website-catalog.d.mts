@@ -7,6 +7,7 @@ export type WebsitePage = Readonly<{
   indexable: boolean;
   availability?: string;
   review?: string;
+  sources?: readonly Readonly<{ label: string; href: string }>[];
 }>;
 export const PUBLIC_WEBSITE_PAGES: readonly WebsitePage[];
 export const PUBLIC_WEBSITE_PAGE_BY_PATH: ReadonlyMap<string, WebsitePage>;

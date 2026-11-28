@@ -8,6 +8,7 @@ export function filterDeveloperReference(entries, query) {
       entry.methods?.join(" "),
       entry.request,
       entry.behavior,
+      entry.searchText,
     ]
       .join(" ")
       .toLowerCase();

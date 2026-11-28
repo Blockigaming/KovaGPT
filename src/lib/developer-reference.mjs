@@ -437,7 +437,92 @@ export const DEVELOPER_GUIDES = [
   ),
 ];
 
-export const DEVELOPER_REFERENCE = [...DEVELOPER_ENDPOINTS, ...DEVELOPER_GUIDES];
+// Frozen 29-page baseline, including the overview and dedicated routes.
+export const DEVELOPER_BASELINE_PATHS = [
+  "/developers",
+  ..."agents api-keys api-reference authentication authorize changelog connections console docs errors examples files image-generation images migration-guides models pricing quickstart rate-limits responses safety sdks search status streaming tool-calling usage-billing webhooks"
+    .split(" ")
+    .map((slug) => `/developers/${slug}`),
+];
+export const DEVELOPER_DEDICATED_PATHS = [
+  "/developers",
+  "/developers/authorize",
+  "/developers/connections",
+  "/developers/console",
+  "/developers/pricing",
+  "/developers/docs",
+  "/developers/api-reference",
+];
+export const DEVELOPER_SOURCE_HISTORY = [
+  {
+    date: "2026-11-28",
+    commit: "6488d5c08c2244c132a0db1196d3f4729c0cd300",
+    title: "Error and retry contracts",
+    change:
+      "REST throttles advertise Retry-After; limiter outages return 503. SDKs expose delay without automatically retrying paid requests.",
+  },
+  {
+    date: "2026-11-28",
+    commit: "dfb196cb9795e04c44df77b7468039458a4bedcb",
+    title: "Scoped discovery and usage",
+    change:
+      "The console reads the selected key's approved catalog. Usage includes existing authoritative meter dimensions; unknown is not zero.",
+  },
+  {
+    date: "2026-11-28",
+    commit: "ae0b0f25bff40a2b69554b5a56b2a4273d1080d9",
+    title: "Resumable uploads",
+    change:
+      "Bounded chunk lifecycle adds offset replay, digest verification, cancellation and expiry without replacing existing file uploads.",
+  },
+  {
+    date: "2026-11-28",
+    commit: "2da44babfcef22165a6c26d408155a1c7e2c9781",
+    title: "Saved prompts",
+    change:
+      "Project-scoped immutable versions and explicit resolution support reproducible quoted inputs.",
+  },
+  {
+    date: "2026-11-28",
+    commit: "d18e67687",
+    title: "Response schemas",
+    change:
+      "Method-specific resource responses replace generic success shapes in the source OpenAPI reference.",
+  },
+  {
+    date: "2026-11-28",
+    commit: "0f572c20d",
+    title: "Realtime sessions",
+    change:
+      "Authenticated metered WebSocket sessions add explicit turn quotes and resource lifecycle controls.",
+  },
+  {
+    date: "2026-11-27",
+    commit: "1c3632e1e",
+    title: "Versioned OpenAPI preview",
+    change:
+      "Source contracts describe supported operations; no public package or service launch is implied.",
+  },
+  {
+    date: "2026-11-26",
+    commit: "4b8500a0b",
+    title: "Conversation persistence",
+    change:
+      "Scoped state and revision fences require explicit revision management rather than implicit consumer-chat access.",
+  },
+];
+export const DEVELOPER_REFERENCE = [...DEVELOPER_ENDPOINTS, ...DEVELOPER_GUIDES].map((entry) => ({
+  ...entry,
+  searchText: developerReferencePage(entry)
+    .sections.flatMap((section) => [section.title, section.body, ...section.points])
+    .join(" "),
+}));
+export const DEVELOPER_PAGE_PATHS = [
+  ...new Set([
+    ...DEVELOPER_DEDICATED_PATHS,
+    ...DEVELOPER_REFERENCE.map((entry) => `/developers/${entry.slug}`),
+  ]),
+].sort();
 export const DEVELOPER_REFERENCE_BY_SLUG = new Map(
   DEVELOPER_REFERENCE.map((entry) => [entry.slug, entry]),
 );
@@ -454,6 +539,42 @@ export function developerReferencePage(entry) {
     sections: [
       { title: "Request and integration", body: entry.request, points: [] },
       { title: "Behavior and limits", body: entry.behavior, points: [] },
+      ...(entry.slug === "support"
+        ? [
+            {
+              title: "Frequently asked questions",
+              body: "Start with the original project and request. Do not issue a new paid request to diagnose a previous one.",
+              points: [
+                "401 or 403? Check the key expiry, revocation, project membership and operation scope in the console. Never paste a credential into a ticket.",
+                "Model missing? Discover with GET /api/v1/models using the affected key. A consumer model name does not establish API eligibility.",
+                "Quote expired or changed? Reconcile the original request first, then obtain a new quote for the exact input only if a new operation is intended.",
+                "Uncertain charge or disconnected stream? Retrieve the original request with GET /api/v1/usage?id=<request UUID> or the original job resource; compare currency, settlement state and hold. A cancellation is not a refund.",
+                "Upload incomplete? Retrieve upload state and resume at the returned offset or cancel the upload. Never submit a different payload for a previously accepted offset.",
+                "Suspected credential leak? Revoke the key in the console immediately; issue a new narrowly scoped key, replace the server secret and review usage. Do not send the leaked key to support.",
+              ],
+            },
+            {
+              title: "Report an incident",
+              body: "Use the Contact support link below or email support@kovagpt.com. The support route is separate from the API; no response-time guarantee is asserted.",
+              points: [
+                "Include UTC timestamp, HTTP method and route, public model, HTTP status and sanitized error.code, request or job UUID, SDK name and version.",
+                "For billing incidents include account currency, settlement state and observed charge or hold in minor units. State whether the original request may have started.",
+                "Describe expected versus observed behavior and whether the problem reproduces with an unpaid read. Remove API keys, quote tokens, webhook secrets, private payloads, file contents and raw provider responses.",
+              ],
+            },
+          ]
+        : []),
+      ...(entry.slug === "changelog"
+        ? [
+            {
+              title: "Source candidate history",
+              body: "Dates below are source commit dates, not release dates. Compatibility changes apply only when the corresponding contract is activated; check discovery before use.",
+              points: DEVELOPER_SOURCE_HISTORY.map(
+                (item) => `${item.date} — ${item.title}: ${item.change}`,
+              ),
+            },
+          ]
+        : []),
       ...(entry.slug === "rate-limits"
         ? [
             {
@@ -507,7 +628,22 @@ export function developerReferencePage(entry) {
           ]
         : []),
     ],
+    ...(entry.slug === "changelog"
+      ? {
+          sources: DEVELOPER_SOURCE_HISTORY.map((item) => ({
+            label: `${item.date} — ${item.title}`,
+            href: `https://github.com/Blockigaming/KovaGPT/commit/${item.commit}`,
+          })),
+        }
+      : {}),
     related: [
+      ...(entry.slug === "support"
+        ? [
+            { label: "Error recovery", to: "/developers/errors" },
+            { label: "Usage and billing", to: "/developers/usage-billing" },
+            { label: "API key management", to: "/developers/api-keys" },
+          ]
+        : []),
       { label: "Search developer documentation", to: "/developers/docs" },
       { label: "Developer console", to: "/developers/console" },
       { label: "Contact support", to: "/contact-support" },

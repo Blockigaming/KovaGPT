@@ -58,6 +58,13 @@ function DeveloperDirectory({
       title={title}
       summary="Preview reference for the versioned API and integration contracts. A documented endpoint is not proof of activation."
     >
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm">
+        <Link to="/developers" className="underline">
+          Developers
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{title}</span>
+      </nav>
       <nav aria-label="Developer documentation navigation" className="flex flex-wrap gap-4 text-sm">
         <Link to="/developers/$docSlug" params={{ docSlug: "docs" }} className="underline">
           All documentation
@@ -83,8 +90,10 @@ function DeveloperDirectory({
           <span>Search developer documentation</span>
           <input
             type="search"
+            aria-controls="developer-search-results"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            maxLength={200}
             placeholder="Search endpoints, guides and fields"
             className="block min-h-11 w-full rounded-lg border border-input bg-background px-3 text-base"
           />
@@ -92,29 +101,35 @@ function DeveloperDirectory({
         <p role="status" className="text-sm text-muted-foreground">
           {matches.length} {matches.length === 1 ? "result" : "results"}
         </p>
-        {matches.length ? (
-          <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
-            {matches.map((entry) => (
-              <li key={entry.slug} className="min-w-0">
-                <Link
-                  to="/developers/$docSlug"
-                  params={{ docSlug: entry.slug }}
-                  className="block min-h-11 rounded-lg border border-border p-4 hover:bg-muted/50"
-                >
-                  <h2 className="font-semibold">{entry.title}</h2>
-                  {entry.path && (
-                    <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-                      {entry.methods?.join(" / ")} {entry.path}
+        <div id="developer-search-results">
+          {matches.length ? (
+            <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
+              {matches.map((entry) => (
+                <li key={entry.slug} className="min-w-0">
+                  <Link
+                    to="/developers/$docSlug"
+                    params={{ docSlug: entry.slug }}
+                    className="block min-h-11 rounded-lg border border-border p-4 hover:bg-muted/50"
+                  >
+                    <h2 className="font-semibold">{entry.title}</h2>
+                    {entry.path && (
+                      <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                        {entry.methods?.join(" / ")} {entry.path}
+                      </p>
+                    )}
+                    <p className="mt-2 break-words text-sm text-muted-foreground">
+                      {entry.request}
                     </p>
-                  )}
-                  <p className="mt-2 break-words text-sm text-muted-foreground">{entry.request}</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm">No matching documentation. Try a route name, field or feature.</p>
-        )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm">
+              No matching documentation. Try a route name, field or feature.
+            </p>
+          )}
+        </div>
       </section>
     </PublicPageView>
   );
